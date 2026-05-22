@@ -17,7 +17,7 @@ export default function LoginScreen() {
       const data = await postLogin({ email: email.trim().toLowerCase(), password });
       if (!data.accessToken) { setError('Invalid server response. Please try again.'); return; }
       setAccessToken(data.accessToken);
-      router.replace('/choose-service');
+      router.replace('/(tabs)/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error. Please try again.');
     } finally { setIsLoading(false); }

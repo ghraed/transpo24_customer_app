@@ -478,3 +478,42 @@ export interface RequestStatusRouteParams {
   requestId?: string;
   initialRequest?: string;
 }
+
+export interface CustomerHomeProfile {
+  id: string;
+  fullName: string | null;
+  email: string;
+  phone: string | null;
+  avatarUrl: string | null;
+}
+
+export interface CustomerHomeRequestSummary {
+  id: string;
+  serviceName: string | null;
+  serviceKey: string | null;
+  status: CustomerRequestStatus;
+  statusLabel: string;
+  pickupAddress: string | null;
+  dropoffAddress: string | null;
+  scheduledPickupAt: string | null;
+  submittedAt: string | null;
+  createdAt?: string;
+}
+
+export interface CustomerHomeCounters {
+  totalRequests: number;
+  activeRequests: number;
+  completedRequests: number;
+  cancelledRequests: number;
+  pendingQuotesRequests: number;
+}
+
+export interface CustomerHomeResponse {
+  customer: CustomerHomeProfile;
+  activeRequest: CustomerHomeRequestSummary | null;
+  recentRequests: CustomerHomeRequestSummary[];
+  counters: CustomerHomeCounters;
+  notifications: {
+    unreadCount: number;
+  };
+}

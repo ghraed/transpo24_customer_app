@@ -135,7 +135,7 @@ export default function RequestStatusScreen() {
   const progressIndex = requestData ? STATUS_PROGRESS[requestData.status] : 0;
 
   const goHome = (): void => {
-    router.replace('/home' as Href);
+    router.replace('/(tabs)/home' as Href);
   };
 
   if (!requestId) {
