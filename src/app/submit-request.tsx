@@ -221,7 +221,7 @@ export default function SubmitRequestScreen() {
       } as unknown as Href;
 
       setTimeout(() => {
-        router.replace(statusRoute);
+        router.push(statusRoute);
       }, 350);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to submit request.';
@@ -248,6 +248,9 @@ export default function SubmitRequestScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </Pressable>
           <Text style={styles.title}>Submit Request</Text>
           <Text style={styles.subtitle}>
             Review your transport request before sending it to drivers.
@@ -377,6 +380,21 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 4,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  },
+  backButtonText: {
+    color: '#334155',
+    fontWeight: '600',
+    fontSize: 13,
   },
   title: {
     fontSize: 28,

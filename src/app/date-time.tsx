@@ -392,7 +392,7 @@ export default function DateTimeScreen() {
             pathname: '/pickup-location',
             params: { serviceId, serviceKey: serviceKey ?? '' },
           } as unknown as Href;
-          router.replace(route);
+          router.push(route);
         }, 700);
         return;
       }
@@ -412,7 +412,7 @@ export default function DateTimeScreen() {
               pickupPlaceId: params.pickupPlaceId ?? '',
             },
           } as unknown as Href;
-          router.replace(route);
+          router.push(route);
         }, 700);
         return;
       }
@@ -430,6 +430,9 @@ export default function DateTimeScreen() {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </Pressable>
           <Text style={styles.title}>Date, Item Details & Photos</Text>
           <Text style={styles.subtitle}>
             Tell us when, what, and show us what you want to transport.
@@ -724,6 +727,21 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 4,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  },
+  backButtonText: {
+    color: '#334155',
+    fontWeight: '600',
+    fontSize: 13,
   },
   title: {
     fontSize: 28,

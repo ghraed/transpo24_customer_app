@@ -176,7 +176,7 @@ export default function DropoffLocationScreen() {
             pathname: '/pickup-location',
             params: { serviceId },
           } as unknown as Href;
-          router.replace(pickupRoute);
+          router.push(pickupRoute);
         }, 700);
         return;
       }
@@ -218,6 +218,9 @@ export default function DropoffLocationScreen() {
       style={styles.container}
     >
       <View style={styles.header}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </Pressable>
         <Text style={styles.title}>Dropoff Location</Text>
         <Text style={styles.subtitle}>Where should the driver deliver your item?</Text>
       </View>
@@ -314,6 +317,21 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 10,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  },
+  backButtonText: {
+    color: '#334155',
+    fontWeight: '600',
+    fontSize: 13,
   },
   title: {
     fontSize: 28,

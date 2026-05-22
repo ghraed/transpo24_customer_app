@@ -1,9 +1,11 @@
 import { Redirect, Tabs } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React from 'react';
 
 import { getAccessToken } from '@/lib/auth-token';
 
 export default function CustomerTabsLayout() {
+  const router = useRouter();
   const token = getAccessToken();
 
   if (!token) {
@@ -34,6 +36,12 @@ export default function CustomerTabsLayout() {
         name="new-request"
         options={{
           title: 'New Request',
+        }}
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.push('/choose-service');
+          },
         }}
       />
       <Tabs.Screen
