@@ -113,6 +113,29 @@ export interface SubmitCustomerRequestPayload {
   customerNote?: string;
 }
 
+export interface LocalPhotoAsset {
+  uri: string;
+  fileName?: string;
+  mimeType?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface UploadedRequestPhoto {
+  id: string;
+  url: string;
+  mimeType: string;
+  sizeBytes: number;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface UploadRequestPhotosResponse {
+  requestId: string;
+  photos: UploadedRequestPhoto[];
+}
+
 export type CustomerRequestStatus =
   | 'DRAFT'
   | 'PENDING_QUOTES'
