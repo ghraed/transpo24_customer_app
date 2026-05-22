@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Link } from 'expo-router';
+import { getApiBaseUrl } from '@/config/backend';
 
 interface ForgotPasswordRequest {
   email: string;
@@ -22,9 +23,7 @@ interface ForgotPasswordErrorResponse {
 }
 
 export default function ForgotPasswordScreen() {
-  const apiBaseUrl = useMemo(() => {
-    return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
-  }, []);
+  const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
   const [email, setEmail] = useState<string>('');
   const [error, setError] = useState<string>('');

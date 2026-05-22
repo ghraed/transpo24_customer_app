@@ -1,187 +1,27 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-interface LoginSuccessResponse {
-  accessToken: string;
-  user: {
-    id: string;
-    email: string;
-  };
-}
-
-interface LoginErrorResponse {
-  message?: string | string[];
-}
-
+import { postLogin } from '@/lib/api';
+import { setAccessToken } from '@/lib/auth-token';
 export default function LoginScreen() {
   const router = useRouter();
-  const apiBaseUrl = useMemo(() => {
-    return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
-  }, []);
-
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
   const onLoginPress = useCallback(async () => {
     setError('');
-
-    if (!email.trim() || !password) {
-      setError('Email and password are required.');
-      return;
-    }
-
+    if (!email.trim() || !password) { setError('Email and password are required.'); return; }
     setIsLoading(true);
-
     try {
-      const payload: LoginRequest = {
-        email: email.trim().toLowerCase(),
-        password,
-      };
-
-      const response = await fetch(`${apiBaseUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = (await response.json()) as LoginErrorResponse;
-        const message = Array.isArray(errorData.message)
-          ? errorData.message[0]
-          : errorData.message;
-        setError(message ?? 'Login failed. Please try again.');
-        return;
-      }
-
-      const data = (await response.json()) as LoginSuccessResponse;
-
-      if (!data.accessToken) {
-        setError('Invalid server response. Please try again.');
-        return;
-      }
-
-      router.replace('/home');
-    } catch {
-      setError('Network error. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [apiBaseUrl, email, password, router]);
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Customer Login</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
-
-      <Pressable
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={onLoginPress}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Login</Text>
-        )}
-      </Pressable>
-
-      <Link href="/forgot-password" style={styles.linkText}>
-        Forgot your password?
-      </Link>
-
-      <Link href="/register" style={styles.linkTextSecondary}>
-        New customer? Create an account
-      </Link>
-    </View>
-  );
+      const data = await postLogin({ email: email.trim().toLowerCase(), password });
+      if (!data.accessToken) { setError('Invalid server response. Please try again.'); return; }
+      setAccessToken(data.accessToken);
+      router.replace('/choose-service');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error. Please try again.');
+    } finally { setIsLoading(false); }
+  }, [email, password, router]);
+  return <View style={styles.container}><Text style={styles.title}>Customer Login</Text><TextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />{!!error && <Text style={styles.errorText}>{error}</Text>}<Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={onLoginPress} disabled={isLoading}>{isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Login</Text>}</Pressable><Link href="/forgot-password" style={styles.linkText}>Forgot your password?</Link><Link href="/register" style={styles.linkTextSecondary}>New customer? Create an account</Link></View>;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    marginBottom: 20,
-    color: '#111111',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 12,
-    backgroundColor: '#ffffff',
-  },
-  button: {
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#1a73e8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  linkText: {
-    marginTop: 16,
-    color: '#1a73e8',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  linkTextSecondary: {
-    marginTop: 12,
-    color: '#2563eb',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  errorText: {
-    color: '#d93025',
-    marginBottom: 8,
-  },
-});
+const styles = StyleSheet.create({ container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#fff' }, title: { fontSize: 26, fontWeight: '700', marginBottom: 20, color: '#111111' }, input: { borderWidth: 1, borderColor: '#d0d0d0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 12, backgroundColor: '#ffffff' }, button: { height: 48, borderRadius: 10, backgroundColor: '#1a73e8', alignItems: 'center', justifyContent: 'center', marginTop: 6 }, buttonDisabled: { opacity: 0.7 }, buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' }, linkText: { marginTop: 16, color: '#1a73e8', textAlign: 'center', fontWeight: '500' }, linkTextSecondary: { marginTop: 12, color: '#2563eb', textAlign: 'center', fontWeight: '500' }, errorText: { color: '#d93025', marginBottom: 8 } });

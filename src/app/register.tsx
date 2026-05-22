@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { getApiBaseUrl } from '@/config/backend';
 
 interface RegisterRequest {
   name: string;
@@ -31,9 +32,7 @@ interface RegisterErrorResponse {
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const apiBaseUrl = useMemo(() => {
-    return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
-  }, []);
+  const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');

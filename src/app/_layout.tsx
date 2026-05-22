@@ -1,7 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { Stack } from 'expo-router';
 import { useColorScheme } from 'react-native';
-
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 
 export default function RootLayout() {
@@ -14,6 +13,10 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ title: 'Login' }} />
         <Stack.Screen name="register" options={{ title: 'Create Account' }} />
         <Stack.Screen name="forgot-password" options={{ title: 'Reset Password' }} />
+        <Stack.Screen name="choose-service" options={{ title: 'Choose Service' }} />
+        <Stack.Screen name="vehicle-details" options={{ title: 'Vehicle Details' }} />
+        <Stack.Screen name="vehicle-condition" options={{ title: 'Vehicle Condition' }} />
+        <Stack.Screen name="pickup-location" options={{ title: 'Pickup Location' }} />
         <Stack.Screen name="home" options={{ title: 'Home' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />
       </Stack>
