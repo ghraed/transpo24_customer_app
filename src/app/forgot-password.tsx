@@ -7,85 +7,74 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 
-interface LoginRequest {
+interface ForgotPasswordRequest {
   email: string;
-  password: string;
 }
 
-interface LoginSuccessResponse {
-  accessToken: string;
-  user: {
-    id: string;
-    email: string;
-  };
+interface ForgotPasswordResponse {
+  message?: string;
 }
 
-interface LoginErrorResponse {
+interface ForgotPasswordErrorResponse {
   message?: string | string[];
 }
 
-export default function LoginScreen() {
-  const router = useRouter();
+export default function ForgotPasswordScreen() {
   const apiBaseUrl = useMemo(() => {
     return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
   }, []);
 
   const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const onLoginPress = useCallback(async () => {
+  const onResetPress = useCallback(async () => {
     setError('');
+    setSuccessMessage('');
 
-    if (!email.trim() || !password) {
-      setError('Email and password are required.');
+    if (!email.trim()) {
+      setError('Email is required.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const payload: LoginRequest = {
+      const payload: ForgotPasswordRequest = {
         email: email.trim().toLowerCase(),
-        password,
       };
 
-      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+      const response = await fetch(`${apiBaseUrl}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as LoginErrorResponse;
+        const errorData = (await response.json()) as ForgotPasswordErrorResponse;
         const message = Array.isArray(errorData.message)
           ? errorData.message[0]
           : errorData.message;
-        setError(message ?? 'Login failed. Please try again.');
+        setError(message ?? 'Could not send reset link. Please try again.');
         return;
       }
 
-      const data = (await response.json()) as LoginSuccessResponse;
-
-      if (!data.accessToken) {
-        setError('Invalid server response. Please try again.');
-        return;
-      }
-
-      router.replace('/home');
+      const data = (await response.json()) as ForgotPasswordResponse;
+      setSuccessMessage(data.message ?? 'If this email exists, a reset link has been sent.');
     } catch {
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, email, password, router]);
+  }, [apiBaseUrl, email]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Customer Login</Text>
+      <Text style={styles.title}>Reset Password</Text>
+      <Text style={styles.subtitle}>Enter your email to receive a password reset link.</Text>
 
       <TextInput
         style={styles.input}
@@ -97,34 +86,23 @@ export default function LoginScreen() {
         onChangeText={setEmail}
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
       {!!error && <Text style={styles.errorText}>{error}</Text>}
+      {!!successMessage && <Text style={styles.successText}>{successMessage}</Text>}
 
       <Pressable
         style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={onLoginPress}
+        onPress={onResetPress}
         disabled={isLoading}
       >
         {isLoading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={styles.buttonText}>Send Reset Link</Text>
         )}
       </Pressable>
 
-      <Link href="/forgot-password" style={styles.linkText}>
-        Forgot your password?
-      </Link>
-
-      <Link href="/register" style={styles.linkTextSecondary}>
-        New customer? Create an account
+      <Link href="/" style={styles.linkText}>
+        Back to Login
       </Link>
     </View>
   );
@@ -140,8 +118,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    marginBottom: 20,
+    marginBottom: 8,
     color: '#111111',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#555555',
+    marginBottom: 16,
   },
   input: {
     borderWidth: 1,
@@ -174,14 +157,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-  linkTextSecondary: {
-    marginTop: 12,
-    color: '#2563eb',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
   errorText: {
     color: '#d93025',
+    marginBottom: 8,
+  },
+  successText: {
+    color: '#188038',
     marginBottom: 8,
   },
 });

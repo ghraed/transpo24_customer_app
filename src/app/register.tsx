@@ -9,68 +9,73 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 
-interface LoginRequest {
+interface RegisterRequest {
+  name: string;
   email: string;
   password: string;
 }
 
-interface LoginSuccessResponse {
-  accessToken: string;
-  user: {
+interface RegisterSuccessResponse {
+  accessToken?: string;
+  user?: {
     id: string;
     email: string;
+    name?: string;
   };
+  message?: string;
 }
 
-interface LoginErrorResponse {
+interface RegisterErrorResponse {
   message?: string | string[];
 }
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const apiBaseUrl = useMemo(() => {
     return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
   }, []);
 
+  const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const onLoginPress = useCallback(async () => {
+  const onRegisterPress = useCallback(async () => {
     setError('');
 
-    if (!email.trim() || !password) {
-      setError('Email and password are required.');
+    if (!name.trim() || !email.trim() || !password) {
+      setError('Name, email, and password are required.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const payload: LoginRequest = {
+      const payload: RegisterRequest = {
+        name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
       };
 
-      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+      const response = await fetch(`${apiBaseUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as LoginErrorResponse;
+        const errorData = (await response.json()) as RegisterErrorResponse;
         const message = Array.isArray(errorData.message)
           ? errorData.message[0]
           : errorData.message;
-        setError(message ?? 'Login failed. Please try again.');
+        setError(message ?? 'Registration failed. Please try again.');
         return;
       }
 
-      const data = (await response.json()) as LoginSuccessResponse;
+      const data = (await response.json()) as RegisterSuccessResponse;
 
-      if (!data.accessToken) {
+      if (!data.user && !data.accessToken) {
         setError('Invalid server response. Please try again.');
         return;
       }
@@ -81,11 +86,19 @@ export default function LoginScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, email, password, router]);
+  }, [apiBaseUrl, email, name, password, router]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Customer Login</Text>
+      <Text style={styles.title}>Create Account</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Full name"
+        autoCapitalize="words"
+        value={name}
+        onChangeText={setName}
+      />
 
       <TextInput
         style={styles.input}
@@ -109,22 +122,18 @@ export default function LoginScreen() {
 
       <Pressable
         style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={onLoginPress}
+        onPress={onRegisterPress}
         disabled={isLoading}
       >
         {isLoading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={styles.buttonText}>Register</Text>
         )}
       </Pressable>
 
-      <Link href="/forgot-password" style={styles.linkText}>
-        Forgot your password?
-      </Link>
-
-      <Link href="/register" style={styles.linkTextSecondary}>
-        New customer? Create an account
+      <Link href="/" style={styles.linkText}>
+        Already have an account? Login
       </Link>
     </View>
   );
@@ -171,12 +180,6 @@ const styles = StyleSheet.create({
   linkText: {
     marginTop: 16,
     color: '#1a73e8',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  linkTextSecondary: {
-    marginTop: 12,
-    color: '#2563eb',
     textAlign: 'center',
     fontWeight: '500',
   },
