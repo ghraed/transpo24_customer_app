@@ -18,6 +18,8 @@ export default function RootLayout() {
         <Stack.Screen name="vehicle-details" options={{ title: 'Vehicle Details' }} />
         <Stack.Screen name="pickup-location" options={{ title: 'Pickup Location' }} />
         <Stack.Screen name="dropoff-location" options={{ title: 'Dropoff Location' }} />
+        <Stack.Screen name="date-time" options={{ title: 'Date & Time' }} />
+        <Stack.Screen name="upload-photos" options={{ title: 'Upload Photos' }} />
         <Stack.Screen name="home" options={{ title: 'Home' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />
       </Stack>

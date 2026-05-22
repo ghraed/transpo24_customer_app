@@ -3,7 +3,9 @@ import type {
   CreateCustomerRequestPayload,
   CustomerRequest,
   CustomerRequestApiResponse,
+  UpdateDropoffLocationPayload,
   UpdatePickupLocationPayload,
+  UpdateScheduleAndItemDetailsPayload,
 } from '@/types/customer-request';
 import type { Service } from '@/types/service';
 import type {
@@ -51,28 +53,37 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerRequest {
-  const location = response.pickupLocation;
-
-  if (location.latitude === null || location.longitude === null) {
-    return {
-      id: response.id,
-      serviceId: response.serviceId,
-      status: response.status,
-    };
-  }
+  const pickup = response.pickupLocation;
+  const dropoff = response.dropoffLocation;
 
   return {
     id: response.id,
     serviceId: response.serviceId,
     status: response.status,
-    pickupLocation: {
-      coordinates: {
-        latitude: location.latitude,
-        longitude: location.longitude,
-      },
-      address: location.address ?? undefined,
-      placeId: location.placeId ?? undefined,
-    },
+    pickupLocation:
+      pickup.latitude !== null && pickup.longitude !== null
+        ? {
+            coordinates: {
+              latitude: pickup.latitude,
+              longitude: pickup.longitude,
+            },
+            address: pickup.address ?? undefined,
+            placeId: pickup.placeId ?? undefined,
+          }
+        : undefined,
+    dropoffLocation:
+      dropoff.latitude !== null && dropoff.longitude !== null
+        ? {
+            coordinates: {
+              latitude: dropoff.latitude,
+              longitude: dropoff.longitude,
+            },
+            address: dropoff.address ?? undefined,
+            placeId: dropoff.placeId ?? undefined,
+          }
+        : undefined,
+    schedule: response.schedule,
+    itemDetails: response.itemDetails,
   };
 }
 
@@ -139,6 +150,45 @@ export async function updatePickupLocation(
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to save pickup location.');
+  }
+
+  const data = (await response.json()) as CustomerRequestApiResponse;
+  return mapCustomerRequest(data);
+}
+
+export async function updateDropoffLocation(
+  requestId: string,
+  payload: UpdateDropoffLocationPayload,
+): Promise<CustomerRequest> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/dropoff-location`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to save dropoff location.');
+  }
+
+  const data = (await response.json()) as CustomerRequestApiResponse;
+  return mapCustomerRequest(data);
+}
+
+export async function updateScheduleAndItemDetails(
+  requestId: string,
+  payload: UpdateScheduleAndItemDetailsPayload,
+): Promise<CustomerRequest> {
+  const response = await fetch(
+    `${getApiBaseUrl()}/customer/requests/${requestId}/schedule-and-item-details`,
+    {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to save schedule and item details.');
   }
 
   const data = (await response.json()) as CustomerRequestApiResponse;
