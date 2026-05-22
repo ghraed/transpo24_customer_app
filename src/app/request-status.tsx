@@ -1,47 +1,473 @@
-import { useLocalSearchParams } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-type RequestStatusRouteParams = {
-  requestId?: string;
-  status?: string;
-  submittedAt?: string;
+import { getCustomerRequestStatus } from '@/lib/api';
+import type {
+  CustomerRequestStatus,
+  RequestStatusResponse,
+} from '@/types/customer-request';
+
+interface TimelineStep {
+  key: string;
+  label: string;
+}
+
+const TIMELINE_STEPS: TimelineStep[] = [
+  { key: 'REQUEST_SUBMITTED', label: 'Request submitted' },
+  { key: 'PENDING_QUOTES', label: 'Waiting for offers' },
+  { key: 'QUOTED', label: 'Choose driver' },
+  { key: 'DRIVER_ASSIGNED', label: 'Driver assigned' },
+  { key: 'PICKUP_IN_PROGRESS', label: 'Pickup' },
+  { key: 'IN_TRANSIT', label: 'In transit' },
+  { key: 'DELIVERED', label: 'Delivered' },
+];
+
+const STATUS_PROGRESS: Record<CustomerRequestStatus, number> = {
+  DRAFT: 0,
+  PENDING_QUOTES: 1,
+  QUOTED: 2,
+  ACCEPTED: 2,
+  DRIVER_ASSIGNED: 3,
+  PICKUP_IN_PROGRESS: 4,
+  IN_TRANSIT: 5,
+  DELIVERED: 6,
+  CANCELLED: -1,
 };
 
+function formatDate(value: string | null | undefined): string {
+  if (!value) return 'N/A';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+}
+
+function formatLocation(
+  location: RequestStatusResponse['pickupLocation'] | RequestStatusResponse['dropoffLocation'],
+): string {
+  if (location.address) return location.address;
+  if (location.latitude === null || location.longitude === null) return 'N/A';
+  return `Lat ${location.latitude.toFixed(6)}, Lng ${location.longitude.toFixed(6)}`;
+}
+
+function shortRequestId(id: string): string {
+  if (id.length <= 12) return id;
+  return `${id.slice(0, 6)}...${id.slice(-4)}`;
+}
+
+function parseInitialRequest(raw: string | undefined): RequestStatusResponse | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as RequestStatusResponse;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export default function RequestStatusScreen() {
-  const params = useLocalSearchParams<RequestStatusRouteParams>();
+  const router = useRouter();
+  const params = useLocalSearchParams();
+
+  const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
+  const initialRequest = useMemo(
+    () => parseInitialRequest(typeof params.initialRequest === 'string' ? params.initialRequest : undefined),
+    [params.initialRequest],
+  );
+
+  const [requestData, setRequestData] = useState<RequestStatusResponse | null>(initialRequest);
+  const [isLoading, setIsLoading] = useState<boolean>(!initialRequest);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  const loadStatus = useCallback(
+    async (refresh: boolean): Promise<void> => {
+      if (!requestId) {
+        setErrorMessage('Missing request id. Please go back and submit your request again.');
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+
+      if (refresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      setErrorMessage('');
+
+      try {
+        const data = await getCustomerRequestStatus(requestId);
+        setRequestData(data);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to load request status.';
+        const normalized = message.toLowerCase();
+        if (normalized.includes('not found')) {
+          setErrorMessage('Request not found.');
+        } else if (normalized.includes('forbidden') || normalized.includes('access')) {
+          setErrorMessage('You do not have access to this request.');
+        } else {
+          setErrorMessage(message);
+        }
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [requestId],
+  );
+
+  useEffect(() => {
+    void loadStatus(false);
+  }, [loadStatus]);
+
+  const progressIndex = requestData ? STATUS_PROGRESS[requestData.status] : 0;
+
+  const goHome = (): void => {
+    router.replace('/home' as Href);
+  };
+
+  if (!requestId) {
+    return (
+      <SafeAreaView style={styles.centeredContainer}>
+        <Text style={styles.title}>Request Status</Text>
+        <Text style={styles.errorText}>Missing request id.</Text>
+        <Pressable style={styles.secondaryButton} onPress={goHome}>
+          <Text style={styles.secondaryButtonText}>Back to Home</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
+
+  if (isLoading && !requestData) {
+    return (
+      <SafeAreaView style={styles.centeredContainer}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>Loading request status...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!requestData) {
+    return (
+      <SafeAreaView style={styles.centeredContainer}>
+        <Text style={styles.title}>Request Status</Text>
+        <Text style={styles.errorText}>{errorMessage || 'Unable to load request status.'}</Text>
+        <Pressable style={styles.primaryButton} onPress={() => void loadStatus(false)}>
+          <Text style={styles.primaryButtonText}>Retry</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Request Status</Text>
-      <Text style={styles.subtitle}>Your request has been sent to drivers.</Text>
-      <Text style={styles.value}>requestId: {params.requestId ?? 'N/A'}</Text>
-      <Text style={styles.value}>status: {params.status ?? 'N/A'}</Text>
-      <Text style={styles.value}>submittedAt: {params.submittedAt ?? 'N/A'}</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadStatus(true)} />}
+      >
+        <View style={styles.headerCard}>
+          <Text style={styles.title}>Request Status</Text>
+          <Text style={styles.subtitle}>Track the progress of your transport request.</Text>
+          <Text style={styles.statusPill}>{requestData.statusLabel || requestData.status}</Text>
+          <Text style={styles.metaText}>Request #{shortRequestId(requestData.id)}</Text>
+          <Text style={styles.metaText}>Submitted: {formatDate(requestData.submittedAt)}</Text>
+          <Text style={styles.helperText}>Drivers will review your request and send offers soon.</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Progress</Text>
+          {requestData.status === 'CANCELLED' ? (
+            <Text style={styles.errorText}>This request has been cancelled.</Text>
+          ) : (
+            TIMELINE_STEPS.map((step, index) => {
+              const isDone = progressIndex > index;
+              const isCurrent = progressIndex === index;
+              return (
+                <View key={step.key} style={styles.timelineRow}>
+                  <View
+                    style={[
+                      styles.timelineDot,
+                      isDone ? styles.timelineDotDone : undefined,
+                      isCurrent ? styles.timelineDotCurrent : undefined,
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.timelineText,
+                      isDone ? styles.timelineTextDone : undefined,
+                      isCurrent ? styles.timelineTextCurrent : undefined,
+                    ]}
+                  >
+                    {step.label}
+                  </Text>
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Request Summary</Text>
+          <Text style={styles.rowLabel}>Service</Text>
+          <Text style={styles.rowValue}>
+            {requestData.service?.nameEn || requestData.service?.key || requestData.serviceId}
+          </Text>
+          <Text style={styles.rowLabel}>Pickup</Text>
+          <Text style={styles.rowValue}>{formatLocation(requestData.pickupLocation)}</Text>
+          <Text style={styles.rowLabel}>Dropoff</Text>
+          <Text style={styles.rowValue}>{formatLocation(requestData.dropoffLocation)}</Text>
+          <Text style={styles.rowLabel}>Date & Time</Text>
+          <Text style={styles.rowValue}>
+            {requestData.schedule.isImmediate
+              ? 'Immediate pickup'
+              : formatDate(requestData.schedule.scheduledPickupAt)}
+          </Text>
+          <Text style={styles.rowLabel}>Item</Text>
+          <Text style={styles.rowValue}>
+            {requestData.itemDetails.title || 'N/A'} ({requestData.itemDetails.type || 'N/A'})
+          </Text>
+          {requestData.itemDetails.description ? (
+            <Text style={styles.rowValue}>{requestData.itemDetails.description}</Text>
+          ) : null}
+          <Text style={styles.rowLabel}>Loading Help</Text>
+          <Text style={styles.rowValue}>
+            {requestData.itemDetails.requiresLoadingHelp
+              ? `Yes (${requestData.itemDetails.loadingWorkersCount ?? 0} workers)`
+              : 'No'}
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Quotes & Offers</Text>
+          {requestData.quotesSummary.hasOffers ? (
+            <Text style={styles.rowValue}>
+              {requestData.quotesSummary.count} offers • Lowest: {requestData.quotesSummary.lowestPrice}{' '}
+              {requestData.quotesSummary.currency || ''}
+            </Text>
+          ) : (
+            <Text style={styles.rowValue}>No offers yet</Text>
+          )}
+          <Pressable style={styles.secondaryButton} disabled>
+            <Text style={styles.secondaryButtonText}>View Offers</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Driver & Tracking</Text>
+          {requestData.driverSummary.assigned ? (
+            <>
+              <Text style={styles.rowValue}>Driver: {requestData.driverSummary.driverName || 'N/A'}</Text>
+              <Text style={styles.rowValue}>Vehicle: {requestData.driverSummary.vehicleInfo || 'N/A'}</Text>
+            </>
+          ) : (
+            <Text style={styles.rowValue}>No driver assigned yet</Text>
+          )}
+          {requestData.trackingSummary.available ? (
+            <Text style={styles.rowValue}>
+              Tracking updated {formatDate(requestData.trackingSummary.lastUpdatedAt)}
+            </Text>
+          ) : (
+            <Text style={styles.rowValue}>Tracking is not available yet</Text>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Photos</Text>
+          {requestData.photos.length === 0 ? (
+            <Text style={styles.rowValue}>No photos added.</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+              {requestData.photos.map((photo) => (
+                <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} resizeMode="cover" />
+              ))}
+            </ScrollView>
+          )}
+        </View>
+
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+        <View style={styles.actionsRow}>
+          <Pressable style={styles.primaryButton} onPress={() => void loadStatus(false)}>
+            <Text style={styles.primaryButtonText}>{isRefreshing ? 'Refreshing...' : 'Refresh'}</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryButton} onPress={goHome}>
+            <Text style={styles.secondaryButtonText}>Back to Home</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F8FAFC',
+  },
+  centeredContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 24,
+    gap: 12,
+  },
+  content: {
+    padding: 16,
+    gap: 12,
+    paddingBottom: 24,
+  },
+  headerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#101828',
-    marginBottom: 8,
+    color: '#0F172A',
   },
   subtitle: {
-    fontSize: 15,
-    color: '#475467',
-    marginBottom: 20,
+    marginTop: 6,
+    color: '#475569',
+    fontSize: 14,
   },
-  value: {
-    fontSize: 13,
+  statusPill: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#DBEAFE',
+    color: '#1D4ED8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    fontWeight: '600',
+  },
+  metaText: {
+    marginTop: 8,
     color: '#334155',
-    marginBottom: 6,
+    fontSize: 13,
+  },
+  helperText: {
+    marginTop: 8,
+    color: '#475569',
+    fontSize: 13,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#CBD5E1',
+  },
+  timelineDotDone: {
+    backgroundColor: '#10B981',
+  },
+  timelineDotCurrent: {
+    backgroundColor: '#2563EB',
+  },
+  timelineText: {
+    color: '#64748B',
+    fontSize: 14,
+  },
+  timelineTextDone: {
+    color: '#0F172A',
+    fontWeight: '500',
+  },
+  timelineTextCurrent: {
+    color: '#1D4ED8',
+    fontWeight: '700',
+  },
+  rowLabel: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  rowValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  photoRow: {
+    gap: 10,
+  },
+  photo: {
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+    backgroundColor: '#E2E8F0',
+  },
+  actionsRow: {
+    gap: 10,
+  },
+  primaryButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 10,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  secondaryButton: {
+    borderRadius: 10,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+  },
+  secondaryButtonText: {
+    color: '#0F172A',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  loadingText: {
+    color: '#475569',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
