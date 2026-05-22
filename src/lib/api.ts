@@ -1,4 +1,10 @@
 import { getAccessToken } from './auth-token';
+import type {
+  CreateCustomerRequestPayload,
+  CustomerRequest,
+  CustomerRequestApiResponse,
+  UpdatePickupLocationPayload,
+} from '@/types/customer-request';
 import type { Service } from '@/types/service';
 import type {
   VehicleCatalogBrand,
@@ -22,13 +28,6 @@ function toMessage(errorData: ApiErrorResponse, fallback: string): string {
     : (errorData.message ?? fallback);
 }
 
-function getAuthHeaders(): Record<string, string> {
-  const token = getAccessToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
 async function parseError(response: Response, fallback: string): Promise<Error> {
   try {
     const errorData = (await response.json()) as ApiErrorResponse;
@@ -36,6 +35,45 @@ async function parseError(response: Response, fallback: string): Promise<Error> 
   } catch {
     return new Error(fallback);
   }
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerRequest {
+  const location = response.pickupLocation;
+
+  if (location.latitude === null || location.longitude === null) {
+    return {
+      id: response.id,
+      serviceId: response.serviceId,
+      status: response.status,
+    };
+  }
+
+  return {
+    id: response.id,
+    serviceId: response.serviceId,
+    status: response.status,
+    pickupLocation: {
+      coordinates: {
+        latitude: location.latitude,
+        longitude: location.longitude,
+      },
+      address: location.address ?? undefined,
+      placeId: location.placeId ?? undefined,
+    },
+  };
 }
 
 export async function postLogin(payload: {
@@ -48,7 +86,9 @@ export async function postLogin(payload: {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) throw await parseError(response, 'Login failed.');
+  if (!response.ok) {
+    throw await parseError(response, 'Login failed.');
+  }
 
   return (await response.json()) as {
     accessToken: string;
@@ -62,10 +102,47 @@ export async function getServices(): Promise<Service[]> {
     headers: getAuthHeaders(),
   });
 
-  if (!response.ok) throw await parseError(response, 'Failed to load services.');
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load services.');
+  }
 
   const data = (await response.json()) as Service[] | { services: Service[] };
   return Array.isArray(data) ? data : (data.services ?? []);
+}
+
+export async function createCustomerRequest(
+  payload: CreateCustomerRequestPayload,
+): Promise<CustomerRequest> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to create customer request.');
+  }
+
+  const data = (await response.json()) as CustomerRequestApiResponse;
+  return mapCustomerRequest(data);
+}
+
+export async function updatePickupLocation(
+  requestId: string,
+  payload: UpdatePickupLocationPayload,
+): Promise<CustomerRequest> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/pickup-location`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to save pickup location.');
+  }
+
+  const data = (await response.json()) as CustomerRequestApiResponse;
+  return mapCustomerRequest(data);
 }
 
 export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeResult> {
@@ -74,7 +151,9 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
     headers: getAuthHeaders(),
   });
 
-  if (!response.ok) throw await parseError(response, 'Failed to decode vehicle VIN.');
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to decode vehicle VIN.');
+  }
 
   const payload = (await response.json()) as
     | { data?: Partial<VehicleVinDecodeResult> | null }
@@ -102,7 +181,9 @@ export async function getVehicleBrands(): Promise<VehicleCatalogBrand[]> {
     headers: getAuthHeaders(),
   });
 
-  if (!response.ok) throw await parseError(response, 'Failed to load vehicle brands.');
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load vehicle brands.');
+  }
 
   const data = (await response.json()) as VehicleCatalogBrand[] | { brands: VehicleCatalogBrand[] };
   return Array.isArray(data) ? data : (data.brands ?? []);
@@ -117,7 +198,9 @@ export async function getVehicleModels(brandId: string): Promise<VehicleCatalogM
     },
   );
 
-  if (!response.ok) throw await parseError(response, 'Failed to load vehicle models.');
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load vehicle models.');
+  }
 
   const data = (await response.json()) as VehicleCatalogModel[] | { models: VehicleCatalogModel[] };
   return Array.isArray(data) ? data : (data.models ?? []);
@@ -132,7 +215,9 @@ export async function getVehicleSeries(modelId: string): Promise<VehicleCatalogS
     },
   );
 
-  if (!response.ok) throw await parseError(response, 'Failed to load vehicle series.');
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load vehicle series.');
+  }
 
   const data = (await response.json()) as VehicleCatalogSeries[] | { series: VehicleCatalogSeries[] };
   return Array.isArray(data) ? data : (data.series ?? []);
@@ -147,10 +232,14 @@ export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogY
     },
   );
 
-  if (!response.ok) throw await parseError(response, 'Failed to load vehicle years.');
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load vehicle years.');
+  }
 
-  const data = (await response.json()) as Array<number | VehicleCatalogYearOption> | { years: Array<number | VehicleCatalogYearOption> };
+  const data =
+    (await response.json()) as Array<number | VehicleCatalogYearOption> | { years: Array<number | VehicleCatalogYearOption> };
   const raw = Array.isArray(data) ? data : (data.years ?? []);
+
   return raw
     .map((item) => (typeof item === 'number' ? { year: item } : item))
     .filter((item): item is VehicleCatalogYearOption => typeof item?.year === 'number');
