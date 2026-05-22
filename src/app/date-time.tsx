@@ -1,8 +1,10 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,11 +16,16 @@ import {
   View,
 } from 'react-native';
 
-import { updateScheduleAndItemDetails } from '@/lib/api';
+import {
+  updateScheduleAndItemDetails,
+  uploadRequestPhotos,
+} from '@/lib/api';
 import type {
   DateTimeRouteParams,
   ItemCondition,
   ItemType,
+  LocalPhotoAsset,
+  UploadedRequestPhoto,
   UpdateScheduleAndItemDetailsPayload,
 } from '@/types/customer-request';
 
@@ -46,6 +53,10 @@ interface ScheduleAndItemDetailsForm {
   loadingWorkersCount?: string;
   specialInstructions?: string;
 }
+
+const MAX_PHOTOS = 8;
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const ITEM_TYPE_OPTIONS: Array<{ label: string; value: ItemType }> = [
   { label: 'Vehicle', value: 'VEHICLE' },
@@ -75,14 +86,34 @@ function defaultItemTypeFromServiceKey(rawKey: string | undefined): ItemType {
 
 function parsePositiveNumber(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  const next = Number(value);
-  return Number.isFinite(next) ? next : undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function parseInteger(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  const next = Number(value);
-  return Number.isInteger(next) ? next : undefined;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : undefined;
+}
+
+function inferMimeType(uri: string): string | undefined {
+  const normalized = uri.toLowerCase();
+  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) return 'image/jpeg';
+  if (normalized.endsWith('.png')) return 'image/png';
+  if (normalized.endsWith('.webp')) return 'image/webp';
+  return undefined;
+}
+
+function mapPickerAssetToLocalPhoto(asset: ImagePicker.ImagePickerAsset): LocalPhotoAsset {
+  const mimeType = asset.mimeType ?? inferMimeType(asset.uri);
+  return {
+    uri: asset.uri,
+    fileName: asset.fileName ?? undefined,
+    mimeType: mimeType ?? undefined,
+    fileSize: asset.fileSize ?? undefined,
+    width: asset.width,
+    height: asset.height,
+  };
 }
 
 export default function DateTimeScreen() {
@@ -111,10 +142,20 @@ export default function DateTimeScreen() {
     loadingWorkersCount: '',
     specialInstructions: '',
   });
+  const [selectedPhotos, setSelectedPhotos] = useState<LocalPhotoAsset[]>([]);
+  const [uploadedPhotos, setUploadedPhotos] = useState<UploadedRequestPhoto[]>([]);
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isSavingDetails, setIsSavingDetails] = useState<boolean>(false);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState<boolean>(false);
+
+  const updateForm = <K extends keyof ScheduleAndItemDetailsForm>(
+    key: K,
+    value: ScheduleAndItemDetailsForm[K],
+  ) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
@@ -142,26 +183,25 @@ export default function DateTimeScreen() {
     }
 
     if (form.itemYear) {
-      const itemYear = parseInteger(form.itemYear);
-      if (itemYear === undefined || itemYear < 1900 || itemYear > currentYear + 1) {
+      const year = parseInteger(form.itemYear);
+      if (year === undefined || year < 1900 || year > currentYear + 1) {
         errors.push(`Item year must be between 1900 and ${currentYear + 1}.`);
       }
     }
 
-    const numericFields: Array<{ name: string; value: string | undefined }> = [
-      { name: 'Weight (kg)', value: form.itemWeightKg },
-      { name: 'Length (cm)', value: form.itemLengthCm },
-      { name: 'Width (cm)', value: form.itemWidthCm },
-      { name: 'Height (cm)', value: form.itemHeightCm },
+    const numericFields: Array<{ label: string; value: string | undefined }> = [
+      { label: 'Weight (kg)', value: form.itemWeightKg },
+      { label: 'Length (cm)', value: form.itemLengthCm },
+      { label: 'Width (cm)', value: form.itemWidthCm },
+      { label: 'Height (cm)', value: form.itemHeightCm },
     ];
-
-    for (const field of numericFields) {
-      if (!field.value) continue;
+    numericFields.forEach((field) => {
+      if (!field.value) return;
       const parsed = parsePositiveNumber(field.value);
       if (parsed === undefined || parsed <= 0) {
-        errors.push(`${field.name} must be a positive number.`);
+        errors.push(`${field.label} must be a positive number.`);
       }
-    }
+    });
 
     if (form.requiresLoadingHelp) {
       const workers = parseInteger(form.loadingWorkersCount);
@@ -170,21 +210,85 @@ export default function DateTimeScreen() {
       }
     }
 
+    if (selectedPhotos.length > MAX_PHOTOS) {
+      errors.push(`You can select up to ${MAX_PHOTOS} photos.`);
+    }
+
+    selectedPhotos.forEach((photo, index) => {
+      const mimeType = photo.mimeType ?? inferMimeType(photo.uri);
+      if (mimeType && !ALLOWED_MIME_TYPES.has(mimeType)) {
+        errors.push(`Photo ${index + 1} has unsupported format.`);
+      }
+      if (photo.fileSize && photo.fileSize > MAX_FILE_SIZE_BYTES) {
+        errors.push(`Photo ${index + 1} is larger than 5 MB.`);
+      }
+    });
+
     return errors;
-  }, [form, requestId, serviceId]);
+  }, [form, requestId, selectedPhotos, serviceId]);
 
-  const canContinue = validationErrors.length === 0 && !isSaving;
+  const isBusy = isSavingDetails || isUploadingPhotos;
+  const canContinue = validationErrors.length === 0 && !isBusy;
 
-  const updateForm = <K extends keyof ScheduleAndItemDetailsForm>(
-    key: K,
-    value: ScheduleAndItemDetailsForm[K],
-  ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const pickFromLibrary = async (): Promise<void> => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
+      setErrorMessage('Media library permission is needed to select photos.');
+      return;
+    }
+
+    const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
+    if (remainingSlots <= 0) {
+      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsMultipleSelection: true,
+      mediaTypes: ['images'],
+      quality: 0.9,
+      selectionLimit: remainingSlots,
+    });
+
+    if (result.canceled) return;
+
+    const nextPhotos = result.assets.map(mapPickerAssetToLocalPhoto);
+    setSelectedPhotos((prev) => [...prev, ...nextPhotos].slice(0, MAX_PHOTOS));
+    setErrorMessage('');
   };
 
-  const onSubmit = async () => {
+  const takePhoto = async (): Promise<void> => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
+      setErrorMessage('Camera permission is needed to take photos.');
+      return;
+    }
+
+    const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
+    if (remainingSlots <= 0) {
+      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.9,
+    });
+
+    if (result.canceled) return;
+
+    const nextPhoto = mapPickerAssetToLocalPhoto(result.assets[0]);
+    setSelectedPhotos((prev) => [...prev, nextPhoto].slice(0, MAX_PHOTOS));
+    setErrorMessage('');
+  };
+
+  const removePhoto = (index: number): void => {
+    setSelectedPhotos((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const onContinue = async (): Promise<void> => {
     if (validationErrors.length > 0) {
-      setErrorMessage(validationErrors[0] ?? 'Please complete the form.');
+      setErrorMessage(validationErrors[0] ?? 'Please complete required fields.');
       return;
     }
 
@@ -210,16 +314,37 @@ export default function DateTimeScreen() {
       specialInstructions: form.specialInstructions?.trim() || undefined,
     };
 
-    setIsSaving(true);
     setErrorMessage('');
+    setIsSavingDetails(true);
 
     try {
-      const updated = await updateScheduleAndItemDetails(requestId, payload);
+      const updatedRequest = await updateScheduleAndItemDetails(requestId, payload);
+      let uploaded: UploadedRequestPhoto[] = uploadedPhotos;
+
+      if (selectedPhotos.length > 0) {
+        setIsUploadingPhotos(true);
+        try {
+          const uploadResponse = await uploadRequestPhotos(requestId, selectedPhotos);
+          uploaded = uploadResponse.photos;
+          setUploadedPhotos(uploadResponse.photos);
+          setSelectedPhotos([]);
+        } catch (uploadError) {
+          const message =
+            uploadError instanceof Error
+              ? uploadError.message
+              : 'Details were saved, but photo upload failed. Please retry.';
+          setErrorMessage(`${message} You can retry without losing form data.`);
+          return;
+        } finally {
+          setIsUploadingPhotos(false);
+        }
+      }
+
       const nextRoute = {
-        pathname: '/upload-photos',
+        pathname: '/submit-request',
         params: {
-          requestId: updated.id,
-          serviceId: updated.serviceId,
+          requestId: updatedRequest.id,
+          serviceId: updatedRequest.serviceId,
           pickupLatitude: params.pickupLatitude ?? '',
           pickupLongitude: params.pickupLongitude ?? '',
           pickupAddress: params.pickupAddress ?? '',
@@ -232,15 +357,16 @@ export default function DateTimeScreen() {
           scheduledPickupAt: payload.scheduledPickupAt ?? '',
           itemTitle: payload.itemTitle,
           itemType: payload.itemType,
+          uploadedPhotos: JSON.stringify(uploaded),
         },
       } as unknown as Href;
       router.push(nextRoute);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to save date and item details.';
-      const normalizedMessage = message.toLowerCase();
+      const normalized = message.toLowerCase();
 
-      if (normalizedMessage.includes('pickup location must be selected')) {
+      if (normalized.includes('pickup location must be selected')) {
         setErrorMessage('Pickup location is missing. Redirecting to pickup step...');
         setTimeout(() => {
           const route = {
@@ -252,7 +378,7 @@ export default function DateTimeScreen() {
         return;
       }
 
-      if (normalizedMessage.includes('dropoff location must be selected')) {
+      if (normalized.includes('dropoff location must be selected')) {
         setErrorMessage('Dropoff location is missing. Redirecting to dropoff step...');
         setTimeout(() => {
           const route = {
@@ -274,20 +400,21 @@ export default function DateTimeScreen() {
 
       setErrorMessage(message);
     } finally {
-      setIsSaving(false);
+      setIsSavingDetails(false);
     }
   };
 
-  const scheduledLabel = form.scheduledPickupAt
-    ? form.scheduledPickupAt.toLocaleString()
-    : 'Select date and time';
-
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.title}>Date & Item Details</Text>
-          <Text style={styles.subtitle}>Tell us when and what you want to transport.</Text>
+          <Text style={styles.title}>Date, Item Details & Photos</Text>
+          <Text style={styles.subtitle}>
+            Tell us when, what, and show us what you want to transport.
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -315,16 +442,15 @@ export default function DateTimeScreen() {
             <View style={styles.datetimeContainer}>
               <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
                 <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
-                <Text style={styles.pickerButtonValue}>{scheduledLabel.split(',')[0] ?? scheduledLabel}</Text>
+                <Text style={styles.pickerButtonValue}>
+                  {form.scheduledPickupAt ? form.scheduledPickupAt.toLocaleDateString() : 'Select date'}
+                </Text>
               </Pressable>
               <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
                 <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
                 <Text style={styles.pickerButtonValue}>
                   {form.scheduledPickupAt
-                    ? form.scheduledPickupAt.toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
+                    ? form.scheduledPickupAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     : 'Select time'}
                 </Text>
               </Pressable>
@@ -350,12 +476,7 @@ export default function DateTimeScreen() {
                 style={[styles.optionChip, form.itemType === option.value && styles.optionChipActive]}
                 onPress={() => updateForm('itemType', option.value)}
               >
-                <Text
-                  style={[
-                    styles.optionChipText,
-                    form.itemType === option.value && styles.optionChipTextActive,
-                  ]}
-                >
+                <Text style={[styles.optionChipText, form.itemType === option.value && styles.optionChipTextActive]}>
                   {option.label}
                 </Text>
               </Pressable>
@@ -485,6 +606,34 @@ export default function DateTimeScreen() {
           />
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Upload Photos</Text>
+          <Text style={styles.helperText}>
+            Add clear photos to help drivers give accurate quotes.
+          </Text>
+          <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
+
+          <View style={styles.row}>
+            <Pressable style={[styles.actionButton, styles.halfInput]} onPress={() => void pickFromLibrary()}>
+              <Text style={styles.actionButtonText}>Add Photos</Text>
+            </Pressable>
+            <Pressable style={[styles.actionButtonSecondary, styles.halfInput]} onPress={() => void takePhoto()}>
+              <Text style={styles.actionButtonSecondaryText}>Take Photo</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.photoGrid}>
+            {selectedPhotos.map((photo, index) => (
+              <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
+                <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
+                  <Text style={styles.removePhotoText}>Remove</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        </View>
+
         {validationErrors.length > 0 ? (
           <View style={styles.validationCard}>
             {validationErrors.map((error) => (
@@ -495,15 +644,17 @@ export default function DateTimeScreen() {
           </View>
         ) : null}
 
+        {isSavingDetails ? <Text style={styles.progressText}>Saving details...</Text> : null}
+        {isUploadingPhotos ? <Text style={styles.progressText}>Uploading photos...</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </ScrollView>
 
       <Pressable
         style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
         disabled={!canContinue}
-        onPress={() => void onSubmit()}
+        onPress={() => void onContinue()}
       >
-        {isSaving ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.continueText}>Continue</Text>}
+        {isBusy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.continueText}>Continue</Text>}
       </Pressable>
 
       {showDatePicker ? (
@@ -670,6 +821,67 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '600',
   },
+  helperText: {
+    fontSize: 12,
+    color: '#667085',
+  },
+  photoCounter: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475467',
+  },
+  actionButton: {
+    backgroundColor: '#1a73e8',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  actionButtonSecondary: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#1a73e8',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  actionButtonSecondaryText: {
+    color: '#1a73e8',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  photoItem: {
+    width: '31%',
+    minWidth: 100,
+  },
+  photoPreview: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 10,
+    backgroundColor: '#e5e7eb',
+  },
+  removePhotoButton: {
+    marginTop: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    borderRadius: 8,
+    paddingVertical: 4,
+  },
+  removePhotoText: {
+    fontSize: 12,
+    color: '#b42318',
+    fontWeight: '600',
+  },
   validationCard: {
     borderWidth: 1,
     borderColor: '#fecdca',
@@ -681,6 +893,11 @@ const styles = StyleSheet.create({
   validationText: {
     color: '#b42318',
     fontSize: 12,
+  },
+  progressText: {
+    fontSize: 13,
+    color: '#0b57d0',
+    fontWeight: '600',
   },
   errorText: {
     color: '#b42318',

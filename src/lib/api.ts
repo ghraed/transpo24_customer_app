@@ -3,6 +3,8 @@ import type {
   CreateCustomerRequestPayload,
   CustomerRequest,
   CustomerRequestApiResponse,
+  LocalPhotoAsset,
+  UploadRequestPhotosResponse,
   UpdateDropoffLocationPayload,
   UpdatePickupLocationPayload,
   UpdateScheduleAndItemDetailsPayload,
@@ -52,6 +54,15 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+function getMultipartAuthHeaders(): Record<string, string> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerRequest {
   const pickup = response.pickupLocation;
   const dropoff = response.dropoffLocation;
@@ -84,6 +95,7 @@ function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerReque
         : undefined,
     schedule: response.schedule,
     itemDetails: response.itemDetails,
+    photos: response.photos,
   };
 }
 
@@ -195,6 +207,43 @@ export async function updateScheduleAndItemDetails(
   return mapCustomerRequest(data);
 }
 
+type ReactNativeFormDataFile = {
+  uri: string;
+  name: string;
+  type: string;
+};
+
+function toFormDataFile(photo: LocalPhotoAsset, index: number): ReactNativeFormDataFile {
+  return {
+    uri: photo.uri,
+    name: photo.fileName ?? `request-photo-${Date.now()}-${index}.jpg`,
+    type: photo.mimeType ?? 'image/jpeg',
+  };
+}
+
+export async function uploadRequestPhotos(
+  requestId: string,
+  photos: LocalPhotoAsset[],
+): Promise<UploadRequestPhotosResponse> {
+  const formData = new FormData();
+  photos.forEach((photo, index) => {
+    const file = toFormDataFile(photo, index);
+    formData.append('photos', file as unknown as Blob);
+  });
+
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/photos`, {
+    method: 'POST',
+    headers: getMultipartAuthHeaders(),
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to upload request photos.');
+  }
+
+  return (await response.json()) as UploadRequestPhotosResponse;
+}
+
 export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeResult> {
   const response = await fetch(`${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(vin)}`, {
     method: 'GET',
@@ -293,4 +342,15 @@ export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogY
   return raw
     .map((item) => (typeof item === 'number' ? { year: item } : item))
     .filter((item): item is VehicleCatalogYearOption => typeof item?.year === 'number');
+}
+
+export async function deleteRequestPhoto(requestId: string, photoId: string): Promise<void> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/photos/${photoId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to delete request photo.');
+  }
 }

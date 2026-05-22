@@ -2,19 +2,20 @@ import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-type UploadPhotosRouteParams = {
+type SubmitRequestRouteParams = {
   requestId?: string;
   serviceId?: string;
   itemTitle?: string;
   itemType?: string;
+  uploadedPhotos?: string;
 };
 
-export default function UploadPhotosScreen() {
-  const params = useLocalSearchParams<UploadPhotosRouteParams>();
+export default function SubmitRequestScreen() {
+  const params = useLocalSearchParams<SubmitRequestRouteParams>();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Upload Photos</Text>
+      <Text style={styles.title}>Submit Request</Text>
       <Text style={styles.subtitle}>Placeholder screen for the next step in request creation.</Text>
       <Text style={styles.value}>requestId: {params.requestId ?? 'N/A'}</Text>
       <Text style={styles.value}>serviceId: {params.serviceId ?? 'N/A'}</Text>
