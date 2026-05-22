@@ -86,6 +86,10 @@ export interface UploadRequestPhotosResponse {
   photos: UploadedRequestPhoto[];
 }
 
+export interface SubmitCustomerRequestPayload {
+  customerNote?: string;
+}
+
 export type CustomerRequestStatus =
   | 'DRAFT'
   | 'PENDING_QUOTES'
@@ -101,6 +105,7 @@ export interface CustomerRequest {
   id: string;
   serviceId: string;
   status: CustomerRequestStatus;
+  submittedAt?: string | null;
   pickupLocation?: LocationData;
   dropoffLocation?: LocationData;
   schedule?: {
@@ -132,6 +137,7 @@ export interface CustomerRequestApiResponse {
   id: string;
   serviceId: string;
   status: CustomerRequestStatus;
+  submittedAt?: string | null;
   pickupLocation: {
     latitude: number | null;
     longitude: number | null;
@@ -192,3 +198,24 @@ export type DateTimeRouteParams = {
   dropoffAddress?: string;
   dropoffPlaceId?: string;
 };
+
+export interface SubmitRequestRouteParams {
+  requestId?: string;
+  serviceId?: string;
+  serviceKey?: string;
+  serviceName?: string;
+  pickupLatitude?: string;
+  pickupLongitude?: string;
+  pickupAddress?: string;
+  pickupPlaceId?: string;
+  dropoffLatitude?: string;
+  dropoffLongitude?: string;
+  dropoffAddress?: string;
+  dropoffPlaceId?: string;
+  isImmediate?: string;
+  scheduledPickupAt?: string;
+  itemTitle?: string;
+  itemType?: ItemType;
+  itemDetails?: string;
+  uploadedPhotos?: string;
+}

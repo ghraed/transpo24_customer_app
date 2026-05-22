@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="dropoff-location" options={{ title: 'Dropoff Location' }} />
         <Stack.Screen name="date-time" options={{ title: 'Date & Time' }} />
         <Stack.Screen name="submit-request" options={{ title: 'Submit Request' }} />
+        <Stack.Screen name="request-status" options={{ title: 'Request Status' }} />
         <Stack.Screen name="home" options={{ title: 'Home' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />
       </Stack>

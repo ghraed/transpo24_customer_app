@@ -345,6 +345,7 @@ export default function DateTimeScreen() {
         params: {
           requestId: updatedRequest.id,
           serviceId: updatedRequest.serviceId,
+          serviceKey: serviceKey ?? '',
           pickupLatitude: params.pickupLatitude ?? '',
           pickupLongitude: params.pickupLongitude ?? '',
           pickupAddress: params.pickupAddress ?? '',
@@ -357,6 +358,24 @@ export default function DateTimeScreen() {
           scheduledPickupAt: payload.scheduledPickupAt ?? '',
           itemTitle: payload.itemTitle,
           itemType: payload.itemType,
+          itemDetails: JSON.stringify({
+            title: payload.itemTitle,
+            description: payload.itemDescription ?? null,
+            type: payload.itemType,
+            brand: payload.itemBrand ?? null,
+            model: payload.itemModel ?? null,
+            year: payload.itemYear ?? null,
+            condition: payload.itemCondition ?? null,
+            weightKg: payload.itemWeightKg ?? null,
+            dimensions: {
+              lengthCm: payload.itemLengthCm ?? null,
+              widthCm: payload.itemWidthCm ?? null,
+              heightCm: payload.itemHeightCm ?? null,
+            },
+            requiresLoadingHelp: payload.requiresLoadingHelp,
+            loadingWorkersCount: payload.loadingWorkersCount ?? null,
+            specialInstructions: payload.specialInstructions ?? null,
+          }),
           uploadedPhotos: JSON.stringify(uploaded),
         },
       } as unknown as Href;
