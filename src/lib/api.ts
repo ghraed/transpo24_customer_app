@@ -4,6 +4,7 @@ import type {
   CustomerRequest,
   CustomerRequestApiResponse,
   LocalPhotoAsset,
+  SubmitCustomerRequestPayload,
   UploadRequestPhotosResponse,
   UpdateDropoffLocationPayload,
   UpdatePickupLocationPayload,
@@ -71,6 +72,7 @@ function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerReque
     id: response.id,
     serviceId: response.serviceId,
     status: response.status,
+    submittedAt: response.submittedAt ?? null,
     pickupLocation:
       pickup.latitude !== null && pickup.longitude !== null
         ? {
@@ -353,4 +355,22 @@ export async function deleteRequestPhoto(requestId: string, photoId: string): Pr
   if (!response.ok) {
     throw await parseError(response, 'Failed to delete request photo.');
   }
+}
+
+export async function submitCustomerRequest(
+  requestId: string,
+  payload?: SubmitCustomerRequestPayload,
+): Promise<CustomerRequest> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/submit`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload ?? {}),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to submit request.');
+  }
+
+  const data = (await response.json()) as CustomerRequestApiResponse;
+  return mapCustomerRequest(data);
 }
