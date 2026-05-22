@@ -4,6 +4,7 @@ import type {
   CustomerRequest,
   CustomerRequestApiResponse,
   LocalPhotoAsset,
+  RequestStatusResponse,
   SubmitCustomerRequestPayload,
   UploadRequestPhotosResponse,
   UpdateDropoffLocationPayload,
@@ -373,4 +374,17 @@ export async function submitCustomerRequest(
 
   const data = (await response.json()) as CustomerRequestApiResponse;
   return mapCustomerRequest(data);
+}
+
+export async function getCustomerRequestStatus(requestId: string): Promise<RequestStatusResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/status`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load request status.');
+  }
+
+  return (await response.json()) as RequestStatusResponse;
 }

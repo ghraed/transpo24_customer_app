@@ -86,6 +86,14 @@ export interface UploadRequestPhotosResponse {
   photos: UploadedRequestPhoto[];
 }
 
+export interface RequestServiceSummary {
+  id: string;
+  key: string;
+  nameEn: string;
+  nameAr: string;
+  icon: string | null;
+}
+
 export interface SubmitCustomerRequestPayload {
   customerNote?: string;
 }
@@ -218,4 +226,73 @@ export interface SubmitRequestRouteParams {
   itemType?: ItemType;
   itemDetails?: string;
   uploadedPhotos?: string;
+}
+
+export interface RequestStatusResponse {
+  id: string;
+  serviceId: string;
+  service?: RequestServiceSummary;
+  status: CustomerRequestStatus;
+  statusLabel: string;
+  submittedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  pickupLocation: {
+    latitude: number | null;
+    longitude: number | null;
+    address: string | null;
+    placeId: string | null;
+  };
+  dropoffLocation: {
+    latitude: number | null;
+    longitude: number | null;
+    address: string | null;
+    placeId: string | null;
+  };
+  schedule: {
+    isImmediate: boolean;
+    scheduledPickupAt: string | null;
+  };
+  itemDetails: {
+    title: string | null;
+    description: string | null;
+    type: string | null;
+    brand: string | null;
+    model: string | null;
+    year: number | null;
+    condition: string | null;
+    weightKg: number | null;
+    dimensions: {
+      lengthCm: number | null;
+      widthCm: number | null;
+      heightCm: number | null;
+    };
+    requiresLoadingHelp: boolean;
+    loadingWorkersCount: number | null;
+    specialInstructions: string | null;
+  };
+  photos: UploadedRequestPhoto[];
+  quotesSummary: {
+    count: number;
+    lowestPrice: number | null;
+    currency: string | null;
+    hasOffers: boolean;
+  };
+  driverSummary: {
+    assigned: boolean;
+    driverId: string | null;
+    driverName: string | null;
+    vehicleInfo: string | null;
+  };
+  trackingSummary: {
+    available: boolean;
+    currentLatitude: number | null;
+    currentLongitude: number | null;
+    lastUpdatedAt: string | null;
+  };
+}
+
+export interface RequestStatusRouteParams {
+  requestId?: string;
+  initialRequest?: string;
 }
