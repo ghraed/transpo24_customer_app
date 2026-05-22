@@ -1,6 +1,8 @@
 import { getAccessToken } from './auth-token';
 import type {
   CreateCustomerRequestPayload,
+  CustomerHomeResponse,
+  CustomerHomeRequestSummary,
   CustomerRequest,
   CustomerRequestApiResponse,
   LocalPhotoAsset,
@@ -387,4 +389,30 @@ export async function getCustomerRequestStatus(requestId: string): Promise<Reque
   }
 
   return (await response.json()) as RequestStatusResponse;
+}
+
+export async function getCustomerHome(): Promise<CustomerHomeResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/home`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load customer home.');
+  }
+
+  return (await response.json()) as CustomerHomeResponse;
+}
+
+export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[]> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load customer requests.');
+  }
+
+  return (await response.json()) as CustomerHomeRequestSummary[];
 }
