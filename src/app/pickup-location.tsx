@@ -11,9 +11,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Marker, type MapPressEvent, type Region } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, type MapPressEvent, type Region } from 'react-native-maps';
 
+import { HAS_GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { createCustomerRequest, updatePickupLocation } from '@/lib/api';
+import { resolvePlaceFromQuery } from '@/lib/places';
 import type { Coordinates } from '@/types/customer-request';
 
 type PickupLocationRouteParams = {
@@ -54,6 +56,8 @@ export default function PickupLocationScreen() {
   const [locationMessage, setLocationMessage] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [searchMessage, setSearchMessage] = useState<string>('');
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState<boolean>(false);
 
   const hasValidServiceId = serviceId.trim().length > 0;
 
@@ -95,6 +99,20 @@ export default function PickupLocationScreen() {
       };
 
       setRegion(nextRegion);
+      const reverse = await Location.reverseGeocodeAsync({
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
+      });
+      const firstAddress = reverse[0];
+      const formattedAddress = [firstAddress?.name, firstAddress?.street, firstAddress?.city, firstAddress?.region]
+        .filter(Boolean)
+        .join(', ');
+
+      setSelectedLocation({
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
+        address: formattedAddress || 'Current location',
+      });
     } catch {
       setLocationMessage('Unable to access current location. You can still select a location manually.');
     } finally {
@@ -105,6 +123,47 @@ export default function PickupLocationScreen() {
   useEffect(() => {
     void loadCurrentLocation();
   }, [loadCurrentLocation]);
+
+  const onSearchSubmit = useCallback(async () => {
+    const query = addressQuery.trim();
+
+    if (!query) {
+      setSearchMessage('Type an address first to search places.');
+      return;
+    }
+
+    if (!HAS_GOOGLE_MAPS_API_KEY) {
+      setSearchMessage('Google Places key is missing. Check your map environment configuration.');
+      return;
+    }
+
+    setIsSearchingPlaces(true);
+    setSearchMessage('');
+
+    try {
+      const place = await resolvePlaceFromQuery(query);
+      setSelectedLocation({
+        latitude: place.latitude,
+        longitude: place.longitude,
+        address: place.address,
+        placeId: place.placeId,
+      });
+      setRegion((prev) => ({
+        ...prev,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      }));
+      setSearchMessage(`Pinned: ${place.address}`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Places search failed. Please try again.';
+      setSearchMessage(message);
+    } finally {
+      setIsSearchingPlaces(false);
+    }
+  }, [addressQuery]);
 
   const onContinue = useCallback(async () => {
     if (!selectedLocation) {
@@ -186,20 +245,35 @@ export default function PickupLocationScreen() {
         <TextInput
           value={addressQuery}
           onChangeText={setAddressQuery}
+          onSubmitEditing={() => void onSearchSubmit()}
           placeholder="Search pickup address"
           placeholderTextColor="#98a2b3"
           style={styles.searchInput}
+          returnKeyType="search"
         />
         <Text style={styles.searchHint}>
-          Google Places autocomplete is not configured yet.
+          {HAS_GOOGLE_MAPS_API_KEY
+            ? 'Google Places API key is configured.'
+            : 'Google Places API key is not configured yet.'}
         </Text>
         <Text style={styles.searchHint}>
-          TODO: Integrate Places API and set selected latitude/longitude/address/placeId.
+          Press search on the keyboard to move pin and map to the top matching place.
         </Text>
+        {isSearchingPlaces ? (
+          <ActivityIndicator style={styles.searchSpinner} size="small" color="#1a73e8" />
+        ) : null}
+        {searchMessage ? <Text style={styles.searchHint}>{searchMessage}</Text> : null}
       </View>
 
       <View style={styles.mapContainer}>
-        <MapView style={styles.map} initialRegion={region} region={region} onRegionChangeComplete={setRegion} onPress={onMapPress}>
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          initialRegion={region}
+          region={region}
+          onRegionChangeComplete={setRegion}
+          onPress={onMapPress}
+        >
           {selectedLocation ? (
             <Marker
               coordinate={{ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }}
@@ -291,6 +365,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     color: '#667085',
+  },
+  searchSpinner: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
   },
   mapContainer: {
     flex: 1,
