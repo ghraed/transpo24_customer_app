@@ -474,6 +474,54 @@ export interface RequestStatusResponse {
   };
 }
 
+export type DriverOfferStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED';
+
+export interface CustomerRequestOfferSummary {
+  id: string;
+  requestId: string;
+  driverId: string;
+  price: number;
+  currency: string;
+  estimatedPickupAt: string | null;
+  estimatedDeliveryAt: string | null;
+  estimatedDurationMinutes: number | null;
+  message: string | null;
+  status: DriverOfferStatus;
+  createdAt: string;
+  acceptedAt: string | null;
+}
+
+export interface CustomerRequestOffersResponse {
+  requestId: string;
+  offers: CustomerRequestOfferSummary[];
+}
+
+export interface CustomerAcceptOfferResponse {
+  request: {
+    id: string;
+    status: CustomerRequestStatus;
+    assignedDriverId: string;
+    acceptedOfferId: string;
+    acceptedAt: string;
+  };
+  acceptedOffer: {
+    id: string;
+    requestId: string;
+    driverId: string;
+    price: number;
+    currency: string;
+    estimatedPickupAt: string | null;
+    estimatedDeliveryAt: string | null;
+    estimatedDurationMinutes: number | null;
+    message: string | null;
+    status: DriverOfferStatus;
+    acceptedAt: string | null;
+    createdAt: string;
+  };
+  rejectedOffersCount: number;
+  nextStep: 'TRACK_REQUEST';
+}
+
 export interface RequestStatusRouteParams {
   requestId?: string;
   initialRequest?: string;
