@@ -24,6 +24,8 @@ export default function RootLayout() {
         <Stack.Screen name="date-time" options={{ title: 'Date & Item Details' }} />
         <Stack.Screen name="submit-request" options={{ title: 'Submit Request' }} />
         <Stack.Screen name="request-status" options={{ title: 'Request Status' }} />
+        <Stack.Screen name="customer-tracking" options={{ title: 'Customer Tracking' }} />
+        <Stack.Screen name="socket-debug" options={{ title: 'Socket Debug' }} />
 
         <Stack.Screen name="home" options={{ title: 'Home' }} />
         <Stack.Screen name="explore" options={{ title: 'Explore' }} />

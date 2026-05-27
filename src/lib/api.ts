@@ -1,5 +1,7 @@
 import { getAccessToken } from './auth-token';
 import type {
+  CustomerAcceptOfferResponse,
+  CustomerRequestOffersResponse,
   CreateCustomerRequestPayload,
   CustomerHomeResponse,
   CustomerHomeRequestSummary,
@@ -415,4 +417,34 @@ export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[
   }
 
   return (await response.json()) as CustomerHomeRequestSummary[];
+}
+
+export async function getCustomerRequestOffers(requestId: string): Promise<CustomerRequestOffersResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/offers`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load request offers.');
+  }
+
+  return (await response.json()) as CustomerRequestOffersResponse;
+}
+
+export async function acceptCustomerRequestOffer(
+  requestId: string,
+  offerId: string,
+): Promise<CustomerAcceptOfferResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/trips/${requestId}/offers/${offerId}/accept`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ confirm: true }),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to accept offer.');
+  }
+
+  return (await response.json()) as CustomerAcceptOfferResponse;
 }

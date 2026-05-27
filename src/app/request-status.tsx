@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   RefreshControl,
@@ -12,8 +13,9 @@ import {
   View,
 } from 'react-native';
 
-import { getCustomerRequestStatus } from '@/lib/api';
+import { acceptCustomerRequestOffer, getCustomerRequestOffers, getCustomerRequestStatus } from '@/lib/api';
 import type {
+  CustomerRequestOfferSummary,
   CustomerRequestStatus,
   RequestStatusResponse,
 } from '@/types/customer-request';
@@ -27,8 +29,8 @@ const TIMELINE_STEPS: TimelineStep[] = [
   { key: 'REQUEST_SUBMITTED', label: 'Request submitted' },
   { key: 'PENDING_QUOTES', label: 'Waiting for offers' },
   { key: 'QUOTED', label: 'Choose driver' },
-  { key: 'DRIVER_ASSIGNED', label: 'Driver assigned' },
-  { key: 'PICKUP_IN_PROGRESS', label: 'Pickup' },
+  { key: 'DRIVER_GOING_TO_PICKUP', label: 'Driver going to pickup' },
+  { key: 'DRIVER_ARRIVED_PICKUP', label: 'Driver arrived at pickup' },
   { key: 'IN_TRANSIT', label: 'In transit' },
   { key: 'DELIVERED', label: 'Delivered' },
 ];
@@ -39,9 +41,13 @@ const STATUS_PROGRESS: Record<CustomerRequestStatus, number> = {
   QUOTED: 2,
   ACCEPTED: 2,
   DRIVER_ASSIGNED: 3,
+  DRIVER_GOING_TO_PICKUP: 3,
+  DRIVER_ARRIVED_PICKUP: 4,
   PICKUP_IN_PROGRESS: 4,
   IN_TRANSIT: 5,
+  DRIVER_GOING_TO_DROPOFF: 5,
   DELIVERED: 6,
+  COMPLETED: 6,
   CANCELLED: -1,
 };
 
@@ -89,6 +95,8 @@ export default function RequestStatusScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(!initialRequest);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [offers, setOffers] = useState<CustomerRequestOfferSummary[]>([]);
+  const [isAcceptingOfferId, setIsAcceptingOfferId] = useState<string>('');
 
   const loadStatus = useCallback(
     async (refresh: boolean): Promise<void> => {
@@ -110,6 +118,8 @@ export default function RequestStatusScreen() {
       try {
         const data = await getCustomerRequestStatus(requestId);
         setRequestData(data);
+        const offersResponse = await getCustomerRequestOffers(requestId);
+        setOffers(offersResponse.offers ?? []);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to load request status.';
         const normalized = message.toLowerCase();
@@ -133,6 +143,54 @@ export default function RequestStatusScreen() {
   }, [loadStatus]);
 
   const progressIndex = requestData ? STATUS_PROGRESS[requestData.status] : 0;
+  const pendingOffers = offers.filter((offer) => offer.status === 'PENDING');
+  const acceptedOffer = offers.find((offer) => offer.status === 'ACCEPTED') ?? null;
+
+  const onAcceptOffer = (offer: CustomerRequestOfferSummary): void => {
+    if (!requestData) return;
+    if (isAcceptingOfferId) return;
+    if (!(requestData.status === 'QUOTED' || requestData.status === 'PENDING_QUOTES')) {
+      return;
+    }
+
+    Alert.alert(
+      'Accept this offer?',
+      `Accept ${offer.price} ${offer.currency} from this driver?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Accept',
+          onPress: () => {
+            void (async () => {
+              setIsAcceptingOfferId(offer.id);
+              setErrorMessage('');
+              try {
+                await acceptCustomerRequestOffer(requestData.id, offer.id);
+                router.push({
+                  pathname: '/customer-tracking',
+                  params: {
+                    tripId: requestData.id,
+                    pickupLatitude: String(requestData.pickupLocation.latitude ?? ''),
+                    pickupLongitude: String(requestData.pickupLocation.longitude ?? ''),
+                    pickupAddress: requestData.pickupLocation.address ?? '',
+                    dropoffLatitude: String(requestData.dropoffLocation.latitude ?? ''),
+                    dropoffLongitude: String(requestData.dropoffLocation.longitude ?? ''),
+                    dropoffAddress: requestData.dropoffLocation.address ?? '',
+                  },
+                });
+                await loadStatus(false);
+              } catch (error) {
+                const message = error instanceof Error ? error.message : 'Failed to accept offer.';
+                setErrorMessage(message);
+              } finally {
+                setIsAcceptingOfferId('');
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
 
   const goHome = (): void => {
     router.replace('/(tabs)/home' as Href);
@@ -251,17 +309,62 @@ export default function RequestStatusScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Quotes & Offers</Text>
-          {requestData.quotesSummary.hasOffers ? (
+          {offers.length > 0 ? (
             <Text style={styles.rowValue}>
-              {requestData.quotesSummary.count} offers • Lowest: {requestData.quotesSummary.lowestPrice}{' '}
+              {offers.length} offers • Lowest: {requestData.quotesSummary.lowestPrice ?? 'N/A'}{' '}
               {requestData.quotesSummary.currency || ''}
             </Text>
           ) : (
             <Text style={styles.rowValue}>No offers yet</Text>
           )}
-          <Pressable style={styles.secondaryButton} disabled>
-            <Text style={styles.secondaryButtonText}>View Offers</Text>
-          </Pressable>
+          {acceptedOffer ? (
+            <View style={styles.offerCardAccepted}>
+              <Text style={styles.offerCardTitle}>Accepted Offer</Text>
+              <Text style={styles.rowValue}>
+                {acceptedOffer.price} {acceptedOffer.currency}
+              </Text>
+              <Text style={styles.rowValue}>Accepted at: {formatDate(acceptedOffer.acceptedAt)}</Text>
+            </View>
+          ) : null}
+          {offers.map((offer) => (
+            <View key={offer.id} style={styles.offerCard}>
+              <Text style={styles.offerCardTitle}>
+                Offer: {offer.price} {offer.currency}
+              </Text>
+              <Text style={styles.rowValue}>Status: {offer.status}</Text>
+              <Text style={styles.rowValue}>
+                Estimated pickup: {offer.estimatedPickupAt ? formatDate(offer.estimatedPickupAt) : 'N/A'}
+              </Text>
+              <Text style={styles.rowValue}>
+                Estimated delivery: {offer.estimatedDeliveryAt ? formatDate(offer.estimatedDeliveryAt) : 'N/A'}
+              </Text>
+              {offer.message ? <Text style={styles.rowValue}>Message: {offer.message}</Text> : null}
+              <Pressable
+                style={[
+                  styles.primaryButton,
+                  (offer.status !== 'PENDING' ||
+                    isAcceptingOfferId === offer.id ||
+                    requestData.status === 'ACCEPTED' ||
+                    requestData.status === 'DRIVER_ASSIGNED') &&
+                    styles.disabledButton,
+                ]}
+                onPress={() => onAcceptOffer(offer)}
+                disabled={
+                  offer.status !== 'PENDING' ||
+                  Boolean(isAcceptingOfferId) ||
+                  requestData.status === 'ACCEPTED' ||
+                  requestData.status === 'DRIVER_ASSIGNED'
+                }
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isAcceptingOfferId === offer.id ? 'Accepting...' : 'Accept Offer'}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+          {offers.length === 0 ? null : pendingOffers.length === 0 && !acceptedOffer ? (
+            <Text style={styles.rowValue}>All offers are no longer pending.</Text>
+          ) : null}
         </View>
 
         <View style={styles.card}>
@@ -440,6 +543,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
+  disabledButton: {
+    opacity: 0.6,
+  },
   primaryButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
@@ -469,5 +575,28 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 14,
     textAlign: 'center',
+  },
+  offerCard: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  offerCardAccepted: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+  },
+  offerCardTitle: {
+    color: '#0F172A',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

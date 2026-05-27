@@ -96,6 +96,9 @@ export default function HomeTabScreen() {
           <Pressable style={styles.primaryButton} onPress={onStartNewRequest}>
             <Text style={styles.primaryButtonText}>New Transport Request</Text>
           </Pressable>
+          <Pressable style={styles.debugButton} onPress={() => router.push('/socket-debug')}>
+            <Text style={styles.primaryButtonText}>Socket Debug</Text>
+          </Pressable>
         </View>
 
         {data.activeRequest ? (
@@ -206,6 +209,14 @@ const styles = StyleSheet.create({
   requestTitle: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
   primaryButton: {
     backgroundColor: '#1D4ED8',
+    borderRadius: 10,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  debugButton: {
+    backgroundColor: '#7C3AED',
     borderRadius: 10,
     minHeight: 44,
     alignItems: 'center',
