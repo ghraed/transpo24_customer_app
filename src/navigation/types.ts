@@ -19,4 +19,14 @@ export type CustomerStackParamList = {
     pickupLocation: AddressedLocation;
     dropoffLocation: AddressedLocation;
   };
+  WaitingForPickupScreen: {
+    tripId: string;
+    pickupLocation: AddressedLocation;
+    dropoffLocation: AddressedLocation;
+  };
+  CustomerDeliveryTrackingScreen: {
+    tripId: string;
+    pickupLocation: AddressedLocation;
+    dropoffLocation: AddressedLocation;
+  };
 };
