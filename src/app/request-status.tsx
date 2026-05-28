@@ -229,6 +229,29 @@ export default function RequestStatusScreen() {
     );
   }
 
+  const canOpenTrackingMap =
+    requestData.pickupLocation.latitude !== null &&
+    requestData.pickupLocation.longitude !== null &&
+    requestData.dropoffLocation.latitude !== null &&
+    requestData.dropoffLocation.longitude !== null;
+
+  const openTrackingMap = (): void => {
+    if (!canOpenTrackingMap) return;
+
+    router.push({
+      pathname: '/customer-tracking',
+      params: {
+        tripId: requestData.id,
+        pickupLatitude: String(requestData.pickupLocation.latitude),
+        pickupLongitude: String(requestData.pickupLocation.longitude),
+        pickupAddress: requestData.pickupLocation.address ?? '',
+        dropoffLatitude: String(requestData.dropoffLocation.latitude),
+        dropoffLongitude: String(requestData.dropoffLocation.longitude),
+        dropoffAddress: requestData.dropoffLocation.address ?? '',
+      },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -384,6 +407,13 @@ export default function RequestStatusScreen() {
           ) : (
             <Text style={styles.rowValue}>Tracking is not available yet</Text>
           )}
+          <Pressable
+            style={[styles.primaryButton, !canOpenTrackingMap && styles.disabledButton]}
+            onPress={openTrackingMap}
+            disabled={!canOpenTrackingMap}
+          >
+            <Text style={styles.primaryButtonText}>Open Live Map</Text>
+          </Pressable>
         </View>
 
         <View style={styles.card}>
