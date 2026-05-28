@@ -78,3 +78,22 @@ export type ItemPickedUpPayload = {
   pickupNotes: string | null;
   pickupProofImageUrl: string | null;
 };
+
+export type DriverStartedDeliveryPayload = {
+  tripId: string;
+  driverId: string;
+  customerId: string;
+  status: "DRIVER_GOING_TO_DROPOFF";
+  dropoffLocation: AddressedLocation;
+  startedAt: string;
+};
+
+export type ItemDeliveredPayload = {
+  tripId: string;
+  driverId: string;
+  customerId: string;
+  status: "DELIVERED";
+  deliveredAt: string;
+  deliveryNotes: string | null;
+  deliveryProofImageUrl: string | null;
+};

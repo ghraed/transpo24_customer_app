@@ -27,6 +27,7 @@ export default function RootLayout() {
         <Stack.Screen name="customer-tracking" options={{ title: 'Customer Tracking' }} />
         <Stack.Screen name="waiting-for-pickup" options={{ title: 'Waiting for Pickup' }} />
         <Stack.Screen name="customer-delivery-tracking" options={{ title: 'Delivery Tracking' }} />
+        <Stack.Screen name="customer-trip-delivered" options={{ title: 'Trip Delivered' }} />
         <Stack.Screen name="socket-debug" options={{ title: 'Socket Debug' }} />
 
         <Stack.Screen name="home" options={{ title: 'Home' }} />

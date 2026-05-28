@@ -29,4 +29,10 @@ export type CustomerStackParamList = {
     pickupLocation: AddressedLocation;
     dropoffLocation: AddressedLocation;
   };
+  CustomerTripDeliveredScreen: {
+    tripId: string;
+    deliveredAt: string;
+    deliveryNotes?: string | null;
+    deliveryProofImageUrl?: string | null;
+  };
 };

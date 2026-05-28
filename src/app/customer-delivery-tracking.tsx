@@ -1,6 +1,6 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,18 +11,22 @@ import {
   joinTripRoom,
   leaveTripRoom,
   onDriverLocationUpdated,
+  onDriverStartedDelivery,
+  onItemDelivered,
   onSocketDisconnect,
   onSocketError,
   onTripStatusUpdated,
 } from '@/services/socketService';
 import type { AddressedLocation, GeoLocation } from '@/types/trip.types';
 import {
-  calculateDistanceMeters,
   isValidGeoLocation,
   isValidTripId,
   validateDriverLocationUpdatedPayload,
+  validateDriverStartedDeliveryPayload,
+  validateItemDeliveredPayload,
   validateTripStatusUpdatedPayload,
-} from '@/utils/pickupValidation';
+} from '@/utils/deliveryValidation';
+import { calculateDistanceMeters } from '@/utils/pickupValidation';
 
 type RouteParams = {
   tripId?: string;
@@ -40,11 +44,33 @@ function parseNumber(value: string | string[] | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export default function CustomerDeliveryTrackingScreen() {
-  const params = useLocalSearchParams<RouteParams>();
+function buildDeliveredRoute(
+  tripId: string,
+  deliveredAt: string,
+  deliveryNotes?: string | null,
+  deliveryProofImageUrl?: string | null,
+): Href {
+  return {
+    pathname: '/customer-trip-delivered',
+    params: {
+      tripId,
+      deliveredAt,
+      deliveryNotes: deliveryNotes ?? '',
+      deliveryProofImageUrl: deliveryProofImageUrl ?? '',
+    },
+  };
+}
 
+export default function CustomerDeliveryTrackingScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<RouteParams>();
   const tripId = typeof params.tripId === 'string' ? params.tripId.trim() : '';
-  const mapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || '';
+  const mapsApiKey =
+    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
+    (Platform.OS === 'ios'
+      ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY?.trim()
+      : process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY?.trim()) ||
+    '';
 
   const pickupLocation = useMemo<AddressedLocation | null>(() => {
     const latitude = parseNumber(params.pickupLatitude);
@@ -69,7 +95,7 @@ export default function CustomerDeliveryTrackingScreen() {
   }, [params.dropoffAddress, params.dropoffLatitude, params.dropoffLongitude]);
 
   const [driverLocation, setDriverLocation] = useState<GeoLocation | null>(null);
-  const [statusText, setStatusText] = useState<string>('Driver is heading to dropoff location');
+  const [statusText, setStatusText] = useState<string>('Driver is going to dropoff location');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   const isRouteValid =
@@ -78,7 +104,7 @@ export default function CustomerDeliveryTrackingScreen() {
     Boolean(dropoffLocation && isValidGeoLocation(dropoffLocation));
 
   useEffect(() => {
-    if (!isRouteValid) {
+    if (!isRouteValid || !pickupLocation || !dropoffLocation) {
       setErrorMessage('Invalid delivery tracking parameters.');
       return;
     }
@@ -97,22 +123,58 @@ export default function CustomerDeliveryTrackingScreen() {
       return;
     }
 
+    const unsubStarted = onDriverStartedDelivery((payload) => {
+      const validated = validateDriverStartedDeliveryPayload(payload);
+      if (!validated) {
+        console.warn('Ignoring invalid driverStartedDelivery payload', payload);
+        return;
+      }
+      if (validated.tripId !== tripId) return;
+      setStatusText('Driver is going to dropoff location');
+    });
+
     const unsubLocation = onDriverLocationUpdated((payload) => {
       const validated = validateDriverLocationUpdatedPayload(payload);
-      if (!validated || validated.tripId !== tripId) return;
+      if (!validated) {
+        console.warn('Ignoring invalid driverLocationUpdated payload', payload);
+        return;
+      }
+      if (validated.tripId !== tripId) return;
       setDriverLocation({ latitude: validated.latitude, longitude: validated.longitude });
+      setStatusText('Your item is on the way');
+    });
+
+    const unsubDelivered = onItemDelivered((payload) => {
+      const validated = validateItemDeliveredPayload(payload);
+      if (!validated) {
+        console.warn('Ignoring invalid itemDelivered payload', payload);
+        return;
+      }
+      if (validated.tripId !== tripId) return;
+      setStatusText('Item delivered');
+      router.replace(
+        buildDeliveredRoute(
+          tripId,
+          validated.deliveredAt,
+          validated.deliveryNotes,
+          validated.deliveryProofImageUrl,
+        ),
+      );
     });
 
     const unsubStatus = onTripStatusUpdated((payload) => {
       const validated = validateTripStatusUpdatedPayload(payload);
-      if (!validated || validated.tripId !== tripId) return;
+      if (!validated) {
+        console.warn('Ignoring invalid tripStatusUpdated payload', payload);
+        return;
+      }
+      if (validated.tripId !== tripId) return;
 
-      if (validated.status === 'DELIVERED') {
+      if (validated.status === 'DRIVER_GOING_TO_DROPOFF') {
+        setStatusText('Driver is going to dropoff location');
+      } else if (validated.status === 'DELIVERED' || validated.status === 'COMPLETED') {
         setStatusText('Item delivered');
-      } else if (validated.status === 'COMPLETED') {
-        setStatusText('Trip completed');
-      } else if (validated.status === 'DRIVER_GOING_TO_DROPOFF') {
-        setStatusText('Driver is heading to dropoff location');
+        router.replace(buildDeliveredRoute(tripId, validated.updatedAt));
       }
     });
 
@@ -125,13 +187,26 @@ export default function CustomerDeliveryTrackingScreen() {
     });
 
     return () => {
+      unsubStarted();
       unsubLocation();
+      unsubDelivered();
       unsubStatus();
       unsubDisconnect();
       unsubSocketError();
       leaveTripRoom(tripId);
     };
-  }, [isRouteValid, tripId]);
+  }, [dropoffLocation, isRouteValid, pickupLocation, router, tripId]);
+
+  if (!mapsApiKey) {
+    return (
+      <SafeAreaView style={styles.centeredContainer}>
+        <Text style={styles.errorText}>
+          Google Maps API key is missing. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY or platform key
+          (EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY / EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY).
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   if (!isRouteValid || !pickupLocation || !dropoffLocation) {
     return (
@@ -157,16 +232,14 @@ export default function CustomerDeliveryTrackingScreen() {
         {driverLocation ? (
           <>
             <Marker coordinate={driverLocation} title="Driver" pinColor="#2563EB" />
-            {mapsApiKey ? (
-              <MapViewDirections
-                origin={driverLocation}
-                destination={dropoffLocation}
-                apikey={mapsApiKey}
-                mode="DRIVING"
-                strokeWidth={4}
-                strokeColor="#0EA5E9"
-              />
-            ) : null}
+            <MapViewDirections
+              origin={driverLocation}
+              destination={dropoffLocation}
+              apikey={mapsApiKey}
+              mode="DRIVING"
+              strokeWidth={4}
+              strokeColor="#0EA5E9"
+            />
           </>
         ) : null}
       </MapView>
@@ -177,11 +250,11 @@ export default function CustomerDeliveryTrackingScreen() {
         {!driverLocation ? (
           <View style={styles.row}>
             <ActivityIndicator size="small" color="#2563EB" />
-            <Text style={styles.helperText}>Waiting for live driver location...</Text>
+            <Text style={styles.helperText}>Waiting for driver location...</Text>
           </View>
         ) : (
           <Text style={styles.helperText}>
-            Distance to dropoff:{' '}
+            Driver distance to dropoff:{' '}
             {(calculateDistanceMeters(driverLocation, dropoffLocation) / 1000).toFixed(2)} km
           </Text>
         )}
