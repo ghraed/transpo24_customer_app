@@ -4,6 +4,14 @@ import type {
   GeoLocation,
   OfferAcceptedPayload,
 } from '@/types/trip.types';
+import {
+  isValidGeoLocation as isValidGeoLocationBase,
+  isValidLatitude as isValidLatitudeBase,
+  isValidLongitude as isValidLongitudeBase,
+  isValidTripId as isValidTripIdBase,
+  validateDriverLocationUpdatedPayload as validateDriverLocationUpdatedPayloadBase,
+  validateTripStatusUpdatedPayload as validateTripStatusUpdatedPayloadBase,
+} from '@/utils/pickupValidation';
 
 const PICKUP_ARRIVAL_RADIUS_METERS = 100;
 
@@ -12,15 +20,19 @@ export function isPositiveIntegerString(value: string): boolean {
 }
 
 export function isValidLatitude(value: number): boolean {
-  return Number.isFinite(value) && value >= -90 && value <= 90;
+  return isValidLatitudeBase(value);
 }
 
 export function isValidLongitude(value: number): boolean {
-  return Number.isFinite(value) && value >= -180 && value <= 180;
+  return isValidLongitudeBase(value);
 }
 
 export function isValidGeoLocation(location: GeoLocation): boolean {
-  return isValidLatitude(location.latitude) && isValidLongitude(location.longitude);
+  return isValidGeoLocationBase(location);
+}
+
+export function isValidTripId(value: string): boolean {
+  return isValidTripIdBase(value);
 }
 
 export function validateTripId(tripId: string): string | null {
@@ -116,32 +128,11 @@ export function validateOfferAcceptedPayload(payload: unknown): OfferAcceptedPay
 export function validateDriverLocationUpdatedPayload(
   payload: unknown,
 ): DriverLocationUpdatedPayload | null {
-  if (!isRecord(payload)) return null;
+  return validateDriverLocationUpdatedPayloadBase(payload);
+}
 
-  const { tripId, driverId, latitude, longitude, heading, speed, accuracy, recordedAt } = payload;
-
-  if (
-    typeof tripId !== 'string' ||
-    typeof driverId !== 'string' ||
-    typeof latitude !== 'number' ||
-    typeof longitude !== 'number' ||
-    typeof recordedAt !== 'string'
-  ) {
-    return null;
-  }
-
-  if (!isValidGeoLocation({ latitude, longitude })) return null;
-
-  return {
-    tripId,
-    driverId,
-    latitude,
-    longitude,
-    heading: typeof heading === 'number' ? heading : null,
-    speed: typeof speed === 'number' ? speed : null,
-    accuracy: typeof accuracy === 'number' ? accuracy : null,
-    recordedAt,
-  };
+export function validateTripStatusUpdatedPayload(payload: unknown) {
+  return validateTripStatusUpdatedPayloadBase(payload);
 }
 
 export function validateDriverArrivedPickupConfirmedPayload(

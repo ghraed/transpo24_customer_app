@@ -1,0 +1,300 @@
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { getAccessToken } from '@/lib/auth-token';
+import {
+  connectSocket,
+  joinTripRoom,
+  leaveTripRoom,
+  onDriverLocationUpdated,
+  onItemPickedUp,
+  onSocketDisconnect,
+  onSocketError,
+  onTripStatusUpdated,
+} from '@/services/socketService';
+import type { AddressedLocation, GeoLocation, ItemPickedUpPayload } from '@/types/trip.types';
+import {
+  isValidGeoLocation,
+  isValidTripId,
+  validateDriverLocationUpdatedPayload,
+  validateItemPickedUpPayload,
+  validateTripStatusUpdatedPayload,
+} from '@/utils/pickupValidation';
+
+type RouteParams = {
+  tripId?: string;
+  pickupLatitude?: string;
+  pickupLongitude?: string;
+  pickupAddress?: string;
+  dropoffLatitude?: string;
+  dropoffLongitude?: string;
+  dropoffAddress?: string;
+};
+
+function parseNumber(value: string | string[] | undefined): number | null {
+  if (typeof value !== 'string') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export default function WaitingForPickupScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<RouteParams>();
+
+  const tripId = typeof params.tripId === 'string' ? params.tripId.trim() : '';
+  const [driverLocation, setDriverLocation] = useState<GeoLocation | null>(null);
+  const [pickupInfo, setPickupInfo] = useState<ItemPickedUpPayload | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isWaiting, setIsWaiting] = useState<boolean>(true);
+
+  const pickupLocation = useMemo<AddressedLocation | null>(() => {
+    const latitude = parseNumber(params.pickupLatitude);
+    const longitude = parseNumber(params.pickupLongitude);
+    if (latitude === null || longitude === null) return null;
+    return {
+      latitude,
+      longitude,
+      address: typeof params.pickupAddress === 'string' ? params.pickupAddress : null,
+    };
+  }, [params.pickupAddress, params.pickupLatitude, params.pickupLongitude]);
+
+  const dropoffLocation = useMemo<AddressedLocation | null>(() => {
+    const latitude = parseNumber(params.dropoffLatitude);
+    const longitude = parseNumber(params.dropoffLongitude);
+    if (latitude === null || longitude === null) return null;
+    return {
+      latitude,
+      longitude,
+      address: typeof params.dropoffAddress === 'string' ? params.dropoffAddress : null,
+    };
+  }, [params.dropoffAddress, params.dropoffLatitude, params.dropoffLongitude]);
+
+  const isRouteValid =
+    isValidTripId(tripId) &&
+    Boolean(pickupLocation && isValidGeoLocation(pickupLocation)) &&
+    Boolean(dropoffLocation && isValidGeoLocation(dropoffLocation));
+
+  useEffect(() => {
+    if (!isRouteValid || !pickupLocation || !dropoffLocation) {
+      setErrorMessage('Invalid tracking parameters. Please reopen tracking from request status.');
+      return;
+    }
+
+    const token = getAccessToken();
+    if (!token) {
+      setErrorMessage('Missing auth token. Please login again.');
+      return;
+    }
+
+    try {
+      connectSocket(token);
+      joinTripRoom(tripId);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect realtime socket.');
+      return;
+    }
+
+    const unsubDriverLocation = onDriverLocationUpdated((payload) => {
+      const validated = validateDriverLocationUpdatedPayload(payload);
+      if (!validated || validated.tripId !== tripId) return;
+      setDriverLocation({ latitude: validated.latitude, longitude: validated.longitude });
+    });
+
+    const unsubItemPickedUp = onItemPickedUp((payload) => {
+      const validated = validateItemPickedUpPayload(payload);
+      if (!validated) {
+        console.warn('Ignoring invalid itemPickedUp payload', payload);
+        return;
+      }
+
+      if (validated.tripId !== tripId) {
+        return;
+      }
+
+      setPickupInfo(validated);
+      setIsWaiting(false);
+
+      router.replace((
+        '/customer-delivery-tracking?tripId=' +
+        encodeURIComponent(tripId) +
+        '&pickupLatitude=' +
+        encodeURIComponent(String(pickupLocation.latitude)) +
+        '&pickupLongitude=' +
+        encodeURIComponent(String(pickupLocation.longitude)) +
+        '&pickupAddress=' +
+        encodeURIComponent(pickupLocation.address ?? '') +
+        '&dropoffLatitude=' +
+        encodeURIComponent(String(dropoffLocation.latitude)) +
+        '&dropoffLongitude=' +
+        encodeURIComponent(String(dropoffLocation.longitude)) +
+        '&dropoffAddress=' +
+        encodeURIComponent(dropoffLocation.address ?? '')
+      ) as Href);
+    });
+
+    const unsubTripStatus = onTripStatusUpdated((payload) => {
+      const validated = validateTripStatusUpdatedPayload(payload);
+      if (!validated) {
+        console.warn('Ignoring invalid tripStatusUpdated payload', payload);
+        return;
+      }
+
+      if (validated.tripId !== tripId) {
+        return;
+      }
+
+      if (validated.status === 'ITEM_PICKED_UP') {
+        router.replace((
+          '/customer-delivery-tracking?tripId=' +
+          encodeURIComponent(tripId) +
+          '&pickupLatitude=' +
+          encodeURIComponent(String(pickupLocation.latitude)) +
+          '&pickupLongitude=' +
+          encodeURIComponent(String(pickupLocation.longitude)) +
+          '&pickupAddress=' +
+          encodeURIComponent(pickupLocation.address ?? '') +
+          '&dropoffLatitude=' +
+          encodeURIComponent(String(dropoffLocation.latitude)) +
+          '&dropoffLongitude=' +
+          encodeURIComponent(String(dropoffLocation.longitude)) +
+          '&dropoffAddress=' +
+          encodeURIComponent(dropoffLocation.address ?? '')
+        ) as Href);
+      }
+    });
+
+    const unsubDisconnect = onSocketDisconnect(() => {
+      setErrorMessage('Socket disconnected. Waiting to reconnect...');
+    });
+
+    const unsubSocketError = onSocketError((message) => {
+      setErrorMessage(message || 'Socket connection error.');
+    });
+
+    return () => {
+      unsubDriverLocation();
+      unsubItemPickedUp();
+      unsubTripStatus();
+      unsubDisconnect();
+      unsubSocketError();
+      leaveTripRoom(tripId);
+    };
+  }, [dropoffLocation, isRouteValid, pickupLocation, router, tripId]);
+
+  if (!isRouteValid || !pickupLocation || !dropoffLocation) {
+    return (
+      <SafeAreaView style={styles.centeredContainer}>
+        <Text style={styles.errorText}>Invalid waiting-for-pickup route params.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: pickupLocation.latitude,
+          longitude: pickupLocation.longitude,
+          latitudeDelta: 0.03,
+          longitudeDelta: 0.03,
+        }}
+      >
+        <Marker coordinate={pickupLocation} title="Pickup" />
+        <Marker coordinate={dropoffLocation} title="Dropoff" pinColor="#DC2626" />
+        {driverLocation ? <Marker coordinate={driverLocation} title="Driver" pinColor="#2563EB" /> : null}
+      </MapView>
+
+      <View style={styles.bottomCard}>
+        <Text style={styles.title}>Pickup Stage</Text>
+        <Text style={styles.statusText}>Driver arrived at pickup location</Text>
+        <Text style={styles.helperText}>Waiting for driver to confirm item pickup</Text>
+        {isWaiting ? (
+          <View style={styles.row}>
+            <ActivityIndicator size="small" color="#2563EB" />
+            <Text style={styles.helperText}>Listening for pickup confirmation...</Text>
+          </View>
+        ) : null}
+
+        {pickupInfo ? (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Pickup Confirmed</Text>
+            <Text style={styles.helperText}>Picked up at: {new Date(pickupInfo.pickedUpAt).toLocaleString()}</Text>
+            {pickupInfo.pickupNotes ? <Text style={styles.helperText}>Notes: {pickupInfo.pickupNotes}</Text> : null}
+            {pickupInfo.pickupProofImageUrl ? (
+              <Text style={styles.helperText}>Proof URL: {pickupInfo.pickupProofImageUrl}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() =>
+            router.replace((
+              '/customer-delivery-tracking?tripId=' +
+              encodeURIComponent(tripId) +
+              '&pickupLatitude=' +
+              encodeURIComponent(String(pickupLocation.latitude)) +
+              '&pickupLongitude=' +
+              encodeURIComponent(String(pickupLocation.longitude)) +
+              '&pickupAddress=' +
+              encodeURIComponent(pickupLocation.address ?? '') +
+              '&dropoffLatitude=' +
+              encodeURIComponent(String(dropoffLocation.latitude)) +
+              '&dropoffLongitude=' +
+              encodeURIComponent(String(dropoffLocation.longitude)) +
+              '&dropoffAddress=' +
+              encodeURIComponent(dropoffLocation.address ?? '')
+            ) as Href)
+          }
+        >
+          <Text style={styles.secondaryButtonText}>Open Delivery Tracking</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  map: { flex: 1 },
+  bottomCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    gap: 8,
+  },
+  title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
+  statusText: { color: '#1E293B', fontWeight: '600' },
+  helperText: { color: '#475569' },
+  errorText: { color: '#B91C1C' },
+  centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoCard: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  infoTitle: { color: '#1E3A8A', fontWeight: '700' },
+  secondaryButton: {
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  secondaryButtonText: { color: '#1E293B', fontWeight: '600' },
+});

@@ -68,3 +68,13 @@ export type TripStatusUpdatedPayload = {
   status: TripStatus;
   updatedAt: string;
 };
+
+export type ItemPickedUpPayload = {
+  tripId: string;
+  driverId: string;
+  customerId: string;
+  status: 'ITEM_PICKED_UP';
+  pickedUpAt: string;
+  pickupNotes: string | null;
+  pickupProofImageUrl: string | null;
+};

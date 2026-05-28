@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -24,6 +24,7 @@ import {
   validateDriverArrivedPickupConfirmedPayload,
   validateDriverLocationUpdatedPayload,
   validateTripId,
+  validateTripStatusUpdatedPayload,
 } from '@/utils/locationValidation';
 
 function parseNumber(value: string | string[] | undefined): number | null {
@@ -33,6 +34,7 @@ function parseNumber(value: string | string[] | undefined): number | null {
 }
 
 export default function CustomerTrackingScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{
     tripId?: string;
     pickupLatitude?: string;
@@ -117,15 +119,46 @@ export default function CustomerTrackingScreen() {
       const validated = validateDriverArrivedPickupConfirmedPayload(payload);
       if (!validated || validated.tripId !== validTripId) return;
       setStatusText('Driver arrived at pickup location');
-      setRouteStage('dropoff');
+      router.replace((
+        '/waiting-for-pickup?tripId=' +
+        encodeURIComponent(validTripId) +
+        '&pickupLatitude=' +
+        encodeURIComponent(String(pickupLocation.latitude)) +
+        '&pickupLongitude=' +
+        encodeURIComponent(String(pickupLocation.longitude)) +
+        '&pickupAddress=' +
+        encodeURIComponent(pickupLocation.address ?? '') +
+        '&dropoffLatitude=' +
+        encodeURIComponent(String(dropoffLocation.latitude)) +
+        '&dropoffLongitude=' +
+        encodeURIComponent(String(dropoffLocation.longitude)) +
+        '&dropoffAddress=' +
+        encodeURIComponent(dropoffLocation.address ?? '')
+      ) as Href);
     });
 
     const unsubStatus = onTripStatusUpdated((payload) => {
-      if (!payload || payload.tripId !== validTripId) return;
-      const status = payload.status as TripStatus;
+      const validatedStatusPayload = validateTripStatusUpdatedPayload(payload);
+      if (!validatedStatusPayload || validatedStatusPayload.tripId !== validTripId) return;
+      const status = validatedStatusPayload.status as TripStatus;
       if (status === 'DRIVER_ARRIVED_PICKUP') {
         setStatusText('Driver arrived at pickup location');
-        setRouteStage('dropoff');
+        router.replace((
+          '/waiting-for-pickup?tripId=' +
+          encodeURIComponent(validTripId) +
+          '&pickupLatitude=' +
+          encodeURIComponent(String(pickupLocation.latitude)) +
+          '&pickupLongitude=' +
+          encodeURIComponent(String(pickupLocation.longitude)) +
+          '&pickupAddress=' +
+          encodeURIComponent(pickupLocation.address ?? '') +
+          '&dropoffLatitude=' +
+          encodeURIComponent(String(dropoffLocation.latitude)) +
+          '&dropoffLongitude=' +
+          encodeURIComponent(String(dropoffLocation.longitude)) +
+          '&dropoffAddress=' +
+          encodeURIComponent(dropoffLocation.address ?? '')
+        ) as Href);
       } else if (status === 'DRIVER_GOING_TO_PICKUP') {
         setStatusText('Driver is going to pickup location');
         setRouteStage('pickup');
@@ -155,7 +188,7 @@ export default function CustomerTrackingScreen() {
       unsubSocketError();
       leaveTripRoom(validTripId);
     };
-  }, [dropoffLocation, pickupLocation, tripId]);
+  }, [dropoffLocation, pickupLocation, router, tripId]);
 
   if (!mapsApiKey) {
     return (
