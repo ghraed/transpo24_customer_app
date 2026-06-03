@@ -33,6 +33,7 @@ import type {
   Coordinates,
   DropoffLocationRouteParams,
   LocalPhotoAsset,
+  PendingGoodsDetailsPayload,
   PendingMotorcycleDetailsPayload,
   UpdateScheduleAndItemDetailsPayload,
   UploadedRequestPhoto,
@@ -104,6 +105,17 @@ function parsePendingMotorcycleDetails(
   }
 }
 
+function parsePendingGoodsDetails(
+  raw: string | undefined,
+): PendingGoodsDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as PendingGoodsDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
 function parseVehicleConditionDetails(
   raw: string | undefined,
 ): { vehicleCondition?: VehicleCondition; vehicleConditionNotes?: string } | undefined {
@@ -161,6 +173,10 @@ export default function DropoffLocationScreen() {
     typeof params.pendingMotorcyclePhotoAssets === 'string'
       ? params.pendingMotorcyclePhotoAssets
       : '';
+  const pendingGoodsDetailsRaw =
+    typeof params.pendingGoodsDetails === 'string' ? params.pendingGoodsDetails : '';
+  const pendingGoodsPhotoAssetsRaw =
+    typeof params.pendingGoodsPhotoAssets === 'string' ? params.pendingGoodsPhotoAssets : '';
   const itemDetails = typeof params.itemDetails === 'string' ? params.itemDetails : '';
   const uploadedPhotos = typeof params.uploadedPhotos === 'string' ? params.uploadedPhotos : '';
   const isImmediate = typeof params.isImmediate === 'string' ? params.isImmediate : '';
@@ -210,7 +226,9 @@ export default function DropoffLocationScreen() {
 
   const canContinue = useMemo(() => {
     const hasDraftContext =
-      serviceKey === 'MOTORCYCLE_TRANSPORT' ? serviceId.length > 0 : requestId.length > 0 && serviceId.length > 0;
+      serviceKey === 'MOTORCYCLE_TRANSPORT' || serviceKey === 'GOODS_TRANSPORT'
+        ? serviceId.length > 0
+        : requestId.length > 0 && serviceId.length > 0;
     return selectedLocation !== null && hasDraftContext && !isSaving;
   }, [requestId, selectedLocation, serviceId, serviceKey, isSaving]);
 
@@ -359,7 +377,11 @@ export default function DropoffLocationScreen() {
       return;
     }
 
-    if (requestId.length === 0 && serviceKey !== 'MOTORCYCLE_TRANSPORT') {
+    if (
+      requestId.length === 0 &&
+      serviceKey !== 'MOTORCYCLE_TRANSPORT' &&
+      serviceKey !== 'GOODS_TRANSPORT'
+    ) {
       setErrorMessage('Missing request. Please go back and select pickup location again.');
       return;
     }
@@ -387,6 +409,36 @@ export default function DropoffLocationScreen() {
             serviceKey,
             pendingMotorcycleDetails: pendingMotorcycleDetailsRaw,
             pendingMotorcyclePhotoAssets: pendingMotorcyclePhotoAssetsRaw,
+            pickupLatitude: hasPickupCoordinates ? String(pickupLatitude) : '',
+            pickupLongitude: hasPickupCoordinates ? String(pickupLongitude) : '',
+            pickupAddress,
+            pickupPlaceId,
+            dropoffLatitude: String(selectedLocation.latitude),
+            dropoffLongitude: String(selectedLocation.longitude),
+            dropoffAddress: selectedLocation.address ?? '',
+            dropoffPlaceId: selectedLocation.placeId ?? '',
+            routeDistanceKm: routeDistanceKm !== null ? String(routeDistanceKm) : '',
+          },
+        } as unknown as Href;
+
+        router.push(nextRoute);
+        return;
+      }
+
+      if (serviceKey === 'GOODS_TRANSPORT') {
+        const pendingGoodsDetails = parsePendingGoodsDetails(pendingGoodsDetailsRaw);
+        if (!pendingGoodsDetails) {
+          setErrorMessage('Goods details are missing. Please go back and complete them first.');
+          return;
+        }
+
+        const nextRoute = {
+          pathname: '/submit-request',
+          params: {
+            serviceId,
+            serviceKey,
+            pendingGoodsDetails: pendingGoodsDetailsRaw,
+            pendingGoodsPhotoAssets: pendingGoodsPhotoAssetsRaw,
             pickupLatitude: hasPickupCoordinates ? String(pickupLatitude) : '',
             pickupLongitude: hasPickupCoordinates ? String(pickupLongitude) : '',
             pickupAddress,
@@ -502,16 +554,18 @@ export default function DropoffLocationScreen() {
         setTimeout(() => {
           const pickupRoute = {
             pathname: '/pickup-location',
-            params: {
-              serviceId,
-              serviceKey,
-              vehicleDetails,
-              vehicleConditionDetails,
-              pendingMotorcycleDetails: pendingMotorcycleDetailsRaw,
-              pendingMotorcyclePhotoAssets: pendingMotorcyclePhotoAssetsRaw,
-            },
-          } as unknown as Href;
-          router.push(pickupRoute);
+          params: {
+            serviceId,
+            serviceKey,
+            vehicleDetails,
+            vehicleConditionDetails,
+            pendingMotorcycleDetails: pendingMotorcycleDetailsRaw,
+            pendingMotorcyclePhotoAssets: pendingMotorcyclePhotoAssetsRaw,
+            pendingGoodsDetails: pendingGoodsDetailsRaw,
+            pendingGoodsPhotoAssets: pendingGoodsPhotoAssetsRaw,
+          },
+        } as unknown as Href;
+        router.push(pickupRoute);
         }, 700);
         return;
       }
@@ -533,6 +587,8 @@ export default function DropoffLocationScreen() {
     serviceKey,
     isImmediate,
     itemDetails,
+    pendingGoodsDetailsRaw,
+    pendingGoodsPhotoAssetsRaw,
     pendingPhotoAssetsRaw,
     pendingMotorcycleDetailsRaw,
     pendingMotorcyclePhotoAssetsRaw,

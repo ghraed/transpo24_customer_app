@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import {
+  createGoodsTransportRequest,
   createMotorcycleTransportRequest,
   submitCustomerRequest,
   updateScheduleAndItemDetails,
@@ -20,11 +21,14 @@ import {
 } from '@/lib/api';
 import { getApiBaseUrl } from '@/config/backend';
 import type {
+  CreateGoodsTransportRequestPayload,
   CreateMotorcycleTransportRequestPayload,
   CustomerRequest,
+  GoodsHeavyShipmentType,
   ItemType,
   LocationData,
   LocalPhotoAsset,
+  PendingGoodsDetailsPayload,
   PendingMotorcycleDetailsPayload,
   SubmitRequestRouteParams,
   UpdateScheduleAndItemDetailsPayload,
@@ -121,6 +125,25 @@ function parsePendingMotorcyclePhotoAssets(raw: string | undefined): LocalPhotoA
   }
 }
 
+function parsePendingGoodsDetails(raw: string | undefined): PendingGoodsDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as PendingGoodsDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
+function parsePendingGoodsPhotoAssets(raw: string | undefined): LocalPhotoAsset[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as LocalPhotoAsset[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function formatLocation(location?: LocationData): string {
   if (!location) return 'Missing location';
   if (location.address?.trim()) return location.address;
@@ -138,6 +161,11 @@ function formatSchedule(isImmediate: boolean, scheduledPickupAt?: string): strin
 function formatItemType(itemType: ItemType | undefined): string {
   if (!itemType) return 'Missing item type';
   return itemType.replace('_', ' ');
+}
+
+function formatHeavyShipmentType(value: GoodsHeavyShipmentType | undefined): string {
+  if (!value) return 'Not specified';
+  return value === 'ONE_HEAVY_ITEM' ? 'One heavy item' : 'Multiple smaller pieces';
 }
 
 function resolvePhotoUrl(url: string): string {
@@ -215,7 +243,16 @@ export default function SubmitRequestScreen() {
     () => parsePendingMotorcyclePhotoAssets(singleParam(params.pendingMotorcyclePhotoAssets)),
     [params.pendingMotorcyclePhotoAssets],
   );
+  const pendingGoodsDetails = useMemo(
+    () => parsePendingGoodsDetails(singleParam(params.pendingGoodsDetails)),
+    [params.pendingGoodsDetails],
+  );
+  const pendingGoodsPhotoAssets = useMemo(
+    () => parsePendingGoodsPhotoAssets(singleParam(params.pendingGoodsPhotoAssets)),
+    [params.pendingGoodsPhotoAssets],
+  );
   const isMotorcycleTransport = serviceKey === 'MOTORCYCLE_TRANSPORT';
+  const isGoodsTransport = serviceKey === 'GOODS_TRANSPORT';
   const isVehicleTransport = serviceKey === 'VEHICLE_TRANSPORT';
 
   const [customerNote, setCustomerNote] = useState<string>('');
@@ -233,6 +270,33 @@ export default function SubmitRequestScreen() {
       }
       if (!pendingMotorcycleDetails?.motorcycleCondition) {
         errors.push('Motorcycle condition is missing.');
+      }
+    } else if (isGoodsTransport) {
+      if (!pendingGoodsDetails?.shipmentSize) {
+        errors.push('Shipment size is missing.');
+      }
+      if (!pendingGoodsDetails?.goodsDescription?.trim()) {
+        errors.push('Goods description is missing.');
+      }
+      if (
+        typeof pendingGoodsDetails?.approximateWeightKg !== 'number' ||
+        pendingGoodsDetails.approximateWeightKg <= 0
+      ) {
+        errors.push('Approximate weight must be greater than 0.');
+      }
+      if (
+        typeof pendingGoodsDetails?.numberOfPieces !== 'number' ||
+        !Number.isInteger(pendingGoodsDetails.numberOfPieces) ||
+        pendingGoodsDetails.numberOfPieces < 1
+      ) {
+        errors.push('Number of pieces must be at least 1.');
+      }
+      if (
+        pendingGoodsDetails &&
+        pendingGoodsDetails.approximateWeightKg >= 50 &&
+        !pendingGoodsDetails.heavyShipmentType
+      ) {
+        errors.push('Heavy shipment type is required for shipments 50 kg or more.');
       }
     } else {
       if (!requestId) errors.push('Missing request id.');
@@ -252,8 +316,10 @@ export default function SubmitRequestScreen() {
   }, [
     dropoffLocation,
     isImmediate,
+    isGoodsTransport,
     isMotorcycleTransport,
     itemDetails,
+    pendingGoodsDetails,
     pendingMotorcycleDetails,
     pickupLocation,
     requestId,
@@ -273,6 +339,8 @@ export default function SubmitRequestScreen() {
         vehicleConditionDetails: params.vehicleConditionDetails ?? '',
         pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
         pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
+        pendingGoodsDetails: params.pendingGoodsDetails ?? '',
+        pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
       },
     } as unknown as Href;
     router.push(route);
@@ -289,6 +357,8 @@ export default function SubmitRequestScreen() {
         vehicleConditionDetails: params.vehicleConditionDetails ?? '',
         pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
         pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
+        pendingGoodsDetails: params.pendingGoodsDetails ?? '',
+        pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
         pickupLatitude: params.pickupLatitude ?? '',
         pickupLongitude: params.pickupLongitude ?? '',
         pickupAddress: params.pickupAddress ?? '',
@@ -307,6 +377,19 @@ export default function SubmitRequestScreen() {
           serviceKey,
           pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
           pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
+        },
+      } as unknown as Href);
+      return;
+    }
+
+    if (isGoodsTransport) {
+      router.push({
+        pathname: '/goods-details',
+        params: {
+          serviceId,
+          serviceKey,
+          pendingGoodsDetails: params.pendingGoodsDetails ?? '',
+          pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
         },
       } as unknown as Href);
       return;
@@ -374,6 +457,59 @@ export default function SubmitRequestScreen() {
 
         if (pendingMotorcyclePhotoAssets.length > 0) {
           await uploadRequestPhotos(created.id, pendingMotorcyclePhotoAssets);
+        }
+
+        const submitted = await submitCustomerRequest(created.id, {
+          customerNote: customerNote.trim() || undefined,
+        });
+
+        setSuccessMessage('Request submitted successfully.');
+
+        const statusRoute = {
+          pathname: '/request-status',
+          params: {
+            requestId: submitted.id,
+            status: submitted.status,
+            submittedAt: submitted.submittedAt ?? '',
+          },
+        } as unknown as Href;
+
+        setTimeout(() => {
+          router.push(statusRoute);
+        }, 350);
+        return;
+      }
+
+      if (isGoodsTransport && pickupLocation && dropoffLocation && pendingGoodsDetails) {
+        const payload: CreateGoodsTransportRequestPayload = {
+          shipmentSize: pendingGoodsDetails.shipmentSize,
+          goodsDescription: pendingGoodsDetails.goodsDescription.trim(),
+          approximateWeightKg: pendingGoodsDetails.approximateWeightKg,
+          numberOfPieces: pendingGoodsDetails.numberOfPieces,
+          isFragile: pendingGoodsDetails.isFragile ?? false,
+          requiresRefrigeration: pendingGoodsDetails.requiresRefrigeration ?? false,
+          heavyShipmentType:
+            pendingGoodsDetails.approximateWeightKg >= 50
+              ? pendingGoodsDetails.heavyShipmentType
+              : undefined,
+          pickupLocation: {
+            latitude: pickupLocation.coordinates.latitude,
+            longitude: pickupLocation.coordinates.longitude,
+            address: pickupLocation.address,
+            placeId: pickupLocation.placeId,
+          },
+          deliveryLocation: {
+            latitude: dropoffLocation.coordinates.latitude,
+            longitude: dropoffLocation.coordinates.longitude,
+            address: dropoffLocation.address,
+            placeId: dropoffLocation.placeId,
+          },
+        };
+
+        const created = await createGoodsTransportRequest(payload);
+
+        if (pendingGoodsPhotoAssets.length > 0) {
+          await uploadRequestPhotos(created.id, pendingGoodsPhotoAssets);
         }
 
         const submitted = await submitCustomerRequest(created.id, {
@@ -527,6 +663,21 @@ export default function SubmitRequestScreen() {
           </View>
         ) : null}
 
+        {isGoodsTransport ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Photos</Text>
+            {pendingGoodsPhotoAssets.length === 0 ? (
+              <Text style={styles.value}>No photos added</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
+                {pendingGoodsPhotoAssets.map((photo, index) => (
+                  <Image key={`${photo.uri}-${index}`} source={{ uri: photo.uri }} style={styles.photoThumb} />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        ) : null}
+
         {isMotorcycleTransport && pendingMotorcycleDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -549,6 +700,28 @@ export default function SubmitRequestScreen() {
           </View>
         ) : null}
 
+        {isGoodsTransport && pendingGoodsDetails ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Goods Details</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+            </View>
+            <Text style={styles.value}>Shipment size: {pendingGoodsDetails.shipmentSize}</Text>
+            <Text style={styles.value}>Description: {pendingGoodsDetails.goodsDescription}</Text>
+            <Text style={styles.value}>Approximate weight: {pendingGoodsDetails.approximateWeightKg} kg</Text>
+            <Text style={styles.value}>Number of pieces: {pendingGoodsDetails.numberOfPieces}</Text>
+            <Text style={styles.value}>Fragile: {pendingGoodsDetails.isFragile ? 'Yes' : 'No'}</Text>
+            <Text style={styles.value}>
+              Refrigeration: {pendingGoodsDetails.requiresRefrigeration ? 'Yes' : 'No'}
+            </Text>
+            {pendingGoodsDetails.approximateWeightKg >= 50 ? (
+              <Text style={styles.value}>
+                Heavy shipment: {formatHeavyShipmentType(pendingGoodsDetails.heavyShipmentType)}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Pickup Location</Text>
@@ -568,7 +741,7 @@ export default function SubmitRequestScreen() {
           ) : null}
         </View>
 
-        {!isMotorcycleTransport ? (
+        {!isMotorcycleTransport && !isGoodsTransport ? (
           <>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -633,7 +806,7 @@ export default function SubmitRequestScreen() {
           </>
         ) : null}
 
-        {isMotorcycleTransport ? (
+        {isMotorcycleTransport || isGoodsTransport ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Optional Note</Text>
             <TextInput

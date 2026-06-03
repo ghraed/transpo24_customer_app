@@ -19,6 +19,7 @@ export default function RootLayout() {
         <Stack.Screen name="choose-service" options={{ title: 'Choose Service' }} />
         <Stack.Screen name="vehicle-details" options={{ title: 'Vehicle Details' }} />
         <Stack.Screen name="motorcycle-details" options={{ title: 'Motorcycle Details' }} />
+        <Stack.Screen name="goods-details" options={{ title: 'Goods Details' }} />
         <Stack.Screen name="vehicle-condition" options={{ title: 'Vehicle Condition' }} />
         <Stack.Screen name="pickup-location" options={{ title: 'Pickup Location' }} />
         <Stack.Screen name="dropoff-location" options={{ title: 'Dropoff Location' }} />

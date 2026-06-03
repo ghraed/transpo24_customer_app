@@ -41,6 +41,10 @@ export type MotorcycleCondition =
   | 'DAMAGED'
   | 'UNKNOWN';
 
+export type GoodsShipmentSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
+
+export type GoodsHeavyShipmentType = 'ONE_HEAVY_ITEM' | 'MULTIPLE_SMALLER_PIECES';
+
 export interface MotorcycleLocationPayload {
   latitude: number;
   longitude: number;
@@ -60,6 +64,25 @@ export interface CreateMotorcycleTransportRequestPayload {
   deliveryLocation: MotorcycleLocationPayload;
 }
 
+export interface GoodsLocationPayload {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  placeId?: string;
+}
+
+export interface CreateGoodsTransportRequestPayload {
+  shipmentSize: GoodsShipmentSize;
+  goodsDescription: string;
+  approximateWeightKg: number;
+  numberOfPieces: number;
+  isFragile: boolean;
+  requiresRefrigeration: boolean;
+  heavyShipmentType?: GoodsHeavyShipmentType;
+  pickupLocation: GoodsLocationPayload;
+  deliveryLocation: GoodsLocationPayload;
+}
+
 export interface PendingMotorcycleDetailsPayload {
   motorcycleType: MotorcycleType;
   chassisNumber?: string;
@@ -70,6 +93,16 @@ export interface PendingMotorcycleDetailsPayload {
   scheduledPickupAt?: string;
 }
 
+export interface PendingGoodsDetailsPayload {
+  shipmentSize: GoodsShipmentSize;
+  goodsDescription: string;
+  approximateWeightKg: number;
+  numberOfPieces: number;
+  isFragile: boolean;
+  requiresRefrigeration: boolean;
+  heavyShipmentType?: GoodsHeavyShipmentType;
+}
+
 export interface MotorcycleTransportFormData {
   motorcycleType: MotorcycleType | '';
   chassisNumber: string;
@@ -78,6 +111,16 @@ export interface MotorcycleTransportFormData {
   requiresDedicatedCarrier: boolean;
   isImmediate: boolean;
   scheduledPickupAt: Date;
+}
+
+export interface GoodsTransportFormData {
+  shipmentSize: GoodsShipmentSize | '';
+  goodsDescription: string;
+  approximateWeightKg: string;
+  numberOfPieces: string;
+  isFragile: boolean;
+  requiresRefrigeration: boolean;
+  heavyShipmentType: GoodsHeavyShipmentType | '';
 }
 
 export interface UpdatePickupLocationPayload {
@@ -225,6 +268,15 @@ export interface CustomerRequest {
     requiresSpecialWrapping: boolean;
     requiresDedicatedCarrier: boolean;
   };
+  goodsDetails?: {
+    shipmentSize: GoodsShipmentSize | null;
+    goodsDescription: string | null;
+    approximateWeightKg: number | null;
+    numberOfPieces: number | null;
+    isFragile: boolean;
+    requiresRefrigeration: boolean;
+    heavyShipmentType: GoodsHeavyShipmentType | null;
+  };
   photos?: UploadedRequestPhoto[];
 }
 
@@ -274,6 +326,15 @@ export interface CustomerRequestApiResponse {
     requiresSpecialWrapping: boolean;
     requiresDedicatedCarrier: boolean;
   };
+  goodsDetails?: {
+    shipmentSize: GoodsShipmentSize | null;
+    goodsDescription: string | null;
+    approximateWeightKg: number | null;
+    numberOfPieces: number | null;
+    isFragile: boolean;
+    requiresRefrigeration: boolean;
+    heavyShipmentType: GoodsHeavyShipmentType | null;
+  };
   photos: UploadedRequestPhoto[];
 }
 
@@ -285,6 +346,8 @@ export type DropoffLocationRouteParams = {
   vehicleConditionDetails?: string;
   pendingMotorcycleDetails?: string;
   pendingMotorcyclePhotoAssets?: string;
+  pendingGoodsDetails?: string;
+  pendingGoodsPhotoAssets?: string;
   pickupLatitude?: string;
   pickupLongitude?: string;
   pickupAddress?: string;
@@ -320,6 +383,13 @@ export type MotorcycleDetailsRouteParams = {
   pendingMotorcyclePhotoAssets?: string;
 };
 
+export type GoodsDetailsRouteParams = {
+  serviceId?: string;
+  serviceKey?: string;
+  pendingGoodsDetails?: string;
+  pendingGoodsPhotoAssets?: string;
+};
+
 export interface SubmitRequestRouteParams {
   requestId?: string;
   serviceId?: string;
@@ -327,6 +397,8 @@ export interface SubmitRequestRouteParams {
   serviceName?: string;
   pendingMotorcycleDetails?: string;
   pendingMotorcyclePhotoAssets?: string;
+  pendingGoodsDetails?: string;
+  pendingGoodsPhotoAssets?: string;
   pickupLatitude?: string;
   pickupLongitude?: string;
   pickupAddress?: string;
@@ -395,6 +467,15 @@ export interface RequestStatusResponse {
     condition: MotorcycleCondition | null;
     requiresSpecialWrapping: boolean;
     requiresDedicatedCarrier: boolean;
+  };
+  goodsDetails?: {
+    shipmentSize: GoodsShipmentSize | null;
+    goodsDescription: string | null;
+    approximateWeightKg: number | null;
+    numberOfPieces: number | null;
+    isFragile: boolean;
+    requiresRefrigeration: boolean;
+    heavyShipmentType: GoodsHeavyShipmentType | null;
   };
   photos: UploadedRequestPhoto[];
   quotesSummary: {

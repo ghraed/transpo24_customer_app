@@ -1,5 +1,6 @@
 import { getAccessToken } from './auth-token';
 import type {
+  CreateGoodsTransportRequestPayload,
   CreateMotorcycleTransportRequestPayload,
   CustomerAcceptOfferResponse,
   CustomerRequestOffersResponse,
@@ -104,6 +105,7 @@ function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerReque
     schedule: response.schedule,
     itemDetails: response.itemDetails,
     motorcycleDetails: response.motorcycleDetails,
+    goodsDetails: response.goodsDetails,
     photos: response.photos,
   };
 }
@@ -170,6 +172,23 @@ export async function createMotorcycleTransportRequest(
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to create motorcycle transport request.');
+  }
+
+  const data = (await response.json()) as CustomerRequestApiResponse;
+  return mapCustomerRequest(data);
+}
+
+export async function createGoodsTransportRequest(
+  payload: CreateGoodsTransportRequestPayload,
+): Promise<CustomerRequest> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/goods-transport`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to create goods transport request.');
   }
 
   const data = (await response.json()) as CustomerRequestApiResponse;
