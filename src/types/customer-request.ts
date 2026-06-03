@@ -28,6 +28,58 @@ export interface CreateCustomerRequestPayload {
   vehicleConditionNotes?: string;
 }
 
+export type MotorcycleType =
+  | 'SPORT_BIKE'
+  | 'CRUISER'
+  | 'ELECTRIC_MOTORCYCLE'
+  | 'SCOOTER'
+  | 'OTHER';
+
+export type MotorcycleCondition =
+  | 'WORKING'
+  | 'NOT_WORKING'
+  | 'DAMAGED'
+  | 'UNKNOWN';
+
+export interface MotorcycleLocationPayload {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  placeId?: string;
+}
+
+export interface CreateMotorcycleTransportRequestPayload {
+  motorcycleType: MotorcycleType;
+  chassisNumber?: string;
+  motorcycleCondition: MotorcycleCondition;
+  requiresSpecialWrapping: boolean;
+  requiresDedicatedCarrier: boolean;
+  isImmediate?: boolean;
+  scheduledPickupAt?: string;
+  pickupLocation: MotorcycleLocationPayload;
+  deliveryLocation: MotorcycleLocationPayload;
+}
+
+export interface PendingMotorcycleDetailsPayload {
+  motorcycleType: MotorcycleType;
+  chassisNumber?: string;
+  motorcycleCondition: MotorcycleCondition;
+  requiresSpecialWrapping: boolean;
+  requiresDedicatedCarrier: boolean;
+  isImmediate?: boolean;
+  scheduledPickupAt?: string;
+}
+
+export interface MotorcycleTransportFormData {
+  motorcycleType: MotorcycleType | '';
+  chassisNumber: string;
+  motorcycleCondition: MotorcycleCondition | '';
+  requiresSpecialWrapping: boolean;
+  requiresDedicatedCarrier: boolean;
+  isImmediate: boolean;
+  scheduledPickupAt: Date;
+}
+
 export interface UpdatePickupLocationPayload {
   latitude: number;
   longitude: number;
@@ -166,6 +218,13 @@ export interface CustomerRequest {
     loadingWorkersCount: number | null;
     specialInstructions: string | null;
   };
+  motorcycleDetails?: {
+    type: MotorcycleType | null;
+    chassisNumber: string | null;
+    condition: MotorcycleCondition | null;
+    requiresSpecialWrapping: boolean;
+    requiresDedicatedCarrier: boolean;
+  };
   photos?: UploadedRequestPhoto[];
 }
 
@@ -208,6 +267,13 @@ export interface CustomerRequestApiResponse {
     loadingWorkersCount: number | null;
     specialInstructions: string | null;
   };
+  motorcycleDetails?: {
+    type: MotorcycleType | null;
+    chassisNumber: string | null;
+    condition: MotorcycleCondition | null;
+    requiresSpecialWrapping: boolean;
+    requiresDedicatedCarrier: boolean;
+  };
   photos: UploadedRequestPhoto[];
 }
 
@@ -217,6 +283,8 @@ export type DropoffLocationRouteParams = {
   serviceKey?: string;
   vehicleDetails?: string;
   vehicleConditionDetails?: string;
+  pendingMotorcycleDetails?: string;
+  pendingMotorcyclePhotoAssets?: string;
   pickupLatitude?: string;
   pickupLongitude?: string;
   pickupAddress?: string;
@@ -245,11 +313,20 @@ export type DateTimeRouteParams = {
   dropoffPlaceId?: string;
 };
 
+export type MotorcycleDetailsRouteParams = {
+  serviceId?: string;
+  serviceKey?: string;
+  pendingMotorcycleDetails?: string;
+  pendingMotorcyclePhotoAssets?: string;
+};
+
 export interface SubmitRequestRouteParams {
   requestId?: string;
   serviceId?: string;
   serviceKey?: string;
   serviceName?: string;
+  pendingMotorcycleDetails?: string;
+  pendingMotorcyclePhotoAssets?: string;
   pickupLatitude?: string;
   pickupLongitude?: string;
   pickupAddress?: string;
@@ -311,6 +388,13 @@ export interface RequestStatusResponse {
     requiresLoadingHelp: boolean;
     loadingWorkersCount: number | null;
     specialInstructions: string | null;
+  };
+  motorcycleDetails?: {
+    type: MotorcycleType | null;
+    chassisNumber: string | null;
+    condition: MotorcycleCondition | null;
+    requiresSpecialWrapping: boolean;
+    requiresDedicatedCarrier: boolean;
   };
   photos: UploadedRequestPhoto[];
   quotesSummary: {

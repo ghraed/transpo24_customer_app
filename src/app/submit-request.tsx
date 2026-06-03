@@ -12,12 +12,20 @@ import {
   View,
 } from 'react-native';
 
-import { submitCustomerRequest, updateScheduleAndItemDetails } from '@/lib/api';
+import {
+  createMotorcycleTransportRequest,
+  submitCustomerRequest,
+  updateScheduleAndItemDetails,
+  uploadRequestPhotos,
+} from '@/lib/api';
 import { getApiBaseUrl } from '@/config/backend';
 import type {
+  CreateMotorcycleTransportRequestPayload,
   CustomerRequest,
   ItemType,
   LocationData,
+  LocalPhotoAsset,
+  PendingMotorcycleDetailsPayload,
   SubmitRequestRouteParams,
   UpdateScheduleAndItemDetailsPayload,
   UploadedRequestPhoto,
@@ -89,6 +97,27 @@ function parseVehicleConditionDetails(
     };
   } catch {
     return undefined;
+  }
+}
+
+function parsePendingMotorcycleDetails(
+  raw: string | undefined,
+): PendingMotorcycleDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as PendingMotorcycleDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
+function parsePendingMotorcyclePhotoAssets(raw: string | undefined): LocalPhotoAsset[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as LocalPhotoAsset[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
@@ -178,6 +207,16 @@ export default function SubmitRequestScreen() {
     const parsed = Number(raw);
     return Number.isFinite(parsed) ? parsed : null;
   }, [params.routeDistanceKm]);
+  const pendingMotorcycleDetails = useMemo(
+    () => parsePendingMotorcycleDetails(singleParam(params.pendingMotorcycleDetails)),
+    [params.pendingMotorcycleDetails],
+  );
+  const pendingMotorcyclePhotoAssets = useMemo(
+    () => parsePendingMotorcyclePhotoAssets(singleParam(params.pendingMotorcyclePhotoAssets)),
+    [params.pendingMotorcyclePhotoAssets],
+  );
+  const isMotorcycleTransport = serviceKey === 'MOTORCYCLE_TRANSPORT';
+  const isVehicleTransport = serviceKey === 'VEHICLE_TRANSPORT';
 
   const [customerNote, setCustomerNote] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -186,22 +225,40 @@ export default function SubmitRequestScreen() {
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
-    if (!requestId) errors.push('Missing request id.');
     if (!pickupLocation) errors.push('Pickup location is missing.');
     if (!dropoffLocation) errors.push('Dropoff location is missing.');
-    if (!itemDetails) {
-      errors.push('Item details are missing.');
+    if (isMotorcycleTransport) {
+      if (!pendingMotorcycleDetails?.motorcycleType) {
+        errors.push('Motorcycle type is missing.');
+      }
+      if (!pendingMotorcycleDetails?.motorcycleCondition) {
+        errors.push('Motorcycle condition is missing.');
+      }
     } else {
-      if (!itemDetails.title?.trim()) errors.push('Item title is missing.');
-      if (!itemDetails.type) errors.push('Item type is missing.');
-    }
-    if (!isImmediate) {
-      if (!scheduledPickupAt) {
-        errors.push('Scheduled pickup time is missing.');
+      if (!requestId) errors.push('Missing request id.');
+      if (!itemDetails) {
+        errors.push('Item details are missing.');
+      } else {
+        if (!itemDetails.title?.trim()) errors.push('Item title is missing.');
+        if (!itemDetails.type) errors.push('Item type is missing.');
+      }
+      if (!isImmediate) {
+        if (!scheduledPickupAt) {
+          errors.push('Scheduled pickup time is missing.');
+        }
       }
     }
     return errors;
-  }, [dropoffLocation, isImmediate, itemDetails, pickupLocation, requestId, scheduledPickupAt]);
+  }, [
+    dropoffLocation,
+    isImmediate,
+    isMotorcycleTransport,
+    itemDetails,
+    pendingMotorcycleDetails,
+    pickupLocation,
+    requestId,
+    scheduledPickupAt,
+  ]);
 
   const canSubmit = validationErrors.length === 0 && !isSubmitting;
 
@@ -214,6 +271,8 @@ export default function SubmitRequestScreen() {
         serviceKey,
         vehicleDetails: params.vehicleDetails ?? '',
         vehicleConditionDetails: params.vehicleConditionDetails ?? '',
+        pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
+        pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
       },
     } as unknown as Href;
     router.push(route);
@@ -228,6 +287,8 @@ export default function SubmitRequestScreen() {
         serviceKey,
         vehicleDetails: params.vehicleDetails ?? '',
         vehicleConditionDetails: params.vehicleConditionDetails ?? '',
+        pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
+        pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
         pickupLatitude: params.pickupLatitude ?? '',
         pickupLongitude: params.pickupLongitude ?? '',
         pickupAddress: params.pickupAddress ?? '',
@@ -238,6 +299,19 @@ export default function SubmitRequestScreen() {
   };
 
   const navigateToDateTime = (): void => {
+    if (isMotorcycleTransport) {
+      router.push({
+        pathname: '/motorcycle-details',
+        params: {
+          serviceId,
+          serviceKey,
+          pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
+          pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
+        },
+      } as unknown as Href);
+      return;
+    }
+
     const route = {
       pathname: '/date-time',
       params: {
@@ -270,7 +344,60 @@ export default function SubmitRequestScreen() {
     setSuccessMessage('');
 
     try {
-      if (serviceKey === 'VEHICLE_TRANSPORT' && itemDetails) {
+      if (isMotorcycleTransport && pickupLocation && dropoffLocation && pendingMotorcycleDetails) {
+        const payload: CreateMotorcycleTransportRequestPayload = {
+          motorcycleType: pendingMotorcycleDetails.motorcycleType,
+          chassisNumber: pendingMotorcycleDetails.chassisNumber?.trim() || undefined,
+          motorcycleCondition: pendingMotorcycleDetails.motorcycleCondition,
+          requiresSpecialWrapping: pendingMotorcycleDetails.requiresSpecialWrapping,
+          requiresDedicatedCarrier: pendingMotorcycleDetails.requiresDedicatedCarrier,
+          isImmediate: pendingMotorcycleDetails.isImmediate ?? true,
+          scheduledPickupAt:
+            pendingMotorcycleDetails.isImmediate === false
+              ? pendingMotorcycleDetails.scheduledPickupAt
+              : undefined,
+          pickupLocation: {
+            latitude: pickupLocation.coordinates.latitude,
+            longitude: pickupLocation.coordinates.longitude,
+            address: pickupLocation.address,
+            placeId: pickupLocation.placeId,
+          },
+          deliveryLocation: {
+            latitude: dropoffLocation.coordinates.latitude,
+            longitude: dropoffLocation.coordinates.longitude,
+            address: dropoffLocation.address,
+            placeId: dropoffLocation.placeId,
+          },
+        };
+
+        const created = await createMotorcycleTransportRequest(payload);
+
+        if (pendingMotorcyclePhotoAssets.length > 0) {
+          await uploadRequestPhotos(created.id, pendingMotorcyclePhotoAssets);
+        }
+
+        const submitted = await submitCustomerRequest(created.id, {
+          customerNote: customerNote.trim() || undefined,
+        });
+
+        setSuccessMessage('Request submitted successfully.');
+
+        const statusRoute = {
+          pathname: '/request-status',
+          params: {
+            requestId: submitted.id,
+            status: submitted.status,
+            submittedAt: submitted.submittedAt ?? '',
+          },
+        } as unknown as Href;
+
+        setTimeout(() => {
+          router.push(statusRoute);
+        }, 350);
+        return;
+      }
+
+      if (isVehicleTransport && itemDetails) {
         const payload: UpdateScheduleAndItemDetailsPayload = {
           isImmediate,
           scheduledPickupAt: isImmediate ? undefined : scheduledPickupAt,
@@ -385,6 +512,43 @@ export default function SubmitRequestScreen() {
           </View>
         ) : null}
 
+        {isMotorcycleTransport ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Photos</Text>
+            {pendingMotorcyclePhotoAssets.length === 0 ? (
+              <Text style={styles.value}>No photos added</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
+                {pendingMotorcyclePhotoAssets.map((photo, index) => (
+                  <Image key={`${photo.uri}-${index}`} source={{ uri: photo.uri }} style={styles.photoThumb} />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        ) : null}
+
+        {isMotorcycleTransport && pendingMotorcycleDetails ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Motorcycle Details</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+            </View>
+            <Text style={styles.value}>Type: {pendingMotorcycleDetails.motorcycleType.replace(/_/g, ' ')}</Text>
+            <Text style={styles.value}>
+              Condition: {pendingMotorcycleDetails.motorcycleCondition.replace(/_/g, ' ')}
+            </Text>
+            <Text style={styles.value}>
+              Chassis number: {pendingMotorcycleDetails.chassisNumber?.trim() || 'Not provided'}
+            </Text>
+            <Text style={styles.value}>
+              Special wrapping: {pendingMotorcycleDetails.requiresSpecialWrapping ? 'Yes' : 'No'}
+            </Text>
+            <Text style={styles.value}>
+              Dedicated carrier: {pendingMotorcycleDetails.requiresDedicatedCarrier ? 'Yes' : 'No'}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Pickup Location</Text>
@@ -404,66 +568,84 @@ export default function SubmitRequestScreen() {
           ) : null}
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Date & Time</Text>
-            <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+        {!isMotorcycleTransport ? (
+          <>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Date & Time</Text>
+                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              </View>
+              <Text style={styles.value}>{formatSchedule(isImmediate, scheduledPickupAt)}</Text>
+            </View>
+
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Item Details</Text>
+                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              </View>
+              <Text style={styles.value}>Title: {itemDetails?.title ?? 'N/A'}</Text>
+              <Text style={styles.value}>Type: {formatItemType(itemDetails?.type ?? undefined)}</Text>
+              {itemDetails?.description ? <Text style={styles.value}>Description: {itemDetails.description}</Text> : null}
+              {(itemDetails?.brand || itemDetails?.model || itemDetails?.year) ? (
+                <Text style={styles.value}>
+                  {`Brand/Model/Year: ${itemDetails.brand ?? '-'} / ${itemDetails.model ?? '-'} / ${itemDetails.year ?? '-'}`}
+                </Text>
+              ) : null}
+              {itemDetails?.condition ? <Text style={styles.value}>Condition: {itemDetails.condition}</Text> : null}
+              {itemDetails?.weightKg ? <Text style={styles.value}>Weight: {itemDetails.weightKg} kg</Text> : null}
+              {(itemDetails?.dimensions.lengthCm || itemDetails?.dimensions.widthCm || itemDetails?.dimensions.heightCm) ? (
+                <Text style={styles.value}>
+                  {`Dimensions: ${itemDetails.dimensions.lengthCm ?? '-'} x ${itemDetails.dimensions.widthCm ?? '-'} x ${itemDetails.dimensions.heightCm ?? '-'} cm`}
+                </Text>
+              ) : null}
+              <Text style={styles.value}>
+                Loading help: {itemDetails?.requiresLoadingHelp ? `Yes (${itemDetails.loadingWorkersCount ?? 0} workers)` : 'No'}
+              </Text>
+              {itemDetails?.specialInstructions ? (
+                <Text style={styles.value}>Special instructions: {itemDetails.specialInstructions}</Text>
+              ) : null}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Photos</Text>
+              {photos.length === 0 ? (
+                <Text style={styles.value}>No photos added</Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
+                  {photos.map((photo) => (
+                    <Image key={photo.id} source={{ uri: resolvePhotoUrl(photo.url) }} style={styles.photoThumb} />
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Optional Note</Text>
+              <TextInput
+                value={customerNote}
+                onChangeText={setCustomerNote}
+                placeholder="Add a note for drivers, optional"
+                placeholderTextColor="#98a2b3"
+                style={styles.noteInput}
+                multiline
+              />
+            </View>
+          </>
+        ) : null}
+
+        {isMotorcycleTransport ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Optional Note</Text>
+            <TextInput
+              value={customerNote}
+              onChangeText={setCustomerNote}
+              placeholder="Add a note for drivers, optional"
+              placeholderTextColor="#98a2b3"
+              style={styles.noteInput}
+              multiline
+            />
           </View>
-          <Text style={styles.value}>{formatSchedule(isImmediate, scheduledPickupAt)}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Item Details</Text>
-            <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
-          </View>
-          <Text style={styles.value}>Title: {itemDetails?.title ?? 'N/A'}</Text>
-          <Text style={styles.value}>Type: {formatItemType(itemDetails?.type ?? undefined)}</Text>
-          {itemDetails?.description ? <Text style={styles.value}>Description: {itemDetails.description}</Text> : null}
-          {(itemDetails?.brand || itemDetails?.model || itemDetails?.year) ? (
-            <Text style={styles.value}>
-              {`Brand/Model/Year: ${itemDetails.brand ?? '-'} / ${itemDetails.model ?? '-'} / ${itemDetails.year ?? '-'}`}
-            </Text>
-          ) : null}
-          {itemDetails?.condition ? <Text style={styles.value}>Condition: {itemDetails.condition}</Text> : null}
-          {itemDetails?.weightKg ? <Text style={styles.value}>Weight: {itemDetails.weightKg} kg</Text> : null}
-          {(itemDetails?.dimensions.lengthCm || itemDetails?.dimensions.widthCm || itemDetails?.dimensions.heightCm) ? (
-            <Text style={styles.value}>
-              {`Dimensions: ${itemDetails.dimensions.lengthCm ?? '-'} x ${itemDetails.dimensions.widthCm ?? '-'} x ${itemDetails.dimensions.heightCm ?? '-'} cm`}
-            </Text>
-          ) : null}
-          <Text style={styles.value}>
-            Loading help: {itemDetails?.requiresLoadingHelp ? `Yes (${itemDetails.loadingWorkersCount ?? 0} workers)` : 'No'}
-          </Text>
-          {itemDetails?.specialInstructions ? (
-            <Text style={styles.value}>Special instructions: {itemDetails.specialInstructions}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photos</Text>
-          {photos.length === 0 ? (
-            <Text style={styles.value}>No photos added</Text>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
-              {photos.map((photo) => (
-                <Image key={photo.id} source={{ uri: resolvePhotoUrl(photo.url) }} style={styles.photoThumb} />
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Optional Note</Text>
-          <TextInput
-            value={customerNote}
-            onChangeText={setCustomerNote}
-            placeholder="Add a note for drivers, optional"
-            placeholderTextColor="#98a2b3"
-            style={styles.noteInput}
-            multiline
-          />
-        </View>
+        ) : null}
 
         <Text style={styles.helperText}>
           Drivers will review your request and send offers.

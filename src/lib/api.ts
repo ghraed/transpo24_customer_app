@@ -1,5 +1,6 @@
 import { getAccessToken } from './auth-token';
 import type {
+  CreateMotorcycleTransportRequestPayload,
   CustomerAcceptOfferResponse,
   CustomerRequestOffersResponse,
   CreateCustomerRequestPayload,
@@ -102,6 +103,7 @@ function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerReque
         : undefined,
     schedule: response.schedule,
     itemDetails: response.itemDetails,
+    motorcycleDetails: response.motorcycleDetails,
     photos: response.photos,
   };
 }
@@ -151,6 +153,23 @@ export async function createCustomerRequest(
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to create customer request.');
+  }
+
+  const data = (await response.json()) as CustomerRequestApiResponse;
+  return mapCustomerRequest(data);
+}
+
+export async function createMotorcycleTransportRequest(
+  payload: CreateMotorcycleTransportRequestPayload,
+): Promise<CustomerRequest> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/motorcycle-transport`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to create motorcycle transport request.');
   }
 
   const data = (await response.json()) as CustomerRequestApiResponse;
@@ -371,7 +390,7 @@ export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogY
   }
 
   const data =
-    (await response.json()) as Array<number | VehicleCatalogYearOption> | { years: Array<number | VehicleCatalogYearOption> };
+    (await response.json()) as (number | VehicleCatalogYearOption)[] | { years: (number | VehicleCatalogYearOption)[] };
   const raw = Array.isArray(data) ? data : (data.years ?? []);
 
   return raw

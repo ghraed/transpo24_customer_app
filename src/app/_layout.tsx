@@ -1,5 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -19,6 +18,7 @@ export default function RootLayout() {
 
         <Stack.Screen name="choose-service" options={{ title: 'Choose Service' }} />
         <Stack.Screen name="vehicle-details" options={{ title: 'Vehicle Details' }} />
+        <Stack.Screen name="motorcycle-details" options={{ title: 'Motorcycle Details' }} />
         <Stack.Screen name="vehicle-condition" options={{ title: 'Vehicle Condition' }} />
         <Stack.Screen name="pickup-location" options={{ title: 'Pickup Location' }} />
         <Stack.Screen name="dropoff-location" options={{ title: 'Dropoff Location' }} />

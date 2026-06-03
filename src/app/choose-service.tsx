@@ -16,13 +16,24 @@ export default function ChooseServiceScreen() {
     catch (err) { setError(err instanceof Error ? err.message : 'Failed to load services.'); }
     finally { setIsLoading(false); }
   }, []);
-  useEffect(() => { void loadServices(); }, [loadServices]);
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void loadServices();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadServices]);
   const canContinue = useMemo(() => selectedService !== null, [selectedService]);
   const onContinue = useCallback(() => {
     if (!selectedService) return;
     const isVehicleService = selectedService.key === 'VEHICLE_TRANSPORT';
+    const isMotorcycleService = selectedService.key === 'MOTORCYCLE_TRANSPORT';
     router.push({
-      pathname: isVehicleService ? '/vehicle-details' : '/pickup-location',
+      pathname: isVehicleService
+        ? '/vehicle-details'
+        : isMotorcycleService
+          ? '/motorcycle-details'
+          : '/pickup-location',
       params: { serviceId: selectedService.id, serviceKey: selectedService.key },
     });
   }, [router, selectedService]);
@@ -30,7 +41,7 @@ export default function ChooseServiceScreen() {
     router.back();
   }, [router]);
   if (isLoading) return <View style={styles.centerContainer}><ActivityIndicator size="large" color="#1a73e8" /><Text style={styles.stateText}>Loading services...</Text></View>;
-  if (error) return <View style={styles.centerContainer}><Text style={styles.errorTitle}>Couldn't load services</Text><Text style={styles.stateText}>{error}</Text><Pressable style={styles.retryButton} onPress={() => void loadServices()}><Text style={styles.retryText}>Retry</Text></Pressable></View>;
+  if (error) return <View style={styles.centerContainer}><Text style={styles.errorTitle}>Couldn&apos;t load services</Text><Text style={styles.stateText}>{error}</Text><Pressable style={styles.retryButton} onPress={() => void loadServices()}><Text style={styles.retryText}>Retry</Text></Pressable></View>;
   if (services.length === 0) return <View style={styles.centerContainer}><Text style={styles.errorTitle}>No services available</Text><Text style={styles.stateText}>Please try again in a moment.</Text><Pressable style={styles.retryButton} onPress={() => void loadServices()}><Text style={styles.retryText}>Refresh</Text></Pressable></View>;
   return (
     <View style={styles.container}>

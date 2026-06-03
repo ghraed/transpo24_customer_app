@@ -27,7 +27,11 @@ import {
   updatePickupLocation,
 } from '@/lib/api';
 import { resolvePlaceFromQuery } from '@/lib/places';
-import type { Coordinates } from '@/types/customer-request';
+import type {
+  Coordinates,
+  PendingMotorcycleDetailsPayload,
+  UpdateScheduleAndItemDetailsPayload,
+} from '@/types/customer-request';
 import type { VehicleCondition } from '@/types/vehicle-condition';
 import type { VehicleDetailsPayload } from '@/types/vehicle';
 
@@ -39,6 +43,8 @@ type PickupLocationRouteParams = {
   vehicleConditionDetails?: string;
   pendingRequestDetails?: string;
   pendingPhotoAssets?: string;
+  pendingMotorcycleDetails?: string;
+  pendingMotorcyclePhotoAssets?: string;
 };
 
 type SelectedPickupLocation = {
@@ -106,6 +112,17 @@ function parsePendingRequestDetails(
   }
 }
 
+function parsePendingMotorcycleDetails(
+  raw: string | undefined,
+): PendingMotorcycleDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as PendingMotorcycleDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function PickupLocationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<PickupLocationRouteParams>();
@@ -120,6 +137,12 @@ export default function PickupLocationScreen() {
     typeof params.pendingRequestDetails === 'string' ? params.pendingRequestDetails : '';
   const pendingPhotoAssetsRaw =
     typeof params.pendingPhotoAssets === 'string' ? params.pendingPhotoAssets : '';
+  const pendingMotorcycleDetailsRaw =
+    typeof params.pendingMotorcycleDetails === 'string' ? params.pendingMotorcycleDetails : '';
+  const pendingMotorcyclePhotoAssetsRaw =
+    typeof params.pendingMotorcyclePhotoAssets === 'string'
+      ? params.pendingMotorcyclePhotoAssets
+      : '';
 
   const [requestId, setRequestId] = useState<string | undefined>(initialRequestId);
   const [selectedLocation, setSelectedLocation] = useState<SelectedPickupLocation | null>(null);
@@ -378,6 +401,31 @@ export default function PickupLocationScreen() {
     try {
       let targetRequestId = requestId;
 
+      if (serviceKey === 'MOTORCYCLE_TRANSPORT') {
+        const pendingMotorcycleDetails = parsePendingMotorcycleDetails(pendingMotorcycleDetailsRaw);
+        if (!pendingMotorcycleDetails) {
+          setErrorMessage('Motorcycle details are missing. Please go back and complete them first.');
+          return;
+        }
+
+        const nextRoute = {
+          pathname: '/dropoff-location',
+          params: {
+            serviceId,
+            serviceKey,
+            pickupLatitude: String(selectedLocation.latitude),
+            pickupLongitude: String(selectedLocation.longitude),
+            pickupAddress: selectedLocation.address ?? '',
+            pickupPlaceId: selectedLocation.placeId ?? '',
+            pendingMotorcycleDetails: pendingMotorcycleDetailsRaw,
+            pendingMotorcyclePhotoAssets: pendingMotorcyclePhotoAssetsRaw,
+          },
+        } as unknown as Href;
+
+        router.push(nextRoute);
+        return;
+      }
+
       if (!targetRequestId) {
         const parsedVehicleDetails = parseVehicleDetails(vehicleDetails);
         const parsedVehicleConditionDetails = parseVehicleConditionDetails(vehicleConditionDetails);
@@ -425,6 +473,8 @@ export default function PickupLocationScreen() {
           pickupPlaceId: selectedLocation.placeId ?? '',
           pendingRequestDetails: pendingRequestDetailsRaw,
           pendingPhotoAssets: pendingPhotoAssetsRaw,
+          pendingMotorcycleDetails: pendingMotorcycleDetailsRaw,
+          pendingMotorcyclePhotoAssets: pendingMotorcyclePhotoAssetsRaw,
         },
       } as unknown as Href;
 
@@ -435,7 +485,7 @@ export default function PickupLocationScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [hasValidServiceId, pendingPhotoAssetsRaw, pendingRequestDetailsRaw, requestId, router, selectedLocation, serviceId, serviceKey, vehicleConditionDetails, vehicleDetails]);
+  }, [hasValidServiceId, pendingMotorcycleDetailsRaw, pendingMotorcyclePhotoAssetsRaw, pendingPhotoAssetsRaw, pendingRequestDetailsRaw, requestId, router, selectedLocation, serviceId, serviceKey, vehicleConditionDetails, vehicleDetails]);
 
   const selectionLabel = selectedLocation?.address?.trim()
     ? selectedLocation.address
