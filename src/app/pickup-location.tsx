@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -21,7 +22,10 @@ import {
   Region,
 } from '@/components/native-maps';
 import { HAS_GOOGLE_MAPS_API_KEY } from '@/config/maps';
-import { createCustomerRequest, updatePickupLocation } from '@/lib/api';
+import {
+  createCustomerRequest,
+  updatePickupLocation,
+} from '@/lib/api';
 import { resolvePlaceFromQuery } from '@/lib/places';
 import type { Coordinates } from '@/types/customer-request';
 import type { VehicleCondition } from '@/types/vehicle-condition';
@@ -33,6 +37,8 @@ type PickupLocationRouteParams = {
   requestId?: string;
   vehicleDetails?: string;
   vehicleConditionDetails?: string;
+  pendingRequestDetails?: string;
+  pendingPhotoAssets?: string;
 };
 
 type SelectedPickupLocation = {
@@ -40,6 +46,13 @@ type SelectedPickupLocation = {
   longitude: number;
   address?: string;
   placeId?: string;
+  source?: 'device' | 'manual' | 'search';
+};
+
+type ProviderState = {
+  gpsAvailable?: boolean;
+  networkAvailable?: boolean;
+  locationServicesEnabled: boolean;
 };
 
 const DEFAULT_REGION: Region = {
@@ -48,6 +61,19 @@ const DEFAULT_REGION: Region = {
   latitudeDelta: 0.08,
   longitudeDelta: 0.08,
 };
+
+function formatAddressFromReverseGeocode(
+  reverseGeocodeResult: Location.LocationGeocodedAddress | undefined,
+): string {
+  return [
+    reverseGeocodeResult?.name,
+    reverseGeocodeResult?.street,
+    reverseGeocodeResult?.city,
+    reverseGeocodeResult?.region,
+  ]
+    .filter(Boolean)
+    .join(', ');
+}
 
 function parseVehicleDetails(raw: string): VehicleDetailsPayload | undefined {
   if (!raw) return undefined;
@@ -69,6 +95,17 @@ function parseVehicleConditionDetails(
   }
 }
 
+function parsePendingRequestDetails(
+  raw: string | undefined,
+): UpdateScheduleAndItemDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as UpdateScheduleAndItemDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function PickupLocationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<PickupLocationRouteParams>();
@@ -79,6 +116,10 @@ export default function PickupLocationScreen() {
   const vehicleConditionDetails =
     typeof params.vehicleConditionDetails === 'string' ? params.vehicleConditionDetails : '';
   const initialRequestId = typeof params.requestId === 'string' ? params.requestId : undefined;
+  const pendingRequestDetailsRaw =
+    typeof params.pendingRequestDetails === 'string' ? params.pendingRequestDetails : '';
+  const pendingPhotoAssetsRaw =
+    typeof params.pendingPhotoAssets === 'string' ? params.pendingPhotoAssets : '';
 
   const [requestId, setRequestId] = useState<string | undefined>(initialRequestId);
   const [selectedLocation, setSelectedLocation] = useState<SelectedPickupLocation | null>(null);
@@ -86,10 +127,15 @@ export default function PickupLocationScreen() {
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(true);
   const [locationMessage, setLocationMessage] = useState<string>('');
+  const [isLocationServicesDisabled, setIsLocationServicesDisabled] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [searchMessage, setSearchMessage] = useState<string>('');
   const [isSearchingPlaces, setIsSearchingPlaces] = useState<boolean>(false);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [providerState, setProviderState] = useState<ProviderState | null>(null);
+  const [lastLocationTimestamp, setLastLocationTimestamp] = useState<number | null>(null);
+  const [isMockedLocation, setIsMockedLocation] = useState<boolean | null>(null);
 
   const hasValidServiceId = serviceId.trim().length > 0;
 
@@ -99,6 +145,7 @@ export default function PickupLocationScreen() {
     setSelectedLocation({
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
+      source: 'manual',
     });
     setErrorMessage('');
   }, []);
@@ -107,54 +154,170 @@ export default function PickupLocationScreen() {
     return selectedLocation !== null && hasValidServiceId && !isSaving;
   }, [selectedLocation, hasValidServiceId, isSaving]);
 
-  const loadCurrentLocation = useCallback(async () => {
-    setIsLoadingLocation(true);
-    setLocationMessage('');
-
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-
-      if (permission.status !== Location.PermissionStatus.GRANTED) {
-        setLocationMessage('Location permission denied. You can still select a location on the map.');
-        return;
-      }
-
-      const current = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
+  const applyCurrentLocation = useCallback(
+    async (location: Location.LocationObject) => {
+      setLocationAccuracy(typeof location.coords.accuracy === 'number' ? location.coords.accuracy : null);
+      setLastLocationTimestamp(location.timestamp);
+      setIsMockedLocation(typeof location.mocked === 'boolean' ? location.mocked : null);
       const nextRegion: Region = {
-        latitude: current.coords.latitude,
-        longitude: current.coords.longitude,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
         latitudeDelta: 0.03,
         longitudeDelta: 0.03,
       };
 
       setRegion(nextRegion);
-      const reverse = await Location.reverseGeocodeAsync({
-        latitude: current.coords.latitude,
-        longitude: current.coords.longitude,
-      });
-      const firstAddress = reverse[0];
-      const formattedAddress = [firstAddress?.name, firstAddress?.street, firstAddress?.city, firstAddress?.region]
-        .filter(Boolean)
-        .join(', ');
+      setLocationMessage('');
+      setErrorMessage('');
+      setIsLocationServicesDisabled(false);
 
-      setSelectedLocation({
-        latitude: current.coords.latitude,
-        longitude: current.coords.longitude,
-        address: formattedAddress || 'Current location',
+      const reverse = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
       });
+      const formattedAddress = formatAddressFromReverseGeocode(reverse[0]);
+
+      setSelectedLocation((previous) => {
+        if (previous && previous.source && previous.source !== 'device') {
+          return previous;
+        }
+
+        return {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          address: formattedAddress || 'Current location',
+          source: 'device',
+        };
+      });
+    },
+    [],
+  );
+
+  const loadCurrentLocation = useCallback(async (requestPermission: boolean) => {
+    setIsLoadingLocation(true);
+
+    try {
+      const permission = requestPermission
+        ? await Location.requestForegroundPermissionsAsync()
+        : await Location.getForegroundPermissionsAsync();
+
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        setIsLocationServicesDisabled(false);
+        setLocationMessage('Location permission denied. You can still select a location on the map.');
+        return;
+      }
+
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      const providerStatus = await Location.getProviderStatusAsync();
+      setProviderState({
+        gpsAvailable: providerStatus.gpsAvailable,
+        networkAvailable: providerStatus.networkAvailable,
+        locationServicesEnabled: providerStatus.locationServicesEnabled,
+      });
+
+      if (!servicesEnabled) {
+        setIsLocationServicesDisabled(true);
+        setLocationMessage(
+          'Location services are off. Turn GPS on to use your current location, or select a location on the map.',
+        );
+        return;
+      }
+
+      if (Platform.OS === 'android') {
+        try {
+          await Location.enableNetworkProviderAsync();
+        } catch {
+          setLocationMessage(
+            'High-accuracy mode was not enabled. Please enable precise/high-accuracy location on the phone.',
+          );
+        }
+      }
+
+      const current = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+        mayShowUserSettingsDialog: true,
+        timeInterval: 1000,
+        distanceInterval: 1,
+      });
+
+      await applyCurrentLocation(current);
     } catch {
+      setIsLocationServicesDisabled(false);
       setLocationMessage('Unable to access current location. You can still select a location manually.');
     } finally {
       setIsLoadingLocation(false);
     }
-  }, []);
+  }, [applyCurrentLocation]);
 
   useEffect(() => {
-    void loadCurrentLocation();
+    const timeoutId = setTimeout(() => {
+      void loadCurrentLocation(true);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [loadCurrentLocation]);
+
+  useEffect(() => {
+    if (!isLocationServicesDisabled) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void loadCurrentLocation(false);
+    }, 2500);
+
+    return () => clearInterval(intervalId);
+  }, [isLocationServicesDisabled, loadCurrentLocation]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void loadCurrentLocation(false);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [loadCurrentLocation]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    async function startLiveLocationTracking() {
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        return;
+      }
+
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        return;
+      }
+
+      locationSubscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          mayShowUserSettingsDialog: true,
+          timeInterval: 1500,
+          distanceInterval: 1,
+        },
+        (location) => {
+          if (!isMounted) {
+            return;
+          }
+
+          void applyCurrentLocation(location);
+        },
+      );
+    }
+
+    void startLiveLocationTracking();
+
+    return () => {
+      isMounted = false;
+      locationSubscription?.remove();
+    };
+  }, [applyCurrentLocation]);
 
   const onSearchSubmit = useCallback(async () => {
     const query = addressQuery.trim();
@@ -179,6 +342,7 @@ export default function PickupLocationScreen() {
         longitude: place.longitude,
         address: place.address,
         placeId: place.placeId,
+        source: 'search',
       });
       setRegion((prev) => ({
         ...prev,
@@ -217,15 +381,20 @@ export default function PickupLocationScreen() {
       if (!targetRequestId) {
         const parsedVehicleDetails = parseVehicleDetails(vehicleDetails);
         const parsedVehicleConditionDetails = parseVehicleConditionDetails(vehicleConditionDetails);
+        const pendingRequestDetails = parsePendingRequestDetails(pendingRequestDetailsRaw);
         const created = await createCustomerRequest({
           serviceId,
           vehicleVin: parsedVehicleDetails?.vehicleVin,
-          vehicleBrand: parsedVehicleDetails?.vehicleBrand,
-          vehicleModel: parsedVehicleDetails?.vehicleModel,
+          vehicleBrand:
+            parsedVehicleDetails?.vehicleBrand?.trim() || pendingRequestDetails?.itemBrand?.trim() || undefined,
+          vehicleModel:
+            parsedVehicleDetails?.vehicleModel?.trim() || pendingRequestDetails?.itemModel?.trim() || undefined,
           vehicleSeries: parsedVehicleDetails?.vehicleSeries,
           vehicleVariant: parsedVehicleDetails?.vehicleVariant,
-          vehicleManufactureYear: parsedVehicleDetails?.vehicleManufactureYear,
-          vehicleEstimatedWeightKg: parsedVehicleDetails?.vehicleEstimatedWeightKg,
+          vehicleManufactureYear:
+            parsedVehicleDetails?.vehicleManufactureYear ?? pendingRequestDetails?.itemYear,
+          vehicleEstimatedWeightKg:
+            parsedVehicleDetails?.vehicleEstimatedWeightKg ?? pendingRequestDetails?.itemWeightKg,
           vehicleBodyType: parsedVehicleDetails?.vehicleBodyType,
           vehicleDataSource: parsedVehicleDetails?.vehicleDataSource,
           vehicleCondition: parsedVehicleConditionDetails?.vehicleCondition,
@@ -254,6 +423,8 @@ export default function PickupLocationScreen() {
           pickupLongitude: String(selectedLocation.longitude),
           pickupAddress: selectedLocation.address ?? '',
           pickupPlaceId: selectedLocation.placeId ?? '',
+          pendingRequestDetails: pendingRequestDetailsRaw,
+          pendingPhotoAssets: pendingPhotoAssetsRaw,
         },
       } as unknown as Href;
 
@@ -264,7 +435,7 @@ export default function PickupLocationScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [hasValidServiceId, requestId, router, selectedLocation, serviceId, serviceKey, vehicleConditionDetails, vehicleDetails]);
+  }, [hasValidServiceId, pendingPhotoAssetsRaw, pendingRequestDetailsRaw, requestId, router, selectedLocation, serviceId, serviceKey, vehicleConditionDetails, vehicleDetails]);
 
   const selectionLabel = selectedLocation?.address?.trim()
     ? selectedLocation.address
@@ -275,6 +446,18 @@ export default function PickupLocationScreen() {
   const locationDetails = selectedLocation
     ? `Lat: ${selectedLocation.latitude.toFixed(6)}  |  Lng: ${selectedLocation.longitude.toFixed(6)}`
     : '';
+
+  const locationAccuracyText =
+    locationAccuracy !== null ? `GPS accuracy: about ${Math.round(locationAccuracy)}m` : '';
+  const providerSummary = providerState
+    ? `GPS: ${providerState.gpsAvailable ? 'on' : 'off'} • Network: ${providerState.networkAvailable ? 'on' : 'off'} • Services: ${providerState.locationServicesEnabled ? 'on' : 'off'}`
+    : '';
+  const locationMetaText = [
+    lastLocationTimestamp ? `Updated: ${new Date(lastLocationTimestamp).toLocaleTimeString()}` : null,
+    isMockedLocation === true ? 'Mocked location detected' : null,
+  ]
+    .filter(Boolean)
+    .join(' • ');
 
   return (
     <KeyboardAvoidingView
@@ -307,6 +490,17 @@ export default function PickupLocationScreen() {
         <Text style={styles.searchHint}>
           Press search on the keyboard to move pin and map to the top matching place.
         </Text>
+        <Pressable
+          style={[styles.locationButton, isLoadingLocation && styles.locationButtonDisabled]}
+          onPress={() => void loadCurrentLocation(true)}
+          disabled={isLoadingLocation}
+        >
+          {isLoadingLocation ? (
+            <ActivityIndicator size="small" color="#1a73e8" />
+          ) : (
+            <Text style={styles.locationButtonText}>Use Current Location</Text>
+          )}
+        </Pressable>
         {isSearchingPlaces ? (
           <ActivityIndicator style={styles.searchSpinner} size="small" color="#1a73e8" />
         ) : null}
@@ -320,6 +514,7 @@ export default function PickupLocationScreen() {
             style={styles.map}
             initialRegion={region}
             region={region}
+            showsUserLocation
             onRegionChangeComplete={setRegion}
             onPress={onMapPress}
           >
@@ -353,6 +548,9 @@ export default function PickupLocationScreen() {
       <View style={styles.bottomCard}>
         <Text style={styles.bottomTitle}>{selectionLabel}</Text>
         {locationDetails ? <Text style={styles.bottomDetails}>{locationDetails}</Text> : null}
+        {locationAccuracyText ? <Text style={styles.bottomDetails}>{locationAccuracyText}</Text> : null}
+        {providerSummary ? <Text style={styles.bottomDetails}>{providerSummary}</Text> : null}
+        {locationMetaText ? <Text style={styles.bottomDetails}>{locationMetaText}</Text> : null}
       </View>
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
@@ -426,6 +624,24 @@ const styles = StyleSheet.create({
   searchSpinner: {
     marginTop: 8,
     alignSelf: 'flex-start',
+  },
+  locationButton: {
+    marginTop: 10,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationButtonDisabled: {
+    opacity: 0.7,
+  },
+  locationButtonText: {
+    color: '#1d4ed8',
+    fontSize: 14,
+    fontWeight: '700',
   },
   mapContainer: {
     flex: 1,

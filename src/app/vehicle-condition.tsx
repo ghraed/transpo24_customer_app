@@ -8,6 +8,8 @@ type RouteParams = {
   serviceId?: string;
   serviceKey?: string;
   vehicleDetails?: string;
+  pendingRequestDetails?: string;
+  pendingPhotoAssets?: string;
 };
 
 const MAX_NOTES_LENGTH = 500;
@@ -26,6 +28,9 @@ export default function VehicleConditionScreen() {
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId : '';
   const serviceKey = typeof params.serviceKey === 'string' ? params.serviceKey : '';
   const vehicleDetails = typeof params.vehicleDetails === 'string' ? params.vehicleDetails : '';
+  const pendingRequestDetails =
+    typeof params.pendingRequestDetails === 'string' ? params.pendingRequestDetails : '';
+  const pendingPhotoAssets = typeof params.pendingPhotoAssets === 'string' ? params.pendingPhotoAssets : '';
 
   const [form, setForm] = useState<VehicleConditionFormValues>({
     condition: null,
@@ -55,6 +60,8 @@ export default function VehicleConditionScreen() {
         serviceId,
         serviceKey,
         vehicleDetails,
+        pendingRequestDetails,
+        pendingPhotoAssets,
         vehicleConditionDetails: JSON.stringify({
           vehicleCondition: form.condition,
           vehicleConditionNotes: trimmedNotes || undefined,

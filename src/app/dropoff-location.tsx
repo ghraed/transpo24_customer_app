@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,20 +17,34 @@ import {
   isNativeMapRuntimeAvailable,
   MapPressEvent,
   NativeMapView,
+  NativeMapViewDirections,
   NativeMarker,
   PROVIDER_GOOGLE,
   Region,
 } from '@/components/native-maps';
-import { HAS_GOOGLE_MAPS_API_KEY } from '@/config/maps';
-import { updateDropoffLocation } from '@/lib/api';
+import { GOOGLE_MAPS_API_KEY, HAS_GOOGLE_MAPS_API_KEY } from '@/config/maps';
+import {
+  updateDropoffLocation,
+  updateScheduleAndItemDetails,
+  uploadRequestPhotos,
+} from '@/lib/api';
 import { resolvePlaceFromQuery } from '@/lib/places';
-import type { Coordinates, DropoffLocationRouteParams } from '@/types/customer-request';
+import type {
+  Coordinates,
+  DropoffLocationRouteParams,
+  LocalPhotoAsset,
+  UpdateScheduleAndItemDetailsPayload,
+  UploadedRequestPhoto,
+} from '@/types/customer-request';
+import type { VehicleCondition } from '@/types/vehicle-condition';
+import type { VehicleDetailsPayload } from '@/types/vehicle';
 
 type SelectedDropoffLocation = {
   latitude: number;
   longitude: number;
   address?: string;
   placeId?: string;
+  source?: 'device' | 'manual' | 'search';
 };
 
 const DEFAULT_REGION: Region = {
@@ -38,6 +53,76 @@ const DEFAULT_REGION: Region = {
   latitudeDelta: 0.08,
   longitudeDelta: 0.08,
 };
+
+function formatDistance(distanceMeters: number): string {
+  if (distanceMeters < 1000) {
+    return `${Math.round(distanceMeters)} m`;
+  }
+
+  return `${(distanceMeters / 1000).toFixed(distanceMeters >= 10 ? 1 : 2)} km`;
+}
+
+function parsePendingRequestDetails(
+  raw: string | undefined,
+): UpdateScheduleAndItemDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as UpdateScheduleAndItemDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
+function parsePendingPhotoAssets(raw: string | undefined): LocalPhotoAsset[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as LocalPhotoAsset[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseVehicleDetails(raw: string | undefined): VehicleDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as VehicleDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseVehicleConditionDetails(
+  raw: string | undefined,
+): { vehicleCondition?: VehicleCondition; vehicleConditionNotes?: string } | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as { vehicleCondition?: VehicleCondition; vehicleConditionNotes?: string };
+  } catch {
+    return undefined;
+  }
+}
+
+function serializeItemDetails(payload: UpdateScheduleAndItemDetailsPayload): string {
+  return JSON.stringify({
+    title: payload.itemTitle,
+    description: payload.itemDescription ?? null,
+    type: payload.itemType,
+    brand: payload.itemBrand ?? null,
+    model: payload.itemModel ?? null,
+    year: payload.itemYear ?? null,
+    condition: payload.itemCondition ?? null,
+    weightKg: payload.itemWeightKg ?? null,
+    dimensions: {
+      lengthCm: payload.itemLengthCm ?? null,
+      widthCm: payload.itemWidthCm ?? null,
+      heightCm: payload.itemHeightCm ?? null,
+    },
+    requiresLoadingHelp: payload.requiresLoadingHelp,
+    loadingWorkersCount: payload.loadingWorkersCount ?? null,
+    specialInstructions: payload.specialInstructions ?? null,
+  });
+}
 
 export default function DropoffLocationScreen() {
   const router = useRouter();
@@ -54,6 +139,15 @@ export default function DropoffLocationScreen() {
     typeof params.pickupLongitude === 'string' ? Number(params.pickupLongitude) : null;
   const pickupAddress = typeof params.pickupAddress === 'string' ? params.pickupAddress.trim() : '';
   const pickupPlaceId = typeof params.pickupPlaceId === 'string' ? params.pickupPlaceId.trim() : '';
+  const pendingRequestDetailsRaw =
+    typeof params.pendingRequestDetails === 'string' ? params.pendingRequestDetails : '';
+  const pendingPhotoAssetsRaw =
+    typeof params.pendingPhotoAssets === 'string' ? params.pendingPhotoAssets : '';
+  const itemDetails = typeof params.itemDetails === 'string' ? params.itemDetails : '';
+  const uploadedPhotos = typeof params.uploadedPhotos === 'string' ? params.uploadedPhotos : '';
+  const isImmediate = typeof params.isImmediate === 'string' ? params.isImmediate : '';
+  const scheduledPickupAt =
+    typeof params.scheduledPickupAt === 'string' ? params.scheduledPickupAt : '';
 
   const hasPickupCoordinates =
     pickupLatitude !== null &&
@@ -73,12 +167,15 @@ export default function DropoffLocationScreen() {
         }
       : DEFAULT_REGION,
   );
-  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(!hasPickupCoordinates);
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(true);
   const [locationMessage, setLocationMessage] = useState<string>('');
+  const [isLocationServicesDisabled, setIsLocationServicesDisabled] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [searchMessage, setSearchMessage] = useState<string>('');
   const [isSearchingPlaces, setIsSearchingPlaces] = useState<boolean>(false);
+  const [routeMessage, setRouteMessage] = useState<string>('');
+  const [routeDistanceKm, setRouteDistanceKm] = useState<number | null>(null);
 
   const onMapPress = useCallback((event: MapPressEvent) => {
     const coordinates: Coordinates = event.nativeEvent.coordinate;
@@ -86,7 +183,10 @@ export default function DropoffLocationScreen() {
     setSelectedLocation({
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
+      source: 'manual',
     });
+    setRouteDistanceKm(null);
+    setRouteMessage('');
     setErrorMessage('');
   }, []);
 
@@ -94,20 +194,54 @@ export default function DropoffLocationScreen() {
     return selectedLocation !== null && requestId.length > 0 && serviceId.length > 0 && !isSaving;
   }, [requestId, selectedLocation, serviceId, isSaving]);
 
-  const loadCurrentLocation = useCallback(async () => {
-    if (hasPickupCoordinates) {
-      return;
-    }
+  const applyCurrentLocation = useCallback((location: Location.LocationObject) => {
+    const nextRegion: Region = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      latitudeDelta: 0.03,
+      longitudeDelta: 0.03,
+    };
 
-    setIsLoadingLocation(true);
+    setRegion(nextRegion);
     setLocationMessage('');
+    setErrorMessage('');
+    setIsLocationServicesDisabled(false);
+    setSelectedLocation((previous) => {
+      if (previous && previous.source && previous.source !== 'device') {
+        return previous;
+      }
+
+      return {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        address: 'Current location',
+        source: 'device',
+      };
+    });
+  }, []);
+
+  const loadCurrentLocation = useCallback(async (requestPermission: boolean) => {
+    setIsLoadingLocation(true);
 
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
+      const permission = requestPermission
+        ? await Location.requestForegroundPermissionsAsync()
+        : await Location.getForegroundPermissionsAsync();
 
       if (permission.status !== Location.PermissionStatus.GRANTED) {
+        setIsLocationServicesDisabled(false);
         setLocationMessage(
           'Location permission denied. You can still select a dropoff location manually on the map.',
+        );
+        return;
+      }
+
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+
+      if (!servicesEnabled) {
+        setIsLocationServicesDisabled(true);
+        setLocationMessage(
+          'Location services are off. Turn GPS on to use your current location, or choose a dropoff location on the map.',
         );
         return;
       }
@@ -116,23 +250,43 @@ export default function DropoffLocationScreen() {
         accuracy: Location.Accuracy.Balanced,
       });
 
-      const nextRegion: Region = {
-        latitude: current.coords.latitude,
-        longitude: current.coords.longitude,
-        latitudeDelta: 0.03,
-        longitudeDelta: 0.03,
-      };
-
-      setRegion(nextRegion);
+      applyCurrentLocation(current);
     } catch {
+      setIsLocationServicesDisabled(false);
       setLocationMessage('Unable to access current location. You can still pick location manually.');
     } finally {
       setIsLoadingLocation(false);
     }
-  }, [hasPickupCoordinates]);
+  }, [applyCurrentLocation]);
 
   useEffect(() => {
-    void loadCurrentLocation();
+    const timeoutId = setTimeout(() => {
+      void loadCurrentLocation(true);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadCurrentLocation]);
+
+  useEffect(() => {
+    if (!isLocationServicesDisabled) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void loadCurrentLocation(false);
+    }, 2500);
+
+    return () => clearInterval(intervalId);
+  }, [isLocationServicesDisabled, loadCurrentLocation]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void loadCurrentLocation(false);
+      }
+    });
+
+    return () => subscription.remove();
   }, [loadCurrentLocation]);
 
   const onSearchSubmit = useCallback(async () => {
@@ -158,7 +312,10 @@ export default function DropoffLocationScreen() {
         longitude: place.longitude,
         address: place.address,
         placeId: place.placeId,
+        source: 'search',
       });
+      setRouteDistanceKm(null);
+      setRouteMessage('');
       setRegion((prev) => ({
         ...prev,
         latitude: place.latitude,
@@ -203,8 +360,66 @@ export default function DropoffLocationScreen() {
         placeId: selectedLocation.placeId,
       });
 
+      let nextIsImmediate = isImmediate;
+      let nextScheduledPickupAt = scheduledPickupAt;
+      let nextItemDetails = itemDetails;
+      let nextUploadedPhotos = uploadedPhotos;
+
+      if (serviceKey === 'VEHICLE_TRANSPORT' && pendingRequestDetailsRaw) {
+        const pendingRequestDetails = parsePendingRequestDetails(pendingRequestDetailsRaw);
+        if (pendingRequestDetails) {
+          const parsedVehicleConditionDetails = parseVehicleConditionDetails(vehicleConditionDetails);
+          const parsedVehicleDetails = parseVehicleDetails(vehicleDetails);
+          const payload: UpdateScheduleAndItemDetailsPayload = {
+            ...pendingRequestDetails,
+            vehicleVin: parsedVehicleDetails?.vehicleVin,
+            vehicleBrand:
+              parsedVehicleDetails?.vehicleBrand?.trim() ||
+              pendingRequestDetails.vehicleBrand?.trim() ||
+              pendingRequestDetails.itemBrand?.trim() ||
+              undefined,
+            vehicleModel:
+              parsedVehicleDetails?.vehicleModel?.trim() ||
+              pendingRequestDetails.vehicleModel?.trim() ||
+              pendingRequestDetails.itemModel?.trim() ||
+              undefined,
+            vehicleSeries: parsedVehicleDetails?.vehicleSeries,
+            vehicleVariant: parsedVehicleDetails?.vehicleVariant,
+            vehicleManufactureYear:
+              parsedVehicleDetails?.vehicleManufactureYear ??
+              pendingRequestDetails.vehicleManufactureYear ??
+              pendingRequestDetails.itemYear,
+            vehicleEstimatedWeightKg:
+              parsedVehicleDetails?.vehicleEstimatedWeightKg ??
+              pendingRequestDetails.vehicleEstimatedWeightKg ??
+              pendingRequestDetails.itemWeightKg,
+            vehicleBodyType:
+              parsedVehicleDetails?.vehicleBodyType ?? pendingRequestDetails.vehicleBodyType,
+            vehicleDataSource:
+              parsedVehicleDetails?.vehicleDataSource ?? pendingRequestDetails.vehicleDataSource,
+            vehicleCondition: parsedVehicleConditionDetails?.vehicleCondition,
+            vehicleConditionNotes:
+              parsedVehicleConditionDetails?.vehicleConditionNotes?.trim() || undefined,
+          };
+
+          await updateScheduleAndItemDetails(requestId, payload);
+
+          let uploaded: UploadedRequestPhoto[] = [];
+          const pendingPhotoAssets = parsePendingPhotoAssets(pendingPhotoAssetsRaw);
+          if (pendingPhotoAssets.length > 0) {
+            const uploadResponse = await uploadRequestPhotos(requestId, pendingPhotoAssets);
+            uploaded = uploadResponse.photos;
+          }
+
+          nextIsImmediate = String(payload.isImmediate);
+          nextScheduledPickupAt = payload.scheduledPickupAt ?? '';
+          nextItemDetails = serializeItemDetails(payload);
+          nextUploadedPhotos = JSON.stringify(uploaded);
+        }
+      }
+
       const nextRoute = {
-        pathname: '/date-time',
+        pathname: serviceKey === 'VEHICLE_TRANSPORT' ? '/submit-request' : '/date-time',
         params: {
           requestId: updated.id,
           serviceId: updated.serviceId,
@@ -219,6 +434,11 @@ export default function DropoffLocationScreen() {
           dropoffLongitude: String(selectedLocation.longitude),
           dropoffAddress: selectedLocation.address ?? '',
           dropoffPlaceId: selectedLocation.placeId ?? '',
+          isImmediate: nextIsImmediate,
+          scheduledPickupAt: nextScheduledPickupAt,
+          itemDetails: nextItemDetails,
+          uploadedPhotos: nextUploadedPhotos,
+          routeDistanceKm: routeDistanceKm !== null ? String(routeDistanceKm) : '',
         },
       } as unknown as Href;
 
@@ -253,8 +473,15 @@ export default function DropoffLocationScreen() {
     selectedLocation,
     serviceId,
     serviceKey,
+    isImmediate,
+    itemDetails,
+    pendingPhotoAssetsRaw,
+    pendingRequestDetailsRaw,
     vehicleConditionDetails,
     vehicleDetails,
+    uploadedPhotos,
+    scheduledPickupAt,
+    routeDistanceKm,
   ]);
 
   const selectedDropoffLabel = selectedLocation?.address?.trim()
@@ -270,6 +497,9 @@ export default function DropoffLocationScreen() {
   const pickupSummary = hasPickupCoordinates
     ? pickupAddress || `Lat: ${pickupLatitude.toFixed(6)}  |  Lng: ${pickupLongitude.toFixed(6)}`
     : 'Pickup location is missing.';
+
+  const distanceSummary =
+    routeDistanceKm !== null ? formatDistance(routeDistanceKm * 1000) : '';
 
   return (
     <KeyboardAvoidingView
@@ -302,6 +532,17 @@ export default function DropoffLocationScreen() {
         <Text style={styles.searchHint}>
           Press search on the keyboard to move pin and map to the top matching place.
         </Text>
+        <Pressable
+          style={[styles.locationButton, isLoadingLocation && styles.locationButtonDisabled]}
+          onPress={() => void loadCurrentLocation(true)}
+          disabled={isLoadingLocation}
+        >
+          {isLoadingLocation ? (
+            <ActivityIndicator size="small" color="#1a73e8" />
+          ) : (
+            <Text style={styles.locationButtonText}>Use Current Location</Text>
+          )}
+        </Pressable>
         {isSearchingPlaces ? (
           <ActivityIndicator style={styles.searchSpinner} size="small" color="#1a73e8" />
         ) : null}
@@ -315,6 +556,7 @@ export default function DropoffLocationScreen() {
             style={styles.map}
             initialRegion={region}
             region={region}
+            showsUserLocation
             onRegionChangeComplete={setRegion}
             onPress={onMapPress}
           >
@@ -324,6 +566,31 @@ export default function DropoffLocationScreen() {
                 title="Pickup location"
                 description={pickupAddress || 'Pickup location'}
                 pinColor="#2563eb"
+              />
+            ) : null}
+
+            {hasPickupCoordinates &&
+            selectedLocation &&
+            NativeMapViewDirections &&
+            GOOGLE_MAPS_API_KEY ? (
+              <NativeMapViewDirections
+                origin={{ latitude: pickupLatitude, longitude: pickupLongitude }}
+                destination={{
+                  latitude: selectedLocation.latitude,
+                  longitude: selectedLocation.longitude,
+                }}
+                apikey={GOOGLE_MAPS_API_KEY}
+                mode="DRIVING"
+                strokeWidth={4}
+                strokeColor="#2563EB"
+                onReady={(result) => {
+                  setRouteDistanceKm(result.distance);
+                  setRouteMessage('');
+                }}
+                onError={(message: string) => {
+                  setRouteDistanceKm(null);
+                  setRouteMessage(`Route error: ${message}`);
+                }}
               />
             ) : null}
 
@@ -357,10 +624,17 @@ export default function DropoffLocationScreen() {
       </View>
 
       {locationMessage ? <Text style={styles.infoMessage}>{locationMessage}</Text> : null}
+      {routeMessage ? <Text style={styles.infoMessage}>{routeMessage}</Text> : null}
 
       <View style={styles.bottomCard}>
         <Text style={styles.bottomTitle}>{selectedDropoffLabel}</Text>
         {selectedDropoffDetails ? <Text style={styles.bottomDetails}>{selectedDropoffDetails}</Text> : null}
+        {distanceSummary ? (
+          <View style={styles.distanceSummaryContainer}>
+            <Text style={styles.distanceLabel}>Distance from pickup:</Text>
+            <Text style={styles.distanceValue}>{distanceSummary}</Text>
+          </View>
+        ) : null}
         <View style={styles.pickupSummaryContainer}>
           <Text style={styles.pickupLabel}>Pickup:</Text>
           <Text style={styles.pickupDetails}>{pickupSummary}</Text>
@@ -447,6 +721,24 @@ const styles = StyleSheet.create({
     marginTop: 8,
     alignSelf: 'flex-start',
   },
+  locationButton: {
+    marginTop: 10,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationButtonDisabled: {
+    opacity: 0.7,
+  },
+  locationButtonText: {
+    color: '#1d4ed8',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   mapContainer: {
     flex: 1,
     borderRadius: 14,
@@ -523,6 +815,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e4e7ec',
     paddingTop: 8,
+  },
+  distanceSummaryContainer: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e4e7ec',
+    paddingTop: 8,
+  },
+  distanceLabel: {
+    fontSize: 12,
+    color: '#344054',
+    fontWeight: '600',
+  },
+  distanceValue: {
+    marginTop: 2,
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '700',
   },
   pickupLabel: {
     fontSize: 12,

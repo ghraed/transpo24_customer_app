@@ -235,20 +235,48 @@ export async function uploadRequestPhotos(
   const formData = new FormData();
   photos.forEach((photo, index) => {
     const file = toFormDataFile(photo, index);
-    formData.append('photos', file as unknown as Blob);
+    formData.append('photos', file as unknown as never);
   });
 
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/photos`, {
-    method: 'POST',
-    headers: getMultipartAuthHeaders(),
-    body: formData,
+  const headers = getMultipartAuthHeaders();
+
+  return await new Promise<UploadRequestPhotosResponse>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${getApiBaseUrl()}/customer/requests/${requestId}/photos`);
+
+    Object.entries(headers).forEach(([key, value]) => {
+      request.setRequestHeader(key, value);
+    });
+
+    request.onreadystatechange = () => {
+      if (request.readyState !== XMLHttpRequest.DONE) {
+        return;
+      }
+
+      const responseText = request.responseText ?? '';
+      if (request.status >= 200 && request.status < 300) {
+        try {
+          resolve(JSON.parse(responseText) as UploadRequestPhotosResponse);
+        } catch {
+          reject(new Error('Failed to upload request photos.'));
+        }
+        return;
+      }
+
+      try {
+        const errorData = JSON.parse(responseText) as ApiErrorResponse;
+        reject(new Error(toMessage(errorData, 'Failed to upload request photos.')));
+      } catch {
+        reject(new Error('Failed to upload request photos.'));
+      }
+    };
+
+    request.onerror = () => {
+      reject(new Error('Failed to upload request photos.'));
+    };
+
+    request.send(formData);
   });
-
-  if (!response.ok) {
-    throw await parseError(response, 'Failed to upload request photos.');
-  }
-
-  return (await response.json()) as UploadRequestPhotosResponse;
 }
 
 export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeResult> {

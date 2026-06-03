@@ -6,8 +6,11 @@ declare module 'react-native-maps-directions' {
     origin: LatLng;
     destination: LatLng;
     apikey: string;
+    mode?: 'DRIVING' | 'WALKING' | 'BICYCLING' | 'TRANSIT';
     strokeWidth?: number;
     strokeColor?: string;
+    onReady?: (result: { distance: number; duration: number; coordinates: LatLng[] }) => void;
+    onError?: (message: string) => void;
   }
 
   const MapViewDirections: React.ComponentType<MapViewDirectionsProps>;

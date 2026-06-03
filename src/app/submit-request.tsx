@@ -12,10 +12,19 @@ import {
   View,
 } from 'react-native';
 
-import { submitCustomerRequest } from '@/lib/api';
-import type { CustomerRequest, ItemType, LocationData, UploadedRequestPhoto } from '@/types/customer-request';
+import { submitCustomerRequest, updateScheduleAndItemDetails } from '@/lib/api';
+import { getApiBaseUrl } from '@/config/backend';
+import type {
+  CustomerRequest,
+  ItemType,
+  LocationData,
+  SubmitRequestRouteParams,
+  UpdateScheduleAndItemDetailsPayload,
+  UploadedRequestPhoto,
+} from '@/types/customer-request';
 import type { VehicleCondition } from '@/types/vehicle-condition';
 import type { VehicleDetailsPayload } from '@/types/vehicle';
+import { formatDistanceKm } from '@/utils/routeDistance';
 
 type ParsedItemDetails = NonNullable<CustomerRequest['itemDetails']>;
 
@@ -102,9 +111,20 @@ function formatItemType(itemType: ItemType | undefined): string {
   return itemType.replace('_', ' ');
 }
 
+function resolvePhotoUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (/^(https?:|file:|content:|data:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const baseUrl = getApiBaseUrl();
+  return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+}
+
 export default function SubmitRequestScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<SubmitRequestRouteParams>();
 
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
@@ -152,6 +172,12 @@ export default function SubmitRequestScreen() {
     () => parseVehicleConditionDetails(singleParam(params.vehicleConditionDetails)),
     [params.vehicleConditionDetails],
   );
+  const routeDistanceKm = useMemo(() => {
+    const raw = singleParam(params.routeDistanceKm);
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [params.routeDistanceKm]);
 
   const [customerNote, setCustomerNote] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -244,6 +270,43 @@ export default function SubmitRequestScreen() {
     setSuccessMessage('');
 
     try {
+      if (serviceKey === 'VEHICLE_TRANSPORT' && itemDetails) {
+        const payload: UpdateScheduleAndItemDetailsPayload = {
+          isImmediate,
+          scheduledPickupAt: isImmediate ? undefined : scheduledPickupAt,
+          itemTitle: itemDetails.title?.trim() || 'Vehicle transport',
+          itemDescription: itemDetails.description ?? undefined,
+          itemType: itemDetails.type ?? 'VEHICLE',
+          itemBrand: vehicleDetails?.vehicleBrand?.trim() || itemDetails.brand || undefined,
+          itemModel: vehicleDetails?.vehicleModel?.trim() || itemDetails.model || undefined,
+          itemYear: vehicleDetails?.vehicleManufactureYear ?? itemDetails.year ?? undefined,
+          vehicleVin: vehicleDetails?.vehicleVin,
+          vehicleBrand: vehicleDetails?.vehicleBrand?.trim() || itemDetails.brand || undefined,
+          vehicleModel: vehicleDetails?.vehicleModel?.trim() || itemDetails.model || undefined,
+          vehicleSeries: vehicleDetails?.vehicleSeries,
+          vehicleVariant: vehicleDetails?.vehicleVariant,
+          vehicleManufactureYear:
+            vehicleDetails?.vehicleManufactureYear ?? itemDetails.year ?? undefined,
+          vehicleEstimatedWeightKg:
+            vehicleDetails?.vehicleEstimatedWeightKg ?? itemDetails.weightKg ?? undefined,
+          vehicleBodyType: vehicleDetails?.vehicleBodyType,
+          vehicleDataSource: vehicleDetails?.vehicleDataSource,
+          itemCondition: itemDetails.condition ?? undefined,
+          itemWeightKg:
+            vehicleDetails?.vehicleEstimatedWeightKg ?? itemDetails.weightKg ?? undefined,
+          itemLengthCm: itemDetails.dimensions.lengthCm ?? undefined,
+          itemWidthCm: itemDetails.dimensions.widthCm ?? undefined,
+          itemHeightCm: itemDetails.dimensions.heightCm ?? undefined,
+          requiresLoadingHelp: itemDetails.requiresLoadingHelp,
+          loadingWorkersCount: itemDetails.loadingWorkersCount ?? undefined,
+          specialInstructions: itemDetails.specialInstructions ?? undefined,
+          vehicleCondition: vehicleConditionDetails?.vehicleCondition,
+          vehicleConditionNotes: vehicleConditionDetails?.vehicleConditionNotes?.trim() || undefined,
+        };
+
+        await updateScheduleAndItemDetails(requestId, payload);
+      }
+
       const submitted = await submitCustomerRequest(requestId, {
         customerNote: customerNote.trim() || undefined,
       });
@@ -336,6 +399,9 @@ export default function SubmitRequestScreen() {
             <Pressable onPress={navigateToDropoff}><Text style={styles.editText}>Edit</Text></Pressable>
           </View>
           <Text style={styles.value}>{formatLocation(dropoffLocation)}</Text>
+          {routeDistanceKm !== null ? (
+            <Text style={styles.value}>Route distance: {formatDistanceKm(routeDistanceKm)}</Text>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -381,7 +447,7 @@ export default function SubmitRequestScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
               {photos.map((photo) => (
-                <Image key={photo.id} source={{ uri: photo.url }} style={styles.photoThumb} />
+                <Image key={photo.id} source={{ uri: resolvePhotoUrl(photo.url) }} style={styles.photoThumb} />
               ))}
             </ScrollView>
           )}

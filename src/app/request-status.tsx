@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { getApiBaseUrl } from '@/config/backend';
 import { acceptCustomerRequestOffer, getCustomerRequestOffers, getCustomerRequestStatus } from '@/lib/api';
 import type {
   CustomerRequestOfferSummary,
@@ -69,6 +70,17 @@ function formatLocation(
 function shortRequestId(id: string): string {
   if (id.length <= 12) return id;
   return `${id.slice(0, 6)}...${id.slice(-4)}`;
+}
+
+function resolvePhotoUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (/^(https?:|file:|content:|data:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const baseUrl = getApiBaseUrl();
+  return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
 
 function parseInitialRequest(raw: string | undefined): RequestStatusResponse | null {
@@ -139,7 +151,11 @@ export default function RequestStatusScreen() {
   );
 
   useEffect(() => {
-    void loadStatus(false);
+    const timeoutId = setTimeout(() => {
+      void loadStatus(false);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [loadStatus]);
 
   const progressIndex = requestData ? STATUS_PROGRESS[requestData.status] : 0;
@@ -423,7 +439,12 @@ export default function RequestStatusScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
               {requestData.photos.map((photo) => (
-                <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} resizeMode="cover" />
+                <Image
+                  key={photo.id}
+                  source={{ uri: resolvePhotoUrl(photo.url) }}
+                  style={styles.photo}
+                  resizeMode="cover"
+                />
               ))}
             </ScrollView>
           )}

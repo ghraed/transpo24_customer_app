@@ -1,8 +1,11 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useLocalSearchParams, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +21,7 @@ import {
   getVehicleSeries,
   getVehicleYears,
 } from '@/lib/api';
+import type { ItemType, LocalPhotoAsset, UpdateScheduleAndItemDetailsPayload } from '@/types/customer-request';
 import type {
   VehicleCatalogBrand,
   VehicleCatalogModel,
@@ -31,6 +35,20 @@ type RouteParams = {
   serviceId?: string;
   serviceKey?: string;
 };
+
+type VehicleRequestForm = {
+  isImmediate: boolean;
+  scheduledPickupAt: Date;
+  itemTitle: string;
+  itemDescription?: string;
+  requiresLoadingHelp: boolean;
+  loadingWorkersCount?: string;
+  specialInstructions?: string;
+};
+
+const MAX_PHOTOS = 8;
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const BODY_TYPE_OPTIONS: SearchableOption[] = [
   { id: 'Sedan', label: 'Sedan' },
@@ -56,6 +74,36 @@ function toNumericOrUndefined(value: string): number | undefined {
 
 function normalizeForMatch(value: string | null | undefined): string {
   return (value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function parsePositiveInteger(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : undefined;
+}
+
+function inferMimeType(uri: string): string | undefined {
+  const normalized = uri.toLowerCase();
+  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) return 'image/jpeg';
+  if (normalized.endsWith('.png')) return 'image/png';
+  if (normalized.endsWith('.webp')) return 'image/webp';
+  return undefined;
+}
+
+function mapPickerAssetToLocalPhoto(asset: ImagePicker.ImagePickerAsset): LocalPhotoAsset {
+  const mimeType = asset.mimeType ?? inferMimeType(asset.uri);
+  return {
+    uri: asset.uri,
+    fileName: asset.fileName ?? undefined,
+    mimeType: mimeType ?? undefined,
+    fileSize: asset.fileSize ?? undefined,
+    width: asset.width,
+    height: asset.height,
+  };
+}
+
+function buildDefaultScheduledPickupAt(): Date {
+  return new Date(Date.now() + 60 * 60 * 1000);
 }
 
 type SearchableOption = {
@@ -152,6 +200,20 @@ export default function VehicleDetailsScreen() {
   const [yearSearch, setYearSearch] = useState<string>('');
   const [bodyTypeSearch, setBodyTypeSearch] = useState<string>('');
   const [openDropdown, setOpenDropdown] = useState<'brand' | 'model' | 'series' | 'year' | 'bodyType' | null>(null);
+  const [requestForm, setRequestForm] = useState<VehicleRequestForm>(() => ({
+    isImmediate: false,
+    scheduledPickupAt: buildDefaultScheduledPickupAt(),
+    itemTitle: '',
+    itemDescription: '',
+    requiresLoadingHelp: false,
+    loadingWorkersCount: '',
+    specialInstructions: '',
+  }));
+  const [selectedPhotos, setSelectedPhotos] = useState<LocalPhotoAsset[]>([]);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
+
+  const isVehicleTransport = serviceKey === 'VEHICLE_TRANSPORT';
 
   useEffect(() => {
     let cancelled = false;
@@ -295,7 +357,6 @@ export default function VehicleDetailsScreen() {
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
     const nowYear = new Date().getFullYear();
-
     if (form.vin?.trim()) {
       const vinLength = form.vin.trim().length;
       if (vinLength < 6 || vinLength > 32) {
@@ -318,8 +379,37 @@ export default function VehicleDetailsScreen() {
       errors.push('Estimated weight must be a positive number.');
     }
 
+    if (isVehicleTransport) {
+      if (!requestForm.isImmediate) {
+        if (!requestForm.scheduledPickupAt) {
+          errors.push('Please select pickup date and time.');
+        }
+      }
+
+      if (requestForm.requiresLoadingHelp) {
+        const workers = parsePositiveInteger(requestForm.loadingWorkersCount);
+        if (workers === undefined || workers <= 0) {
+          errors.push('Loading workers count must be a positive number.');
+        }
+      }
+
+      if (selectedPhotos.length > MAX_PHOTOS) {
+        errors.push(`You can upload up to ${MAX_PHOTOS} photos.`);
+      }
+
+      selectedPhotos.forEach((photo, index) => {
+        const mimeType = photo.mimeType ?? inferMimeType(photo.uri);
+        if (mimeType && !ALLOWED_MIME_TYPES.has(mimeType)) {
+          errors.push(`Photo ${index + 1} has unsupported format.`);
+        }
+        if (photo.fileSize && photo.fileSize > MAX_FILE_SIZE_BYTES) {
+          errors.push(`Photo ${index + 1} is larger than 5 MB.`);
+        }
+      });
+    }
+
     return errors;
-  }, [form]);
+  }, [form, isVehicleTransport, requestForm.isImmediate, requestForm.loadingWorkersCount, requestForm.requiresLoadingHelp, requestForm.scheduledPickupAt, selectedPhotos]);
 
   const decodeVin = useCallback(async () => {
     const vin = form.vin?.trim();
@@ -487,9 +577,70 @@ export default function VehicleDetailsScreen() {
 
   const canContinue = validationErrors.length === 0 && !isDecodingVin;
 
+  const pickFromLibrary = useCallback(async (): Promise<void> => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
+      setErrorMessage('Media library permission is needed to select photos.');
+      return;
+    }
+
+    const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
+    if (remainingSlots <= 0) {
+      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsMultipleSelection: true,
+      mediaTypes: ['images'],
+      quality: 0.9,
+      selectionLimit: remainingSlots,
+    });
+
+    if (result.canceled) return;
+
+    const nextPhotos = result.assets.map(mapPickerAssetToLocalPhoto);
+    setSelectedPhotos((prev) => [...prev, ...nextPhotos].slice(0, MAX_PHOTOS));
+    setErrorMessage('');
+  }, [selectedPhotos.length]);
+
+  const takePhoto = useCallback(async (): Promise<void> => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
+      setErrorMessage('Camera permission is needed to take photos.');
+      return;
+    }
+
+    const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
+    if (remainingSlots <= 0) {
+      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.9,
+    });
+
+    if (result.canceled) return;
+
+    const nextPhoto = mapPickerAssetToLocalPhoto(result.assets[0]);
+    setSelectedPhotos((prev) => [...prev, nextPhoto].slice(0, MAX_PHOTOS));
+    setErrorMessage('');
+  }, [selectedPhotos.length]);
+
+  const removePhoto = useCallback((index: number): void => {
+    setSelectedPhotos((prev) => prev.filter((_, idx) => idx !== index));
+  }, []);
+
   const onContinue = useCallback(() => {
     if (!canContinue) {
       setErrorMessage(validationErrors[0] ?? 'Please complete the vehicle details.');
+      return;
+    }
+
+    if (!requestForm.isImmediate && requestForm.scheduledPickupAt.getTime() <= Date.now()) {
+      setErrorMessage('Scheduled pickup must be in the future.');
       return;
     }
 
@@ -507,18 +658,57 @@ export default function VehicleDetailsScreen() {
         vehicleBodyType: form.bodyType?.trim() || undefined,
         vehicleDataSource: form.source,
       } satisfies VehicleDetailsPayload),
+      pendingRequestDetails: isVehicleTransport
+        ? JSON.stringify({
+            isImmediate: requestForm.isImmediate,
+            scheduledPickupAt:
+              requestForm.isImmediate || !requestForm.scheduledPickupAt
+                ? undefined
+                : requestForm.scheduledPickupAt.toISOString(),
+            itemTitle:
+              requestForm.itemTitle.trim() ||
+              [form.brandName.trim(), form.modelName.trim(), form.manufactureYear ? String(form.manufactureYear) : '']
+                .filter(Boolean)
+                .join(' '),
+            itemDescription: requestForm.itemDescription?.trim() || undefined,
+            itemType: 'VEHICLE' as ItemType,
+            itemBrand: form.brandName.trim(),
+            itemModel: form.modelName.trim(),
+            itemYear: form.manufactureYear,
+            vehicleVin: form.vin?.trim() || undefined,
+            vehicleBrand: form.brandName.trim(),
+            vehicleModel: form.modelName.trim(),
+            vehicleSeries: form.seriesName?.trim() || undefined,
+            vehicleVariant: form.variantName?.trim() || undefined,
+            vehicleManufactureYear: form.manufactureYear,
+            vehicleEstimatedWeightKg: form.estimatedWeightKg,
+            vehicleBodyType: form.bodyType?.trim() || undefined,
+            vehicleDataSource: form.source,
+            itemWeightKg: form.estimatedWeightKg,
+            requiresLoadingHelp: requestForm.requiresLoadingHelp,
+            loadingWorkersCount: requestForm.requiresLoadingHelp
+              ? parsePositiveInteger(requestForm.loadingWorkersCount)
+              : undefined,
+            specialInstructions: requestForm.specialInstructions?.trim() || undefined,
+          } satisfies UpdateScheduleAndItemDetailsPayload)
+        : '',
+      pendingPhotoAssets: isVehicleTransport ? JSON.stringify(selectedPhotos) : '',
     };
 
     router.push({
       pathname: '/vehicle-condition',
       params: nextParams,
     } as unknown as Href);
-  }, [canContinue, form, router, serviceId, serviceKey, validationErrors]);
+  }, [canContinue, form, isVehicleTransport, requestForm, router, selectedPhotos, serviceId, serviceKey, validationErrors]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Vehicle Details</Text>
-      <Text style={styles.subtitle}>Add your vehicle details before choosing pickup location.</Text>
+      <Text style={styles.subtitle}>
+        {isVehicleTransport
+          ? 'Add your vehicle, pickup schedule, and photos before choosing pickup location.'
+          : 'Add your vehicle details before choosing pickup location.'}
+      </Text>
 
       <Text style={styles.label}>VIN / Chassis Number (optional)</Text>
       <View style={styles.vinInputRow}>
@@ -709,13 +899,174 @@ export default function VehicleDetailsScreen() {
         style={styles.input}
       />
 
+      {isVehicleTransport ? (
+        <>
+          <Text style={styles.sectionTitle}>Date & Time</Text>
+          <View style={styles.toggleRow}>
+            <Pressable
+              style={[styles.optionChip, requestForm.isImmediate && styles.optionChipActive]}
+              onPress={() => setRequestForm((prev) => ({ ...prev, isImmediate: true }))}
+            >
+              <Text style={[styles.optionChipText, requestForm.isImmediate && styles.optionChipTextActive]}>
+                Immediate pickup
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.optionChip, !requestForm.isImmediate && styles.optionChipActive]}
+              onPress={() => setRequestForm((prev) => ({ ...prev, isImmediate: false }))}
+            >
+              <Text style={[styles.optionChipText, !requestForm.isImmediate && styles.optionChipTextActive]}>
+                Schedule for later
+              </Text>
+            </Pressable>
+          </View>
+
+          {!requestForm.isImmediate ? (
+            <View style={styles.datetimeContainer}>
+              <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+                <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+                <Text style={styles.pickerButtonValue}>
+                  {requestForm.scheduledPickupAt
+                    ? requestForm.scheduledPickupAt.toLocaleDateString()
+                    : 'Select date'}
+                </Text>
+              </Pressable>
+              <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+                <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+                <Text style={styles.pickerButtonValue}>
+                  {requestForm.scheduledPickupAt
+                    ? requestForm.scheduledPickupAt.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'Select time'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          <Text style={styles.sectionTitle}>Request Details</Text>
+          <TextInput
+            value={requestForm.itemTitle}
+            onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemTitle: value }))}
+            placeholder="Transport title (optional)"
+            placeholderTextColor="#98a2b3"
+            style={styles.input}
+          />
+          <TextInput
+            value={requestForm.itemDescription ?? ''}
+            onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemDescription: value }))}
+            placeholder="Extra details for the driver (optional)"
+            placeholderTextColor="#98a2b3"
+            style={[styles.input, styles.textarea]}
+            multiline
+          />
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Requires loading help</Text>
+            <Pressable
+              style={[styles.switchChip, requestForm.requiresLoadingHelp && styles.switchChipActive]}
+              onPress={() =>
+                setRequestForm((prev) => ({
+                  ...prev,
+                  requiresLoadingHelp: !prev.requiresLoadingHelp,
+                  loadingWorkersCount: prev.requiresLoadingHelp ? '' : prev.loadingWorkersCount,
+                }))
+              }
+            >
+              <Text
+                style={[
+                  styles.switchChipText,
+                  requestForm.requiresLoadingHelp && styles.switchChipTextActive,
+                ]}
+              >
+                {requestForm.requiresLoadingHelp ? 'Yes' : 'No'}
+              </Text>
+            </Pressable>
+          </View>
+          {requestForm.requiresLoadingHelp ? (
+            <TextInput
+              value={requestForm.loadingWorkersCount ?? ''}
+              onChangeText={(value) =>
+                setRequestForm((prev) => ({ ...prev, loadingWorkersCount: value }))
+              }
+              placeholder="Loading workers count"
+              placeholderTextColor="#98a2b3"
+              style={styles.input}
+              keyboardType="number-pad"
+            />
+          ) : null}
+          <TextInput
+            value={requestForm.specialInstructions ?? ''}
+            onChangeText={(value) =>
+              setRequestForm((prev) => ({ ...prev, specialInstructions: value }))
+            }
+            placeholder="Special instructions (optional)"
+            placeholderTextColor="#98a2b3"
+            style={[styles.input, styles.textarea]}
+            multiline
+          />
+
+          <Text style={styles.sectionTitle}>Upload Photos</Text>
+          <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
+          <View style={styles.actionsRow}>
+            <Pressable style={[styles.secondaryButton, styles.flexButton]} onPress={() => void pickFromLibrary()}>
+              <Text style={styles.secondaryButtonText}>Add Photos</Text>
+            </Pressable>
+            <Pressable style={[styles.photoButton, styles.flexButton]} onPress={() => void takePhoto()}>
+              <Text style={styles.photoButtonText}>Take Photo</Text>
+            </Pressable>
+          </View>
+          <View style={styles.photoGrid}>
+            {selectedPhotos.map((photo, index) => (
+              <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
+                <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
+                  <Text style={styles.removePhotoText}>Remove</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
+
       <Pressable
         style={[styles.continueButton, !canContinue && styles.continueDisabled]}
         onPress={onContinue}
         disabled={!canContinue}
       >
-        <Text style={styles.continueText}>Continue to Pickup Location</Text>
+        <Text style={styles.continueText}>Continue to Vehicle Condition</Text>
       </Pressable>
+
+      {showDatePicker ? (
+        <DateTimePicker
+          value={requestForm.scheduledPickupAt}
+          mode="date"
+          minimumDate={new Date()}
+          onChange={(_, selectedDate) => {
+            setShowDatePicker(false);
+            if (!selectedDate) return;
+            const base = requestForm.scheduledPickupAt ?? new Date();
+            const next = new Date(selectedDate);
+            next.setHours(base.getHours(), base.getMinutes(), 0, 0);
+            setRequestForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+          }}
+        />
+      ) : null}
+
+      {showTimePicker ? (
+        <DateTimePicker
+          value={requestForm.scheduledPickupAt}
+          mode="time"
+          onChange={(_, selectedDate) => {
+            setShowTimePicker(false);
+            if (!selectedDate) return;
+            const base = requestForm.scheduledPickupAt ?? new Date();
+            const next = new Date(base);
+            next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+            setRequestForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+          }}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -758,6 +1109,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: '#111827',
+  },
+  textarea: {
+    minHeight: 88,
+    height: 88,
+    textAlignVertical: 'top',
+    paddingTop: 10,
   },
   vinInputRow: {
     borderWidth: 1,
@@ -860,6 +1217,142 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#1a73e8',
     fontWeight: '700',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  optionChip: {
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+  },
+  optionChipActive: {
+    borderColor: '#1a73e8',
+    backgroundColor: '#eef5ff',
+  },
+  optionChipText: {
+    color: '#344054',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  optionChipTextActive: {
+    color: '#0b57d0',
+  },
+  datetimeContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  pickerButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+  },
+  pickerButtonLabel: {
+    fontSize: 12,
+    color: '#667085',
+  },
+  pickerButtonValue: {
+    marginTop: 2,
+    fontSize: 14,
+    color: '#101828',
+    fontWeight: '600',
+  },
+  switchRow: {
+    marginTop: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  switchLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  switchChip: {
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    backgroundColor: '#ffffff',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  switchChipActive: {
+    borderColor: '#1a73e8',
+    backgroundColor: '#eef5ff',
+  },
+  switchChipText: {
+    color: '#344054',
+    fontWeight: '700',
+  },
+  switchChipTextActive: {
+    color: '#0b57d0',
+  },
+  photoCounter: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475467',
+  },
+  actionsRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  flexButton: {
+    flex: 1,
+  },
+  photoButton: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#1a73e8',
+    borderRadius: 10,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  photoButtonText: {
+    color: '#1a73e8',
+    fontWeight: '700',
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 10,
+  },
+  photoItem: {
+    width: '31%',
+    minWidth: 100,
+  },
+  photoPreview: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 10,
+    backgroundColor: '#e5e7eb',
+  },
+  removePhotoButton: {
+    marginTop: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    borderRadius: 8,
+    paddingVertical: 4,
+  },
+  removePhotoText: {
+    fontSize: 12,
+    color: '#b42318',
+    fontWeight: '600',
   },
   loader: {
     marginTop: 8,
