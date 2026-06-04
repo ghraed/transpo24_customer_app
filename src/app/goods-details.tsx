@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -14,7 +15,6 @@ import {
 
 import type {
   GoodsDetailsRouteParams,
-  GoodsHeavyShipmentType,
   GoodsShipmentSize,
   GoodsTransportFormData,
   LocalPhotoAsset,
@@ -74,15 +74,21 @@ const SHIPMENT_SIZE_OPTIONS: {
   },
 ];
 
-const HEAVY_SHIPMENT_OPTIONS: { value: GoodsHeavyShipmentType; label: string }[] = [
-  { value: 'ONE_HEAVY_ITEM', label: 'One heavy item' },
-  { value: 'MULTIPLE_SMALLER_PIECES', label: 'Multiple smaller pieces' },
-];
-
 type SearchableOption = {
   id: string;
   label: string;
 };
+
+function inferHeavyShipmentType(
+  approximateWeightKg: number,
+  numberOfPieces: number,
+): GoodsTransportFormData['heavyShipmentType'] {
+  if (approximateWeightKg < 50) {
+    return '';
+  }
+
+  return numberOfPieces > 1 ? 'MULTIPLE_SMALLER_PIECES' : 'ONE_HEAVY_ITEM';
+}
 
 function SearchableDropdown(props: {
   label: string;
@@ -169,6 +175,19 @@ function mapPickerAssetToLocalPhoto(asset: ImagePicker.ImagePickerAsset): LocalP
   };
 }
 
+function buildDefaultScheduledPickupAt(raw?: string): Date {
+  if (raw) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  const nextDate = new Date();
+  nextDate.setHours(nextDate.getHours() + 1, 0, 0, 0);
+  return nextDate;
+}
+
 function formatValidationMessage(form: GoodsTransportFormData): string | null {
   if (!form.shipmentSize) {
     return 'Please select a shipment size.';
@@ -188,8 +207,8 @@ function formatValidationMessage(form: GoodsTransportFormData): string | null {
     return 'Number of pieces must be at least 1.';
   }
 
-  if (weight >= 50 && !form.heavyShipmentType) {
-    return 'Please tell us whether this is one heavy item or multiple smaller pieces.';
+  if (!form.isImmediate && form.scheduledPickupAt.getTime() <= Date.now()) {
+    return 'Scheduled pickup must be in the future.';
   }
 
   return null;
@@ -222,18 +241,19 @@ export default function GoodsDetailsScreen() {
     isFragile: pendingGoodsDetails?.isFragile ?? false,
     requiresRefrigeration: pendingGoodsDetails?.requiresRefrigeration ?? false,
     heavyShipmentType: pendingGoodsDetails?.heavyShipmentType ?? '',
+    isImmediate: pendingGoodsDetails?.isImmediate ?? false,
+    scheduledPickupAt: buildDefaultScheduledPickupAt(pendingGoodsDetails?.scheduledPickupAt),
   }));
   const [selectedPhotos, setSelectedPhotos] = useState<LocalPhotoAsset[]>(pendingGoodsPhotoAssets);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isPickingPhoto, setIsPickingPhoto] = useState<boolean>(false);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [sizeSearch, setSizeSearch] = useState<string>('');
-  const [heavyTypeSearch, setHeavyTypeSearch] = useState<string>('');
-  const [openDropdown, setOpenDropdown] = useState<'size' | 'heavyType' | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<'size' | null>(null);
 
   const validationMessage = useMemo(() => formatValidationMessage(form), [form]);
   const canContinue = serviceId.length > 0;
-  const approximateWeight = Number(form.approximateWeightKg);
-  const requiresHeavyShipmentType = Number.isFinite(approximateWeight) && approximateWeight >= 50;
   const selectedShipmentSize = SHIPMENT_SIZE_OPTIONS.find((option) => option.value === form.shipmentSize);
 
   const sizeOptions = useMemo(
@@ -242,14 +262,6 @@ export default function GoodsDetailsScreen() {
         [option.label, option.approximateWeight, option.usage].join(' ').toLowerCase().includes(sizeSearch.trim().toLowerCase()),
       ).map((option) => ({ id: option.value, label: option.label })),
     [sizeSearch],
-  );
-
-  const heavyTypeOptions = useMemo(
-    () =>
-      HEAVY_SHIPMENT_OPTIONS.filter((option) =>
-        option.label.toLowerCase().includes(heavyTypeSearch.trim().toLowerCase()),
-      ).map((option) => ({ id: option.value, label: option.label })),
-    [heavyTypeSearch],
   );
 
   const onContinue = (): void => {
@@ -280,10 +292,12 @@ export default function GoodsDetailsScreen() {
           numberOfPieces: pieces,
           isFragile: form.isFragile,
           requiresRefrigeration: form.requiresRefrigeration,
-          heavyShipmentType:
-            requiresHeavyShipmentType && form.heavyShipmentType
-              ? form.heavyShipmentType
-              : undefined,
+          heavyShipmentType: inferHeavyShipmentType(weight, pieces) || undefined,
+          isImmediate: form.isImmediate,
+          scheduledPickupAt:
+            form.isImmediate || !form.scheduledPickupAt
+              ? undefined
+              : form.scheduledPickupAt.toISOString(),
         }),
         pendingGoodsPhotoAssets: JSON.stringify(selectedPhotos),
       },
@@ -415,8 +429,10 @@ export default function GoodsDetailsScreen() {
           setForm((prev) => ({
             ...prev,
             approximateWeightKg: value,
-            heavyShipmentType:
-              Number(value) >= 50 ? prev.heavyShipmentType : '',
+            heavyShipmentType: inferHeavyShipmentType(
+              Number(value),
+              Number(prev.numberOfPieces),
+            ),
           }));
           setErrorMessage('');
         }}
@@ -430,7 +446,14 @@ export default function GoodsDetailsScreen() {
       <TextInput
         value={form.numberOfPieces}
         onChangeText={(value) => {
-          setForm((prev) => ({ ...prev, numberOfPieces: value }));
+          setForm((prev) => ({
+            ...prev,
+            numberOfPieces: value,
+            heavyShipmentType: inferHeavyShipmentType(
+              Number(prev.approximateWeightKg),
+              Number(value),
+            ),
+          }));
           setErrorMessage('');
         }}
         placeholder="Enter number of pieces"
@@ -439,31 +462,46 @@ export default function GoodsDetailsScreen() {
         keyboardType="number-pad"
       />
 
-      {requiresHeavyShipmentType ? (
-        <>
-          <Text style={styles.sectionTitle}>Heavy Shipment</Text>
-          <SearchableDropdown
-            label="How is the shipment arranged?"
-            placeholder="Select heavy shipment type"
-            options={heavyTypeOptions}
-            valueLabel={HEAVY_SHIPMENT_OPTIONS.find((option) => option.value === form.heavyShipmentType)?.label ?? ''}
-            isOpen={openDropdown === 'heavyType'}
-            searchText={heavyTypeSearch}
-            onToggle={() => setOpenDropdown((prev) => (prev === 'heavyType' ? null : 'heavyType'))}
-            onSearchChange={setHeavyTypeSearch}
-            onSelect={(option) => {
-              setForm((prev) => ({
-                ...prev,
-                heavyShipmentType: option.id as GoodsHeavyShipmentType,
-              }));
-              setOpenDropdown(null);
-              setErrorMessage('');
-            }}
-          />
-          <Text style={styles.helperText}>
-            This helps us match the right vehicle and equipment for shipments 50 kg or more.
+      <Text style={styles.sectionTitle}>Date & Time</Text>
+      <View style={styles.toggleRow}>
+        <Pressable
+          style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
+          onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
+        >
+          <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
+            Immediate pickup
           </Text>
-        </>
+        </Pressable>
+        <Pressable
+          style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
+          onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
+        >
+          <Text
+            style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}
+          >
+            Schedule for later
+          </Text>
+        </Pressable>
+      </View>
+
+      {!form.isImmediate ? (
+        <View style={styles.datetimeContainer}>
+          <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+            <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+            <Text style={styles.pickerButtonValue}>
+              {form.scheduledPickupAt.toLocaleDateString()}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+            <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+            <Text style={styles.pickerButtonValue}>
+              {form.scheduledPickupAt.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </Pressable>
+        </View>
       ) : null}
 
       <Text style={styles.sectionTitle}>Upload Photos</Text>
@@ -531,6 +569,36 @@ export default function GoodsDetailsScreen() {
       >
         <Text style={styles.continueText}>Continue to Pickup Location</Text>
       </Pressable>
+
+      {showDatePicker ? (
+        <DateTimePicker
+          value={form.scheduledPickupAt}
+          mode="date"
+          minimumDate={new Date()}
+          onChange={(_, selectedDate) => {
+            setShowDatePicker(false);
+            if (!selectedDate) return;
+            const base = form.scheduledPickupAt;
+            const next = new Date(selectedDate);
+            next.setHours(base.getHours(), base.getMinutes(), 0, 0);
+            setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+          }}
+        />
+      ) : null}
+
+      {showTimePicker ? (
+        <DateTimePicker
+          value={form.scheduledPickupAt}
+          mode="time"
+          onChange={(_, selectedDate) => {
+            setShowTimePicker(false);
+            if (!selectedDate) return;
+            const next = new Date(form.scheduledPickupAt);
+            next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+            setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+          }}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -675,6 +743,57 @@ const styles = StyleSheet.create({
     minHeight: 96,
     paddingTop: 12,
     paddingBottom: 12,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  optionChip: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  optionChipActive: {
+    borderColor: '#1a73e8',
+    backgroundColor: '#e8f0fe',
+  },
+  optionChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#344054',
+  },
+  optionChipTextActive: {
+    color: '#1a73e8',
+  },
+  pickerButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  datetimeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  pickerButtonLabel: {
+    fontSize: 13,
+    color: '#667085',
+    marginBottom: 4,
+  },
+  pickerButtonValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
   },
   helperText: {
     marginTop: 8,

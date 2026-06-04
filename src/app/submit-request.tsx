@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import {
+  createFurnitureTransportRequest,
   createGoodsTransportRequest,
   createMotorcycleTransportRequest,
   submitCustomerRequest,
@@ -21,6 +22,7 @@ import {
 } from '@/lib/api';
 import { getApiBaseUrl } from '@/config/backend';
 import type {
+  CreateFurnitureTransportRequestPayload,
   CreateGoodsTransportRequestPayload,
   CreateMotorcycleTransportRequestPayload,
   CustomerRequest,
@@ -28,6 +30,7 @@ import type {
   ItemType,
   LocationData,
   LocalPhotoAsset,
+  PendingFurnitureDetailsPayload,
   PendingGoodsDetailsPayload,
   PendingMotorcycleDetailsPayload,
   SubmitRequestRouteParams,
@@ -144,6 +147,27 @@ function parsePendingGoodsPhotoAssets(raw: string | undefined): LocalPhotoAsset[
   }
 }
 
+function parsePendingFurnitureDetails(
+  raw: string | undefined,
+): PendingFurnitureDetailsPayload | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as PendingFurnitureDetailsPayload;
+  } catch {
+    return undefined;
+  }
+}
+
+function parsePendingFurniturePhotoAssets(raw: string | undefined): LocalPhotoAsset[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as LocalPhotoAsset[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function formatLocation(location?: LocationData): string {
   if (!location) return 'Missing location';
   if (location.address?.trim()) return location.address;
@@ -177,6 +201,69 @@ function resolvePhotoUrl(url: string): string {
 
   const baseUrl = getApiBaseUrl();
   return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+}
+
+function buildFurnitureLocationPayload(location: LocationData) {
+  return {
+    latitude: location.coordinates.latitude,
+    longitude: location.coordinates.longitude,
+  };
+}
+
+function buildFurnitureCustomerNote(
+  customerNote: string,
+  pendingFurnitureDetails: PendingFurnitureDetailsPayload,
+): string | undefined {
+  const noteParts: string[] = [];
+
+  if (
+    pendingFurnitureDetails.needsHelpers &&
+    typeof pendingFurnitureDetails.helpersCount === 'number' &&
+    pendingFurnitureDetails.helpersCount > 0
+  ) {
+    noteParts.push(`Requested helpers: ${pendingFurnitureDetails.helpersCount}`);
+  }
+
+  if (customerNote.trim()) {
+    noteParts.push(customerNote.trim());
+  }
+
+  return noteParts.length > 0 ? noteParts.join('\n') : undefined;
+}
+
+function buildGoodsCustomerNote(
+  customerNote: string,
+  pendingGoodsDetails: PendingGoodsDetailsPayload,
+): string | undefined {
+  const noteParts: string[] = [];
+
+  if (pendingGoodsDetails.isImmediate === true) {
+    noteParts.push('Requested pickup: Immediate pickup');
+  } else if (pendingGoodsDetails.scheduledPickupAt) {
+    noteParts.push(
+      `Requested pickup: ${formatSchedule(false, pendingGoodsDetails.scheduledPickupAt)}`,
+    );
+  }
+
+  if (customerNote.trim()) {
+    noteParts.push(customerNote.trim());
+  }
+
+  return noteParts.length > 0 ? noteParts.join('\n') : undefined;
+}
+
+function buildFurnitureSchedule(
+  pendingFurnitureDetails: PendingFurnitureDetailsPayload,
+): { isImmediate: boolean; scheduledPickupAt?: string } {
+  if (pendingFurnitureDetails.isImmediate) {
+    return { isImmediate: true };
+  }
+
+  return {
+    isImmediate: false,
+    scheduledPickupAt:
+      pendingFurnitureDetails.scheduledPickupAt ?? pendingFurnitureDetails.movingDate,
+  };
 }
 
 export default function SubmitRequestScreen() {
@@ -251,14 +338,24 @@ export default function SubmitRequestScreen() {
     () => parsePendingGoodsPhotoAssets(singleParam(params.pendingGoodsPhotoAssets)),
     [params.pendingGoodsPhotoAssets],
   );
+  const pendingFurnitureDetails = useMemo(
+    () => parsePendingFurnitureDetails(singleParam(params.pendingFurnitureDetails)),
+    [params.pendingFurnitureDetails],
+  );
+  const pendingFurniturePhotoAssets = useMemo(
+    () => parsePendingFurniturePhotoAssets(singleParam(params.pendingFurniturePhotoAssets)),
+    [params.pendingFurniturePhotoAssets],
+  );
   const isMotorcycleTransport = serviceKey === 'MOTORCYCLE_TRANSPORT';
   const isGoodsTransport = serviceKey === 'GOODS_TRANSPORT';
+  const isFurnitureTransport = serviceKey === 'FURNITURE_TRANSPORT';
   const isVehicleTransport = serviceKey === 'VEHICLE_TRANSPORT';
 
   const [customerNote, setCustomerNote] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [currentValidationTime] = useState<number>(() => Date.now());
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
@@ -298,6 +395,49 @@ export default function SubmitRequestScreen() {
       ) {
         errors.push('Heavy shipment type is required for shipments 50 kg or more.');
       }
+      if (pendingGoodsDetails?.isImmediate === false) {
+        if (!pendingGoodsDetails.scheduledPickupAt) {
+          errors.push('Scheduled pickup time is missing.');
+        } else if (
+          new Date(pendingGoodsDetails.scheduledPickupAt).getTime() <= currentValidationTime
+        ) {
+          errors.push('Scheduled pickup must be in the future.');
+        }
+      }
+    } else if (isFurnitureTransport) {
+      if (pendingFurniturePhotoAssets.length === 0) {
+        errors.push('At least one furniture photo is required.');
+      }
+      if (!pendingFurnitureDetails?.furnitureDescription?.trim()) {
+        errors.push('Furniture description is missing.');
+      }
+      if (
+        typeof pendingFurnitureDetails?.approximateItemCount !== 'number' ||
+        !Number.isInteger(pendingFurnitureDetails.approximateItemCount) ||
+        pendingFurnitureDetails.approximateItemCount < 1
+      ) {
+        errors.push('Approximate item count must be at least 1.');
+      }
+      if (!pendingFurnitureDetails?.movingDate) {
+        errors.push('Moving date is missing.');
+      } else {
+        const movingDate = new Date(pendingFurnitureDetails.movingDate);
+        if (Number.isNaN(movingDate.getTime())) {
+          errors.push('Moving date is invalid.');
+        } else if (
+          pendingFurnitureDetails.isImmediate === false &&
+          movingDate.getTime() <= currentValidationTime
+        ) {
+          errors.push('Moving date must be in the future.');
+        }
+      }
+      if (
+        pendingFurnitureDetails?.needsHelpers &&
+        (!Number.isInteger(pendingFurnitureDetails.helpersCount) ||
+          (pendingFurnitureDetails.helpersCount ?? 0) < 1)
+      ) {
+        errors.push('Helpers count must be at least 1.');
+      }
     } else {
       if (!requestId) errors.push('Missing request id.');
       if (!itemDetails) {
@@ -315,15 +455,19 @@ export default function SubmitRequestScreen() {
     return errors;
   }, [
     dropoffLocation,
+    isFurnitureTransport,
     isImmediate,
     isGoodsTransport,
     isMotorcycleTransport,
     itemDetails,
+    pendingFurnitureDetails,
+    pendingFurniturePhotoAssets.length,
     pendingGoodsDetails,
     pendingMotorcycleDetails,
     pickupLocation,
     requestId,
     scheduledPickupAt,
+    currentValidationTime,
   ]);
 
   const canSubmit = validationErrors.length === 0 && !isSubmitting;
@@ -341,6 +485,8 @@ export default function SubmitRequestScreen() {
         pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
         pendingGoodsDetails: params.pendingGoodsDetails ?? '',
         pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
+        pendingFurnitureDetails: params.pendingFurnitureDetails ?? '',
+        pendingFurniturePhotoAssets: params.pendingFurniturePhotoAssets ?? '',
       },
     } as unknown as Href;
     router.push(route);
@@ -359,6 +505,8 @@ export default function SubmitRequestScreen() {
         pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
         pendingGoodsDetails: params.pendingGoodsDetails ?? '',
         pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
+        pendingFurnitureDetails: params.pendingFurnitureDetails ?? '',
+        pendingFurniturePhotoAssets: params.pendingFurniturePhotoAssets ?? '',
         pickupLatitude: params.pickupLatitude ?? '',
         pickupLongitude: params.pickupLongitude ?? '',
         pickupAddress: params.pickupAddress ?? '',
@@ -390,6 +538,19 @@ export default function SubmitRequestScreen() {
           serviceKey,
           pendingGoodsDetails: params.pendingGoodsDetails ?? '',
           pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
+        },
+      } as unknown as Href);
+      return;
+    }
+
+    if (isFurnitureTransport) {
+      router.push({
+        pathname: '/furniture-details',
+        params: {
+          serviceId,
+          serviceKey,
+          pendingFurnitureDetails: params.pendingFurnitureDetails ?? '',
+          pendingFurniturePhotoAssets: params.pendingFurniturePhotoAssets ?? '',
         },
       } as unknown as Href);
       return;
@@ -492,6 +653,11 @@ export default function SubmitRequestScreen() {
             pendingGoodsDetails.approximateWeightKg >= 50
               ? pendingGoodsDetails.heavyShipmentType
               : undefined,
+          isImmediate: pendingGoodsDetails.isImmediate ?? true,
+          scheduledPickupAt:
+            pendingGoodsDetails.isImmediate === false
+              ? pendingGoodsDetails.scheduledPickupAt
+              : undefined,
           pickupLocation: {
             latitude: pickupLocation.coordinates.latitude,
             longitude: pickupLocation.coordinates.longitude,
@@ -513,7 +679,54 @@ export default function SubmitRequestScreen() {
         }
 
         const submitted = await submitCustomerRequest(created.id, {
-          customerNote: customerNote.trim() || undefined,
+          customerNote: buildGoodsCustomerNote(customerNote, pendingGoodsDetails),
+        });
+
+        setSuccessMessage('Request submitted successfully.');
+
+        const statusRoute = {
+          pathname: '/request-status',
+          params: {
+            requestId: submitted.id,
+            status: submitted.status,
+            submittedAt: submitted.submittedAt ?? '',
+          },
+        } as unknown as Href;
+
+        setTimeout(() => {
+          router.push(statusRoute);
+        }, 350);
+        return;
+      }
+
+      if (
+        isFurnitureTransport &&
+        pickupLocation &&
+        dropoffLocation &&
+        pendingFurnitureDetails
+      ) {
+        const payload: CreateFurnitureTransportRequestPayload = {
+          furnitureDescription: pendingFurnitureDetails.furnitureDescription.trim(),
+          approximateItemCount: pendingFurnitureDetails.approximateItemCount,
+          needsHelpers: pendingFurnitureDetails.needsHelpers,
+          movingDate:
+            pendingFurnitureDetails.isImmediate === true
+              ? new Date().toISOString()
+              : (pendingFurnitureDetails.scheduledPickupAt ??
+                pendingFurnitureDetails.movingDate),
+          customerCanHelpLoading: pendingFurnitureDetails.customerCanHelpLoading,
+          pickupLocation: buildFurnitureLocationPayload(pickupLocation),
+          deliveryLocation: buildFurnitureLocationPayload(dropoffLocation),
+          furniturePhotos: pendingFurniturePhotoAssets,
+        };
+
+        const created = await createFurnitureTransportRequest(payload);
+
+        const submitted = await submitCustomerRequest(created.id, {
+          customerNote: buildFurnitureCustomerNote(
+            customerNote,
+            pendingFurnitureDetails,
+          ),
         });
 
         setSuccessMessage('Request submitted successfully.');
@@ -678,6 +891,36 @@ export default function SubmitRequestScreen() {
           </View>
         ) : null}
 
+        {isFurnitureTransport ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Photos</Text>
+            {pendingFurniturePhotoAssets.length === 0 ? (
+              <Text style={styles.value}>No photos added</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
+                {pendingFurniturePhotoAssets.map((photo, index) => (
+                  <Image key={`${photo.uri}-${index}`} source={{ uri: photo.uri }} style={styles.photoThumb} />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        ) : null}
+
+        {isMotorcycleTransport && pendingMotorcycleDetails ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Date & Time</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+            </View>
+            <Text style={styles.value}>
+              {formatSchedule(
+                pendingMotorcycleDetails.isImmediate ?? true,
+                pendingMotorcycleDetails.scheduledPickupAt,
+              )}
+            </Text>
+          </View>
+        ) : null}
+
         {isMotorcycleTransport && pendingMotorcycleDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -696,6 +939,21 @@ export default function SubmitRequestScreen() {
             </Text>
             <Text style={styles.value}>
               Dedicated carrier: {pendingMotorcycleDetails.requiresDedicatedCarrier ? 'Yes' : 'No'}
+            </Text>
+          </View>
+        ) : null}
+
+        {isGoodsTransport && pendingGoodsDetails ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Date & Time</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+            </View>
+            <Text style={styles.value}>
+              {formatSchedule(
+                pendingGoodsDetails.isImmediate ?? true,
+                pendingGoodsDetails.scheduledPickupAt,
+              )}
             </Text>
           </View>
         ) : null}
@@ -722,6 +980,43 @@ export default function SubmitRequestScreen() {
           </View>
         ) : null}
 
+        {isFurnitureTransport && pendingFurnitureDetails ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Date & Time</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+            </View>
+            <Text style={styles.value}>
+              {(() => {
+                const schedule = buildFurnitureSchedule(pendingFurnitureDetails);
+                return formatSchedule(schedule.isImmediate, schedule.scheduledPickupAt);
+              })()}
+            </Text>
+          </View>
+        ) : null}
+
+        {isFurnitureTransport && pendingFurnitureDetails ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Furniture Details</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+            </View>
+            <Text style={styles.value}>Description: {pendingFurnitureDetails.furnitureDescription}</Text>
+            <Text style={styles.value}>Approximate item count: {pendingFurnitureDetails.approximateItemCount}</Text>
+            <Text style={styles.value}>Needs helpers: {pendingFurnitureDetails.needsHelpers ? 'Yes' : 'No'}</Text>
+            {pendingFurnitureDetails.needsHelpers &&
+            typeof pendingFurnitureDetails.helpersCount === 'number' ? (
+              <Text style={styles.value}>Number of helpers: {pendingFurnitureDetails.helpersCount}</Text>
+            ) : null}
+            <Text style={styles.value}>
+              Moving date: {new Date(pendingFurnitureDetails.movingDate).toLocaleString()}
+            </Text>
+            <Text style={styles.value}>
+              Can help loading: {pendingFurnitureDetails.customerCanHelpLoading ? 'Yes' : 'No'}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Pickup Location</Text>
@@ -741,7 +1036,7 @@ export default function SubmitRequestScreen() {
           ) : null}
         </View>
 
-        {!isMotorcycleTransport && !isGoodsTransport ? (
+        {!isMotorcycleTransport && !isGoodsTransport && !isFurnitureTransport ? (
           <>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -806,7 +1101,7 @@ export default function SubmitRequestScreen() {
           </>
         ) : null}
 
-        {isMotorcycleTransport || isGoodsTransport ? (
+        {isMotorcycleTransport || isGoodsTransport || isFurnitureTransport ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Optional Note</Text>
             <TextInput

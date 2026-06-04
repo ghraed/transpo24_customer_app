@@ -1,6 +1,7 @@
 import { getAccessToken } from './auth-token';
 import type {
   CreateGoodsTransportRequestPayload,
+  CreateFurnitureTransportRequestPayload,
   CreateMotorcycleTransportRequestPayload,
   CustomerAcceptOfferResponse,
   CustomerRequestOffersResponse,
@@ -29,6 +30,11 @@ import type {
 interface ApiErrorResponse {
   message?: string | string[];
 }
+
+type FurnitureLocationFormValue = {
+  latitude: number;
+  longitude: number;
+};
 
 function getApiBaseUrl(): string {
   return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
@@ -106,6 +112,7 @@ function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerReque
     itemDetails: response.itemDetails,
     motorcycleDetails: response.motorcycleDetails,
     goodsDetails: response.goodsDetails,
+    furnitureDetails: response.furnitureDetails,
     photos: response.photos,
   };
 }
@@ -195,6 +202,77 @@ export async function createGoodsTransportRequest(
   return mapCustomerRequest(data);
 }
 
+export async function createFurnitureTransportRequest(
+  payload: CreateFurnitureTransportRequestPayload,
+): Promise<CustomerRequest> {
+  const formData = new FormData();
+  formData.append('furnitureDescription', payload.furnitureDescription.trim());
+  formData.append('approximateItemCount', String(payload.approximateItemCount));
+  formData.append('needsHelpers', String(payload.needsHelpers ?? false));
+  formData.append('movingDate', payload.movingDate);
+  formData.append(
+    'customerCanHelpLoading',
+    String(payload.customerCanHelpLoading ?? false),
+  );
+  formData.append(
+    'pickupLocation',
+    JSON.stringify(toFurnitureLocationFormValue(payload.pickupLocation)),
+  );
+  formData.append(
+    'deliveryLocation',
+    JSON.stringify(toFurnitureLocationFormValue(payload.deliveryLocation)),
+  );
+
+  payload.furniturePhotos.forEach((photo, index) => {
+    const file = toFormDataFile(photo, index);
+    formData.append('photos', file as unknown as never);
+  });
+
+  const headers = getMultipartAuthHeaders();
+
+  return await new Promise<CustomerRequest>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${getApiBaseUrl()}/customer/requests/furniture-transport`);
+
+    Object.entries(headers).forEach(([key, value]) => {
+      request.setRequestHeader(key, value);
+    });
+
+    request.onreadystatechange = () => {
+      if (request.readyState !== XMLHttpRequest.DONE) {
+        return;
+      }
+
+      const responseText = request.responseText ?? '';
+      if (request.status >= 200 && request.status < 300) {
+        try {
+          resolve(mapCustomerRequest(JSON.parse(responseText) as CustomerRequestApiResponse));
+        } catch {
+          reject(new Error('Failed to create furniture transport request.'));
+        }
+        return;
+      }
+
+      try {
+        const errorData = JSON.parse(responseText) as ApiErrorResponse;
+        reject(
+          new Error(
+            toMessage(errorData, 'Failed to create furniture transport request.'),
+          ),
+        );
+      } catch {
+        reject(new Error('Failed to create furniture transport request.'));
+      }
+    };
+
+    request.onerror = () => {
+      reject(new Error('Failed to create furniture transport request.'));
+    };
+
+    request.send(formData);
+  });
+}
+
 export async function updatePickupLocation(
   requestId: string,
   payload: UpdatePickupLocationPayload,
@@ -263,6 +341,15 @@ function toFormDataFile(photo: LocalPhotoAsset, index: number): ReactNativeFormD
     uri: photo.uri,
     name: photo.fileName ?? `request-photo-${Date.now()}-${index}.jpg`,
     type: photo.mimeType ?? 'image/jpeg',
+  };
+}
+
+function toFurnitureLocationFormValue(
+  location: CreateFurnitureTransportRequestPayload['pickupLocation'],
+): FurnitureLocationFormValue {
+  return {
+    latitude: location.latitude,
+    longitude: location.longitude,
   };
 }
 

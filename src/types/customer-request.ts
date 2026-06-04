@@ -101,6 +101,37 @@ export interface PendingGoodsDetailsPayload {
   isFragile: boolean;
   requiresRefrigeration: boolean;
   heavyShipmentType?: GoodsHeavyShipmentType;
+  isImmediate?: boolean;
+  scheduledPickupAt?: string;
+}
+
+export interface FurnitureLocationPayload {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  placeId?: string;
+}
+
+export interface CreateFurnitureTransportRequestPayload {
+  furnitureDescription: string;
+  approximateItemCount: number;
+  needsHelpers?: boolean;
+  movingDate: string;
+  customerCanHelpLoading?: boolean;
+  pickupLocation: FurnitureLocationPayload;
+  deliveryLocation: FurnitureLocationPayload;
+  furniturePhotos: LocalPhotoAsset[];
+}
+
+export interface PendingFurnitureDetailsPayload {
+  furnitureDescription: string;
+  approximateItemCount: number;
+  needsHelpers: boolean;
+  helpersCount?: number;
+  isImmediate?: boolean;
+  scheduledPickupAt?: string;
+  movingDate: string;
+  customerCanHelpLoading: boolean;
 }
 
 export interface MotorcycleTransportFormData {
@@ -121,6 +152,18 @@ export interface GoodsTransportFormData {
   isFragile: boolean;
   requiresRefrigeration: boolean;
   heavyShipmentType: GoodsHeavyShipmentType | '';
+  isImmediate: boolean;
+  scheduledPickupAt: Date;
+}
+
+export interface FurnitureTransportFormData {
+  furnitureDescription: string;
+  approximateItemCount: string;
+  needsHelpers: boolean;
+  helpersCount: string;
+  isImmediate: boolean;
+  movingDate: Date;
+  customerCanHelpLoading: boolean;
 }
 
 export interface UpdatePickupLocationPayload {
@@ -277,6 +320,13 @@ export interface CustomerRequest {
     requiresRefrigeration: boolean;
     heavyShipmentType: GoodsHeavyShipmentType | null;
   };
+  furnitureDetails?: {
+    description: string | null;
+    approximateItemCount: number | null;
+    needsHelpers: boolean;
+    movingDate: string | null;
+    customerCanHelpLoading: boolean;
+  };
   photos?: UploadedRequestPhoto[];
 }
 
@@ -335,6 +385,13 @@ export interface CustomerRequestApiResponse {
     requiresRefrigeration: boolean;
     heavyShipmentType: GoodsHeavyShipmentType | null;
   };
+  furnitureDetails?: {
+    description: string | null;
+    approximateItemCount: number | null;
+    needsHelpers: boolean;
+    movingDate: string | null;
+    customerCanHelpLoading: boolean;
+  };
   photos: UploadedRequestPhoto[];
 }
 
@@ -348,6 +405,8 @@ export type DropoffLocationRouteParams = {
   pendingMotorcyclePhotoAssets?: string;
   pendingGoodsDetails?: string;
   pendingGoodsPhotoAssets?: string;
+  pendingFurnitureDetails?: string;
+  pendingFurniturePhotoAssets?: string;
   pickupLatitude?: string;
   pickupLongitude?: string;
   pickupAddress?: string;
@@ -390,6 +449,13 @@ export type GoodsDetailsRouteParams = {
   pendingGoodsPhotoAssets?: string;
 };
 
+export type FurnitureDetailsRouteParams = {
+  serviceId?: string;
+  serviceKey?: string;
+  pendingFurnitureDetails?: string;
+  pendingFurniturePhotoAssets?: string;
+};
+
 export interface SubmitRequestRouteParams {
   requestId?: string;
   serviceId?: string;
@@ -399,6 +465,8 @@ export interface SubmitRequestRouteParams {
   pendingMotorcyclePhotoAssets?: string;
   pendingGoodsDetails?: string;
   pendingGoodsPhotoAssets?: string;
+  pendingFurnitureDetails?: string;
+  pendingFurniturePhotoAssets?: string;
   pickupLatitude?: string;
   pickupLongitude?: string;
   pickupAddress?: string;
@@ -476,6 +544,13 @@ export interface RequestStatusResponse {
     isFragile: boolean;
     requiresRefrigeration: boolean;
     heavyShipmentType: GoodsHeavyShipmentType | null;
+  };
+  furnitureDetails?: {
+    description: string | null;
+    approximateItemCount: number | null;
+    needsHelpers: boolean;
+    movingDate: string | null;
+    customerCanHelpLoading: boolean;
   };
   photos: UploadedRequestPhoto[];
   quotesSummary: {

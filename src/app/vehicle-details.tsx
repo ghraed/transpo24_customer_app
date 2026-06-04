@@ -1246,7 +1246,7 @@ const styles = StyleSheet.create({
   datetimeContainer: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 8,
+    marginTop: 12,
   },
   pickerButton: {
     flex: 1,

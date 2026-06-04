@@ -29,6 +29,7 @@ export default function ChooseServiceScreen() {
     const isVehicleService = selectedService.key === 'VEHICLE_TRANSPORT';
     const isMotorcycleService = selectedService.key === 'MOTORCYCLE_TRANSPORT';
     const isGoodsService = selectedService.key === 'GOODS_TRANSPORT';
+    const isFurnitureService = selectedService.key === 'FURNITURE_TRANSPORT';
     router.push({
       pathname: isVehicleService
         ? '/vehicle-details'
@@ -36,6 +37,8 @@ export default function ChooseServiceScreen() {
           ? '/motorcycle-details'
           : isGoodsService
             ? '/goods-details'
+            : isFurnitureService
+              ? '/furniture-details'
           : '/pickup-location',
       params: { serviceId: selectedService.id, serviceKey: selectedService.key },
     });
