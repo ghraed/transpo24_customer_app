@@ -28,6 +28,13 @@
     "plugins": [
       "expo-router",
       [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.example.transpo24",
+          "enableGooglePay": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",

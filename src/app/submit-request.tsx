@@ -577,6 +577,21 @@ export default function SubmitRequestScreen() {
     router.push(route);
   };
 
+  const navigateToRequestStatus = (submitted: CustomerRequest): void => {
+    const statusRoute = {
+      pathname: '/request-status',
+      params: {
+        requestId: submitted.id,
+        status: submitted.status,
+        submittedAt: submitted.submittedAt ?? '',
+      },
+    } as unknown as Href;
+
+    setTimeout(() => {
+      router.push(statusRoute);
+    }, 350);
+  };
+
   const onSubmit = async (): Promise<void> => {
     if (validationErrors.length > 0) {
       setErrorMessage(validationErrors[0] ?? 'Request details are incomplete.');
@@ -625,19 +640,7 @@ export default function SubmitRequestScreen() {
         });
 
         setSuccessMessage('Request submitted successfully.');
-
-        const statusRoute = {
-          pathname: '/request-status',
-          params: {
-            requestId: submitted.id,
-            status: submitted.status,
-            submittedAt: submitted.submittedAt ?? '',
-          },
-        } as unknown as Href;
-
-        setTimeout(() => {
-          router.push(statusRoute);
-        }, 350);
+        navigateToRequestStatus(submitted);
         return;
       }
 
@@ -683,19 +686,7 @@ export default function SubmitRequestScreen() {
         });
 
         setSuccessMessage('Request submitted successfully.');
-
-        const statusRoute = {
-          pathname: '/request-status',
-          params: {
-            requestId: submitted.id,
-            status: submitted.status,
-            submittedAt: submitted.submittedAt ?? '',
-          },
-        } as unknown as Href;
-
-        setTimeout(() => {
-          router.push(statusRoute);
-        }, 350);
+        navigateToRequestStatus(submitted);
         return;
       }
 
@@ -730,19 +721,7 @@ export default function SubmitRequestScreen() {
         });
 
         setSuccessMessage('Request submitted successfully.');
-
-        const statusRoute = {
-          pathname: '/request-status',
-          params: {
-            requestId: submitted.id,
-            status: submitted.status,
-            submittedAt: submitted.submittedAt ?? '',
-          },
-        } as unknown as Href;
-
-        setTimeout(() => {
-          router.push(statusRoute);
-        }, 350);
+        navigateToRequestStatus(submitted);
         return;
       }
 
@@ -788,19 +767,7 @@ export default function SubmitRequestScreen() {
       });
 
       setSuccessMessage('Request submitted successfully.');
-
-      const statusRoute = {
-        pathname: '/request-status',
-        params: {
-          requestId: submitted.id,
-          status: submitted.status,
-          submittedAt: submitted.submittedAt ?? '',
-        },
-      } as unknown as Href;
-
-      setTimeout(() => {
-        router.push(statusRoute);
-      }, 350);
+      navigateToRequestStatus(submitted);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to submit request.';
       const normalized = message.toLowerCase();

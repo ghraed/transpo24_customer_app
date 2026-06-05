@@ -275,6 +275,63 @@ export type CustomerRequestStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
+export type PaymentMethod =
+  | 'CREDIT_CARD'
+  | 'DEBIT_CARD'
+  | 'APPLE_PAY'
+  | 'GOOGLE_PAY'
+  | 'APP_WALLET';
+
+export type PaymentStatus =
+  | 'PAYMENT_HOLD_PENDING'
+  | 'PAYMENT_HELD'
+  | 'PAYMENT_FAILED'
+  | 'DELIVERY_CONFIRMED'
+  | 'PAYMENT_CAPTURE_PENDING'
+  | 'PAYMENT_CAPTURED'
+  | 'PAYMENT_RELEASED'
+  | 'PAYMENT_CANCELLED'
+  | 'PAYMENT_REFUNDED';
+
+export type PaymentProvider = 'STRIPE' | 'APP_WALLET';
+
+export type AdditionalChargeStatus = 'PENDING' | 'CAPTURED' | 'CANCELLED' | 'FAILED';
+
+export interface PaymentSummary {
+  id: string;
+  requestId: string;
+  acceptedOfferId: string;
+  customerId: string;
+  driverId: string;
+  amount: number;
+  heldAmount: number;
+  capturedAmount: number;
+  currency: string;
+  paymentMethod: PaymentMethod;
+  provider: PaymentProvider;
+  status: PaymentStatus;
+  stripePaymentIntentId: string | null;
+  stripeClientSecret: string | null;
+  stripeChargeId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdditionalCharge {
+  id: string;
+  requestId: string;
+  driverId: string;
+  customerId: string;
+  amount: number;
+  currency: string;
+  reason: string;
+  equipmentType: string | null;
+  invoiceUrl: string | null;
+  status: AdditionalChargeStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CustomerRequest {
   id: string;
   serviceId: string;
@@ -553,6 +610,13 @@ export interface RequestStatusResponse {
     customerCanHelpLoading: boolean;
   };
   photos: UploadedRequestPhoto[];
+  dispatchSummary?: {
+    eligibleDriversCount: number;
+    connectedDriversCount: number;
+    alertsCreatedCount: number;
+    broadcastedAt: string;
+    noConnectedDriversAvailable: boolean;
+  };
   quotesSummary: {
     count: number;
     lowestPrice: number | null;
@@ -597,11 +661,19 @@ export interface CustomerAcceptOfferResponse {
   };
   rejectedOffersCount: number;
   nextStep: 'TRACK_REQUEST';
+  payment: PaymentSummary;
 }
 
 export interface RequestStatusRouteParams {
   requestId?: string;
   initialRequest?: string;
+}
+
+export interface RequestPaymentRouteParams {
+  requestId?: string;
+  offerId?: string;
+  request?: string;
+  offer?: string;
 }
 
 export interface CustomerHomeProfile {
@@ -647,15 +719,22 @@ export type DriverOfferStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED
 
 export interface CustomerRequestOfferSummary {
   id: string;
+  offerId: string;
   requestId: string;
   driverId: string;
+  driverName: string | null;
+  driverVehiclePhoto: string | null;
+  driverRating: number | null;
   price: number;
+  proposedPrice: number;
   currency: string;
   estimatedPickupAt: string | null;
+  estimatedArrivalTime: string | null;
   estimatedDeliveryAt: string | null;
   estimatedDurationMinutes: number | null;
   message: string | null;
   status: DriverOfferStatus;
+  offerStatus: DriverOfferStatus;
   createdAt: string;
   acceptedAt: string | null;
 }

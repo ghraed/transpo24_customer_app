@@ -11,6 +11,8 @@ import type {
   CustomerRequest,
   CustomerRequestApiResponse,
   LocalPhotoAsset,
+  PaymentMethod,
+  PaymentSummary,
   RequestStatusResponse,
   SubmitCustomerRequestPayload,
   UploadRequestPhotosResponse,
@@ -585,19 +587,66 @@ export async function getCustomerRequestOffers(requestId: string): Promise<Custo
   return (await response.json()) as CustomerRequestOffersResponse;
 }
 
+export interface AcceptCustomerRequestOfferPayload {
+  confirm?: boolean;
+  paymentMethod: PaymentMethod;
+  stripePaymentMethodId?: string;
+}
+
 export async function acceptCustomerRequestOffer(
   requestId: string,
   offerId: string,
+  payload: AcceptCustomerRequestOfferPayload,
 ): Promise<CustomerAcceptOfferResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/trips/${requestId}/offers/${offerId}/accept`, {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/offers/${offerId}/accept`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ confirm: true }),
+    body: JSON.stringify({
+      confirm: payload.confirm ?? true,
+      paymentMethod: payload.paymentMethod,
+      ...(payload.stripePaymentMethodId
+        ? { stripePaymentMethodId: payload.stripePaymentMethodId }
+        : {}),
+    }),
   });
 
   if (!response.ok) {
-    throw await parseError(response, 'Failed to accept offer.');
+    throw await parseError(response, 'Failed to confirm offer.');
   }
 
   return (await response.json()) as CustomerAcceptOfferResponse;
+}
+
+export async function confirmDriverOffer(
+  requestId: string,
+  offerId: string,
+  payload: AcceptCustomerRequestOfferPayload,
+): Promise<CustomerAcceptOfferResponse> {
+  return acceptCustomerRequestOffer(requestId, offerId, payload);
+}
+
+export async function getRequestPaymentStatus(requestId: string): Promise<PaymentSummary> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/payment`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load payment status.');
+  }
+
+  return (await response.json()) as PaymentSummary;
+}
+
+export async function cancelPaymentHold(requestId: string): Promise<PaymentSummary> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/payment/cancel`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to cancel payment hold.');
+  }
+
+  return (await response.json()) as PaymentSummary;
 }

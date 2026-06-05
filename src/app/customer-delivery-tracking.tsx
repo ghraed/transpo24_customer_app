@@ -14,13 +14,18 @@ import {
   connectSocket,
   joinTripRoom,
   leaveTripRoom,
+  onAdditionalChargeAdded,
   onDriverLocationUpdated,
   onDriverStartedDelivery,
   onItemDelivered,
+  onPaymentCancelled,
+  onPaymentCaptured,
+  onPaymentHeld,
   onSocketDisconnect,
   onSocketError,
   onTripStatusUpdated,
 } from '@/services/socketService';
+import type { AdditionalCharge, PaymentSummary } from '@/types/customer-request';
 import type { AddressedLocation, GeoLocation } from '@/types/trip.types';
 import {
   isValidGeoLocation,
@@ -101,6 +106,8 @@ export default function CustomerDeliveryTrackingScreen() {
   const [driverLocation, setDriverLocation] = useState<GeoLocation | null>(null);
   const [statusText, setStatusText] = useState<string>('Driver is going to dropoff location');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [paymentBanner, setPaymentBanner] = useState<string>('');
+  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
 
   const isRouteValid =
     isValidTripId(tripId) &&
@@ -190,6 +197,28 @@ export default function CustomerDeliveryTrackingScreen() {
       setErrorMessage(message || 'Socket connection error.');
     });
 
+    const formatMoney = (amount: number, currency: string): string => `${amount.toFixed(2)} ${currency}`;
+
+    const unsubPaymentHeld = onPaymentHeld((payload: PaymentSummary) => {
+      if (payload.requestId !== tripId) return;
+      setPaymentBanner(`Payment held: ${formatMoney(payload.heldAmount, payload.currency)}`);
+    });
+
+    const unsubPaymentCaptured = onPaymentCaptured((payload: PaymentSummary) => {
+      if (payload.requestId !== tripId) return;
+      setPaymentBanner(`Payment captured: ${formatMoney(payload.capturedAmount, payload.currency)}`);
+    });
+
+    const unsubPaymentCancelled = onPaymentCancelled((payload: PaymentSummary) => {
+      if (payload.requestId !== tripId) return;
+      setPaymentBanner('Payment hold released.');
+    });
+
+    const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
+      if (payload.requestId !== tripId) return;
+      setLatestAdditionalCharge(payload);
+    });
+
     return () => {
       unsubStarted();
       unsubLocation();
@@ -197,6 +226,10 @@ export default function CustomerDeliveryTrackingScreen() {
       unsubStatus();
       unsubDisconnect();
       unsubSocketError();
+      unsubPaymentHeld();
+      unsubPaymentCaptured();
+      unsubPaymentCancelled();
+      unsubAdditionalCharge();
       leaveTripRoom(tripId);
     };
   }, [dropoffLocation, isRouteValid, pickupLocation, router, tripId]);
@@ -264,6 +297,15 @@ export default function CustomerDeliveryTrackingScreen() {
       <View style={styles.bottomCard}>
         <Text style={styles.title}>Delivery Tracking</Text>
         <Text style={styles.statusText}>{statusText}</Text>
+        {paymentBanner ? <Text style={styles.infoText}>{paymentBanner}</Text> : null}
+        {latestAdditionalCharge ? (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Additional Charge Added</Text>
+            <Text style={styles.helperText}>
+              {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} • {latestAdditionalCharge.reason}
+            </Text>
+          </View>
+        ) : null}
         {!driverLocation ? (
           <View style={styles.row}>
             <ActivityIndicator size="small" color="#2563EB" />
@@ -296,7 +338,17 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
   statusText: { color: '#1E293B', fontWeight: '600' },
   helperText: { color: '#475569' },
+  infoText: { color: '#1D4ED8', fontWeight: '600' },
   errorText: { color: '#B91C1C' },
   centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoCard: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  infoTitle: { color: '#1E3A8A', fontWeight: '700' },
 });

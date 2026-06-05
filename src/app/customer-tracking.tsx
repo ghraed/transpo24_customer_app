@@ -15,12 +15,17 @@ import {
   connectSocket,
   joinTripRoom,
   leaveTripRoom,
+  onAdditionalChargeAdded,
   onDriverArrivedPickupConfirmed,
   onDriverLocationUpdated,
+  onPaymentCancelled,
+  onPaymentCaptured,
+  onPaymentHeld,
   onSocketDisconnect,
   onSocketError,
   onTripStatusUpdated,
 } from '@/services/socketService';
+import type { AdditionalCharge, PaymentSummary } from '@/types/customer-request';
 import type { AddressedLocation, DriverLocationUpdatedPayload, GeoLocation, TripStatus } from '@/types/trip.types';
 import {
   calculateDistanceMeters,
@@ -61,6 +66,8 @@ export default function CustomerTrackingScreen() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [routeError, setRouteError] = useState<string>('');
   const [routeStage, setRouteStage] = useState<'pickup' | 'dropoff'>('pickup');
+  const [paymentBanner, setPaymentBanner] = useState<string>('');
+  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
 
   const pickupLocation = useMemo<AddressedLocation | null>(() => {
     const latitude = parseNumber(params.pickupLatitude);
@@ -184,12 +191,38 @@ export default function CustomerTrackingScreen() {
       setErrorMessage(message || 'Socket error.');
     });
 
+    const formatMoney = (amount: number, currency: string): string => `${amount.toFixed(2)} ${currency}`;
+
+    const unsubPaymentHeld = onPaymentHeld((payload: PaymentSummary) => {
+      if (payload.requestId !== validTripId) return;
+      setPaymentBanner(`Payment held: ${formatMoney(payload.heldAmount, payload.currency)}`);
+    });
+
+    const unsubPaymentCaptured = onPaymentCaptured((payload: PaymentSummary) => {
+      if (payload.requestId !== validTripId) return;
+      setPaymentBanner(`Payment captured: ${formatMoney(payload.capturedAmount, payload.currency)}`);
+    });
+
+    const unsubPaymentCancelled = onPaymentCancelled((payload: PaymentSummary) => {
+      if (payload.requestId !== validTripId) return;
+      setPaymentBanner('Payment hold released.');
+    });
+
+    const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
+      if (payload.requestId !== validTripId) return;
+      setLatestAdditionalCharge(payload);
+    });
+
     return () => {
       unsubLocation();
       unsubArrived();
       unsubStatus();
       unsubDisconnect();
       unsubSocketError();
+      unsubPaymentHeld();
+      unsubPaymentCaptured();
+      unsubPaymentCancelled();
+      unsubAdditionalCharge();
       leaveTripRoom(validTripId);
     };
   }, [dropoffLocation, pickupLocation, router, tripId]);
@@ -275,6 +308,15 @@ export default function CustomerTrackingScreen() {
       <View style={styles.bottomCard}>
         <Text style={styles.title}>Trip Tracking</Text>
         <Text style={styles.statusText}>{statusText}</Text>
+        {paymentBanner ? <Text style={styles.infoText}>{paymentBanner}</Text> : null}
+        {latestAdditionalCharge ? (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Additional Charge Added</Text>
+            <Text style={styles.helperText}>
+              {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} • {latestAdditionalCharge.reason}
+            </Text>
+          </View>
+        ) : null}
         {!driverLocation ? (
           <View style={styles.row}>
             <ActivityIndicator size="small" color="#2563EB" />
@@ -332,6 +374,10 @@ const styles = StyleSheet.create({
   helperText: {
     color: '#475569',
   },
+  infoText: {
+    color: '#1D4ED8',
+    fontWeight: '600',
+  },
   errorText: {
     color: '#B91C1C',
   },
@@ -345,6 +391,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  infoCard: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  infoTitle: {
+    color: '#1E3A8A',
+    fontWeight: '700',
   },
   pickupMarker: {
     width: 28,

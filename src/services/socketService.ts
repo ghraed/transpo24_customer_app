@@ -1,6 +1,13 @@
 import { io, type Socket } from 'socket.io-client';
 
 import type {
+  AdditionalCharge,
+  CustomerAcceptOfferResponse,
+  CustomerRequestOfferSummary,
+  CustomerRequestStatus,
+  PaymentSummary,
+} from '@/types/customer-request';
+import type {
   DriverArrivedPickupConfirmedPayload,
   ItemPickedUpPayload,
   ItemDeliveredPayload,
@@ -21,6 +28,19 @@ export type SocketDebugPongPayload = {
   tripId: string | null;
   note: string | null;
 };
+
+export type OfferNewPayload = {
+  requestId: string;
+  requestStatus: CustomerRequestStatus;
+  offer: CustomerRequestOfferSummary;
+};
+
+export type RequestDriverSelectedPayload = CustomerAcceptOfferResponse;
+export type PaymentHeldPayload = PaymentSummary;
+export type PaymentFailedPayload = PaymentSummary;
+export type PaymentCapturedPayload = PaymentSummary;
+export type PaymentCancelledPayload = PaymentSummary;
+export type AdditionalChargeAddedPayload = AdditionalCharge;
 
 const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL?.trim();
 let socket: Socket | null = null;
@@ -140,6 +160,22 @@ export function onOfferAccepted(callback: (payload: OfferAcceptedPayload) => voi
   return () => instance.off('offerAccepted', callback);
 }
 
+export function onOfferNew(callback: (payload: OfferNewPayload) => void): () => void {
+  const instance = getSocket();
+  instance.off('offerNew', callback);
+  instance.on('offerNew', callback);
+  return () => instance.off('offerNew', callback);
+}
+
+export function onRequestDriverSelected(
+  callback: (payload: RequestDriverSelectedPayload) => void,
+): () => void {
+  const instance = getSocket();
+  instance.off('requestDriverSelected', callback);
+  instance.on('requestDriverSelected', callback);
+  return () => instance.off('requestDriverSelected', callback);
+}
+
 export function onDriverLocationUpdated(
   callback: (payload: DriverLocationUpdatedPayload) => void,
 ): () => void {
@@ -147,6 +183,51 @@ export function onDriverLocationUpdated(
   instance.off('driverLocationUpdated', callback);
   instance.on('driverLocationUpdated', callback);
   return () => instance.off('driverLocationUpdated', callback);
+}
+
+export function onPaymentHeld(
+  callback: (payload: PaymentHeldPayload) => void,
+): () => void {
+  const instance = getSocket();
+  instance.off('paymentHeld', callback);
+  instance.on('paymentHeld', callback);
+  return () => instance.off('paymentHeld', callback);
+}
+
+export function onPaymentFailed(
+  callback: (payload: PaymentFailedPayload) => void,
+): () => void {
+  const instance = getSocket();
+  instance.off('paymentFailed', callback);
+  instance.on('paymentFailed', callback);
+  return () => instance.off('paymentFailed', callback);
+}
+
+export function onPaymentCaptured(
+  callback: (payload: PaymentCapturedPayload) => void,
+): () => void {
+  const instance = getSocket();
+  instance.off('paymentCaptured', callback);
+  instance.on('paymentCaptured', callback);
+  return () => instance.off('paymentCaptured', callback);
+}
+
+export function onPaymentCancelled(
+  callback: (payload: PaymentCancelledPayload) => void,
+): () => void {
+  const instance = getSocket();
+  instance.off('paymentCancelled', callback);
+  instance.on('paymentCancelled', callback);
+  return () => instance.off('paymentCancelled', callback);
+}
+
+export function onAdditionalChargeAdded(
+  callback: (payload: AdditionalChargeAddedPayload) => void,
+): () => void {
+  const instance = getSocket();
+  instance.off('additionalChargeAdded', callback);
+  instance.on('additionalChargeAdded', callback);
+  return () => instance.off('additionalChargeAdded', callback);
 }
 
 export function onDriverArrivedPickupConfirmed(
