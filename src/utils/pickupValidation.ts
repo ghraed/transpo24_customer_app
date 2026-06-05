@@ -2,6 +2,7 @@ import type {
   DriverLocationUpdatedPayload,
   GeoLocation,
   ItemPickedUpPayload,
+  DriverNearDeliveryPayload,
   TripStatus,
   TripStatusUpdatedPayload,
 } from '@/types/trip.types';
@@ -24,6 +25,31 @@ const TRIP_STATUSES: readonly TripStatus[] = [
 
 function isRecord(payload: unknown): payload is Record<string, unknown> {
   return typeof payload === 'object' && payload !== null;
+}
+
+function parseProofPhotos(value: unknown): ItemPickedUpPayload['pickupProofPhotos'] | null {
+  if (!Array.isArray(value)) return [];
+
+  const photos: ItemPickedUpPayload['pickupProofPhotos'] = [];
+  for (const photo of value) {
+    if (!isRecord(photo)) return null;
+    const { id, type, url, mimeType, sizeBytes, sortOrder, createdAt } = photo;
+    if (
+      typeof id !== 'string' ||
+      typeof type !== 'string' ||
+      typeof url !== 'string' ||
+      typeof mimeType !== 'string' ||
+      typeof sizeBytes !== 'number' ||
+      typeof sortOrder !== 'number' ||
+      typeof createdAt !== 'string'
+    ) {
+      return null;
+    }
+
+    photos.push({ id, type: type as ItemPickedUpPayload['pickupProofPhotos'][number]['type'], url, mimeType, sizeBytes, sortOrder, createdAt });
+  }
+
+  return photos;
 }
 
 export function isValidTripId(value: string): boolean {
@@ -54,6 +80,7 @@ export function validateItemPickedUpPayload(payload: unknown): ItemPickedUpPaylo
     pickedUpAt,
     pickupNotes,
     pickupProofImageUrl,
+    pickupProofPhotos,
   } = payload;
 
   if (
@@ -74,6 +101,11 @@ export function validateItemPickedUpPayload(payload: unknown): ItemPickedUpPaylo
     return null;
   }
 
+  const parsedProofPhotos = parseProofPhotos(pickupProofPhotos);
+  if (parsedProofPhotos === null) {
+    return null;
+  }
+
   return {
     tripId,
     driverId,
@@ -82,7 +114,28 @@ export function validateItemPickedUpPayload(payload: unknown): ItemPickedUpPaylo
     pickedUpAt,
     pickupNotes: pickupNotes ?? null,
     pickupProofImageUrl: pickupProofImageUrl ?? null,
+    pickupProofPhotos: parsedProofPhotos,
   };
+}
+
+export function validateDriverNearDeliveryPayload(
+  payload: unknown,
+): DriverNearDeliveryPayload | null {
+  if (!isRecord(payload)) return null;
+
+  const { tripId, driverId, customerId, distanceKm, thresholdKm, notifiedAt } = payload;
+  if (
+    typeof tripId !== 'string' ||
+    typeof driverId !== 'string' ||
+    typeof customerId !== 'string' ||
+    typeof distanceKm !== 'number' ||
+    typeof thresholdKm !== 'number' ||
+    typeof notifiedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  return { tripId, driverId, customerId, distanceKm, thresholdKm, notifiedAt };
 }
 
 export function validateTripStatusUpdatedPayload(payload: unknown): TripStatusUpdatedPayload | null {

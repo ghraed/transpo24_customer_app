@@ -16,14 +16,11 @@ import {
   onAdditionalChargeAdded,
   onDriverLocationUpdated,
   onItemPickedUp,
-  onPaymentCancelled,
-  onPaymentCaptured,
-  onPaymentHeld,
   onSocketDisconnect,
   onSocketError,
   onTripStatusUpdated,
 } from '@/services/socketService';
-import type { AdditionalCharge, PaymentSummary } from '@/types/customer-request';
+import type { AdditionalCharge } from '@/types/customer-request';
 import type { AddressedLocation, GeoLocation, ItemPickedUpPayload } from '@/types/trip.types';
 import {
   isValidGeoLocation,
@@ -58,7 +55,6 @@ export default function WaitingForPickupScreen() {
   const [pickupInfo, setPickupInfo] = useState<ItemPickedUpPayload | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isWaiting, setIsWaiting] = useState<boolean>(true);
-  const [paymentBanner, setPaymentBanner] = useState<string>('');
   const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
 
   const pickupLocation = useMemo<AddressedLocation | null>(() => {
@@ -185,23 +181,6 @@ export default function WaitingForPickupScreen() {
       setErrorMessage(message || 'Socket connection error.');
     });
 
-    const formatMoney = (amount: number, currency: string): string => `${amount.toFixed(2)} ${currency}`;
-
-    const unsubPaymentHeld = onPaymentHeld((payload: PaymentSummary) => {
-      if (payload.requestId !== tripId) return;
-      setPaymentBanner(`Payment held: ${formatMoney(payload.heldAmount, payload.currency)}`);
-    });
-
-    const unsubPaymentCaptured = onPaymentCaptured((payload: PaymentSummary) => {
-      if (payload.requestId !== tripId) return;
-      setPaymentBanner(`Payment captured: ${formatMoney(payload.capturedAmount, payload.currency)}`);
-    });
-
-    const unsubPaymentCancelled = onPaymentCancelled((payload: PaymentSummary) => {
-      if (payload.requestId !== tripId) return;
-      setPaymentBanner('Payment hold released.');
-    });
-
     const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
       if (payload.requestId !== tripId) return;
       setLatestAdditionalCharge(payload);
@@ -213,9 +192,6 @@ export default function WaitingForPickupScreen() {
       unsubTripStatus();
       unsubDisconnect();
       unsubSocketError();
-      unsubPaymentHeld();
-      unsubPaymentCaptured();
-      unsubPaymentCancelled();
       unsubAdditionalCharge();
       leaveTripRoom(tripId);
     };
@@ -256,7 +232,6 @@ export default function WaitingForPickupScreen() {
       <View style={styles.bottomCard}>
         <Text style={styles.title}>Pickup Stage</Text>
         <Text style={styles.statusText}>Driver arrived at pickup location</Text>
-        {paymentBanner ? <Text style={styles.infoText}>{paymentBanner}</Text> : null}
         {latestAdditionalCharge ? (
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>Additional Charge Added</Text>
@@ -278,9 +253,9 @@ export default function WaitingForPickupScreen() {
             <Text style={styles.infoTitle}>Pickup Confirmed</Text>
             <Text style={styles.helperText}>Picked up at: {new Date(pickupInfo.pickedUpAt).toLocaleString()}</Text>
             {pickupInfo.pickupNotes ? <Text style={styles.helperText}>Notes: {pickupInfo.pickupNotes}</Text> : null}
-            {pickupInfo.pickupProofImageUrl ? (
-              <Text style={styles.helperText}>Proof URL: {pickupInfo.pickupProofImageUrl}</Text>
-            ) : null}
+            <Text style={styles.helperText}>
+              Proof photos received: {pickupInfo.pickupProofPhotos.length}
+            </Text>
           </View>
         ) : null}
 

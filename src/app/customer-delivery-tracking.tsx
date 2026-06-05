@@ -15,21 +15,20 @@ import {
   joinTripRoom,
   leaveTripRoom,
   onAdditionalChargeAdded,
+  onDriverNearDelivery,
   onDriverLocationUpdated,
   onDriverStartedDelivery,
   onItemDelivered,
-  onPaymentCancelled,
-  onPaymentCaptured,
-  onPaymentHeld,
   onSocketDisconnect,
   onSocketError,
   onTripStatusUpdated,
 } from '@/services/socketService';
-import type { AdditionalCharge, PaymentSummary } from '@/types/customer-request';
+import type { AdditionalCharge } from '@/types/customer-request';
 import type { AddressedLocation, GeoLocation } from '@/types/trip.types';
 import {
   isValidGeoLocation,
   isValidTripId,
+  validateDriverNearDeliveryPayload,
   validateDriverLocationUpdatedPayload,
   validateDriverStartedDeliveryPayload,
   validateItemDeliveredPayload,
@@ -106,7 +105,7 @@ export default function CustomerDeliveryTrackingScreen() {
   const [driverLocation, setDriverLocation] = useState<GeoLocation | null>(null);
   const [statusText, setStatusText] = useState<string>('Driver is going to dropoff location');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [paymentBanner, setPaymentBanner] = useState<string>('');
+  const [nearDeliveryBanner, setNearDeliveryBanner] = useState<string>('');
   const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
 
   const isRouteValid =
@@ -168,9 +167,16 @@ export default function CustomerDeliveryTrackingScreen() {
           tripId,
           validated.deliveredAt,
           validated.deliveryNotes,
-          validated.deliveryProofImageUrl,
+          validated.deliveryProofPhotos[0]?.url ?? validated.deliveryProofImageUrl,
         ),
       );
+    });
+
+    const unsubNearDelivery = onDriverNearDelivery((payload) => {
+      const validated = validateDriverNearDeliveryPayload(payload);
+      if (!validated || validated.tripId !== tripId) return;
+      setNearDeliveryBanner('Your driver is close to the delivery location. Delivery is approaching.');
+      setStatusText('Driver is near the delivery location');
     });
 
     const unsubStatus = onTripStatusUpdated((payload) => {
@@ -197,23 +203,6 @@ export default function CustomerDeliveryTrackingScreen() {
       setErrorMessage(message || 'Socket connection error.');
     });
 
-    const formatMoney = (amount: number, currency: string): string => `${amount.toFixed(2)} ${currency}`;
-
-    const unsubPaymentHeld = onPaymentHeld((payload: PaymentSummary) => {
-      if (payload.requestId !== tripId) return;
-      setPaymentBanner(`Payment held: ${formatMoney(payload.heldAmount, payload.currency)}`);
-    });
-
-    const unsubPaymentCaptured = onPaymentCaptured((payload: PaymentSummary) => {
-      if (payload.requestId !== tripId) return;
-      setPaymentBanner(`Payment captured: ${formatMoney(payload.capturedAmount, payload.currency)}`);
-    });
-
-    const unsubPaymentCancelled = onPaymentCancelled((payload: PaymentSummary) => {
-      if (payload.requestId !== tripId) return;
-      setPaymentBanner('Payment hold released.');
-    });
-
     const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
       if (payload.requestId !== tripId) return;
       setLatestAdditionalCharge(payload);
@@ -223,12 +212,10 @@ export default function CustomerDeliveryTrackingScreen() {
       unsubStarted();
       unsubLocation();
       unsubDelivered();
+      unsubNearDelivery();
       unsubStatus();
       unsubDisconnect();
       unsubSocketError();
-      unsubPaymentHeld();
-      unsubPaymentCaptured();
-      unsubPaymentCancelled();
       unsubAdditionalCharge();
       leaveTripRoom(tripId);
     };
@@ -297,7 +284,7 @@ export default function CustomerDeliveryTrackingScreen() {
       <View style={styles.bottomCard}>
         <Text style={styles.title}>Delivery Tracking</Text>
         <Text style={styles.statusText}>{statusText}</Text>
-        {paymentBanner ? <Text style={styles.infoText}>{paymentBanner}</Text> : null}
+        {nearDeliveryBanner ? <Text style={styles.infoText}>{nearDeliveryBanner}</Text> : null}
         {latestAdditionalCharge ? (
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>Additional Charge Added</Text>

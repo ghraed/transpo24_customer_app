@@ -13,6 +13,7 @@ import type {
   LocalPhotoAsset,
   PaymentMethod,
   PaymentSummary,
+  RequestTracking,
   RequestStatusResponse,
   SubmitCustomerRequestPayload,
   UploadRequestPhotosResponse,
@@ -546,6 +547,19 @@ export async function getCustomerRequestStatus(requestId: string): Promise<Reque
   }
 
   return (await response.json()) as RequestStatusResponse;
+}
+
+export async function getRequestTracking(requestId: string): Promise<RequestTracking> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/tracking`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load request tracking.');
+  }
+
+  return (await response.json()) as RequestTracking;
 }
 
 export async function getCustomerHome(): Promise<CustomerHomeResponse> {

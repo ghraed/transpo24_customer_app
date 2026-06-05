@@ -269,11 +269,72 @@ export type CustomerRequestStatus =
   | 'DRIVER_GOING_TO_PICKUP'
   | 'DRIVER_ARRIVED_PICKUP'
   | 'PICKUP_IN_PROGRESS'
+  | 'ITEM_PICKED_UP'
   | 'IN_TRANSIT'
   | 'DRIVER_GOING_TO_DROPOFF'
   | 'DELIVERED'
   | 'COMPLETED'
   | 'CANCELLED';
+
+export type RequestTrackingStatus =
+  | 'DRIVER_ASSIGNED'
+  | 'DRIVER_GOING_TO_PICKUP'
+  | 'DRIVER_ARRIVED_PICKUP'
+  | 'PICKUP_IN_PROGRESS'
+  | 'ITEM_PICKED_UP'
+  | 'IN_TRANSIT'
+  | 'DRIVER_GOING_TO_DROPOFF'
+  | 'DELIVERED'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export type ProofPhotoType = 'PICKUP' | 'DELIVERY';
+
+export interface ProofPhoto {
+  id: string;
+  type: ProofPhotoType;
+  url: string;
+  mimeType: string;
+  sizeBytes: number;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface DriverLocation {
+  latitude: number;
+  longitude: number;
+  heading: number | null;
+  speed: number | null;
+  accuracy: number | null;
+  recordedAt: string;
+}
+
+export interface RequestTracking {
+  requestId: string;
+  currentStatus: RequestTrackingStatus;
+  assignedDriverId: string | null;
+  driverName: string | null;
+  driverVehiclePhoto: string | null;
+  pickupLocation: {
+    latitude: number | null;
+    longitude: number | null;
+    address: string | null;
+    placeId: string | null;
+  };
+  deliveryLocation: {
+    latitude: number | null;
+    longitude: number | null;
+    address: string | null;
+    placeId: string | null;
+  };
+  latestDriverLocation: DriverLocation | null;
+  pickupProofPhotos: ProofPhoto[];
+  deliveryProofPhotos: ProofPhoto[];
+  nearDeliveryNotifiedAt: string | null;
+  deliveredAt: string | null;
+  ratingAvailable: boolean;
+  updatedAt: string;
+}
 
 export type PaymentMethod =
   | 'CREDIT_CARD'

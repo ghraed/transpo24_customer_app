@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   RefreshControl,
@@ -14,35 +15,45 @@ import {
 
 import { getApiBaseUrl } from '@/config/backend';
 import {
-  cancelPaymentHold,
   getCustomerRequestOffers,
   getCustomerRequestStatus,
-  getRequestPaymentStatus,
+  getRequestTracking,
 } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
+  joinTripRoom,
+  leaveTripRoom,
   onAdditionalChargeAdded,
+  onDriverLocationUpdated,
+  onDriverNearDelivery,
+  onItemDelivered,
+  onItemPickedUp,
   onOfferNew,
-  onPaymentCancelled,
-  onPaymentCaptured,
-  onPaymentFailed,
-  onPaymentHeld,
   onRequestDriverSelected,
   onSocketConnected,
   onSocketDisconnect,
   onSocketError,
+  onTripStatusUpdated,
   waitForSocketConnection,
 } from '@/services/socketService';
 import type {
   AdditionalCharge,
   CustomerRequestOfferSummary,
   CustomerRequestStatus,
-  PaymentMethod,
-  PaymentStatus,
-  PaymentSummary,
+  DriverLocation,
+  ProofPhoto,
+  RequestTracking,
+  RequestTrackingStatus,
   RequestStatusResponse,
 } from '@/types/customer-request';
+import {
+  validateDriverLocationUpdatedPayload,
+  validateDriverNearDeliveryPayload,
+  validateItemPickedUpPayload,
+  validateTripStatusUpdatedPayload,
+} from '@/utils/pickupValidation';
+import { validateItemDeliveredPayload } from '@/utils/deliveryValidation';
 
 interface TimelineStep {
   key: string;
@@ -52,36 +63,41 @@ interface TimelineStep {
 type SocketState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error' | 'unavailable';
 
 const TIMELINE_STEPS: TimelineStep[] = [
-  { key: 'REQUEST_SUBMITTED', label: 'Request submitted' },
-  { key: 'PENDING_QUOTES', label: 'Waiting for offers' },
-  { key: 'QUOTED', label: 'Choose driver' },
-  { key: 'DRIVER_GOING_TO_PICKUP', label: 'Driver going to pickup' },
-  { key: 'DRIVER_ARRIVED_PICKUP', label: 'Driver arrived at pickup' },
-  { key: 'IN_TRANSIT', label: 'In transit' },
+  { key: 'DRIVER_ASSIGNED', label: 'Driver before starting the order' },
+  { key: 'DRIVER_GOING_TO_PICKUP', label: 'Driver is on the way to the pickup location' },
+  { key: 'DRIVER_ARRIVED_PICKUP', label: 'Driver has arrived at the pickup location' },
+  { key: 'ITEM_PICKED_UP', label: 'Pickup completed' },
+  { key: 'DRIVER_GOING_TO_DROPOFF', label: 'Driver is on the way to the delivery location' },
   { key: 'DELIVERED', label: 'Delivered' },
 ];
 
-const STATUS_PROGRESS: Record<CustomerRequestStatus, number> = {
-  DRAFT: 0,
-  PENDING_QUOTES: 1,
-  QUOTED: 2,
-  ACCEPTED: 2,
-  DRIVER_ASSIGNED: 3,
-  DRIVER_GOING_TO_PICKUP: 3,
-  DRIVER_ARRIVED_PICKUP: 4,
-  PICKUP_IN_PROGRESS: 4,
-  IN_TRANSIT: 5,
-  DRIVER_GOING_TO_DROPOFF: 5,
-  DELIVERED: 6,
-  COMPLETED: 6,
+const STATUS_PROGRESS: Partial<Record<CustomerRequestStatus | RequestTrackingStatus, number>> = {
+  ACCEPTED: 0,
+  DRIVER_ASSIGNED: 0,
+  DRIVER_GOING_TO_PICKUP: 1,
+  DRIVER_ARRIVED_PICKUP: 2,
+  PICKUP_IN_PROGRESS: 2,
+  ITEM_PICKED_UP: 3,
+  IN_TRANSIT: 4,
+  DRIVER_GOING_TO_DROPOFF: 4,
+  DELIVERED: 5,
+  COMPLETED: 5,
   CANCELLED: -1,
 };
 
 const STATUS_LABELS: Partial<Record<CustomerRequestStatus, string>> = {
   PENDING_QUOTES: 'Waiting for driver offers',
   QUOTED: 'Choose your driver',
-  DRIVER_ASSIGNED: 'Driver selected',
-  DRIVER_GOING_TO_PICKUP: 'Driver going to pickup',
+  ACCEPTED: 'Driver before starting the order',
+  DRIVER_ASSIGNED: 'Driver before starting the order',
+  DRIVER_GOING_TO_PICKUP: 'Driver is on the way to the pickup location',
+  DRIVER_ARRIVED_PICKUP: 'Driver has arrived at the pickup location',
+  PICKUP_IN_PROGRESS: 'Driver has arrived at the pickup location',
+  ITEM_PICKED_UP: 'Pickup completed',
+  IN_TRANSIT: 'Driver is on the way to the delivery location',
+  DRIVER_GOING_TO_DROPOFF: 'Driver is on the way to the delivery location',
+  DELIVERED: 'Delivered',
+  COMPLETED: 'Delivered',
 };
 
 function parseInitialRequest(raw: string | undefined): RequestStatusResponse | null {
@@ -170,7 +186,20 @@ function upsertOffer(
 function getHeadline(status: CustomerRequestStatus, offersCount: number): string {
   if (status === 'PENDING_QUOTES' && offersCount === 0) return 'Waiting for driver offers';
   if (status === 'QUOTED' || offersCount > 0) return 'Choose your driver';
-  if (status === 'DRIVER_ASSIGNED' || status === 'DRIVER_GOING_TO_PICKUP') return 'Driver selected';
+  if (
+    status === 'ACCEPTED' ||
+    status === 'DRIVER_ASSIGNED' ||
+    status === 'DRIVER_GOING_TO_PICKUP' ||
+    status === 'DRIVER_ARRIVED_PICKUP' ||
+    status === 'PICKUP_IN_PROGRESS' ||
+    status === 'ITEM_PICKED_UP' ||
+    status === 'IN_TRANSIT' ||
+    status === 'DRIVER_GOING_TO_DROPOFF' ||
+    status === 'DELIVERED' ||
+    status === 'COMPLETED'
+  ) {
+    return 'Order Tracking';
+  }
   return 'Request Status';
 }
 
@@ -233,60 +262,70 @@ function formatMoney(amount: number, currency: string | null | undefined): strin
   }
 }
 
-function getPaymentMethodLabel(method: PaymentMethod): string {
-  switch (method) {
-    case 'CREDIT_CARD':
-      return 'Credit card';
-    case 'DEBIT_CARD':
-      return 'Debit card';
-    case 'APPLE_PAY':
-      return 'Apple Pay';
-    case 'GOOGLE_PAY':
-      return 'Google Pay';
-    case 'APP_WALLET':
-      return 'App wallet';
-    default:
-      return method;
-  }
+function dedupeProofPhotos(photos: ProofPhoto[]): ProofPhoto[] {
+  const seen = new Set<string>();
+  return photos.filter((photo) => {
+    if (seen.has(photo.id)) return false;
+    seen.add(photo.id);
+    return true;
+  });
 }
 
-function getPaymentStatusLabel(status: PaymentStatus): string {
-  switch (status) {
-    case 'PAYMENT_HOLD_PENDING':
-      return 'Payment hold pending';
-    case 'PAYMENT_HELD':
-      return 'Amount held';
-    case 'PAYMENT_FAILED':
-      return 'Payment failed';
-    case 'DELIVERY_CONFIRMED':
-      return 'Delivery confirmed';
-    case 'PAYMENT_CAPTURE_PENDING':
-      return 'Capture pending';
-    case 'PAYMENT_CAPTURED':
-      return 'Payment captured';
-    case 'PAYMENT_RELEASED':
-      return 'Hold released';
-    case 'PAYMENT_CANCELLED':
-      return 'Payment cancelled';
-    case 'PAYMENT_REFUNDED':
-      return 'Payment refunded';
-    default:
-      return status;
+function getTrackingStatusLabel(
+  status: CustomerRequestStatus | RequestTrackingStatus,
+  nearDeliveryNotifiedAt: string | null,
+  ratingAvailable: boolean,
+): string {
+  if (
+    nearDeliveryNotifiedAt &&
+    (status === 'IN_TRANSIT' || status === 'DRIVER_GOING_TO_DROPOFF')
+  ) {
+    return 'Driver is near the delivery location';
   }
+
+  if (ratingAvailable && (status === 'DELIVERED' || status === 'COMPLETED')) {
+    return 'Rating pending';
+  }
+
+  return STATUS_LABELS[status as CustomerRequestStatus] ?? status;
 }
 
-function buildTrackingHref(requestData: RequestStatusResponse): Href {
+function buildTrackingHref(
+  requestData: RequestStatusResponse,
+  trackingStatus: CustomerRequestStatus | RequestTrackingStatus,
+): Href {
+  const params = {
+    tripId: requestData.id,
+    pickupLatitude: String(requestData.pickupLocation.latitude),
+    pickupLongitude: String(requestData.pickupLocation.longitude),
+    pickupAddress: requestData.pickupLocation.address ?? '',
+    dropoffLatitude: String(requestData.dropoffLocation.latitude),
+    dropoffLongitude: String(requestData.dropoffLocation.longitude),
+    dropoffAddress: requestData.dropoffLocation.address ?? '',
+  };
+
+  if (trackingStatus === 'DRIVER_ARRIVED_PICKUP' || trackingStatus === 'PICKUP_IN_PROGRESS') {
+    return { pathname: '/waiting-for-pickup', params };
+  }
+
+  if (
+    trackingStatus === 'ITEM_PICKED_UP' ||
+    trackingStatus === 'IN_TRANSIT' ||
+    trackingStatus === 'DRIVER_GOING_TO_DROPOFF'
+  ) {
+    return { pathname: '/customer-delivery-tracking', params };
+  }
+
+  if (trackingStatus === 'DELIVERED' || trackingStatus === 'COMPLETED') {
+    return {
+      pathname: '/customer-trip-delivered',
+      params: { tripId: requestData.id },
+    };
+  }
+
   return {
     pathname: '/customer-tracking',
-    params: {
-      tripId: requestData.id,
-      pickupLatitude: String(requestData.pickupLocation.latitude),
-      pickupLongitude: String(requestData.pickupLocation.longitude),
-      pickupAddress: requestData.pickupLocation.address ?? '',
-      dropoffLatitude: String(requestData.dropoffLocation.latitude),
-      dropoffLongitude: String(requestData.dropoffLocation.longitude),
-      dropoffAddress: requestData.dropoffLocation.address ?? '',
-    },
+    params,
   };
 }
 
@@ -302,15 +341,16 @@ export default function RequestStatusScreen() {
 
   const [requestData, setRequestData] = useState<RequestStatusResponse | null>(initialRequest);
   const [offers, setOffers] = useState<CustomerRequestOfferSummary[]>([]);
-  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
+  const [trackingData, setTrackingData] = useState<RequestTracking | null>(null);
+  const [latestDriverLocation, setLatestDriverLocation] = useState<DriverLocation | null>(null);
   const [additionalCharges, setAdditionalCharges] = useState<AdditionalCharge[]>([]);
   const [selectedOfferId, setSelectedOfferId] = useState<string>('');
   const [isOpeningPaymentOfferId, setIsOpeningPaymentOfferId] = useState<string>('');
-  const [isCancellingPayment, setIsCancellingPayment] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(!initialRequest);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [nearDeliveryMessage, setNearDeliveryMessage] = useState<string>('');
   const [socketState, setSocketState] = useState<SocketState>(accessToken ? 'idle' : 'unavailable');
   const [socketMessage, setSocketMessage] = useState<string>(
     accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
@@ -336,25 +376,28 @@ export default function RequestStatusScreen() {
       try {
         const data = await getCustomerRequestStatus(requestId);
         const offersResponse = await getCustomerRequestOffers(requestId);
-        let nextPayment: PaymentSummary | null = null;
+        let nextTracking: RequestTracking | null = null;
 
         try {
-          nextPayment = await getRequestPaymentStatus(requestId);
-        } catch (paymentError) {
-          const paymentMessage =
-            paymentError instanceof Error ? paymentError.message.toLowerCase() : '';
+          nextTracking = await getRequestTracking(requestId);
+        } catch (trackingError) {
+          const trackingMessage =
+            trackingError instanceof Error ? trackingError.message.toLowerCase() : '';
 
-          if (
-            !paymentMessage.includes('payment hold not found') &&
-            !paymentMessage.includes('not found')
-          ) {
-            throw paymentError;
+          if (!trackingMessage.includes('not found')) {
+            throw trackingError;
           }
         }
 
         setRequestData(data);
         setOffers(sortOffers(offersResponse.offers ?? []));
-        setPaymentSummary(nextPayment);
+        setTrackingData(nextTracking);
+        setLatestDriverLocation(nextTracking?.latestDriverLocation ?? null);
+        setNearDeliveryMessage(
+          nextTracking?.nearDeliveryNotifiedAt
+            ? 'Your driver is close to the delivery location. Delivery is approaching.'
+            : '',
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to load request status.';
         const normalized = message.toLowerCase();
@@ -400,6 +443,7 @@ export default function RequestStatusScreen() {
       .then(() => {
         setSocketState('connected');
         setSocketMessage('');
+        joinTripRoom(requestId);
       })
       .catch((error) => {
         setSocketState('error');
@@ -443,7 +487,6 @@ export default function RequestStatusScreen() {
       if (payload.request.id !== requestId) return;
 
       setSuccessMessage('Driver selected successfully.');
-      setPaymentSummary(payload.payment);
       setRequestData((previousRequestData) =>
         previousRequestData
           ? {
@@ -458,30 +501,105 @@ export default function RequestStatusScreen() {
             }
           : previousRequestData,
       );
+      void loadStatus(true);
     });
 
-    const unsubPaymentHeld = onPaymentHeld((payload) => {
-      if (payload.requestId !== requestId) return;
-      setPaymentSummary(payload);
-      setSuccessMessage('Your payment hold is active.');
+    const unsubDriverLocation = onDriverLocationUpdated((payload) => {
+      const validated = validateDriverLocationUpdatedPayload(payload);
+      if (!validated || validated.tripId !== requestId) return;
+
+      setLatestDriverLocation(validated);
+      setTrackingData((previousTrackingData) =>
+        previousTrackingData
+          ? { ...previousTrackingData, latestDriverLocation: validated, updatedAt: validated.recordedAt }
+          : previousTrackingData,
+      );
     });
 
-    const unsubPaymentFailed = onPaymentFailed((payload) => {
-      if (payload.requestId !== requestId) return;
-      setPaymentSummary(payload);
-      setErrorMessage('Payment authorization failed. Please try again.');
+    const unsubTripStatusUpdated = onTripStatusUpdated((payload) => {
+      const validated = validateTripStatusUpdatedPayload(payload);
+      if (!validated || validated.tripId !== requestId) return;
+
+      setRequestData((previousRequestData) =>
+        previousRequestData
+          ? {
+              ...previousRequestData,
+              status: validated.status as CustomerRequestStatus,
+              statusLabel:
+                STATUS_LABELS[validated.status as CustomerRequestStatus] ??
+                previousRequestData.statusLabel,
+              updatedAt: validated.updatedAt,
+            }
+          : previousRequestData,
+      );
+
+      setTrackingData((previousTrackingData) =>
+        previousTrackingData
+          ? {
+              ...previousTrackingData,
+              currentStatus: validated.status as RequestTrackingStatus,
+              updatedAt: validated.updatedAt,
+            }
+          : previousTrackingData,
+      );
     });
 
-    const unsubPaymentCaptured = onPaymentCaptured((payload) => {
-      if (payload.requestId !== requestId) return;
-      setPaymentSummary(payload);
-      setSuccessMessage('Payment captured after delivery confirmation.');
+    const unsubItemPickedUp = onItemPickedUp((payload) => {
+      const validated = validateItemPickedUpPayload(payload);
+      if (!validated || validated.tripId !== requestId) return;
+
+      setTrackingData((previousTrackingData) =>
+        previousTrackingData
+          ? {
+              ...previousTrackingData,
+              currentStatus: 'ITEM_PICKED_UP',
+              pickupProofPhotos: dedupeProofPhotos([
+                ...previousTrackingData.pickupProofPhotos,
+                ...validated.pickupProofPhotos,
+              ]),
+              updatedAt: validated.pickedUpAt,
+            }
+          : previousTrackingData,
+      );
+      setSuccessMessage('Pickup completed with proof photos.');
     });
 
-    const unsubPaymentCancelled = onPaymentCancelled((payload) => {
-      if (payload.requestId !== requestId) return;
-      setPaymentSummary(payload);
-      setSuccessMessage('Payment hold released.');
+    const unsubItemDelivered = onItemDelivered((payload) => {
+      const validated = validateItemDeliveredPayload(payload);
+      if (!validated || validated.tripId !== requestId) return;
+
+      setTrackingData((previousTrackingData) =>
+        previousTrackingData
+          ? {
+              ...previousTrackingData,
+              currentStatus: 'DELIVERED',
+              deliveryProofPhotos: dedupeProofPhotos([
+                ...previousTrackingData.deliveryProofPhotos,
+                ...validated.deliveryProofPhotos,
+              ]),
+              deliveredAt: validated.deliveredAt,
+              ratingAvailable: validated.ratingAvailable,
+              updatedAt: validated.deliveredAt,
+            }
+          : previousTrackingData,
+      );
+      setSuccessMessage('Delivery confirmed. Proof photos are now available.');
+    });
+
+    const unsubNearDelivery = onDriverNearDelivery((payload) => {
+      const validated = validateDriverNearDeliveryPayload(payload);
+      if (!validated || validated.tripId !== requestId) return;
+
+      setNearDeliveryMessage('Your driver is close to the delivery location. Delivery is approaching.');
+      setTrackingData((previousTrackingData) =>
+        previousTrackingData
+          ? {
+              ...previousTrackingData,
+              nearDeliveryNotifiedAt: validated.notifiedAt,
+              updatedAt: validated.notifiedAt,
+            }
+          : previousTrackingData,
+      );
     });
 
     const unsubAdditionalChargeAdded = onAdditionalChargeAdded((payload) => {
@@ -519,16 +637,18 @@ export default function RequestStatusScreen() {
     return () => {
       unsubOfferNew();
       unsubDriverSelected();
-      unsubPaymentHeld();
-      unsubPaymentFailed();
-      unsubPaymentCaptured();
-      unsubPaymentCancelled();
+      unsubDriverLocation();
+      unsubTripStatusUpdated();
+      unsubItemPickedUp();
+      unsubItemDelivered();
+      unsubNearDelivery();
       unsubAdditionalChargeAdded();
       unsubConnected();
       unsubDisconnected();
       unsubSocketError();
+      leaveTripRoom(requestId);
     };
-  }, [accessToken, requestId]);
+  }, [accessToken, loadStatus, requestId]);
 
   const pendingOffers = offers.filter((offer) => (offer.offerStatus ?? offer.status) === 'PENDING');
   const acceptedOffer = offers.find((offer) => (offer.offerStatus ?? offer.status) === 'ACCEPTED') ?? null;
@@ -549,10 +669,15 @@ export default function RequestStatusScreen() {
       requestData.dropoffLocation.longitude !== null,
   );
 
+  const effectiveTrackingStatus =
+    trackingData?.currentStatus ?? requestData?.status ?? 'PENDING_QUOTES';
+  const nearDeliveryNotifiedAt = trackingData?.nearDeliveryNotifiedAt ?? null;
+  const ratingAvailable = trackingData?.ratingAvailable ?? false;
+
   const openTracking = useCallback((): void => {
     if (!requestData || !canOpenTrackingMap) return;
-    router.push(buildTrackingHref(requestData));
-  }, [canOpenTrackingMap, requestData, router]);
+    router.push(buildTrackingHref(requestData, effectiveTrackingStatus));
+  }, [canOpenTrackingMap, effectiveTrackingStatus, requestData, router]);
 
   const openPaymentScreen = useCallback((): void => {
     if (!requestData || !selectedOffer) return;
@@ -569,27 +694,12 @@ export default function RequestStatusScreen() {
     setTimeout(() => setIsOpeningPaymentOfferId(''), 0);
   }, [requestData, router, selectedOffer]);
 
-  const onCancelPayment = useCallback((): void => {
-    if (!requestData || !paymentSummary || isCancellingPayment) return;
-
-    void (async () => {
-      setIsCancellingPayment(true);
-      setErrorMessage('');
-      setSuccessMessage('');
-
-      try {
-        const response = await cancelPaymentHold(requestData.id);
-        setPaymentSummary(response);
-        setSuccessMessage('Payment hold released successfully.');
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : 'Failed to release payment hold.',
-        );
-      } finally {
-        setIsCancellingPayment(false);
-      }
-    })();
-  }, [isCancellingPayment, paymentSummary, requestData]);
+  const onRateDriver = useCallback((): void => {
+    Alert.alert(
+      'Rating is ready',
+      'The rating flow is now available. We can connect it to the final rating screen once that route is added.',
+    );
+  }, []);
 
   if (isLoading && !requestData) {
     return (
@@ -612,13 +722,10 @@ export default function RequestStatusScreen() {
     );
   }
 
-  const progressIndex = STATUS_PROGRESS[requestData.status];
+  const progressIndex = STATUS_PROGRESS[effectiveTrackingStatus] ?? -1;
   const headline = getHeadline(requestData.status, offers.length);
   const helperText = buildOffersHelperText(requestData, offers.length);
   const canChooseOffer = requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED';
-  const canCancelPaymentHold =
-    paymentSummary !== null &&
-    (paymentSummary.status === 'PAYMENT_HOLD_PENDING' || paymentSummary.status === 'PAYMENT_HELD');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -632,17 +739,11 @@ export default function RequestStatusScreen() {
             Track the progress of your transport request and compare driver offers.
           </Text>
           <Text style={styles.statusPill}>
-            {requestData.statusLabel || STATUS_LABELS[requestData.status] || requestData.status}
+            {getTrackingStatusLabel(effectiveTrackingStatus, nearDeliveryNotifiedAt, ratingAvailable)}
           </Text>
           <Text style={styles.metaText}>Request #{shortRequestId(requestData.id)}</Text>
           <Text style={styles.metaText}>Submitted: {formatDate(requestData.submittedAt)}</Text>
           <Text style={styles.helperText}>{helperText}</Text>
-          {paymentSummary ? (
-            <Text style={styles.helperText}>
-              Payment: {getPaymentStatusLabel(paymentSummary.status)} via{' '}
-              {getPaymentMethodLabel(paymentSummary.paymentMethod)}
-            </Text>
-          ) : null}
           <View
             style={[
               styles.socketBadge,
@@ -689,10 +790,31 @@ export default function RequestStatusScreen() {
               );
             })
           )}
+          <Text style={styles.helperText}>
+            Current update:{' '}
+            {getTrackingStatusLabel(effectiveTrackingStatus, nearDeliveryNotifiedAt, ratingAvailable)}
+          </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Request Summary</Text>
+          <Text style={styles.cardTitle}>Tracking Summary</Text>
+          {nearDeliveryMessage ? (
+            <View style={styles.bannerCard}>
+              <Text style={styles.bannerTitle}>Delivery update</Text>
+              <Text style={styles.bannerText}>{nearDeliveryMessage}</Text>
+            </View>
+          ) : null}
+          <Text style={styles.rowLabel}>Assigned driver</Text>
+          <Text style={styles.rowValue}>
+            {trackingData?.driverName || requestData.driverSummary.driverName || 'Not assigned yet'}
+          </Text>
+          {trackingData?.driverVehiclePhoto ? (
+            <Image
+              source={{ uri: resolveAssetUrl(trackingData.driverVehiclePhoto) }}
+              style={styles.driverVehiclePhoto}
+              resizeMode="cover"
+            />
+          ) : null}
           <Text style={styles.rowLabel}>Service</Text>
           <Text style={styles.rowValue}>
             {requestData.service?.nameEn || requestData.service?.key || requestData.serviceId}
@@ -714,50 +836,27 @@ export default function RequestStatusScreen() {
           {requestData.itemDetails.description ? (
             <Text style={styles.rowValue}>{requestData.itemDetails.description}</Text>
           ) : null}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Payment Hold</Text>
-          {paymentSummary ? (
-            <>
-              <Text style={styles.rowLabel}>Agreed amount</Text>
-              <Text style={styles.rowValue}>
-                {formatMoney(paymentSummary.amount, paymentSummary.currency)}
-              </Text>
-              <Text style={styles.rowLabel}>Payment method</Text>
-              <Text style={styles.rowValue}>
-                {getPaymentMethodLabel(paymentSummary.paymentMethod)}
-              </Text>
-              <Text style={styles.rowLabel}>Status</Text>
-              <Text style={styles.rowValue}>{getPaymentStatusLabel(paymentSummary.status)}</Text>
-              <Text style={styles.rowLabel}>Held amount</Text>
-              <Text style={styles.rowValue}>
-                {formatMoney(paymentSummary.heldAmount, paymentSummary.currency)}
-              </Text>
-              <Text style={styles.rowLabel}>Captured amount</Text>
-              <Text style={styles.rowValue}>
-                {formatMoney(paymentSummary.capturedAmount, paymentSummary.currency)}
-              </Text>
-              <Text style={styles.helperText}>
-                The agreed amount will be held now and will only be permanently deducted after final delivery is confirmed.
-              </Text>
-              {canCancelPaymentHold ? (
-                <Pressable
-                  style={[styles.secondaryButton, isCancellingPayment && styles.disabledButton]}
-                  disabled={isCancellingPayment}
-                  onPress={onCancelPayment}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {isCancellingPayment ? 'Releasing hold…' : 'Release Payment Hold'}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </>
-          ) : (
+          <Text style={styles.rowLabel}>Latest driver location</Text>
+          {latestDriverLocation ? (
             <Text style={styles.rowValue}>
-              No payment hold yet. Choose a driver offer to continue to payment.
+              {latestDriverLocation.latitude.toFixed(5)}, {latestDriverLocation.longitude.toFixed(5)} •{' '}
+              {formatDate(latestDriverLocation.recordedAt)}
             </Text>
+          ) : (
+            <Text style={styles.rowValue}>No driver location yet.</Text>
           )}
+          {trackingData?.deliveredAt ? (
+            <>
+              <Text style={styles.rowLabel}>Delivered at</Text>
+              <Text style={styles.rowValue}>{formatDate(trackingData.deliveredAt)}</Text>
+            </>
+          ) : null}
+          {ratingAvailable ? (
+            <>
+              <Text style={styles.rowLabel}>Rating</Text>
+              <Text style={styles.rowValue}>Rating pending</Text>
+            </>
+          ) : null}
         </View>
 
         <View style={styles.card}>
@@ -855,7 +954,7 @@ export default function RequestStatusScreen() {
                     }}
                   >
                     <Text style={styles.primaryButtonText}>
-                      {isOpening ? 'Opening payment…' : isSelected ? 'Continue to Payment' : 'Select Driver'}
+                      {isOpening ? 'Opening next step…' : isSelected ? 'Continue' : 'Select Driver'}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -890,8 +989,44 @@ export default function RequestStatusScreen() {
             onPress={openTracking}
             disabled={!canOpenTrackingMap}
           >
-            <Text style={styles.primaryButtonText}>Open Live Map</Text>
+            <Text style={styles.primaryButtonText}>Open Tracking Map</Text>
           </Pressable>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Pickup Proof Photos</Text>
+          {trackingData?.pickupProofPhotos?.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+              {trackingData.pickupProofPhotos.map((photo) => (
+                <Image
+                  key={photo.id}
+                  source={{ uri: resolveAssetUrl(photo.url) }}
+                  style={styles.photoLarge}
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.rowValue}>Pickup proof photos will appear after pickup is completed.</Text>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Delivery Proof Photos</Text>
+          {trackingData?.deliveryProofPhotos?.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+              {trackingData.deliveryProofPhotos.map((photo) => (
+                <Image
+                  key={photo.id}
+                  source={{ uri: resolveAssetUrl(photo.url) }}
+                  style={styles.photoLarge}
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.rowValue}>Delivery proof photos will appear after final delivery.</Text>
+          )}
         </View>
 
         <View style={styles.card}>
@@ -935,6 +1070,18 @@ export default function RequestStatusScreen() {
             </ScrollView>
           )}
         </View>
+
+        {ratingAvailable ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Rate Service</Text>
+            <Text style={styles.rowValue}>
+              Final delivery is confirmed. You can now rate the driver.
+            </Text>
+            <Pressable style={styles.primaryButton} onPress={onRateDriver}>
+              <Text style={styles.primaryButtonText}>Rate driver</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
@@ -1015,6 +1162,22 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontSize: 13,
   },
+  bannerCard: {
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  bannerTitle: {
+    color: '#92400E',
+    fontWeight: '700',
+  },
+  bannerText: {
+    color: '#92400E',
+    marginTop: 4,
+  },
   socketBadge: {
     marginTop: 10,
     alignSelf: 'flex-start',
@@ -1087,6 +1250,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0F172A',
     marginTop: 2,
+  },
+  driverVehiclePhoto: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    marginTop: 10,
+    backgroundColor: '#E2E8F0',
   },
   emptyState: {
     minHeight: 90,
@@ -1212,6 +1382,12 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 10,
+    backgroundColor: '#E2E8F0',
+  },
+  photoLarge: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
     backgroundColor: '#E2E8F0',
   },
   actionsRow: {

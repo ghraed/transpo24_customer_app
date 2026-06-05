@@ -1,3 +1,5 @@
+import type { ProofPhoto } from './customer-request';
+
 export type UserRole = "CUSTOMER" | "DRIVER" | "ADMIN";
 
 export type TripStatus =
@@ -77,6 +79,7 @@ export type ItemPickedUpPayload = {
   pickedUpAt: string;
   pickupNotes: string | null;
   pickupProofImageUrl: string | null;
+  pickupProofPhotos: ProofPhoto[];
 };
 
 export type DriverStartedDeliveryPayload = {
@@ -96,4 +99,15 @@ export type ItemDeliveredPayload = {
   deliveredAt: string;
   deliveryNotes: string | null;
   deliveryProofImageUrl: string | null;
+  deliveryProofPhotos: ProofPhoto[];
+  ratingAvailable: boolean;
+};
+
+export type DriverNearDeliveryPayload = {
+  tripId: string;
+  driverId: string;
+  customerId: string;
+  distanceKm: number;
+  thresholdKm: number;
+  notifiedAt: string;
 };

@@ -13,6 +13,7 @@ import type {
   ItemDeliveredPayload,
   DriverStartedDeliveryPayload,
   DriverArrivedPickupPayload,
+  DriverNearDeliveryPayload,
   DriverLocationUpdatePayload,
   DriverLocationUpdatedPayload,
   OfferAcceptedPayload,
@@ -41,6 +42,7 @@ export type PaymentFailedPayload = PaymentSummary;
 export type PaymentCapturedPayload = PaymentSummary;
 export type PaymentCancelledPayload = PaymentSummary;
 export type AdditionalChargeAddedPayload = AdditionalCharge;
+export type DriverNearDeliverySocketPayload = DriverNearDeliveryPayload;
 
 const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL?.trim();
 let socket: Socket | null = null;
@@ -183,6 +185,15 @@ export function onDriverLocationUpdated(
   instance.off('driverLocationUpdated', callback);
   instance.on('driverLocationUpdated', callback);
   return () => instance.off('driverLocationUpdated', callback);
+}
+
+export function onDriverNearDelivery(
+  callback: (payload: DriverNearDeliverySocketPayload) => void,
+): () => void {
+  const instance = getSocket();
+  instance.off('driverNearDelivery', callback);
+  instance.on('driverNearDelivery', callback);
+  return () => instance.off('driverNearDelivery', callback);
 }
 
 export function onPaymentHeld(

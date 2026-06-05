@@ -18,14 +18,11 @@ import {
   onAdditionalChargeAdded,
   onDriverArrivedPickupConfirmed,
   onDriverLocationUpdated,
-  onPaymentCancelled,
-  onPaymentCaptured,
-  onPaymentHeld,
   onSocketDisconnect,
   onSocketError,
   onTripStatusUpdated,
 } from '@/services/socketService';
-import type { AdditionalCharge, PaymentSummary } from '@/types/customer-request';
+import type { AdditionalCharge } from '@/types/customer-request';
 import type { AddressedLocation, DriverLocationUpdatedPayload, GeoLocation, TripStatus } from '@/types/trip.types';
 import {
   calculateDistanceMeters,
@@ -66,7 +63,6 @@ export default function CustomerTrackingScreen() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [routeError, setRouteError] = useState<string>('');
   const [routeStage, setRouteStage] = useState<'pickup' | 'dropoff'>('pickup');
-  const [paymentBanner, setPaymentBanner] = useState<string>('');
   const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
 
   const pickupLocation = useMemo<AddressedLocation | null>(() => {
@@ -191,23 +187,6 @@ export default function CustomerTrackingScreen() {
       setErrorMessage(message || 'Socket error.');
     });
 
-    const formatMoney = (amount: number, currency: string): string => `${amount.toFixed(2)} ${currency}`;
-
-    const unsubPaymentHeld = onPaymentHeld((payload: PaymentSummary) => {
-      if (payload.requestId !== validTripId) return;
-      setPaymentBanner(`Payment held: ${formatMoney(payload.heldAmount, payload.currency)}`);
-    });
-
-    const unsubPaymentCaptured = onPaymentCaptured((payload: PaymentSummary) => {
-      if (payload.requestId !== validTripId) return;
-      setPaymentBanner(`Payment captured: ${formatMoney(payload.capturedAmount, payload.currency)}`);
-    });
-
-    const unsubPaymentCancelled = onPaymentCancelled((payload: PaymentSummary) => {
-      if (payload.requestId !== validTripId) return;
-      setPaymentBanner('Payment hold released.');
-    });
-
     const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
       if (payload.requestId !== validTripId) return;
       setLatestAdditionalCharge(payload);
@@ -219,9 +198,6 @@ export default function CustomerTrackingScreen() {
       unsubStatus();
       unsubDisconnect();
       unsubSocketError();
-      unsubPaymentHeld();
-      unsubPaymentCaptured();
-      unsubPaymentCancelled();
       unsubAdditionalCharge();
       leaveTripRoom(validTripId);
     };
@@ -308,7 +284,6 @@ export default function CustomerTrackingScreen() {
       <View style={styles.bottomCard}>
         <Text style={styles.title}>Trip Tracking</Text>
         <Text style={styles.statusText}>{statusText}</Text>
-        {paymentBanner ? <Text style={styles.infoText}>{paymentBanner}</Text> : null}
         {latestAdditionalCharge ? (
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>Additional Charge Added</Text>

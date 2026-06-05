@@ -1,4 +1,5 @@
 import type {
+  DriverNearDeliveryPayload,
   DriverLocationUpdatedPayload,
   DriverStartedDeliveryPayload,
   GeoLocation,
@@ -25,6 +26,31 @@ const TRIP_STATUSES: readonly TripStatus[] = [
 
 function isRecord(payload: unknown): payload is Record<string, unknown> {
   return typeof payload === 'object' && payload !== null;
+}
+
+function parseProofPhotos(value: unknown): ItemDeliveredPayload['deliveryProofPhotos'] | null {
+  if (!Array.isArray(value)) return [];
+
+  const photos: ItemDeliveredPayload['deliveryProofPhotos'] = [];
+  for (const photo of value) {
+    if (!isRecord(photo)) return null;
+    const { id, type, url, mimeType, sizeBytes, sortOrder, createdAt } = photo;
+    if (
+      typeof id !== 'string' ||
+      typeof type !== 'string' ||
+      typeof url !== 'string' ||
+      typeof mimeType !== 'string' ||
+      typeof sizeBytes !== 'number' ||
+      typeof sortOrder !== 'number' ||
+      typeof createdAt !== 'string'
+    ) {
+      return null;
+    }
+
+    photos.push({ id, type: type as ItemDeliveredPayload['deliveryProofPhotos'][number]['type'], url, mimeType, sizeBytes, sortOrder, createdAt });
+  }
+
+  return photos;
 }
 
 export function isValidTripId(value: string): boolean {
@@ -124,6 +150,8 @@ export function validateItemDeliveredPayload(payload: unknown): ItemDeliveredPay
     deliveredAt,
     deliveryNotes,
     deliveryProofImageUrl,
+    deliveryProofPhotos,
+    ratingAvailable,
   } = payload;
 
   if (
@@ -141,6 +169,13 @@ export function validateItemDeliveredPayload(payload: unknown): ItemDeliveredPay
   if (deliveryProofImageUrl !== null && typeof deliveryProofImageUrl !== 'string') {
     return null;
   }
+  const parsedProofPhotos = parseProofPhotos(deliveryProofPhotos);
+  if (parsedProofPhotos === null) {
+    return null;
+  }
+  if (ratingAvailable !== undefined && typeof ratingAvailable !== 'boolean') {
+    return null;
+  }
 
   return {
     tripId,
@@ -150,7 +185,28 @@ export function validateItemDeliveredPayload(payload: unknown): ItemDeliveredPay
     deliveredAt,
     deliveryNotes: deliveryNotes ?? null,
     deliveryProofImageUrl: deliveryProofImageUrl ?? null,
+    deliveryProofPhotos: parsedProofPhotos,
+    ratingAvailable: ratingAvailable === true,
   };
+}
+
+export function validateDriverNearDeliveryPayload(
+  payload: unknown,
+): DriverNearDeliveryPayload | null {
+  if (!isRecord(payload)) return null;
+  const { tripId, driverId, customerId, distanceKm, thresholdKm, notifiedAt } = payload;
+  if (
+    typeof tripId !== 'string' ||
+    typeof driverId !== 'string' ||
+    typeof customerId !== 'string' ||
+    typeof distanceKm !== 'number' ||
+    typeof thresholdKm !== 'number' ||
+    typeof notifiedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  return { tripId, driverId, customerId, distanceKm, thresholdKm, notifiedAt };
 }
 
 export function validateTripStatusUpdatedPayload(payload: unknown): TripStatusUpdatedPayload | null {
@@ -168,4 +224,3 @@ export function validateTripStatusUpdatedPayload(payload: unknown): TripStatusUp
     updatedAt,
   };
 }
-

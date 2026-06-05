@@ -1,7 +1,20 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { getApiBaseUrl } from '@/config/backend';
+import { getRequestTracking } from '@/lib/api';
+import type { RequestTracking } from '@/types/customer-request';
 
 type RouteParams = {
   tripId?: string;
@@ -10,32 +23,130 @@ type RouteParams = {
   deliveryProofImageUrl?: string;
 };
 
+function resolveAssetUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (/^(https?:|file:|content:|data:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const baseUrl = getApiBaseUrl();
+  return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+}
+
 export default function CustomerTripDeliveredScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<RouteParams>();
 
   const tripId = typeof params.tripId === 'string' ? params.tripId : 'N/A';
-  const deliveredAt = typeof params.deliveredAt === 'string' ? params.deliveredAt : null;
+  const deliveredAtParam = typeof params.deliveredAt === 'string' ? params.deliveredAt : null;
   const deliveryNotes = typeof params.deliveryNotes === 'string' ? params.deliveryNotes : '';
   const deliveryProofImageUrl =
     typeof params.deliveryProofImageUrl === 'string' ? params.deliveryProofImageUrl : '';
 
+  const [tracking, setTracking] = useState<RequestTracking | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(tripId !== 'N/A');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  useEffect(() => {
+    if (tripId === 'N/A') {
+      setIsLoading(false);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const response = await getRequestTracking(tripId);
+        setTracking(response);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Failed to load delivery details.',
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [tripId]);
+
+  const onRateDriver = useCallback((): void => {
+    Alert.alert(
+      'Rating is ready',
+      'The driver can now be rated. We can connect this button to the final rating screen once that route is added.',
+    );
+  }, []);
+
+  const deliveredAt = tracking?.deliveredAt ?? deliveredAtParam;
+  const proofPhotos = tracking?.deliveryProofPhotos ?? [];
+  const ratingAvailable = tracking?.ratingAvailable ?? false;
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Item Delivered</Text>
-        <Text style={styles.subtitle}>Your delivery has been completed.</Text>
-        <Text style={styles.meta}>Trip ID: {tripId}</Text>
-        <Text style={styles.meta}>
-          Delivered At: {deliveredAt ? new Date(deliveredAt).toLocaleString() : 'N/A'}
-        </Text>
-        {deliveryNotes ? <Text style={styles.meta}>Notes: {deliveryNotes}</Text> : null}
-        {deliveryProofImageUrl ? <Text style={styles.meta}>Proof URL: {deliveryProofImageUrl}</Text> : null}
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.card}>
+          <Text style={styles.title}>Delivered</Text>
+          <Text style={styles.subtitle}>Your delivery has been completed.</Text>
+          <Text style={styles.meta}>Trip ID: {tripId}</Text>
+          <Text style={styles.meta}>
+            Delivered at: {deliveredAt ? new Date(deliveredAt).toLocaleString() : 'N/A'}
+          </Text>
+          {deliveryNotes ? <Text style={styles.meta}>Notes: {deliveryNotes}</Text> : null}
+          {tracking?.nearDeliveryNotifiedAt ? (
+            <Text style={styles.meta}>
+              Near-delivery alert sent: {new Date(tracking.nearDeliveryNotifiedAt).toLocaleString()}
+            </Text>
+          ) : null}
+        </View>
 
-        <Pressable style={styles.button} onPress={() => router.replace('/home')}>
-          <Text style={styles.buttonText}>Back to Home</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Delivery Proof Photos</Text>
+          {isLoading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color="#2563EB" />
+              <Text style={styles.meta}>Loading delivery proof…</Text>
+            </View>
+          ) : proofPhotos.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+              {proofPhotos.map((photo) => (
+                <Image
+                  key={photo.id}
+                  source={{ uri: resolveAssetUrl(photo.url) }}
+                  style={styles.photo}
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+          ) : deliveryProofImageUrl ? (
+            <Image
+              source={{ uri: resolveAssetUrl(deliveryProofImageUrl) }}
+              style={styles.photoFallback}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.meta}>Delivery proof photos will appear here when available.</Text>
+          )}
+        </View>
+
+        {ratingAvailable ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Rating Pending</Text>
+            <Text style={styles.meta}>Final delivery is confirmed. You can now rate the driver.</Text>
+            <Pressable style={styles.button} onPress={onRateDriver}>
+              <Text style={styles.buttonText}>Rate driver</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() =>
+            router.replace(`/request-status?requestId=${encodeURIComponent(tripId)}`)
+          }
+        >
+          <Text style={styles.secondaryButtonText}>Back to request status</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -44,8 +155,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  content: {
     padding: 20,
-    justifyContent: 'center',
+    gap: 12,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -63,11 +176,36 @@ const styles = StyleSheet.create({
   subtitle: {
     color: '#334155',
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
   meta: {
     color: '#475569',
   },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  photoRow: {
+    gap: 10,
+  },
+  photo: {
+    width: 140,
+    height: 140,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
+  photoFallback: {
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
   button: {
-    marginTop: 8,
+    marginTop: 4,
     minHeight: 46,
     borderRadius: 10,
     backgroundColor: '#2563EB',
@@ -77,5 +215,22 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  secondaryButton: {
+    minHeight: 46,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  errorText: {
+    color: '#DC2626',
+    textAlign: 'center',
   },
 });
