@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -26,7 +26,12 @@ import {
   createCustomerRequest,
   updatePickupLocation,
 } from '@/lib/api';
-import { resolvePlaceFromQuery } from '@/lib/places';
+import {
+  resolvePlaceFromQuery,
+  resolvePlaceSuggestion,
+  searchPlacesAutocomplete,
+  type PlaceAutocompleteSuggestion,
+} from '@/lib/places';
 import type {
   Coordinates,
   PendingFurnitureDetailsPayload,
@@ -193,10 +198,12 @@ export default function PickupLocationScreen() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [searchMessage, setSearchMessage] = useState<string>('');
   const [isSearchingPlaces, setIsSearchingPlaces] = useState<boolean>(false);
+  const [placeSuggestions, setPlaceSuggestions] = useState<PlaceAutocompleteSuggestion[]>([]);
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [providerState, setProviderState] = useState<ProviderState | null>(null);
   const [lastLocationTimestamp, setLastLocationTimestamp] = useState<number | null>(null);
   const [isMockedLocation, setIsMockedLocation] = useState<boolean | null>(null);
+  const suppressAutocompleteRef = useRef<boolean>(false);
 
   const hasValidServiceId = serviceId.trim().length > 0;
 
@@ -380,6 +387,96 @@ export default function PickupLocationScreen() {
     };
   }, [applyCurrentLocation]);
 
+  useEffect(() => {
+    if (suppressAutocompleteRef.current) {
+      suppressAutocompleteRef.current = false;
+      return;
+    }
+
+    const query = addressQuery.trim();
+
+    if (!query) return;
+
+    if (!HAS_GOOGLE_MAPS_API_KEY) {
+      return;
+    }
+
+    let isCancelled = false;
+    const timeoutId = setTimeout(() => {
+
+      const loadSuggestions = async (): Promise<void> => {
+        setIsSearchingPlaces(true);
+        try {
+          const suggestions = await searchPlacesAutocomplete(query);
+          if (isCancelled) return;
+          setPlaceSuggestions(suggestions);
+          setSearchMessage(
+            suggestions.length === 0 ? 'No matching places found.' : 'Choose a suggested address.',
+          );
+        } catch (error) {
+          if (isCancelled) return;
+          setPlaceSuggestions([]);
+          setSearchMessage(
+            error instanceof Error ? error.message : 'Places search failed. Please try again.',
+          );
+        } finally {
+          if (!isCancelled) {
+            setIsSearchingPlaces(false);
+          }
+        }
+      };
+
+      void loadSuggestions();
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [addressQuery]);
+
+  const applyResolvedPlace = useCallback((place: {
+    latitude: number;
+    longitude: number;
+    address: string;
+    placeId: string;
+  }) => {
+    suppressAutocompleteRef.current = true;
+    setAddressQuery(place.address);
+    setSelectedLocation({
+      latitude: place.latitude,
+      longitude: place.longitude,
+      address: place.address,
+      placeId: place.placeId,
+      source: 'search',
+    });
+    setPlaceSuggestions([]);
+    setRegion((prev) => ({
+      ...prev,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    }));
+    setSearchMessage(`Pinned: ${place.address}`);
+  }, []);
+
+  const onSuggestionPress = useCallback(async (suggestion: PlaceAutocompleteSuggestion) => {
+    setIsSearchingPlaces(true);
+    setSearchMessage('');
+
+    try {
+      const place = await resolvePlaceSuggestion(suggestion);
+      applyResolvedPlace(place);
+    } catch (error) {
+      setSearchMessage(
+        error instanceof Error ? error.message : 'Places search failed. Please try again.',
+      );
+    } finally {
+      setIsSearchingPlaces(false);
+    }
+  }, [applyResolvedPlace]);
+
   const onSearchSubmit = useCallback(async () => {
     const query = addressQuery.trim();
 
@@ -397,22 +494,14 @@ export default function PickupLocationScreen() {
     setSearchMessage('');
 
     try {
+      if (placeSuggestions.length > 0) {
+        const place = await resolvePlaceSuggestion(placeSuggestions[0]);
+        applyResolvedPlace(place);
+        return;
+      }
+
       const place = await resolvePlaceFromQuery(query);
-      setSelectedLocation({
-        latitude: place.latitude,
-        longitude: place.longitude,
-        address: place.address,
-        placeId: place.placeId,
-        source: 'search',
-      });
-      setRegion((prev) => ({
-        ...prev,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      }));
-      setSearchMessage(`Pinned: ${place.address}`);
+      applyResolvedPlace(place);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Places search failed. Please try again.';
@@ -420,7 +509,7 @@ export default function PickupLocationScreen() {
     } finally {
       setIsSearchingPlaces(false);
     }
-  }, [addressQuery]);
+  }, [addressQuery, applyResolvedPlace, placeSuggestions]);
 
   const onContinue = useCallback(async () => {
     if (!selectedLocation) {
@@ -619,7 +708,12 @@ export default function PickupLocationScreen() {
       <View style={styles.searchContainer}>
         <TextInput
           value={addressQuery}
-          onChangeText={setAddressQuery}
+          onChangeText={(value) => {
+            setAddressQuery(value);
+            setErrorMessage('');
+            setPlaceSuggestions([]);
+            setSearchMessage('');
+          }}
           onSubmitEditing={() => void onSearchSubmit()}
           placeholder="Search pickup address"
           placeholderTextColor="#98a2b3"
@@ -632,8 +726,21 @@ export default function PickupLocationScreen() {
             : 'Google Places API key is not configured yet.'}
         </Text>
         <Text style={styles.searchHint}>
-          Press search on the keyboard to move pin and map to the top matching place.
+          Start typing and tap a suggestion to pin the pickup location.
         </Text>
+        {placeSuggestions.length > 0 ? (
+          <View style={styles.suggestionsList}>
+            {placeSuggestions.map((suggestion) => (
+              <Pressable
+                key={suggestion.placeId}
+                style={styles.suggestionItem}
+                onPress={() => void onSuggestionPress(suggestion)}
+              >
+                <Text style={styles.suggestionText}>{suggestion.description}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         <Pressable
           style={[styles.locationButton, isLoadingLocation && styles.locationButtonDisabled]}
           onPress={() => void loadCurrentLocation(true)}
@@ -768,6 +875,24 @@ const styles = StyleSheet.create({
   searchSpinner: {
     marginTop: 8,
     alignSelf: 'flex-start',
+  },
+  suggestionsList: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+  },
+  suggestionItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eaecf0',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#101828',
   },
   locationButton: {
     marginTop: 10,

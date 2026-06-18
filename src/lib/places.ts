@@ -5,10 +5,10 @@ const PLACES_AUTOCOMPLETE_ENDPOINT =
 const PLACE_DETAILS_ENDPOINT = 'https://maps.googleapis.com/maps/api/place/details/json';
 
 type PlacesAutocompleteResponse = {
-  predictions?: Array<{
+  predictions?: {
     description: string;
     place_id: string;
-  }>;
+  }[];
   status?: string;
   error_message?: string;
 };
@@ -76,7 +76,7 @@ export async function searchPlacesAutocomplete(
   }));
 }
 
-async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceLocation> {
+export async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceLocation> {
   if (!GOOGLE_MAPS_API_KEY) {
     throw new Error('Google Maps API key is missing.');
   }
@@ -113,6 +113,17 @@ async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceLocation
   };
 }
 
+export async function resolvePlaceSuggestion(
+  suggestion: PlaceAutocompleteSuggestion,
+): Promise<ResolvedPlaceLocation> {
+  const place = await fetchPlaceDetails(suggestion.placeId);
+
+  return {
+    ...place,
+    address: place.address || suggestion.description,
+  };
+}
+
 export async function resolvePlaceFromQuery(input: string): Promise<ResolvedPlaceLocation> {
   const suggestions = await searchPlacesAutocomplete(input);
 
@@ -120,11 +131,5 @@ export async function resolvePlaceFromQuery(input: string): Promise<ResolvedPlac
     throw new Error('No matching places found.');
   }
 
-  const topSuggestion = suggestions[0];
-  const place = await fetchPlaceDetails(topSuggestion.placeId);
-
-  return {
-    ...place,
-    address: place.address || topSuggestion.description,
-  };
+  return resolvePlaceSuggestion(suggestions[0]);
 }
