@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,10 +19,17 @@ import {
   PlatformPay,
 } from '@stripe/stripe-react-native';
 
-import { cancelPaymentHold, confirmDriverOffer } from '@/lib/api';
+import {
+  cancelPaymentHold,
+  confirmDriverOffer,
+  finalizeAcceptedOfferPayment,
+  getCustomerRequestStatus,
+  getRequestPaymentStatus,
+} from '@/lib/api';
 import type {
   CustomerRequestOfferSummary,
   PaymentMethod,
+  PaymentStatus,
   PaymentSummary,
   RequestStatusResponse,
 } from '@/types/customer-request';
@@ -109,21 +116,6 @@ function getPaymentMethodLabel(method: PaymentMethod): string {
   }
 }
 
-function buildTrackingHref(request: RequestStatusResponse): Href {
-  return {
-    pathname: '/customer-tracking',
-    params: {
-      tripId: request.id,
-      pickupLatitude: String(request.pickupLocation.latitude),
-      pickupLongitude: String(request.pickupLocation.longitude),
-      pickupAddress: request.pickupLocation.address ?? '',
-      dropoffLatitude: String(request.dropoffLocation.latitude),
-      dropoffLongitude: String(request.dropoffLocation.longitude),
-      dropoffAddress: request.dropoffLocation.address ?? '',
-    },
-  };
-}
-
 function toStripeErrorMessage(message: string): string {
   const normalized = message.toLowerCase();
 
@@ -131,7 +123,34 @@ function toStripeErrorMessage(message: string): string {
     return 'Payment confirmation was cancelled. You can try again.';
   }
 
+  if (normalized.includes('invalid api key provided')) {
+    return 'Stripe is not configured correctly. Set a real EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY in the client app and a matching STRIPE_SECRET_KEY in the backend.';
+  }
+
   return message;
+}
+
+function isSuccessfulPaymentStatus(status: PaymentStatus): boolean {
+  return (
+    status === 'PAYMENT_HELD' ||
+    status === 'PAYMENT_CAPTURE_PENDING' ||
+    status === 'PAYMENT_CAPTURED'
+  );
+}
+
+function isPendingPaymentStatus(status: PaymentStatus): boolean {
+  return status === 'PAYMENT_HOLD_PENDING';
+}
+
+function isFinalizedRequestStatus(status: RequestStatusResponse['status']): boolean {
+  return (
+    status === 'DRIVER_GOING_TO_PICKUP' ||
+    status === 'DRIVER_ARRIVED_PICKUP' ||
+    status === 'ITEM_PICKED_UP' ||
+    status === 'DRIVER_GOING_TO_DROPOFF' ||
+    status === 'DELIVERED' ||
+    status === 'COMPLETED'
+  );
 }
 
 export default function RequestPaymentScreen() {
@@ -148,7 +167,13 @@ export default function RequestPaymentScreen() {
     [params.offer],
   );
 
-  const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
+  const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
+  const publishableKey =
+    rawPublishableKey &&
+    !rawPublishableKey.startsWith('replace_') &&
+    rawPublishableKey.startsWith('pk_')
+      ? rawPublishableKey
+      : '';
   const merchantCountryCode =
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() || 'US';
   const merchantIdentifier =
@@ -166,14 +191,6 @@ export default function RequestPaymentScreen() {
 
   const amount = offerData ? offerData.proposedPrice ?? offerData.price : 0;
   const currency = offerData?.currency ?? 'USD';
-  const hasValidTrackingData = Boolean(
-    requestData &&
-      requestData.pickupLocation.latitude !== null &&
-      requestData.pickupLocation.longitude !== null &&
-      requestData.dropoffLocation.latitude !== null &&
-      requestData.dropoffLocation.longitude !== null,
-  );
-
   useEffect(() => {
     let active = true;
 
@@ -230,7 +247,7 @@ export default function RequestPaymentScreen() {
     }
 
     if (needsStripe && !publishableKey) {
-      return 'EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY is missing.';
+      return 'Stripe is not configured. Set EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to a real pk_test_ or pk_live_ key.';
     }
 
     if (!requestData || !offerData || !requestId || !offerId) {
@@ -265,18 +282,27 @@ export default function RequestPaymentScreen() {
     return 'Authorize Payment Hold';
   }, [selectedMethod]);
 
-  const navigateToNextStep = (payment: PaymentSummary): void => {
-    if (requestData && hasValidTrackingData) {
-      router.replace(buildTrackingHref(requestData));
-      return;
-    }
-
+  const navigateToNextStep = (nextRequestId: string): void => {
     router.replace({
       pathname: '/request-status',
       params: {
-        requestId: payment.requestId,
+        requestId: nextRequestId,
       },
     });
+  };
+
+  const recoverFinalizedRequestState = async (): Promise<boolean> => {
+    try {
+      const currentRequest = await getCustomerRequestStatus(requestId);
+      if (!isFinalizedRequestStatus(currentRequest.status)) {
+        return false;
+      }
+
+      navigateToNextStep(currentRequest.id);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const confirmStripeBackedPayment = async (payment: PaymentSummary): Promise<void> => {
@@ -349,23 +375,75 @@ export default function RequestPaymentScreen() {
     setErrorMessage('');
 
     let createdPayment: PaymentSummary | null = null;
+    let latestPayment: PaymentSummary | null = null;
 
     try {
-      const response = await confirmDriverOffer(requestId, offerId, {
-        confirm: true,
-        paymentMethod: selectedMethod,
-      });
+      try {
+        const response = await confirmDriverOffer(requestId, offerId, {
+          confirm: true,
+          paymentMethod: selectedMethod,
+        });
 
-      createdPayment = response.payment;
-      setPaymentResult(response.payment);
+        createdPayment = response.payment;
+        setPaymentResult(response.payment);
 
-      if (selectedMethod !== 'APP_WALLET') {
-        await confirmStripeBackedPayment(response.payment);
+        if (response.nextStep === 'TRACK_REQUEST') {
+          if (!(await recoverFinalizedRequestState())) {
+            navigateToNextStep(response.request.id);
+          }
+          return;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message.toLowerCase() : '';
+        if (!message.includes('payment attempt is already in progress')) {
+          throw error;
+        }
+
+        const existingPayment = await getRequestPaymentStatus(requestId);
+        createdPayment = existingPayment;
+        setPaymentResult(existingPayment);
       }
 
-      navigateToNextStep(response.payment);
+      if (!createdPayment) {
+        throw new Error('Missing payment hold information.');
+      }
+
+      if (selectedMethod !== 'APP_WALLET' && isPendingPaymentStatus(createdPayment.status)) {
+        await confirmStripeBackedPayment(createdPayment);
+      }
+
+      latestPayment = await getRequestPaymentStatus(requestId);
+      setPaymentResult(latestPayment);
+
+      if (!isSuccessfulPaymentStatus(latestPayment.status)) {
+        throw new Error(
+          `Payment was not authorized successfully. Current status: ${latestPayment.status}.`,
+        );
+      }
+
+      await finalizeAcceptedOfferPayment(requestId);
+      const finalizedRequest = await getCustomerRequestStatus(requestId);
+      if (!isFinalizedRequestStatus(finalizedRequest.status)) {
+        throw new Error(
+          `Payment hold succeeded but request finalization is still pending. Current request status: ${finalizedRequest.status}.`,
+        );
+      }
+
+      navigateToNextStep(finalizedRequest.id);
     } catch (error) {
-      if (createdPayment && selectedMethod !== 'APP_WALLET') {
+      if (await recoverFinalizedRequestState()) {
+        return;
+      }
+
+      if (createdPayment && isSuccessfulPaymentStatus(latestPayment?.status ?? createdPayment.status)) {
+        navigateToNextStep(requestId);
+        return;
+      }
+
+      if (
+        createdPayment &&
+        !isSuccessfulPaymentStatus(latestPayment?.status ?? createdPayment.status)
+      ) {
         try {
           const releasedPayment = await cancelPaymentHold(requestId);
           setPaymentResult(releasedPayment);

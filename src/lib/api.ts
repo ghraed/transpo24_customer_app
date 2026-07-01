@@ -1,4 +1,6 @@
+import { getApiBaseUrl } from '@/config/backend';
 import { getAccessToken } from './auth-token';
+import type { RegisterPushTokenPayload } from '@/notifications/types';
 import type {
   CreateGoodsTransportRequestPayload,
   CreateFurnitureTransportRequestPayload,
@@ -39,10 +41,6 @@ type FurnitureLocationFormValue = {
   longitude: number;
 };
 
-function getApiBaseUrl(): string {
-  return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
-}
-
 function toMessage(errorData: ApiErrorResponse, fallback: string): string {
   return Array.isArray(errorData.message)
     ? (errorData.message[0] ?? fallback)
@@ -51,10 +49,51 @@ function toMessage(errorData: ApiErrorResponse, fallback: string): string {
 
 async function parseError(response: Response, fallback: string): Promise<Error> {
   try {
-    const errorData = (await response.json()) as ApiErrorResponse;
-    return new Error(toMessage(errorData, fallback));
+    const raw = await response.text();
+
+    if (!raw.trim()) {
+      return new Error(fallback);
+    }
+
+    try {
+      const errorData = JSON.parse(raw) as ApiErrorResponse;
+      return new Error(toMessage(errorData, fallback));
+    } catch {
+      return new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+    }
   } catch {
     return new Error(fallback);
+  }
+}
+
+function sanitizeMalformedJson(raw: string): string {
+  return raw
+    .replace(/^\uFEFF/, '')
+    .replace(/,\s*,+/g, ',')
+    .replace(/,\s*([}\]])/g, '$1');
+}
+
+async function parseJsonBody<T>(response: Response, fallback: string): Promise<T> {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    throw new Error(fallback);
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const sanitized = sanitizeMalformedJson(raw);
+
+    if (sanitized !== raw) {
+      try {
+        return JSON.parse(sanitized) as T;
+      } catch {
+        // Fall through to the detailed error below.
+      }
+    }
+
+    throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
   }
 }
 
@@ -78,6 +117,25 @@ function getMultipartAuthHeaders(): Record<string, string> {
     headers.Authorization = `Bearer ${token}`;
   }
   return headers;
+}
+
+export async function registerPushToken(
+  payload: RegisterPushTokenPayload,
+): Promise<{ success: true }> {
+  const response = await fetch(`${getApiBaseUrl()}/push-tokens`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to register push token.');
+  }
+
+  return parseJsonBody<{ success: true }>(
+    response,
+    'Failed to parse push token registration response.',
+  );
 }
 
 function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerRequest {
@@ -134,10 +192,10 @@ export async function postLogin(payload: {
     throw await parseError(response, 'Login failed.');
   }
 
-  return (await response.json()) as {
+  return parseJsonBody<{
     accessToken: string;
     user: { id: string; email: string; name?: string };
-  };
+  }>(response, 'Failed to parse login response.');
 }
 
 export async function getServices(): Promise<Service[]> {
@@ -150,7 +208,10 @@ export async function getServices(): Promise<Service[]> {
     throw await parseError(response, 'Failed to load services.');
   }
 
-  const data = (await response.json()) as Service[] | { services: Service[] };
+  const data = await parseJsonBody<Service[] | { services: Service[] }>(
+    response,
+    'Failed to parse services response.',
+  );
   return Array.isArray(data) ? data : (data.services ?? []);
 }
 
@@ -167,7 +228,10 @@ export async function createCustomerRequest(
     throw await parseError(response, 'Failed to create customer request.');
   }
 
-  const data = (await response.json()) as CustomerRequestApiResponse;
+  const data = await parseJsonBody<CustomerRequestApiResponse>(
+    response,
+    'Failed to parse create request response.',
+  );
   return mapCustomerRequest(data);
 }
 
@@ -184,7 +248,10 @@ export async function createMotorcycleTransportRequest(
     throw await parseError(response, 'Failed to create motorcycle transport request.');
   }
 
-  const data = (await response.json()) as CustomerRequestApiResponse;
+  const data = await parseJsonBody<CustomerRequestApiResponse>(
+    response,
+    'Failed to parse create motorcycle request response.',
+  );
   return mapCustomerRequest(data);
 }
 
@@ -201,7 +268,10 @@ export async function createGoodsTransportRequest(
     throw await parseError(response, 'Failed to create goods transport request.');
   }
 
-  const data = (await response.json()) as CustomerRequestApiResponse;
+  const data = await parseJsonBody<CustomerRequestApiResponse>(
+    response,
+    'Failed to parse create goods request response.',
+  );
   return mapCustomerRequest(data);
 }
 
@@ -290,7 +360,10 @@ export async function updatePickupLocation(
     throw await parseError(response, 'Failed to save pickup location.');
   }
 
-  const data = (await response.json()) as CustomerRequestApiResponse;
+  const data = await parseJsonBody<CustomerRequestApiResponse>(
+    response,
+    'Failed to parse pickup location response.',
+  );
   return mapCustomerRequest(data);
 }
 
@@ -308,7 +381,10 @@ export async function updateDropoffLocation(
     throw await parseError(response, 'Failed to save dropoff location.');
   }
 
-  const data = (await response.json()) as CustomerRequestApiResponse;
+  const data = await parseJsonBody<CustomerRequestApiResponse>(
+    response,
+    'Failed to parse dropoff location response.',
+  );
   return mapCustomerRequest(data);
 }
 
@@ -329,7 +405,10 @@ export async function updateScheduleAndItemDetails(
     throw await parseError(response, 'Failed to save schedule and item details.');
   }
 
-  const data = (await response.json()) as CustomerRequestApiResponse;
+  const data = await parseJsonBody<CustomerRequestApiResponse>(
+    response,
+    'Failed to parse schedule and item details response.',
+  );
   return mapCustomerRequest(data);
 }
 
@@ -417,9 +496,9 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
     throw await parseError(response, 'Failed to decode vehicle VIN.');
   }
 
-  const payload = (await response.json()) as
-    | { data?: Partial<VehicleVinDecodeResult> | null }
-    | Partial<VehicleVinDecodeResult>;
+  const payload = await parseJsonBody<
+    { data?: Partial<VehicleVinDecodeResult> | null } | Partial<VehicleVinDecodeResult>
+  >(response, 'Failed to parse vehicle VIN response.');
   const data: Partial<VehicleVinDecodeResult> =
     payload && typeof payload === 'object' && 'data' in payload
       ? (payload.data ?? {})
@@ -447,7 +526,10 @@ export async function getVehicleBrands(): Promise<VehicleCatalogBrand[]> {
     throw await parseError(response, 'Failed to load vehicle brands.');
   }
 
-  const data = (await response.json()) as VehicleCatalogBrand[] | { brands: VehicleCatalogBrand[] };
+  const data = await parseJsonBody<VehicleCatalogBrand[] | { brands: VehicleCatalogBrand[] }>(
+    response,
+    'Failed to parse vehicle brands response.',
+  );
   return Array.isArray(data) ? data : (data.brands ?? []);
 }
 
@@ -464,7 +546,10 @@ export async function getVehicleModels(brandId: string): Promise<VehicleCatalogM
     throw await parseError(response, 'Failed to load vehicle models.');
   }
 
-  const data = (await response.json()) as VehicleCatalogModel[] | { models: VehicleCatalogModel[] };
+  const data = await parseJsonBody<VehicleCatalogModel[] | { models: VehicleCatalogModel[] }>(
+    response,
+    'Failed to parse vehicle models response.',
+  );
   return Array.isArray(data) ? data : (data.models ?? []);
 }
 
@@ -481,7 +566,10 @@ export async function getVehicleSeries(modelId: string): Promise<VehicleCatalogS
     throw await parseError(response, 'Failed to load vehicle series.');
   }
 
-  const data = (await response.json()) as VehicleCatalogSeries[] | { series: VehicleCatalogSeries[] };
+  const data = await parseJsonBody<VehicleCatalogSeries[] | { series: VehicleCatalogSeries[] }>(
+    response,
+    'Failed to parse vehicle series response.',
+  );
   return Array.isArray(data) ? data : (data.series ?? []);
 }
 
@@ -498,8 +586,9 @@ export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogY
     throw await parseError(response, 'Failed to load vehicle years.');
   }
 
-  const data =
-    (await response.json()) as (number | VehicleCatalogYearOption)[] | { years: (number | VehicleCatalogYearOption)[] };
+  const data = await parseJsonBody<
+    (number | VehicleCatalogYearOption)[] | { years: (number | VehicleCatalogYearOption)[] }
+  >(response, 'Failed to parse vehicle years response.');
   const raw = Array.isArray(data) ? data : (data.years ?? []);
 
   return raw
@@ -532,7 +621,10 @@ export async function submitCustomerRequest(
     throw await parseError(response, 'Failed to submit request.');
   }
 
-  const data = (await response.json()) as CustomerRequestApiResponse;
+  const data = await parseJsonBody<CustomerRequestApiResponse>(
+    response,
+    'Failed to parse submit request response.',
+  );
   return mapCustomerRequest(data);
 }
 
@@ -546,7 +638,10 @@ export async function getCustomerRequestStatus(requestId: string): Promise<Reque
     throw await parseError(response, 'Failed to load request status.');
   }
 
-  return (await response.json()) as RequestStatusResponse;
+  return parseJsonBody<RequestStatusResponse>(
+    response,
+    'Failed to parse request status response.',
+  );
 }
 
 export async function getRequestTracking(requestId: string): Promise<RequestTracking> {
@@ -559,7 +654,21 @@ export async function getRequestTracking(requestId: string): Promise<RequestTrac
     throw await parseError(response, 'Failed to load request tracking.');
   }
 
-  return (await response.json()) as RequestTracking;
+  return parseJsonBody<RequestTracking>(
+    response,
+    'Failed to parse request tracking response.',
+  );
+}
+
+export async function deleteCustomerRequest(requestId: string): Promise<void> {
+  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to delete request.');
+  }
 }
 
 export async function getCustomerHome(): Promise<CustomerHomeResponse> {
@@ -572,7 +681,10 @@ export async function getCustomerHome(): Promise<CustomerHomeResponse> {
     throw await parseError(response, 'Failed to load customer home.');
   }
 
-  return (await response.json()) as CustomerHomeResponse;
+  return parseJsonBody<CustomerHomeResponse>(
+    response,
+    'Failed to parse customer home response.',
+  );
 }
 
 export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[]> {
@@ -585,7 +697,10 @@ export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[
     throw await parseError(response, 'Failed to load customer requests.');
   }
 
-  return (await response.json()) as CustomerHomeRequestSummary[];
+  return parseJsonBody<CustomerHomeRequestSummary[]>(
+    response,
+    'Failed to parse customer requests response.',
+  );
 }
 
 export async function getCustomerRequestOffers(requestId: string): Promise<CustomerRequestOffersResponse> {
@@ -598,7 +713,10 @@ export async function getCustomerRequestOffers(requestId: string): Promise<Custo
     throw await parseError(response, 'Failed to load request offers.');
   }
 
-  return (await response.json()) as CustomerRequestOffersResponse;
+  return parseJsonBody<CustomerRequestOffersResponse>(
+    response,
+    'Failed to parse request offers response.',
+  );
 }
 
 export interface AcceptCustomerRequestOfferPayload {
@@ -628,7 +746,10 @@ export async function acceptCustomerRequestOffer(
     throw await parseError(response, 'Failed to confirm offer.');
   }
 
-  return (await response.json()) as CustomerAcceptOfferResponse;
+  return parseJsonBody<CustomerAcceptOfferResponse>(
+    response,
+    'Failed to parse confirm offer response.',
+  );
 }
 
 export async function confirmDriverOffer(
@@ -649,7 +770,37 @@ export async function getRequestPaymentStatus(requestId: string): Promise<Paymen
     throw await parseError(response, 'Failed to load payment status.');
   }
 
-  return (await response.json()) as PaymentSummary;
+  return parseJsonBody<PaymentSummary>(
+    response,
+    'Failed to parse payment status response.',
+  );
+}
+
+export async function finalizeAcceptedOfferPayment(
+  requestId: string,
+): Promise<CustomerAcceptOfferResponse | null> {
+  const response = await fetch(
+    `${getApiBaseUrl()}/customer/requests/${requestId}/payment/finalize`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to finalize accepted offer payment.');
+  }
+
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as CustomerAcceptOfferResponse;
+  } catch {
+    return null;
+  }
 }
 
 export async function cancelPaymentHold(requestId: string): Promise<PaymentSummary> {
@@ -662,5 +813,8 @@ export async function cancelPaymentHold(requestId: string): Promise<PaymentSumma
     throw await parseError(response, 'Failed to cancel payment hold.');
   }
 
-  return (await response.json()) as PaymentSummary;
+  return parseJsonBody<PaymentSummary>(
+    response,
+    'Failed to parse cancel payment hold response.',
+  );
 }

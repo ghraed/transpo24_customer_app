@@ -702,9 +702,9 @@ export interface CustomerAcceptOfferResponse {
   request: {
     id: string;
     status: CustomerRequestStatus;
-    assignedDriverId: string;
-    acceptedOfferId: string;
-    acceptedAt: string;
+    assignedDriverId: string | null;
+    acceptedOfferId: string | null;
+    acceptedAt: string | null;
   };
   acceptedOffer: {
     id: string;
@@ -721,7 +721,7 @@ export interface CustomerAcceptOfferResponse {
     createdAt: string;
   };
   rejectedOffersCount: number;
-  nextStep: 'TRACK_REQUEST';
+  nextStep: 'CONFIRM_PAYMENT' | 'TRACK_REQUEST';
   payment: PaymentSummary;
 }
 

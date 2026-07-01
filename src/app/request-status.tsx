@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -15,6 +16,7 @@ import {
 
 import { getApiBaseUrl } from '@/config/backend';
 import {
+  deleteCustomerRequest,
   getCustomerRequestOffers,
   getCustomerRequestStatus,
   getRequestTracking,
@@ -225,6 +227,15 @@ function getRatingText(rating: number | null): string {
   return `★ ${rating.toFixed(1)}`;
 }
 
+function canDeleteRequest(status: CustomerRequestStatus): boolean {
+  return (
+    status === 'DRAFT' ||
+    status === 'PENDING_QUOTES' ||
+    status === 'QUOTED' ||
+    status === 'CANCELLED'
+  );
+}
+
 function buildOffersHelperText(requestData: RequestStatusResponse, offersCount: number): string {
   if (offersCount > 0) {
     const lowestOffer = requestData.quotesSummary.lowestPrice;
@@ -351,6 +362,7 @@ export default function RequestStatusScreen() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [nearDeliveryMessage, setNearDeliveryMessage] = useState<string>('');
+  const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string>('');
   const [socketState, setSocketState] = useState<SocketState>(accessToken ? 'idle' : 'unavailable');
   const [socketMessage, setSocketMessage] = useState<string>(
     accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
@@ -726,6 +738,7 @@ export default function RequestStatusScreen() {
   const headline = getHeadline(requestData.status, offers.length);
   const helperText = buildOffersHelperText(requestData, offers.length);
   const canChooseOffer = requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED';
+  const canDeleteCurrentRequest = canDeleteRequest(requestData.status);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -998,12 +1011,13 @@ export default function RequestStatusScreen() {
           {trackingData?.pickupProofPhotos?.length ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
               {trackingData.pickupProofPhotos.map((photo) => (
-                <Image
-                  key={photo.id}
-                  source={{ uri: resolveAssetUrl(photo.url) }}
-                  style={styles.photoLarge}
-                  resizeMode="cover"
-                />
+                <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
+                  <Image
+                    source={{ uri: resolveAssetUrl(photo.url) }}
+                    style={styles.photoLarge}
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ))}
             </ScrollView>
           ) : (
@@ -1016,12 +1030,13 @@ export default function RequestStatusScreen() {
           {trackingData?.deliveryProofPhotos?.length ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
               {trackingData.deliveryProofPhotos.map((photo) => (
-                <Image
-                  key={photo.id}
-                  source={{ uri: resolveAssetUrl(photo.url) }}
-                  style={styles.photoLarge}
-                  resizeMode="cover"
-                />
+                <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
+                  <Image
+                    source={{ uri: resolveAssetUrl(photo.url) }}
+                    style={styles.photoLarge}
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ))}
             </ScrollView>
           ) : (
@@ -1060,12 +1075,13 @@ export default function RequestStatusScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
               {requestData.photos.map((photo) => (
-                <Image
-                  key={photo.id}
-                  source={{ uri: resolveAssetUrl(photo.url) }}
-                  style={styles.photo}
-                  resizeMode="cover"
-                />
+                <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
+                  <Image
+                    source={{ uri: resolveAssetUrl(photo.url) }}
+                    style={styles.photo}
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ))}
             </ScrollView>
           )}
@@ -1090,10 +1106,43 @@ export default function RequestStatusScreen() {
           <Pressable style={styles.primaryButton} onPress={() => void loadStatus(false)}>
             <Text style={styles.primaryButtonText}>{isRefreshing ? 'Refreshing…' : 'Refresh'}</Text>
           </Pressable>
+          {canDeleteCurrentRequest ? (
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => {
+                Alert.alert('Delete request?', 'This will permanently delete the request.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                      void (async () => {
+                        try {
+                          await deleteCustomerRequest(requestData.id);
+                          router.replace('/(tabs)/home' as Href);
+                        } catch (error) {
+                          setErrorMessage(
+                            error instanceof Error ? error.message : 'Failed to delete request.',
+                          );
+                        }
+                      })();
+                    },
+                  },
+                ]);
+              }}
+            >
+              <Text style={styles.deleteButtonText}>Delete Request</Text>
+            </Pressable>
+          ) : null}
           <Pressable style={styles.secondaryButton} onPress={() => router.replace('/(tabs)/home' as Href)}>
             <Text style={styles.secondaryButtonText}>Back to Home</Text>
           </Pressable>
         </View>
+        <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
+            {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
+          </Pressable>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1390,6 +1439,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#E2E8F0',
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  expandedPhoto: {
+    width: '100%',
+    height: '100%',
+  },
   actionsRow: {
     gap: 10,
   },
@@ -1412,10 +1472,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginTop: 8,
   },
+  deleteButton: {
+    borderRadius: 10,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    backgroundColor: '#DC2626',
+    marginTop: 8,
+  },
   primaryButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
   secondaryButtonText: {
     color: '#0F172A',

@@ -4,11 +4,14 @@ import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 import { getCustomerHome } from '@/lib/api';
 import { clearAccessToken } from '@/lib/auth-token';
+import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
 import type { CustomerHomeProfile } from '@/types/customer-request';
 
 export default function ProfileTabScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<CustomerHomeProfile | null>(null);
+  const [pushStatus, setPushStatus] = useState<string>('');
+  const [isRegisteringPush, setIsRegisteringPush] = useState<boolean>(false);
 
   const loadProfile = useCallback(async (): Promise<void> => {
     try {
@@ -28,6 +31,26 @@ export default function ProfileTabScreen() {
     router.replace('/');
   };
 
+  const onRegisterPush = useCallback(async (): Promise<void> => {
+    if (isRegisteringPush) {
+      return;
+    }
+
+    setIsRegisteringPush(true);
+    setPushStatus('');
+
+    try {
+      const token = await registerCustomerPushNotifications();
+      setPushStatus(`Push registered: ${token.slice(0, 24)}...`);
+    } catch (error) {
+      setPushStatus(
+        error instanceof Error ? error.message : 'Failed to register push notifications.',
+      );
+    } finally {
+      setIsRegisteringPush(false);
+    }
+  }, [isRegisteringPush]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
@@ -42,6 +65,12 @@ export default function ProfileTabScreen() {
         <Pressable style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Settings</Text>
         </Pressable>
+        <Pressable style={styles.secondaryButton} onPress={() => void onRegisterPush()}>
+          <Text style={styles.secondaryButtonText}>
+            {isRegisteringPush ? 'Registering Push...' : 'Register Push Notifications'}
+          </Text>
+        </Pressable>
+        {pushStatus ? <Text style={styles.meta}>{pushStatus}</Text> : null}
         <Pressable style={styles.dangerButton} onPress={onLogout}>
           <Text style={styles.dangerButtonText}>Logout</Text>
         </Pressable>

@@ -1,5 +1,18 @@
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
 function normalizeUrl(url: string): string {
   return url.trim().replace(/\/$/, '');
+}
+
+function getDevServerHost(): string | null {
+  const hostUri = Constants.expoConfig?.hostUri?.trim();
+  if (!hostUri) {
+    return null;
+  }
+
+  const host = hostUri.split(':')[0]?.trim();
+  return host || null;
 }
 
 export function getApiBaseUrl(): string {
@@ -8,7 +21,16 @@ export function getApiBaseUrl(): string {
     return normalizeUrl(explicit);
   }
 
-  return 'http://10.0.2.2:3000';
+  const devHost = getDevServerHost();
+  if (devHost) {
+    return `http://${devHost}:3000`;
+  }
+
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:3000';
+  }
+
+  return 'http://localhost:3000';
 }
 
 export function getSocketBaseUrl(): string {

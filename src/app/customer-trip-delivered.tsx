@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,6 +48,7 @@ export default function CustomerTripDeliveredScreen() {
   const [tracking, setTracking] = useState<RequestTracking | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(tripId !== 'N/A');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string>('');
 
   useEffect(() => {
     if (tripId === 'N/A') {
@@ -107,20 +109,23 @@ export default function CustomerTripDeliveredScreen() {
           ) : proofPhotos.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
               {proofPhotos.map((photo) => (
-                <Image
-                  key={photo.id}
-                  source={{ uri: resolveAssetUrl(photo.url) }}
-                  style={styles.photo}
-                  resizeMode="cover"
-                />
+                <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
+                  <Image
+                    source={{ uri: resolveAssetUrl(photo.url) }}
+                    style={styles.photo}
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ))}
             </ScrollView>
           ) : deliveryProofImageUrl ? (
-            <Image
-              source={{ uri: resolveAssetUrl(deliveryProofImageUrl) }}
-              style={styles.photoFallback}
-              resizeMode="cover"
-            />
+            <Pressable onPress={() => setExpandedPhotoUrl(resolveAssetUrl(deliveryProofImageUrl))}>
+              <Image
+                source={{ uri: resolveAssetUrl(deliveryProofImageUrl) }}
+                style={styles.photoFallback}
+                resizeMode="cover"
+              />
+            </Pressable>
           ) : (
             <Text style={styles.meta}>Delivery proof photos will appear here when available.</Text>
           )}
@@ -146,6 +151,11 @@ export default function CustomerTripDeliveredScreen() {
         >
           <Text style={styles.secondaryButtonText}>Back to request status</Text>
         </Pressable>
+        <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
+            {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
+          </Pressable>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -203,6 +213,17 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 12,
     backgroundColor: '#E2E8F0',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  expandedPhoto: {
+    width: '100%',
+    height: '100%',
   },
   button: {
     marginTop: 4,

@@ -1,12 +1,40 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { getAccessToken } from '@/lib/auth-token';
+import { initializeNotifications } from '@/notifications/registerPushNotifications';
+import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
+import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
+  const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
+  const publishableKey =
+    rawPublishableKey &&
+    !rawPublishableKey.startsWith('replace_') &&
+    rawPublishableKey.startsWith('pk_')
+      ? rawPublishableKey
+      : '';
+
+  useNotificationNavigation();
+
+  useEffect(() => {
+    initializeNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      return;
+    }
+
+    void registerCustomerPushNotifications().catch((error) => {
+      // Best-effort token registration on app boot for already-authenticated sessions.
+      console.warn('Customer push registration failed during app bootstrap.', error);
+    });
+  }, []);
 
   return (
     <StripeProvider publishableKey={publishableKey} merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}>

@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.app"
+      "bundleIdentifier": "com.transpo24.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.app"
+      "package": "com.transpo24.app"
     },
     "web": {
       "output": "static",
@@ -44,6 +44,7 @@
           }
         }
       ],
+      "expo-notifications",
       "expo-font",
       "expo-image",
       "expo-status-bar",
@@ -52,6 +53,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "87c3c78e-ead9-4a42-8d09-86e17d5fb9ff"
+      },
+      "router": {}
+    },
+    "owner": "raed.gh"
   }
 }

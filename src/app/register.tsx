@@ -110,7 +110,7 @@ export default function RegisterScreen() {
       />
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, styles.passwordInput]}
         placeholder="Password"
         secureTextEntry
         value={password}
@@ -159,6 +159,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 12,
     backgroundColor: '#ffffff',
+  },
+  passwordInput: {
+    color: '#000000',
   },
   button: {
     height: 48,
