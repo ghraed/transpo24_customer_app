@@ -5,6 +5,17 @@ function normalizeUrl(url: string): string {
   return url.trim().replace(/\/$/, '');
 }
 
+function readBackendEnvValue(baseName: 'API_URL' | 'SOCKET_URL'): string | undefined {
+  if (Platform.OS === 'android') {
+    const androidOverride = process.env[`EXPO_PUBLIC_ANDROID_${baseName}`]?.trim();
+    if (androidOverride) {
+      return androidOverride;
+    }
+  }
+
+  return process.env[`EXPO_PUBLIC_${baseName}`]?.trim();
+}
+
 function getDevServerHost(): string | null {
   const hostUri = Constants.expoConfig?.hostUri?.trim();
   if (!hostUri) {
@@ -16,7 +27,7 @@ function getDevServerHost(): string | null {
 }
 
 export function getApiBaseUrl(): string {
-  const explicit = process.env.EXPO_PUBLIC_API_URL;
+  const explicit = readBackendEnvValue('API_URL');
   if (explicit && explicit.trim().length > 0) {
     return normalizeUrl(explicit);
   }
@@ -34,7 +45,7 @@ export function getApiBaseUrl(): string {
 }
 
 export function getSocketBaseUrl(): string {
-  const explicit = process.env.EXPO_PUBLIC_SOCKET_URL;
+  const explicit = readBackendEnvValue('SOCKET_URL');
   if (explicit && explicit.trim().length > 0) {
     return normalizeUrl(explicit);
   }

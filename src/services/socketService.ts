@@ -1,5 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 
+import { getSocketBaseUrl } from '@/config/backend';
 import type {
   AdditionalCharge,
   CustomerAcceptOfferResponse,
@@ -44,7 +45,6 @@ export type PaymentCancelledPayload = PaymentSummary;
 export type AdditionalChargeAddedPayload = AdditionalCharge;
 export type DriverNearDeliverySocketPayload = DriverNearDeliveryPayload;
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL?.trim();
 let socket: Socket | null = null;
 let currentToken: string | null = null;
 
@@ -55,10 +55,7 @@ type SocketAckResponse = {
 };
 
 function ensureSocketUrl(): string {
-  if (!SOCKET_URL) {
-    throw new Error('EXPO_PUBLIC_SOCKET_URL is missing. Please set it in your environment.');
-  }
-  return SOCKET_URL;
+  return getSocketBaseUrl();
 }
 
 function getSocket(): Socket {
