@@ -5,8 +5,8 @@ import { postLogin } from '@/lib/api';
 import { setAccessToken } from '@/lib/auth-token';
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [email, setEmail] = useState<string>('raed.ghanim.2014@gmail.com');
+  const [password, setPassword] = useState<string>('Voltermot1');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const onLoginPress = useCallback(async () => {

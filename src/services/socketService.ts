@@ -1,5 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 
+import { getSocketBaseUrl } from '@/config/backend';
 import type {
   DriverArrivedPickupConfirmedPayload,
   ItemPickedUpPayload,
@@ -22,7 +23,6 @@ export type SocketDebugPongPayload = {
   note: string | null;
 };
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL?.trim();
 let socket: Socket | null = null;
 let currentToken: string | null = null;
 
@@ -33,10 +33,7 @@ type SocketAckResponse = {
 };
 
 function ensureSocketUrl(): string {
-  if (!SOCKET_URL) {
-    throw new Error('EXPO_PUBLIC_SOCKET_URL is missing. Please set it in your environment.');
-  }
-  return SOCKET_URL;
+  return getSocketBaseUrl();
 }
 
 function getSocket(): Socket {
@@ -219,38 +216,44 @@ export function waitForSocketConnection(timeoutMs = 5000): Promise<string> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Socket connection timeout.'));
+      reject(new Error('Socket connection timed out.'));
     }, timeoutMs);
 
-    const handleConnect = (): void => {
+    const onConnect = (): void => {
       cleanup();
       resolve(instance.id ?? 'unknown');
     };
 
-    const handleError = (error: Error): void => {
+    const onError = (error: Error): void => {
       cleanup();
-      reject(new Error(error.message || 'Socket connect error.'));
+      reject(error instanceof Error ? error : new Error('Socket connection failed.'));
     };
 
     const cleanup = (): void => {
       clearTimeout(timer);
-      instance.off('connect', handleConnect);
-      instance.off('connect_error', handleError);
+      instance.off('connect', onConnect);
+      instance.off('connect_error', onError);
     };
 
-    instance.on('connect', handleConnect);
-    instance.on('connect_error', handleError);
+    instance.on('connect', onConnect);
+    instance.on('connect_error', onError);
+    instance.connect();
   });
 }
 
 export function onSocketError(callback: (message: string) => void): () => void {
   const instance = getSocket();
-  const handler = (error: Error): void => callback(error.message || 'Socket connection error.');
+  const handler = (error: Error): void => {
+    callback(error instanceof Error ? error.message : 'Socket error');
+  };
+  instance.off('connect_error', handler);
   instance.on('connect_error', handler);
   return () => instance.off('connect_error', handler);
 }
 
-export function onSocketDebugPong(callback: (payload: SocketDebugPongPayload) => void): () => void {
+export function onSocketDebugPong(
+  callback: (payload: SocketDebugPongPayload) => void,
+): () => void {
   const instance = getSocket();
   instance.off('socketDebugPong', callback);
   instance.on('socketDebugPong', callback);
