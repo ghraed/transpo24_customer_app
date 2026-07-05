@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from '@/config/backend';
+import { createBackendReachabilityError, getApiBaseUrl } from '@/config/backend';
 import { getAccessToken } from './auth-token';
 import type { RegisterPushTokenPayload } from '@/notifications/types';
 import type {
@@ -45,6 +45,39 @@ function toMessage(errorData: ApiErrorResponse, fallback: string): string {
   return Array.isArray(errorData.message)
     ? (errorData.message[0] ?? fallback)
     : (errorData.message ?? fallback);
+}
+
+function toNetworkError(endpoint: string, error: unknown): Error {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes('network request failed') ||
+      message.includes('failed to fetch') ||
+      message.includes('nortetohostexception') ||
+      message.includes('no route to host') ||
+      message.includes('connectexception') ||
+      message.includes('connection refused') ||
+      message.includes('failed to connect') ||
+      message.includes('connection reset') ||
+      message.includes('unexpected end of stream') ||
+      message.includes('end of stream') ||
+      message.includes('eofexception') ||
+      message.includes('unable to resolve host') ||
+      message.includes('cleartext')
+    ) {
+      return createBackendReachabilityError(endpoint);
+    }
+  }
+
+  return error instanceof Error ? error : new Error('Unexpected network error.');
+}
+
+async function fetchWithNetworkError(endpoint: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(endpoint, init);
+  } catch (error) {
+    throw toNetworkError(endpoint, error);
+  }
 }
 
 async function parseError(response: Response, fallback: string): Promise<Error> {
@@ -182,7 +215,8 @@ export async function postLogin(payload: {
   email: string;
   password: string;
 }): Promise<{ accessToken: string; user: { id: string; email: string; name?: string } }> {
-  const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
+  const endpoint = `${getApiBaseUrl()}/auth/login`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -199,7 +233,8 @@ export async function postLogin(payload: {
 }
 
 export async function getServices(): Promise<Service[]> {
-  const response = await fetch(`${getApiBaseUrl()}/services`, {
+  const endpoint = `${getApiBaseUrl()}/services`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -218,7 +253,8 @@ export async function getServices(): Promise<Service[]> {
 export async function createCustomerRequest(
   payload: CreateCustomerRequestPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -350,7 +386,8 @@ export async function updatePickupLocation(
   requestId: string,
   payload: UpdatePickupLocationPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/pickup-location`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/pickup-location`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -371,7 +408,8 @@ export async function updateDropoffLocation(
   requestId: string,
   payload: UpdateDropoffLocationPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/dropoff-location`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/dropoff-location`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -392,9 +430,8 @@ export async function updateScheduleAndItemDetails(
   requestId: string,
   payload: UpdateScheduleAndItemDetailsPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/customer/requests/${requestId}/schedule-and-item-details`,
-    {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/schedule-and-item-details`;
+  const response = await fetchWithNetworkError(endpoint, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -487,7 +524,8 @@ export async function uploadRequestPhotos(
 }
 
 export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeResult> {
-  const response = await fetch(`${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(vin)}`, {
+  const endpoint = `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(vin)}`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -517,7 +555,8 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
 }
 
 export async function getVehicleBrands(): Promise<VehicleCatalogBrand[]> {
-  const response = await fetch(`${getApiBaseUrl()}/vehicles/catalog/brands`, {
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/brands`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -534,9 +573,8 @@ export async function getVehicleBrands(): Promise<VehicleCatalogBrand[]> {
 }
 
 export async function getVehicleModels(brandId: string): Promise<VehicleCatalogModel[]> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/vehicles/catalog/models?brandId=${encodeURIComponent(brandId)}`,
-    {
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/models?brandId=${encodeURIComponent(brandId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
       method: 'GET',
       headers: getAuthHeaders(),
     },
@@ -554,9 +592,8 @@ export async function getVehicleModels(brandId: string): Promise<VehicleCatalogM
 }
 
 export async function getVehicleSeries(modelId: string): Promise<VehicleCatalogSeries[]> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/vehicles/catalog/series?modelId=${encodeURIComponent(modelId)}`,
-    {
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/series?modelId=${encodeURIComponent(modelId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
       method: 'GET',
       headers: getAuthHeaders(),
     },
@@ -574,9 +611,8 @@ export async function getVehicleSeries(modelId: string): Promise<VehicleCatalogS
 }
 
 export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogYearOption[]> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/vehicles/catalog/years?seriesId=${encodeURIComponent(seriesId)}`,
-    {
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/years?seriesId=${encodeURIComponent(seriesId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
       method: 'GET',
       headers: getAuthHeaders(),
     },
@@ -597,7 +633,8 @@ export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogY
 }
 
 export async function deleteRequestPhoto(requestId: string, photoId: string): Promise<void> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/photos/${photoId}`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/photos/${photoId}`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -611,7 +648,8 @@ export async function submitCustomerRequest(
   requestId: string,
   payload?: SubmitCustomerRequestPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/submit`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/submit`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload ?? {}),
@@ -629,7 +667,8 @@ export async function submitCustomerRequest(
 }
 
 export async function getCustomerRequestStatus(requestId: string): Promise<RequestStatusResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/status`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/status`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -645,7 +684,8 @@ export async function getCustomerRequestStatus(requestId: string): Promise<Reque
 }
 
 export async function getRequestTracking(requestId: string): Promise<RequestTracking> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/tracking`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/tracking`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -661,7 +701,8 @@ export async function getRequestTracking(requestId: string): Promise<RequestTrac
 }
 
 export async function deleteCustomerRequest(requestId: string): Promise<void> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -672,7 +713,8 @@ export async function deleteCustomerRequest(requestId: string): Promise<void> {
 }
 
 export async function getCustomerHome(): Promise<CustomerHomeResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/home`, {
+  const endpoint = `${getApiBaseUrl()}/customer/home`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -688,7 +730,8 @@ export async function getCustomerHome(): Promise<CustomerHomeResponse> {
 }
 
 export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[]> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -704,7 +747,8 @@ export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[
 }
 
 export async function getCustomerRequestOffers(requestId: string): Promise<CustomerRequestOffersResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/offers`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/offers`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -730,7 +774,8 @@ export async function acceptCustomerRequestOffer(
   offerId: string,
   payload: AcceptCustomerRequestOfferPayload,
 ): Promise<CustomerAcceptOfferResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/offers/${offerId}/accept`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/offers/${offerId}/accept`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
@@ -761,7 +806,8 @@ export async function confirmDriverOffer(
 }
 
 export async function getRequestPaymentStatus(requestId: string): Promise<PaymentSummary> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/payment`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/payment`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -779,9 +825,8 @@ export async function getRequestPaymentStatus(requestId: string): Promise<Paymen
 export async function finalizeAcceptedOfferPayment(
   requestId: string,
 ): Promise<CustomerAcceptOfferResponse | null> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/customer/requests/${requestId}/payment/finalize`,
-    {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/payment/finalize`;
+  const response = await fetchWithNetworkError(endpoint, {
       method: 'POST',
       headers: getAuthHeaders(),
     },
@@ -804,7 +849,8 @@ export async function finalizeAcceptedOfferPayment(
 }
 
 export async function cancelPaymentHold(requestId: string): Promise<PaymentSummary> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/payment/cancel`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/payment/cancel`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
   });
