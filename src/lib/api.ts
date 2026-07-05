@@ -1,4 +1,5 @@
 import { getAccessToken } from './auth-token';
+import { createBackendReachabilityError, getApiBaseUrl } from '@/config/backend';
 import type {
   CustomerAcceptOfferResponse,
   CustomerRequestOffersResponse,
@@ -28,14 +29,43 @@ interface ApiErrorResponse {
   message?: string | string[];
 }
 
-function getApiBaseUrl(): string {
-  return process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://10.0.2.2:3000';
-}
-
 function toMessage(errorData: ApiErrorResponse, fallback: string): string {
   return Array.isArray(errorData.message)
     ? (errorData.message[0] ?? fallback)
     : (errorData.message ?? fallback);
+}
+
+function toNetworkError(endpoint: string, error: unknown): Error {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes('network request failed') ||
+      message.includes('failed to fetch') ||
+      message.includes('nortetohostexception') ||
+      message.includes('no route to host') ||
+      message.includes('connectexception') ||
+      message.includes('connection refused') ||
+      message.includes('failed to connect') ||
+      message.includes('connection reset') ||
+      message.includes('unexpected end of stream') ||
+      message.includes('end of stream') ||
+      message.includes('eofexception') ||
+      message.includes('unable to resolve host') ||
+      message.includes('cleartext')
+    ) {
+      return createBackendReachabilityError(endpoint);
+    }
+  }
+
+  return error instanceof Error ? error : new Error('Unexpected network error.');
+}
+
+async function fetchWithNetworkError(endpoint: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(endpoint, init);
+  } catch (error) {
+    throw toNetworkError(endpoint, error);
+  }
 }
 
 async function parseError(response: Response, fallback: string): Promise<Error> {
@@ -110,7 +140,8 @@ export async function postLogin(payload: {
   email: string;
   password: string;
 }): Promise<{ accessToken: string; user: { id: string; email: string; name?: string } }> {
-  const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
+  const endpoint = `${getApiBaseUrl()}/auth/login`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -127,7 +158,8 @@ export async function postLogin(payload: {
 }
 
 export async function getServices(): Promise<Service[]> {
-  const response = await fetch(`${getApiBaseUrl()}/services`, {
+  const endpoint = `${getApiBaseUrl()}/services`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -143,7 +175,8 @@ export async function getServices(): Promise<Service[]> {
 export async function createCustomerRequest(
   payload: CreateCustomerRequestPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -161,7 +194,8 @@ export async function updatePickupLocation(
   requestId: string,
   payload: UpdatePickupLocationPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/pickup-location`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/pickup-location`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -179,7 +213,8 @@ export async function updateDropoffLocation(
   requestId: string,
   payload: UpdateDropoffLocationPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/dropoff-location`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/dropoff-location`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -197,14 +232,12 @@ export async function updateScheduleAndItemDetails(
   requestId: string,
   payload: UpdateScheduleAndItemDetailsPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/customer/requests/${requestId}/schedule-and-item-details`,
-    {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    },
-  );
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/schedule-and-item-details`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to save schedule and item details.');
@@ -238,7 +271,8 @@ export async function uploadRequestPhotos(
     formData.append('photos', file as unknown as Blob);
   });
 
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/photos`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/photos`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getMultipartAuthHeaders(),
     body: formData,
@@ -252,7 +286,8 @@ export async function uploadRequestPhotos(
 }
 
 export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeResult> {
-  const response = await fetch(`${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(vin)}`, {
+  const endpoint = `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(vin)}`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -264,7 +299,7 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
   const payload = (await response.json()) as
     | { data?: Partial<VehicleVinDecodeResult> | null }
     | Partial<VehicleVinDecodeResult>;
-  const data =
+  const data: Partial<VehicleVinDecodeResult> =
     payload && typeof payload === 'object' && 'data' in payload
       ? (payload.data ?? {})
       : payload;
@@ -282,7 +317,8 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
 }
 
 export async function getVehicleBrands(): Promise<VehicleCatalogBrand[]> {
-  const response = await fetch(`${getApiBaseUrl()}/vehicles/catalog/brands`, {
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/brands`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -296,13 +332,11 @@ export async function getVehicleBrands(): Promise<VehicleCatalogBrand[]> {
 }
 
 export async function getVehicleModels(brandId: string): Promise<VehicleCatalogModel[]> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/vehicles/catalog/models?brandId=${encodeURIComponent(brandId)}`,
-    {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    },
-  );
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/models?brandId=${encodeURIComponent(brandId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to load vehicle models.');
@@ -313,13 +347,11 @@ export async function getVehicleModels(brandId: string): Promise<VehicleCatalogM
 }
 
 export async function getVehicleSeries(modelId: string): Promise<VehicleCatalogSeries[]> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/vehicles/catalog/series?modelId=${encodeURIComponent(modelId)}`,
-    {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    },
-  );
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/series?modelId=${encodeURIComponent(modelId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to load vehicle series.');
@@ -330,13 +362,11 @@ export async function getVehicleSeries(modelId: string): Promise<VehicleCatalogS
 }
 
 export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogYearOption[]> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/vehicles/catalog/years?seriesId=${encodeURIComponent(seriesId)}`,
-    {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    },
-  );
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/years?seriesId=${encodeURIComponent(seriesId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to load vehicle years.');
@@ -352,7 +382,8 @@ export async function getVehicleYears(seriesId: string): Promise<VehicleCatalogY
 }
 
 export async function deleteRequestPhoto(requestId: string, photoId: string): Promise<void> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/photos/${photoId}`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/photos/${photoId}`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -366,7 +397,8 @@ export async function submitCustomerRequest(
   requestId: string,
   payload?: SubmitCustomerRequestPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/submit`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/submit`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload ?? {}),
@@ -381,7 +413,8 @@ export async function submitCustomerRequest(
 }
 
 export async function getCustomerRequestStatus(requestId: string): Promise<RequestStatusResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/status`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/status`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -394,7 +427,8 @@ export async function getCustomerRequestStatus(requestId: string): Promise<Reque
 }
 
 export async function getCustomerHome(): Promise<CustomerHomeResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/home`, {
+  const endpoint = `${getApiBaseUrl()}/customer/home`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -407,7 +441,8 @@ export async function getCustomerHome(): Promise<CustomerHomeResponse> {
 }
 
 export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[]> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -420,7 +455,8 @@ export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[
 }
 
 export async function getCustomerRequestOffers(requestId: string): Promise<CustomerRequestOffersResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/${requestId}/offers`, {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/offers`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
   });
@@ -436,7 +472,8 @@ export async function acceptCustomerRequestOffer(
   requestId: string,
   offerId: string,
 ): Promise<CustomerAcceptOfferResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/trips/${requestId}/offers/${offerId}/accept`, {
+  const endpoint = `${getApiBaseUrl()}/trips/${requestId}/offers/${offerId}/accept`;
+  const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ confirm: true }),
