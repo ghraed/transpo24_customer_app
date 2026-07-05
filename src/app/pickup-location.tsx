@@ -191,7 +191,7 @@ export default function PickupLocationScreen() {
   const [selectedLocation, setSelectedLocation] = useState<SelectedPickupLocation | null>(null);
   const [addressQuery, setAddressQuery] = useState<string>('');
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
-  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(true);
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [locationMessage, setLocationMessage] = useState<string>('');
   const [isLocationServicesDisabled, setIsLocationServicesDisabled] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -203,7 +203,9 @@ export default function PickupLocationScreen() {
   const [providerState, setProviderState] = useState<ProviderState | null>(null);
   const [lastLocationTimestamp, setLastLocationTimestamp] = useState<number | null>(null);
   const [isMockedLocation, setIsMockedLocation] = useState<boolean | null>(null);
+  const [shouldRetryLocationOnAppFocus, setShouldRetryLocationOnAppFocus] = useState<boolean>(false);
   const suppressAutocompleteRef = useRef<boolean>(false);
+  const mapRef = useRef<any>(null);
 
   const hasValidServiceId = serviceId.trim().length > 0;
 
@@ -222,22 +224,28 @@ export default function PickupLocationScreen() {
     return selectedLocation !== null && hasValidServiceId && !isSaving;
   }, [selectedLocation, hasValidServiceId, isSaving]);
 
+  const focusMapOnLocation = useCallback((latitude: number, longitude: number) => {
+    const nextRegion: Region = {
+      latitude,
+      longitude,
+      latitudeDelta: 0.03,
+      longitudeDelta: 0.03,
+    };
+
+    setRegion(nextRegion);
+    mapRef.current?.animateToRegion?.(nextRegion, 300);
+  }, []);
+
   const applyCurrentLocation = useCallback(
     async (location: Location.LocationObject) => {
       setLocationAccuracy(typeof location.coords.accuracy === 'number' ? location.coords.accuracy : null);
       setLastLocationTimestamp(location.timestamp);
       setIsMockedLocation(typeof location.mocked === 'boolean' ? location.mocked : null);
-      const nextRegion: Region = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.03,
-        longitudeDelta: 0.03,
-      };
-
-      setRegion(nextRegion);
+      focusMapOnLocation(location.coords.latitude, location.coords.longitude);
       setLocationMessage('');
       setErrorMessage('');
       setIsLocationServicesDisabled(false);
+      setShouldRetryLocationOnAppFocus(false);
 
       const reverse = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
@@ -258,7 +266,7 @@ export default function PickupLocationScreen() {
         };
       });
     },
-    [],
+    [focusMapOnLocation],
   );
 
   const loadCurrentLocation = useCallback(async (requestPermission: boolean) => {
@@ -271,6 +279,7 @@ export default function PickupLocationScreen() {
 
       if (permission.status !== Location.PermissionStatus.GRANTED) {
         setIsLocationServicesDisabled(false);
+        setShouldRetryLocationOnAppFocus(false);
         setLocationMessage('Location permission denied. You can still select a location on the map.');
         return;
       }
@@ -285,6 +294,7 @@ export default function PickupLocationScreen() {
 
       if (!servicesEnabled) {
         setIsLocationServicesDisabled(true);
+        setShouldRetryLocationOnAppFocus(true);
         setLocationMessage(
           'Location services are off. Turn GPS on to use your current location, or select a location on the map.',
         );
@@ -311,6 +321,7 @@ export default function PickupLocationScreen() {
       await applyCurrentLocation(current);
     } catch {
       setIsLocationServicesDisabled(false);
+      setShouldRetryLocationOnAppFocus(false);
       setLocationMessage('Unable to access current location. You can still select a location manually.');
     } finally {
       setIsLoadingLocation(false);
@@ -318,74 +329,14 @@ export default function PickupLocationScreen() {
   }, [applyCurrentLocation]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void loadCurrentLocation(true);
-    }, 0);
-
-    return () => clearTimeout(timeoutId);
-  }, [loadCurrentLocation]);
-
-  useEffect(() => {
-    if (!isLocationServicesDisabled) {
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      void loadCurrentLocation(false);
-    }, 2500);
-
-    return () => clearInterval(intervalId);
-  }, [isLocationServicesDisabled, loadCurrentLocation]);
-
-  useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
+      if (nextState === 'active' && shouldRetryLocationOnAppFocus) {
         void loadCurrentLocation(false);
       }
     });
 
     return () => subscription.remove();
-  }, [loadCurrentLocation]);
-
-  useEffect(() => {
-    let isMounted = true;
-    let locationSubscription: Location.LocationSubscription | null = null;
-
-    async function startLiveLocationTracking() {
-      const permission = await Location.getForegroundPermissionsAsync();
-      if (permission.status !== Location.PermissionStatus.GRANTED) {
-        return;
-      }
-
-      const servicesEnabled = await Location.hasServicesEnabledAsync();
-      if (!servicesEnabled) {
-        return;
-      }
-
-      locationSubscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.BestForNavigation,
-          mayShowUserSettingsDialog: true,
-          timeInterval: 1500,
-          distanceInterval: 1,
-        },
-        (location) => {
-          if (!isMounted) {
-            return;
-          }
-
-          void applyCurrentLocation(location);
-        },
-      );
-    }
-
-    void startLiveLocationTracking();
-
-    return () => {
-      isMounted = false;
-      locationSubscription?.remove();
-    };
-  }, [applyCurrentLocation]);
+  }, [loadCurrentLocation, shouldRetryLocationOnAppFocus]);
 
   useEffect(() => {
     if (suppressAutocompleteRef.current) {
@@ -451,13 +402,15 @@ export default function PickupLocationScreen() {
       source: 'search',
     });
     setPlaceSuggestions([]);
-    setRegion((prev) => ({
-      ...prev,
+    setShouldRetryLocationOnAppFocus(false);
+    const nextRegion: Region = {
       latitude: place.latitude,
       longitude: place.longitude,
       latitudeDelta: 0.02,
       longitudeDelta: 0.02,
-    }));
+    };
+    setRegion(nextRegion);
+    mapRef.current?.animateToRegion?.(nextRegion, 300);
     setSearchMessage(`Pinned: ${place.address}`);
   }, []);
 
@@ -761,6 +714,7 @@ export default function PickupLocationScreen() {
       <View style={styles.mapContainer}>
         {isNativeMapRuntimeAvailable && NativeMapView && NativeMarker ? (
           <NativeMapView
+            ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={styles.map}
             initialRegion={region}

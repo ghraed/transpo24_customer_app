@@ -224,7 +224,7 @@ export default function DropoffLocationScreen() {
         }
       : DEFAULT_REGION,
   );
-  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(true);
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [locationMessage, setLocationMessage] = useState<string>('');
   const [isLocationServicesDisabled, setIsLocationServicesDisabled] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -234,7 +234,9 @@ export default function DropoffLocationScreen() {
   const [placeSuggestions, setPlaceSuggestions] = useState<PlaceAutocompleteSuggestion[]>([]);
   const [routeMessage, setRouteMessage] = useState<string>('');
   const [routeDistanceKm, setRouteDistanceKm] = useState<number | null>(null);
+  const [shouldRetryLocationOnAppFocus, setShouldRetryLocationOnAppFocus] = useState<boolean>(false);
   const suppressAutocompleteRef = useRef<boolean>(false);
+  const mapRef = useRef<any>(null);
 
   const onMapPress = useCallback((event: MapPressEvent) => {
     const coordinates: Coordinates = event.nativeEvent.coordinate;
@@ -259,18 +261,24 @@ export default function DropoffLocationScreen() {
     return selectedLocation !== null && hasDraftContext && !isSaving;
   }, [requestId, selectedLocation, serviceId, serviceKey, isSaving]);
 
-  const applyCurrentLocation = useCallback((location: Location.LocationObject) => {
+  const focusMapOnLocation = useCallback((latitude: number, longitude: number) => {
     const nextRegion: Region = {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
+      latitude,
+      longitude,
       latitudeDelta: 0.03,
       longitudeDelta: 0.03,
     };
 
     setRegion(nextRegion);
+    mapRef.current?.animateToRegion?.(nextRegion, 300);
+  }, []);
+
+  const applyCurrentLocation = useCallback((location: Location.LocationObject) => {
+    focusMapOnLocation(location.coords.latitude, location.coords.longitude);
     setLocationMessage('');
     setErrorMessage('');
     setIsLocationServicesDisabled(false);
+    setShouldRetryLocationOnAppFocus(false);
     setSelectedLocation((previous) => {
       if (previous && previous.source && previous.source !== 'device') {
         return previous;
@@ -283,7 +291,7 @@ export default function DropoffLocationScreen() {
         source: 'device',
       };
     });
-  }, []);
+  }, [focusMapOnLocation]);
 
   const loadCurrentLocation = useCallback(async (requestPermission: boolean) => {
     setIsLoadingLocation(true);
@@ -295,6 +303,7 @@ export default function DropoffLocationScreen() {
 
       if (permission.status !== Location.PermissionStatus.GRANTED) {
         setIsLocationServicesDisabled(false);
+        setShouldRetryLocationOnAppFocus(false);
         setLocationMessage(
           'Location permission denied. You can still select a dropoff location manually on the map.',
         );
@@ -305,6 +314,7 @@ export default function DropoffLocationScreen() {
 
       if (!servicesEnabled) {
         setIsLocationServicesDisabled(true);
+        setShouldRetryLocationOnAppFocus(true);
         setLocationMessage(
           'Location services are off. Turn GPS on to use your current location, or choose a dropoff location on the map.',
         );
@@ -318,6 +328,7 @@ export default function DropoffLocationScreen() {
       applyCurrentLocation(current);
     } catch {
       setIsLocationServicesDisabled(false);
+      setShouldRetryLocationOnAppFocus(false);
       setLocationMessage('Unable to access current location. You can still pick location manually.');
     } finally {
       setIsLoadingLocation(false);
@@ -325,34 +336,14 @@ export default function DropoffLocationScreen() {
   }, [applyCurrentLocation]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void loadCurrentLocation(true);
-    }, 0);
-
-    return () => clearTimeout(timeoutId);
-  }, [loadCurrentLocation]);
-
-  useEffect(() => {
-    if (!isLocationServicesDisabled) {
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      void loadCurrentLocation(false);
-    }, 2500);
-
-    return () => clearInterval(intervalId);
-  }, [isLocationServicesDisabled, loadCurrentLocation]);
-
-  useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
+      if (nextState === 'active' && shouldRetryLocationOnAppFocus) {
         void loadCurrentLocation(false);
       }
     });
 
     return () => subscription.remove();
-  }, [loadCurrentLocation]);
+  }, [loadCurrentLocation, shouldRetryLocationOnAppFocus]);
 
   useEffect(() => {
     if (suppressAutocompleteRef.current) {
@@ -420,13 +411,15 @@ export default function DropoffLocationScreen() {
     setPlaceSuggestions([]);
     setRouteDistanceKm(null);
     setRouteMessage('');
-    setRegion((prev) => ({
-      ...prev,
+    setShouldRetryLocationOnAppFocus(false);
+    const nextRegion: Region = {
       latitude: place.latitude,
       longitude: place.longitude,
       latitudeDelta: 0.02,
       longitudeDelta: 0.02,
-    }));
+    };
+    setRegion(nextRegion);
+    mapRef.current?.animateToRegion?.(nextRegion, 300);
     setSearchMessage(`Pinned: ${place.address}`);
   }, []);
 
@@ -832,6 +825,7 @@ export default function DropoffLocationScreen() {
       <View style={styles.mapContainer}>
         {isNativeMapRuntimeAvailable && NativeMapView && NativeMarker ? (
           <NativeMapView
+            ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={styles.map}
             initialRegion={region}
