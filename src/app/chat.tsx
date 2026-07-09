@@ -1,0 +1,628 @@
+import { useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import {
+  getChatRoomByTransportRequestId,
+  getChatRoomMessages,
+  markChatRoomMessagesAsRead,
+  sendChatMessage,
+} from '@/lib/api';
+import { getAccessToken } from '@/lib/auth-token';
+import {
+  connectSocket,
+  isSocketConnected,
+  joinChatRoomWithAck,
+  leaveChatRoom,
+  onChatMessageCreated,
+  onChatMessageRead,
+  onSocketDisconnect,
+  onSocketError,
+  sendChatMessageViaSocket,
+  waitForSocketConnection,
+} from '@/services/socketService';
+import type { ChatMessage, ChatRoom, ChatRoomMessagesResponse } from '@/types/chat';
+
+type RouteParams = {
+  chatRoomId?: string;
+  transportRequestId?: string;
+};
+
+const INITIAL_PAGE_LIMIT = 100;
+
+function formatTime(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function normalizeErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+
+  const message = error.message.toLowerCase();
+  if (message.includes('not found')) {
+    return 'No chat room is available for this transport request yet.';
+  }
+  if (message.includes('forbidden') || message.includes('not allowed') || message.includes('unauthorized')) {
+    return 'You are not authorized to access this chat.';
+  }
+
+  return error.message || fallback;
+}
+
+function upsertMessages(previous: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const byId = new Map<string, ChatMessage>();
+
+  previous.forEach((message) => {
+    byId.set(message.id, message);
+  });
+
+  incoming.forEach((message) => {
+    byId.set(message.id, message);
+  });
+
+  return [...byId.values()].sort(
+    (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+  );
+}
+
+async function loadAllRoomMessages(roomId: string): Promise<ChatRoomMessagesResponse> {
+  const firstPage = await getChatRoomMessages(roomId, 1, INITIAL_PAGE_LIMIT);
+  let messages = firstPage.messages;
+
+  if (firstPage.totalPages > 1) {
+    for (let page = 2; page <= firstPage.totalPages; page += 1) {
+      const nextPage = await getChatRoomMessages(roomId, page, INITIAL_PAGE_LIMIT);
+      messages = upsertMessages(messages, nextPage.messages);
+    }
+  }
+
+  return {
+    ...firstPage,
+    messages,
+  };
+}
+
+export default function ChatScreen() {
+  const params = useLocalSearchParams<RouteParams>();
+  const initialRoomId =
+    typeof params.chatRoomId === 'string' ? params.chatRoomId.trim() : '';
+  const transportRequestId =
+    typeof params.transportRequestId === 'string' ? params.transportRequestId.trim() : '';
+
+  const [room, setRoom] = useState<ChatRoom | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [draft, setDraft] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [sendErrorMessage, setSendErrorMessage] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSending, setIsSending] = useState<boolean>(false);
+  const [socketStatusText, setSocketStatusText] = useState<string>('');
+
+  const resolvedRoomId = room?.id ?? initialRoomId;
+  const isClosed = room?.status === 'CLOSED' || room?.status === 'ARCHIVED';
+  const effectiveSocketStatusText =
+    socketStatusText || (!getAccessToken() ? 'Realtime unavailable. Please login again.' : '');
+
+  const loadConversation = useCallback(async (): Promise<ChatRoom | null> => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      let nextRoom: ChatRoom;
+      if (resolvedRoomId) {
+        const response = await loadAllRoomMessages(resolvedRoomId);
+        nextRoom = response.room;
+        setRoom(response.room);
+        setMessages(response.messages);
+      } else if (transportRequestId) {
+        nextRoom = await getChatRoomByTransportRequestId(transportRequestId);
+        const response = await loadAllRoomMessages(nextRoom.id);
+        nextRoom = response.room;
+        setRoom(response.room);
+        setMessages(response.messages);
+      } else {
+        throw new Error('Missing chat room context.');
+      }
+
+      try {
+        const readReceipt = await markChatRoomMessagesAsRead(nextRoom.id);
+        if (readReceipt.readCount > 0) {
+          setRoom((previous) => (previous ? { ...previous, unreadCount: 0 } : previous));
+        }
+      } catch (markReadError) {
+        console.warn('Failed to mark chat messages as read.', markReadError);
+      }
+
+      return nextRoom;
+    } catch (error) {
+      setRoom(null);
+      setMessages([]);
+      setErrorMessage(normalizeErrorMessage(error, 'Failed to load chat conversation.'));
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [resolvedRoomId, transportRequestId]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void loadConversation();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadConversation]);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    if (!room?.id) {
+      return;
+    }
+
+    let isActive = true;
+
+    try {
+      connectSocket(token);
+    } catch (error) {
+      setTimeout(
+        () =>
+          setSocketStatusText(
+            error instanceof Error ? error.message : 'Failed to connect realtime chat.',
+          ),
+        0,
+      );
+      return;
+    }
+
+    void waitForSocketConnection(5000)
+      .then(async () => {
+        if (!isActive) {
+          return;
+        }
+
+        await joinChatRoomWithAck({ roomId: room.id });
+        if (isActive) {
+          setSocketStatusText('Realtime connected');
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          setSocketStatusText(
+            error instanceof Error ? error.message : 'Realtime chat connection timed out.',
+          );
+        }
+      });
+
+    const unsubMessageCreated = onChatMessageCreated((payload) => {
+      if (payload.chatRoomId !== room.id) {
+        return;
+      }
+
+      setMessages((previous) => upsertMessages(previous, [payload]));
+      setRoom((previous) =>
+        previous
+          ? {
+              ...previous,
+              lastMessage: payload,
+              updatedAt: payload.createdAt,
+              unreadCount:
+                payload.senderRole === 'DRIVER'
+                  ? 0
+                  : previous.unreadCount,
+            }
+          : previous,
+      );
+
+      if (payload.senderRole === 'DRIVER') {
+        void markChatRoomMessagesAsRead(room.id)
+          .then(() => {
+            setRoom((previous) => (previous ? { ...previous, unreadCount: 0 } : previous));
+          })
+          .catch((markReadError) => {
+            console.warn('Failed to acknowledge incoming chat message.', markReadError);
+          });
+      }
+    });
+
+    const unsubMessageRead = onChatMessageRead((payload) => {
+      if (payload.roomId !== room.id) {
+        return;
+      }
+
+      setRoom((previous) => (previous ? { ...previous, unreadCount: 0 } : previous));
+    });
+
+    const unsubDisconnect = onSocketDisconnect(() => {
+      setSocketStatusText('Realtime disconnected. REST fallback is ready.');
+    });
+
+    const unsubSocketError = onSocketError((message) => {
+      setSocketStatusText(message || 'Realtime chat connection issue.');
+    });
+
+    return () => {
+      isActive = false;
+      unsubMessageCreated();
+      unsubMessageRead();
+      unsubDisconnect();
+      unsubSocketError();
+      leaveChatRoom({ roomId: room.id });
+    };
+  }, [room?.id]);
+
+  const onSend = useCallback(async (): Promise<void> => {
+    const body = draft.trim();
+    if (!room?.id) {
+      setSendErrorMessage('No chat room is available yet.');
+      return;
+    }
+
+    if (isClosed) {
+      setSendErrorMessage('This chat is closed for new messages.');
+      return;
+    }
+
+    if (!body) {
+      setSendErrorMessage('Enter a message before sending.');
+      return;
+    }
+
+    setIsSending(true);
+    setSendErrorMessage('');
+
+    try {
+      const createdMessage = isSocketConnected()
+        ? await sendChatMessageViaSocket({ roomId: room.id, body })
+        : await sendChatMessage(room.id, { body });
+
+      setMessages((previous) => upsertMessages(previous, [createdMessage]));
+      setRoom((previous) =>
+        previous
+          ? {
+              ...previous,
+              lastMessage: createdMessage,
+              updatedAt: createdMessage.createdAt,
+            }
+          : previous,
+      );
+      setDraft('');
+    } catch (error) {
+      setSendErrorMessage(normalizeErrorMessage(error, 'Failed to send your message.'));
+    } finally {
+      setIsSending(false);
+    }
+  }, [draft, isClosed, room]);
+
+  const sortedMessages = useMemo(
+    () =>
+      [...messages].sort(
+        (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+      ),
+    [messages],
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.headerCard}>
+          <Text style={styles.title}>Chat with driver</Text>
+          <Text style={styles.subtitle}>
+            {room
+              ? `Transport request #${room.transportRequestId}`
+              : 'Messages are only available after the backend creates the chat room.'}
+          </Text>
+          {room ? (
+            <Text style={styles.statusPill}>
+              {room.status === 'ACTIVE' ? 'Chat active' : `Chat ${room.status.toLowerCase()}`}
+            </Text>
+          ) : null}
+          {effectiveSocketStatusText ? (
+            <Text style={styles.socketText}>{effectiveSocketStatusText}</Text>
+          ) : null}
+        </View>
+
+        {isLoading ? (
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" color="#1D4ED8" />
+            <Text style={styles.mutedText}>Loading messages…</Text>
+          </View>
+        ) : errorMessage ? (
+          <View style={styles.centeredContainer}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Pressable style={styles.retryButton} onPress={() => void loadConversation()}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <FlatList
+              data={sortedMessages}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={[
+                styles.messagesContent,
+                sortedMessages.length === 0 ? styles.messagesContentEmpty : undefined,
+              ]}
+              renderItem={({ item }) => {
+                const isClientMessage = item.senderRole === 'CLIENT';
+
+                return (
+                  <View
+                    style={[
+                      styles.messageRow,
+                      isClientMessage ? styles.messageRowClient : styles.messageRowDriver,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.messageBubble,
+                        isClientMessage ? styles.clientBubble : styles.driverBubble,
+                      ]}
+                    >
+                      {item.body ? (
+                        <Text
+                          style={[
+                            styles.messageText,
+                            isClientMessage ? styles.clientMessageText : undefined,
+                          ]}
+                        >
+                          {item.body}
+                        </Text>
+                      ) : null}
+                      <Text
+                        style={[
+                          styles.messageTime,
+                          isClientMessage ? styles.clientMessageTime : undefined,
+                        ]}
+                      >
+                        {formatTime(item.createdAt)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>No messages yet</Text>
+                  <Text style={styles.mutedText}>
+                    Start the conversation once your driver is ready.
+                  </Text>
+                </View>
+              }
+            />
+
+            <View style={styles.inputPanel}>
+              {sendErrorMessage ? <Text style={styles.errorText}>{sendErrorMessage}</Text> : null}
+              {isClosed ? (
+                <Text style={styles.closedText}>
+                  This chat is closed. You can still read previous messages.
+                </Text>
+              ) : null}
+              <View style={styles.inputRow}>
+                <TextInput
+                  value={draft}
+                  onChangeText={setDraft}
+                  placeholder="Type a message"
+                  style={styles.input}
+                  multiline
+                  editable={!isSending && !isClosed}
+                />
+                <Pressable
+                  style={[
+                    styles.sendButton,
+                    (isSending || !draft.trim() || isClosed) && styles.sendButtonDisabled,
+                  ]}
+                  onPress={() => void onSend()}
+                  disabled={isSending || !draft.trim() || isClosed}
+                >
+                  <Text style={styles.sendButtonText}>
+                    {isSending ? 'Sending…' : 'Send'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  keyboardContainer: {
+    flex: 1,
+  },
+  headerCard: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 6,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  statusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#DBEAFE',
+    color: '#1D4ED8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontWeight: '600',
+  },
+  socketText: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  centeredContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  mutedText: {
+    color: '#64748B',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  retryButton: {
+    minHeight: 42,
+    minWidth: 120,
+    borderRadius: 10,
+    backgroundColor: '#1D4ED8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  messagesContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  messagesContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  messageRow: {
+    flexDirection: 'row',
+  },
+  messageRowClient: {
+    justifyContent: 'flex-end',
+  },
+  messageRowDriver: {
+    justifyContent: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '82%',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  clientBubble: {
+    backgroundColor: '#1D4ED8',
+    borderBottomRightRadius: 4,
+  },
+  driverBubble: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderBottomLeftRadius: 4,
+  },
+  messageText: {
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  clientMessageText: {
+    color: '#FFFFFF',
+  },
+  messageTime: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  clientMessageTime: {
+    color: '#DBEAFE',
+  },
+  emptyState: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  inputPanel: {
+    borderTopWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#0F172A',
+  },
+  sendButton: {
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: '#1D4ED8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
+  },
+  sendButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  errorText: {
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  closedText: {
+    color: '#92400E',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+});

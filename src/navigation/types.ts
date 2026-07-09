@@ -14,6 +14,10 @@ export type DriverStackParamList = {
 };
 
 export type CustomerStackParamList = {
+  ChatScreen: {
+    chatRoomId?: string;
+    transportRequestId?: string;
+  };
   CustomerTrackingScreen: {
     tripId: string;
     pickupLocation: AddressedLocation;

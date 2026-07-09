@@ -2,6 +2,13 @@ import { createBackendReachabilityError, getApiBaseUrl } from '@/config/backend'
 import { getAccessToken } from './auth-token';
 import type { RegisterPushTokenPayload } from '@/notifications/types';
 import type {
+  ChatMessage,
+  ChatMessageReadReceipt,
+  ChatRoom,
+  ChatRoomMessagesResponse,
+  SendChatMessagePayload,
+} from '@/types/chat';
+import type {
   CreateGoodsTransportRequestPayload,
   CreateFurnitureTransportRequestPayload,
   CreateMotorcycleTransportRequestPayload,
@@ -743,6 +750,96 @@ export async function getCustomerRequests(): Promise<CustomerHomeRequestSummary[
   return parseJsonBody<CustomerHomeRequestSummary[]>(
     response,
     'Failed to parse customer requests response.',
+  );
+}
+
+export async function getChatRoomByTransportRequestId(
+  transportRequestId: string,
+): Promise<ChatRoom> {
+  const endpoint = `${getApiBaseUrl()}/chat/rooms/by-request/${encodeURIComponent(transportRequestId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load chat room.');
+  }
+
+  return parseJsonBody<ChatRoom>(response, 'Failed to parse chat room response.');
+}
+
+export async function getUserChatRooms(): Promise<ChatRoom[]> {
+  const endpoint = `${getApiBaseUrl()}/chat/rooms`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load chat rooms.');
+  }
+
+  return parseJsonBody<ChatRoom[]>(response, 'Failed to parse chat rooms response.');
+}
+
+export async function getChatRoomMessages(
+  roomId: string,
+  page = 1,
+  limit = 20,
+): Promise<ChatRoomMessagesResponse> {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  const endpoint = `${getApiBaseUrl()}/chat/rooms/${encodeURIComponent(roomId)}/messages?${query.toString()}`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load chat messages.');
+  }
+
+  return parseJsonBody<ChatRoomMessagesResponse>(
+    response,
+    'Failed to parse chat messages response.',
+  );
+}
+
+export async function sendChatMessage(
+  roomId: string,
+  payload: SendChatMessagePayload,
+): Promise<ChatMessage> {
+  const endpoint = `${getApiBaseUrl()}/chat/rooms/${encodeURIComponent(roomId)}/messages`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to send chat message.');
+  }
+
+  return parseJsonBody<ChatMessage>(response, 'Failed to parse chat message response.');
+}
+
+export async function markChatRoomMessagesAsRead(roomId: string): Promise<ChatMessageReadReceipt> {
+  const endpoint = `${getApiBaseUrl()}/chat/rooms/${encodeURIComponent(roomId)}/read`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to mark chat messages as read.');
+  }
+
+  return parseJsonBody<ChatMessageReadReceipt>(
+    response,
+    'Failed to parse chat read response.',
   );
 }
 

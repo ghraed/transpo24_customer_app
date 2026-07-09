@@ -9,6 +9,7 @@ import {
   NativeMapViewDirections,
   NativeMarker,
 } from '@/components/native-maps';
+import { ChatEntryButton } from '@/components/chat-entry-button';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -115,13 +116,13 @@ export default function CustomerDeliveryTrackingScreen() {
 
   useEffect(() => {
     if (!isRouteValid || !pickupLocation || !dropoffLocation) {
-      setErrorMessage('Invalid delivery tracking parameters.');
+      setTimeout(() => setErrorMessage('Invalid delivery tracking parameters.'), 0);
       return;
     }
 
     const token = getAccessToken();
     if (!token) {
-      setErrorMessage('Missing auth token. Please login again.');
+      setTimeout(() => setErrorMessage('Missing auth token. Please login again.'), 0);
       return;
     }
 
@@ -129,7 +130,13 @@ export default function CustomerDeliveryTrackingScreen() {
       connectSocket(token);
       joinTripRoom(tripId);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect realtime socket.');
+      setTimeout(
+        () =>
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Failed to connect realtime socket.',
+          ),
+        0,
+      );
       return;
     }
 
@@ -304,6 +311,7 @@ export default function CustomerDeliveryTrackingScreen() {
             {(calculateDistanceMeters(driverLocation, dropoffLocation) / 1000).toFixed(2)} km
           </Text>
         )}
+        <ChatEntryButton transportRequestId={tripId} />
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </View>
     </SafeAreaView>

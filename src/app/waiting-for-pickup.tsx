@@ -8,6 +8,7 @@ import {
   NativeMapView,
   NativeMarker,
 } from '@/components/native-maps';
+import { ChatEntryButton } from '@/components/chat-entry-button';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -86,13 +87,17 @@ export default function WaitingForPickupScreen() {
 
   useEffect(() => {
     if (!isRouteValid || !pickupLocation || !dropoffLocation) {
-      setErrorMessage('Invalid tracking parameters. Please reopen tracking from request status.');
+      setTimeout(
+        () =>
+          setErrorMessage('Invalid tracking parameters. Please reopen tracking from request status.'),
+        0,
+      );
       return;
     }
 
     const token = getAccessToken();
     if (!token) {
-      setErrorMessage('Missing auth token. Please login again.');
+      setTimeout(() => setErrorMessage('Missing auth token. Please login again.'), 0);
       return;
     }
 
@@ -100,7 +105,13 @@ export default function WaitingForPickupScreen() {
       connectSocket(token);
       joinTripRoom(tripId);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect realtime socket.');
+      setTimeout(
+        () =>
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Failed to connect realtime socket.',
+          ),
+        0,
+      );
       return;
     }
 
@@ -258,6 +269,7 @@ export default function WaitingForPickupScreen() {
             </Text>
           </View>
         ) : null}
+        <ChatEntryButton transportRequestId={tripId} />
 
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 

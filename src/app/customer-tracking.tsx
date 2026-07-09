@@ -1,8 +1,7 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Platform } from 'react-native';
 
 import {
   isNativeMapRuntimeAvailable,
@@ -10,6 +9,7 @@ import {
   NativeMapViewDirections,
   NativeMarker,
 } from '@/components/native-maps';
+import { ChatEntryButton } from '@/components/chat-entry-button';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -90,18 +90,18 @@ export default function CustomerTrackingScreen() {
   useEffect(() => {
     const validTripId = validateTripId(tripId);
     if (!validTripId) {
-      setErrorMessage('Invalid trip id.');
+      setTimeout(() => setErrorMessage('Invalid trip id.'), 0);
       return;
     }
 
     if (!pickupLocation || !dropoffLocation) {
-      setErrorMessage('Invalid trip locations.');
+      setTimeout(() => setErrorMessage('Invalid trip locations.'), 0);
       return;
     }
 
     const token = getAccessToken();
     if (!token) {
-      setErrorMessage('Missing auth token. Please login again.');
+      setTimeout(() => setErrorMessage('Missing auth token. Please login again.'), 0);
       return;
     }
 
@@ -109,7 +109,13 @@ export default function CustomerTrackingScreen() {
       connectSocket(token);
       joinTripRoom(validTripId);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect realtime socket.');
+      setTimeout(
+        () =>
+          setErrorMessage(
+            error instanceof Error ? error.message : 'Failed to connect realtime socket.',
+          ),
+        0,
+      );
       return;
     }
 
@@ -313,6 +319,7 @@ export default function CustomerTrackingScreen() {
             km
           </Text>
         ) : null}
+        <ChatEntryButton transportRequestId={tripId} />
         {routeError ? <Text style={styles.errorText}>{routeError}</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </View>

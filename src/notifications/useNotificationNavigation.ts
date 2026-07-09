@@ -22,6 +22,24 @@ function resolveNotificationRoute(data: PushNotificationData): Href | null {
         };
       }
       return null;
+    case 'CHAT_MESSAGE':
+      if (typeof data.chatRoomId === 'string' && data.chatRoomId.trim()) {
+        const transportRequestId =
+          typeof data.transportRequestId === 'string' ? data.transportRequestId.trim() : '';
+        return (
+          `/chat?chatRoomId=${encodeURIComponent(data.chatRoomId)}${
+            transportRequestId
+              ? `&transportRequestId=${encodeURIComponent(transportRequestId)}`
+              : ''
+          }`
+        ) as Href;
+      }
+      if (typeof data.transportRequestId === 'string' && data.transportRequestId.trim()) {
+        return (
+          `/chat?transportRequestId=${encodeURIComponent(data.transportRequestId)}`
+        ) as Href;
+      }
+      return null;
     default:
       return null;
   }

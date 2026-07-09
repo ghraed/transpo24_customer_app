@@ -59,6 +59,7 @@ export default function RootLayout() {
           <Stack.Screen name="submit-request" options={{ title: 'Submit Request' }} />
           <Stack.Screen name="request-status" options={{ title: 'Request Status' }} />
           <Stack.Screen name="request-payment" options={{ title: 'Payment Hold' }} />
+          <Stack.Screen name="chat" options={{ title: 'Chat with Driver' }} />
           <Stack.Screen name="customer-tracking" options={{ title: 'Customer Tracking' }} />
           <Stack.Screen name="waiting-for-pickup" options={{ title: 'Waiting for Pickup' }} />
           <Stack.Screen name="customer-delivery-tracking" options={{ title: 'Delivery Tracking' }} />

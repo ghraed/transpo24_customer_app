@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { getApiBaseUrl } from '@/config/backend';
+import { ChatEntryButton } from '@/components/chat-entry-button';
 import {
   deleteCustomerRequest,
   getCustomerRequestOffers,
@@ -440,14 +441,16 @@ export default function RequestStatusScreen() {
   useEffect(() => {
     if (!requestId || !accessToken) return;
 
-    setSocketState('connecting');
+    setTimeout(() => setSocketState('connecting'), 0);
 
     try {
       connectSocket(accessToken);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to connect realtime socket.';
-      setSocketState('error');
-      setSocketMessage(message);
+      setTimeout(() => {
+        setSocketState('error');
+        setSocketMessage(message);
+      }, 0);
       return;
     }
 
@@ -685,6 +688,11 @@ export default function RequestStatusScreen() {
     trackingData?.currentStatus ?? requestData?.status ?? 'PENDING_QUOTES';
   const nearDeliveryNotifiedAt = trackingData?.nearDeliveryNotifiedAt ?? null;
   const ratingAvailable = trackingData?.ratingAvailable ?? false;
+  const canOpenChat = Boolean(
+    requestData?.status !== 'CANCELLED' &&
+      (acceptedOffer || requestData?.driverSummary.assigned) &&
+      (requestData?.driverSummary.driverId || acceptedOffer?.driverId),
+  );
 
   const openTracking = useCallback((): void => {
     if (!requestData || !canOpenTrackingMap) return;
@@ -1004,6 +1012,10 @@ export default function RequestStatusScreen() {
           >
             <Text style={styles.primaryButtonText}>Open Tracking Map</Text>
           </Pressable>
+          <ChatEntryButton
+            transportRequestId={requestData.id}
+            enabled={canOpenChat}
+          />
         </View>
 
         <View style={styles.card}>
