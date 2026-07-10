@@ -20,7 +20,6 @@ import {
 } from '@stripe/stripe-react-native';
 
 import { M3LoginColors } from '@/constants/theme';
-import { M3Styles } from '@/lib/m3-styles';
 import {
   cancelPaymentHold,
   confirmDriverOffer,
@@ -179,8 +178,10 @@ export default function RequestPaymentScreen() {
   const merchantCountryCode =
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() || 'US';
   const merchantIdentifier =
-    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() || 'merchant.com.example.transpo24';
-  const isExpoGo = Constants.expoGoConfig != null;
+    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() || '';
+  // `appOwnership === 'expo'` is the Expo Go-specific signal. `executionEnvironment`
+  // also reports `storeClient` for dev clients, which would wrongly disable wallet flows.
+  const isExpoGo = Constants.appOwnership === 'expo';
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CREDIT_CARD');
   const [cardComplete, setCardComplete] = useState<boolean>(false);
@@ -240,12 +241,8 @@ export default function RequestPaymentScreen() {
       return 'Google Pay is only available on Android.';
     }
 
-    if (selectedMethod === 'APPLE_PAY' && supportCheckComplete && !applePaySupported) {
-      return 'Apple Pay is not available on this device right now.';
-    }
-
-    if (selectedMethod === 'GOOGLE_PAY' && supportCheckComplete && !googlePaySupported) {
-      return 'Google Pay is not available on this device right now.';
+    if (selectedMethod === 'APPLE_PAY' && !merchantIdentifier) {
+      return 'Apple Pay is not configured. Set EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER to your real Apple merchant identifier and rebuild the iOS app.';
     }
 
     if (needsStripe && !publishableKey) {
@@ -262,18 +259,16 @@ export default function RequestPaymentScreen() {
 
     return '';
   }, [
-    applePaySupported,
-    googlePaySupported,
     isExpoGo,
     needsCardField,
     needsStripe,
+    merchantIdentifier,
     offerData,
     offerId,
     publishableKey,
     requestData,
     requestId,
     selectedMethod,
-    supportCheckComplete,
     cardComplete,
   ]);
 
@@ -573,9 +568,16 @@ export default function RequestPaymentScreen() {
           <Text style={styles.sectionTitle}>Review</Text>
           <Text style={styles.label}>Chosen method</Text>
           <Text style={styles.value}>{getPaymentMethodLabel(selectedOption.method)}</Text>
-          {merchantIdentifier ? (
+          {selectedMethod === 'APPLE_PAY' ? (
             <Text style={styles.helperText}>
-              Merchant identifier configured: {merchantIdentifier}
+              {merchantIdentifier
+                ? `Merchant identifier configured: ${merchantIdentifier}`
+                : 'Apple Pay requires a real EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER and an iOS rebuild.'}
+            </Text>
+          ) : null}
+          {selectedMethod === 'GOOGLE_PAY' ? (
+            <Text style={styles.helperText}>
+              Google Pay on Android does not use an Apple merchant identifier.
             </Text>
           ) : null}
           {paymentResult ? (

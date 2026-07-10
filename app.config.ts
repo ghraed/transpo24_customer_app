@@ -14,16 +14,20 @@ const IOS_GOOGLE_SERVICES_FILE =
   process.env.EXPO_PUBLIC_IOS_GOOGLE_SERVICES_FILE?.trim() ||
   process.env.EXPO_IOS_GOOGLE_SERVICES_FILE?.trim() ||
   '';
+const STRIPE_MERCHANT_IDENTIFIER =
+  process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() ||
+  process.env.EXPO_STRIPE_MERCHANT_IDENTIFIER?.trim() ||
+  '';
 
 export default ({ config }: ConfigContext) => {
   const existingPlugins = Array.isArray(config.plugins) ? config.plugins : [];
-  const pluginsWithoutReactNativeMaps = existingPlugins.filter((plugin) => {
+  const pluginsWithoutManagedOverrides = existingPlugins.filter((plugin) => {
     if (typeof plugin === 'string') {
-      return plugin !== 'react-native-maps';
+      return plugin !== 'react-native-maps' && plugin !== '@stripe/stripe-react-native';
     }
 
     if (Array.isArray(plugin)) {
-      return plugin[0] !== 'react-native-maps';
+      return plugin[0] !== 'react-native-maps' && plugin[0] !== '@stripe/stripe-react-native';
     }
 
     return true;
@@ -58,7 +62,16 @@ export default ({ config }: ConfigContext) => {
       },
     },
     plugins: [
-      ...pluginsWithoutReactNativeMaps,
+      ...pluginsWithoutManagedOverrides,
+      [
+        '@stripe/stripe-react-native',
+        {
+          enableGooglePay: true,
+          ...(STRIPE_MERCHANT_IDENTIFIER
+            ? { merchantIdentifier: STRIPE_MERCHANT_IDENTIFIER }
+            : {}),
+        },
+      ],
       [
         'react-native-maps',
         {
