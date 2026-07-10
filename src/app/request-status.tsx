@@ -17,7 +17,7 @@ import {
 import { getApiBaseUrl } from '@/config/backend';
 import { ChatEntryButton } from '@/components/chat-entry-button';
 import { M3LoginColors } from '@/constants/theme';
-import { M3Styles } from '@/lib/m3-styles';
+import { isDeliveryCompletedStatus, isHistoryRequestStatus } from '@/lib/request-status';
 import {
   deleteCustomerRequest,
   getCustomerRequestOffers,
@@ -601,6 +601,10 @@ export default function RequestStatusScreen() {
           : previousTrackingData,
       );
       setSuccessMessage('Delivery confirmed. Proof photos are now available.');
+
+      if (validated.ratingAvailable) {
+        router.replace((`/customer-rate-driver?tripId=${encodeURIComponent(requestId)}`) as Href);
+      }
     });
 
     const unsubNearDelivery = onDriverNearDelivery((payload) => {
@@ -665,7 +669,7 @@ export default function RequestStatusScreen() {
       unsubSocketError();
       leaveTripRoom(requestId);
     };
-  }, [accessToken, loadStatus, requestId]);
+  }, [accessToken, loadStatus, requestId, router]);
 
   const pendingOffers = offers.filter((offer) => (offer.offerStatus ?? offer.status) === 'PENDING');
   const acceptedOffer = offers.find((offer) => (offer.offerStatus ?? offer.status) === 'ACCEPTED') ?? null;
@@ -690,8 +694,10 @@ export default function RequestStatusScreen() {
     trackingData?.currentStatus ?? requestData?.status ?? 'PENDING_QUOTES';
   const nearDeliveryNotifiedAt = trackingData?.nearDeliveryNotifiedAt ?? null;
   const ratingAvailable = trackingData?.ratingAvailable ?? false;
+  const isHistoryRequest = isHistoryRequestStatus(requestData?.status);
+  const isDeliveryCompleted = isDeliveryCompletedStatus(effectiveTrackingStatus);
   const canOpenChat = Boolean(
-    requestData?.status !== 'CANCELLED' &&
+    !isHistoryRequest &&
       (acceptedOffer || requestData?.driverSummary.assigned) &&
       (requestData?.driverSummary.driverId || acceptedOffer?.driverId),
   );
@@ -1015,11 +1021,14 @@ export default function RequestStatusScreen() {
             onPress={openTracking}
             disabled={!canOpenTrackingMap}
           >
-            <Text style={styles.primaryButtonText}>Open Tracking Map</Text>
+            <Text style={styles.primaryButtonText}>
+              {isDeliveryCompleted ? 'Open Delivery Summary' : 'Open Tracking Map'}
+            </Text>
           </Pressable>
           <ChatEntryButton
             transportRequestId={requestData.id}
             enabled={canOpenChat}
+            requestStatus={requestData.status}
           />
         </View>
 
@@ -1108,7 +1117,7 @@ export default function RequestStatusScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Rate Service</Text>
             <Text style={styles.rowValue}>
-              Final delivery is confirmed. You can now rate the driver.
+              Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.
             </Text>
             <Pressable style={styles.primaryButton} onPress={onRateDriver}>
               <Text style={styles.primaryButtonText}>Rate driver</Text>

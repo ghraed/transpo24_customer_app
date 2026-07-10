@@ -3,22 +3,27 @@ import React, { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTransportRequestChatRoom } from '@/hooks/use-transport-request-chat-room';
+import { isHistoryRequestStatus } from '@/lib/request-status';
+import type { CustomerRequestStatus } from '@/types/customer-request';
 
 interface ChatEntryButtonProps {
   transportRequestId: string;
   enabled?: boolean;
   label?: string;
+  requestStatus?: CustomerRequestStatus | null;
 }
 
 export function ChatEntryButton({
   transportRequestId,
   enabled = true,
   label = 'Chat with driver',
+  requestStatus,
 }: ChatEntryButtonProps) {
   const router = useRouter();
+  const chatEnabled = enabled && !isHistoryRequestStatus(requestStatus);
   const { room, isLoading } = useTransportRequestChatRoom({
     transportRequestId,
-    enabled,
+    enabled: chatEnabled,
   });
 
   const openChat = useCallback((): void => {
@@ -34,6 +39,10 @@ export function ChatEntryButton({
   }, [room, router]);
 
   if (!enabled) {
+    return null;
+  }
+
+  if (!chatEnabled) {
     return null;
   }
 

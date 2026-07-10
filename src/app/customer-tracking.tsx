@@ -9,7 +9,6 @@ import {
   NativeMapViewDirections,
   NativeMarker,
 } from '@/components/native-maps';
-import { ChatEntryButton } from '@/components/chat-entry-button';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -37,6 +36,16 @@ function parseNumber(value: string | string[] | undefined): number | null {
   if (typeof value !== 'string') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildDeliveredRoute(tripId: string, deliveredAt: string): Href {
+  return {
+    pathname: '/customer-trip-delivered',
+    params: {
+      tripId,
+      deliveredAt,
+    },
+  };
 }
 
 export default function CustomerTrackingScreen() {
@@ -177,11 +186,11 @@ export default function CustomerTrackingScreen() {
         setRouteStage('pickup');
       } else if (
         status === 'ITEM_PICKED_UP' ||
-        status === 'DRIVER_GOING_TO_DROPOFF' ||
-        status === 'DELIVERED' ||
-        status === 'COMPLETED'
+        status === 'DRIVER_GOING_TO_DROPOFF'
       ) {
         setRouteStage('dropoff');
+      } else if (status === 'DELIVERED' || status === 'COMPLETED') {
+        router.replace(buildDeliveredRoute(validTripId, validatedStatusPayload.updatedAt));
       }
     });
 
@@ -319,7 +328,6 @@ export default function CustomerTrackingScreen() {
             km
           </Text>
         ) : null}
-        <ChatEntryButton transportRequestId={tripId} />
         {routeError ? <Text style={styles.errorText}>{routeError}</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </View>

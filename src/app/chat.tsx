@@ -70,6 +70,10 @@ function normalizeErrorMessage(error: unknown, fallback: string): string {
   return error.message || fallback;
 }
 
+function isAccessibleRoom(room: ChatRoom | null): room is ChatRoom {
+  return Boolean(room && room.status === 'ACTIVE');
+}
+
 function upsertMessages(previous: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
   const byId = new Map<string, ChatMessage>();
 
@@ -120,7 +124,6 @@ export default function ChatScreen() {
   const [socketStatusText, setSocketStatusText] = useState<string>('');
 
   const resolvedRoomId = room?.id ?? initialRoomId;
-  const isClosed = room?.status === 'CLOSED' || room?.status === 'ARCHIVED';
   const effectiveSocketStatusText =
     socketStatusText || (!getAccessToken() ? 'Realtime unavailable. Please login again.' : '');
 
@@ -132,12 +135,21 @@ export default function ChatScreen() {
       let nextRoom: ChatRoom;
       if (resolvedRoomId) {
         const response = await loadAllRoomMessages(resolvedRoomId);
+        if (!isAccessibleRoom(response.room)) {
+          throw new Error('This chat is closed and no longer accessible.');
+        }
         nextRoom = response.room;
         setRoom(response.room);
         setMessages(response.messages);
       } else if (transportRequestId) {
         nextRoom = await getChatRoomByTransportRequestId(transportRequestId);
+        if (!isAccessibleRoom(nextRoom)) {
+          throw new Error('This chat is closed and no longer accessible.');
+        }
         const response = await loadAllRoomMessages(nextRoom.id);
+        if (!isAccessibleRoom(response.room)) {
+          throw new Error('This chat is closed and no longer accessible.');
+        }
         nextRoom = response.room;
         setRoom(response.room);
         setMessages(response.messages);
@@ -179,7 +191,7 @@ export default function ChatScreen() {
       return;
     }
 
-    if (!room?.id) {
+    if (!room?.id || !isAccessibleRoom(room)) {
       return;
     }
 
@@ -272,17 +284,12 @@ export default function ChatScreen() {
       unsubSocketError();
       leaveChatRoom({ roomId: room.id });
     };
-  }, [room?.id]);
+  }, [room]);
 
   const onSend = useCallback(async (): Promise<void> => {
     const body = draft.trim();
-    if (!room?.id) {
-      setSendErrorMessage('No chat room is available yet.');
-      return;
-    }
-
-    if (isClosed) {
-      setSendErrorMessage('This chat is closed for new messages.');
+    if (!isAccessibleRoom(room)) {
+      setSendErrorMessage('This chat is closed and no longer accessible.');
       return;
     }
 
@@ -315,7 +322,7 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [draft, isClosed, room]);
+  }, [draft, room]);
 
   const sortedMessages = useMemo(
     () =>
@@ -340,7 +347,7 @@ export default function ChatScreen() {
           </Text>
           {room ? (
             <Text style={styles.statusPill}>
-              {room.status === 'ACTIVE' ? 'Chat active' : `Chat ${room.status.toLowerCase()}`}
+              Chat active
             </Text>
           ) : null}
           {effectiveSocketStatusText ? (
@@ -419,11 +426,6 @@ export default function ChatScreen() {
 
             <View style={styles.inputPanel}>
               {sendErrorMessage ? <Text style={styles.errorText}>{sendErrorMessage}</Text> : null}
-              {isClosed ? (
-                <Text style={styles.closedText}>
-                  This chat is closed. You can still read previous messages.
-                </Text>
-              ) : null}
               <View style={styles.inputRow}>
                 <TextInput
                   value={draft}
@@ -431,15 +433,15 @@ export default function ChatScreen() {
                   placeholder="Type a message"
                   style={styles.input}
                   multiline
-                  editable={!isSending && !isClosed}
+                  editable={!isSending}
                 />
                 <Pressable
                   style={[
                     styles.sendButton,
-                    (isSending || !draft.trim() || isClosed) && styles.sendButtonDisabled,
+                    (isSending || !draft.trim()) && styles.sendButtonDisabled,
                   ]}
                   onPress={() => void onSend()}
-                  disabled={isSending || !draft.trim() || isClosed}
+                  disabled={isSending || !draft.trim()}
                 >
                   <Text style={styles.sendButtonText}>
                     {isSending ? 'Sending…' : 'Send'}

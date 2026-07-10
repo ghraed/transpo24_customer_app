@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { M3LoginColors } from '@/constants/theme';
+import { isHistoryRequestStatus } from '@/lib/request-status';
 import { getCustomerRequests } from '@/lib/api';
 import type { CustomerHomeRequestSummary } from '@/types/customer-request';
 
@@ -40,8 +40,15 @@ export default function RequestsTabScreen() {
   }, []);
 
   useEffect(() => {
-    void loadRequests(false);
+    const timeoutId = setTimeout(() => {
+      void loadRequests(false);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [loadRequests]);
+
+  const activeRequests = requests.filter((request) => !isHistoryRequestStatus(request.status));
+  const historyRequests = requests.filter((request) => isHistoryRequestStatus(request.status));
 
   if (isLoading && requests.length === 0) {
     return (
@@ -73,17 +80,49 @@ export default function RequestsTabScreen() {
             <Text style={styles.mutedText}>Your transport requests will appear here.</Text>
           </View>
         ) : (
-          requests.map((request) => (
-            <Pressable
-              key={request.id}
-              style={styles.card}
-              onPress={() => router.push({ pathname: '/request-status', params: { requestId: request.id } })}
-            >
-              <Text style={styles.cardTitle}>{request.serviceName || request.serviceKey || 'Service'}</Text>
-              <Text style={styles.mutedText}>{request.statusLabel}</Text>
-              <Text style={styles.mutedText}>{request.pickupAddress || 'Pickup'} → {request.dropoffAddress || 'Dropoff'}</Text>
-            </Pressable>
-          ))
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Active Requests</Text>
+              {activeRequests.length === 0 ? (
+                <View style={styles.card}>
+                  <Text style={styles.mutedText}>No active requests right now.</Text>
+                </View>
+              ) : (
+                activeRequests.map((request) => (
+                  <Pressable
+                    key={request.id}
+                    style={styles.card}
+                    onPress={() => router.push({ pathname: '/request-status', params: { requestId: request.id } })}
+                  >
+                    <Text style={styles.cardTitle}>{request.serviceName || request.serviceKey || 'Service'}</Text>
+                    <Text style={styles.mutedText}>{request.statusLabel}</Text>
+                    <Text style={styles.mutedText}>{request.pickupAddress || 'Pickup'} → {request.dropoffAddress || 'Dropoff'}</Text>
+                  </Pressable>
+                ))
+              )}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>History Requests</Text>
+              {historyRequests.length === 0 ? (
+                <View style={styles.card}>
+                  <Text style={styles.mutedText}>No history requests yet.</Text>
+                </View>
+              ) : (
+                historyRequests.map((request) => (
+                  <Pressable
+                    key={request.id}
+                    style={styles.card}
+                    onPress={() => router.push({ pathname: '/request-status', params: { requestId: request.id } })}
+                  >
+                    <Text style={styles.cardTitle}>{request.serviceName || request.serviceKey || 'Service'}</Text>
+                    <Text style={styles.mutedText}>{request.statusLabel}</Text>
+                    <Text style={styles.mutedText}>{request.pickupAddress || 'Pickup'} → {request.dropoffAddress || 'Dropoff'}</Text>
+                  </Pressable>
+                ))
+              )}
+            </View>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -95,6 +134,8 @@ const styles = StyleSheet.create({
   centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', gap: 8 },
   content: { padding: 16, gap: 10 },
   title: { fontSize: 24, fontWeight: '700', color: '#0F172A' },
+  section: { gap: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#334155' },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,

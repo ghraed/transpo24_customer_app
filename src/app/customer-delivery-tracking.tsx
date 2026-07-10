@@ -9,7 +9,6 @@ import {
   NativeMapViewDirections,
   NativeMarker,
 } from '@/components/native-maps';
-import { ChatEntryButton } from '@/components/chat-entry-button';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -169,6 +168,10 @@ export default function CustomerDeliveryTrackingScreen() {
       }
       if (validated.tripId !== tripId) return;
       setStatusText('Item delivered');
+      if (validated.ratingAvailable) {
+        router.replace((`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href);
+        return;
+      }
       router.replace(
         buildDeliveredRoute(
           tripId,
@@ -311,7 +314,6 @@ export default function CustomerDeliveryTrackingScreen() {
             {(calculateDistanceMeters(driverLocation, dropoffLocation) / 1000).toFixed(2)} km
           </Text>
         )}
-        <ChatEntryButton transportRequestId={tripId} />
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </View>
     </SafeAreaView>
