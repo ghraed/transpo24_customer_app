@@ -28,7 +28,7 @@ export default function ProfileTabScreen() {
   }, [loadProfile]);
 
   const onLogout = (): void => {
-    clearAccessToken();
+    void clearAccessToken();
     router.replace('/');
   };
 

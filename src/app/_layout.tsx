@@ -1,15 +1,16 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import React, { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View, useColorScheme } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { getAccessToken } from '@/lib/auth-token';
-import { initializeNotifications , registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
+import { getAccessToken, hydrateAccessToken } from '@/lib/auth-token';
+import { initializeNotifications, registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
 import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [authReady, setAuthReady] = useState(false);
   const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
   const publishableKey =
     rawPublishableKey &&
@@ -21,11 +22,17 @@ export default function RootLayout() {
   useNotificationNavigation();
 
   useEffect(() => {
+    void hydrateAccessToken().finally(() => {
+      setAuthReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
     initializeNotifications();
   }, []);
 
   useEffect(() => {
-    if (!getAccessToken()) {
+    if (!authReady || !getAccessToken()) {
       return;
     }
 
@@ -33,7 +40,20 @@ export default function RootLayout() {
       // Best-effort token registration on app boot for already-authenticated sessions.
       console.warn('Customer push registration failed during app bootstrap.', error);
     });
-  }, []);
+  }, [authReady]);
+
+  if (!authReady) {
+    return (
+      <StripeProvider publishableKey={publishableKey} merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AnimatedSplashOverlay />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator color="#1D4ED8" />
+          </View>
+        </ThemeProvider>
+      </StripeProvider>
+    );
+  }
 
   return (
     <StripeProvider publishableKey={publishableKey} merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}>

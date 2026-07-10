@@ -23,11 +23,19 @@ export default ({ config }: ConfigContext) => {
   const existingPlugins = Array.isArray(config.plugins) ? config.plugins : [];
   const pluginsWithoutManagedOverrides = existingPlugins.filter((plugin) => {
     if (typeof plugin === 'string') {
-      return plugin !== 'react-native-maps' && plugin !== '@stripe/stripe-react-native';
+      return (
+        plugin !== 'react-native-maps' &&
+        plugin !== '@stripe/stripe-react-native' &&
+        plugin !== 'expo-secure-store'
+      );
     }
 
     if (Array.isArray(plugin)) {
-      return plugin[0] !== 'react-native-maps' && plugin[0] !== '@stripe/stripe-react-native';
+      return (
+        plugin[0] !== 'react-native-maps' &&
+        plugin[0] !== '@stripe/stripe-react-native' &&
+        plugin[0] !== 'expo-secure-store'
+      );
     }
 
     return true;
@@ -63,6 +71,7 @@ export default ({ config }: ConfigContext) => {
     },
     plugins: [
       ...pluginsWithoutManagedOverrides,
+      'expo-secure-store',
       [
         '@stripe/stripe-react-native',
         {

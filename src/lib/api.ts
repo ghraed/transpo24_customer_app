@@ -570,7 +570,7 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
     transmissionStyle: data.transmissionStyle,
     driveType: data.driveType,
     doors: data.doors,
-    series: data.series,
+    series: data.series ?? data.variant ?? data.trim,
     variant: data.variant ?? data.trim,
     manufactureYear:
       data.manufactureYear ??

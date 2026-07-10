@@ -558,11 +558,18 @@ export default function VehicleDetailsScreen() {
         seriesName:
           prev.seriesName?.trim()
             ? prev.seriesName
-            : matchedSeries?.name ?? decoded.series ?? prev.seriesName,
+            : matchedSeries?.name ??
+              decoded.series ??
+              decoded.variant ??
+              decoded.trim ??
+              prev.seriesName,
         variantName:
           prev.variantName?.trim()
             ? prev.variantName
-            : decoded.trim ?? matchedSeries?.variantName ?? prev.variantName,
+            : decoded.variant ??
+              decoded.trim ??
+              matchedSeries?.variantName ??
+              prev.variantName,
         manufactureYear:
           prev.manufactureYear ??
           (decoded.manufactureYear &&

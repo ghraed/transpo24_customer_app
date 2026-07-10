@@ -28,7 +28,7 @@ export default function LoginScreen() {
         return;
       }
 
-      setAccessToken(data.accessToken);
+      await setAccessToken(data.accessToken);
       try {
         await registerCustomerPushNotifications();
       } catch (pushError) {
