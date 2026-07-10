@@ -19,6 +19,8 @@ import type {
   CustomerHomeRequestSummary,
   CustomerRequest,
   CustomerRequestApiResponse,
+  CreateDriverRatingPayload,
+  CreateDriverRatingResponse,
   LocalPhotoAsset,
   PaymentMethod,
   PaymentSummary,
@@ -704,6 +706,27 @@ export async function getRequestTracking(requestId: string): Promise<RequestTrac
   return parseJsonBody<RequestTracking>(
     response,
     'Failed to parse request tracking response.',
+  );
+}
+
+export async function createDriverRating(
+  tripId: string,
+  payload: CreateDriverRatingPayload,
+): Promise<CreateDriverRatingResponse> {
+  const endpoint = `${getApiBaseUrl()}/customer/trips/${encodeURIComponent(tripId)}/rating`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to submit driver rating.');
+  }
+
+  return parseJsonBody<CreateDriverRatingResponse>(
+    response,
+    'Failed to parse driver rating response.',
   );
 }
 

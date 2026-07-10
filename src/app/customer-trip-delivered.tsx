@@ -1,8 +1,7 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -15,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getApiBaseUrl } from '@/config/backend';
 import { M3LoginColors } from '@/constants/theme';
-import { M3Styles } from '@/lib/m3-styles';
 import { getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
 
@@ -73,11 +71,10 @@ export default function CustomerTripDeliveredScreen() {
   }, [tripId]);
 
   const onRateDriver = useCallback((): void => {
-    Alert.alert(
-      'Rating is ready',
-      'The driver can now be rated. We can connect this button to the final rating screen once that route is added.',
+    router.push(
+      (`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href,
     );
-  }, []);
+  }, [router, tripId]);
 
   const deliveredAt = tracking?.deliveredAt ?? deliveredAtParam;
   const proofPhotos = tracking?.deliveryProofPhotos ?? [];

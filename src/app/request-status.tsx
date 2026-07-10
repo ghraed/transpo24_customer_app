@@ -717,11 +717,14 @@ export default function RequestStatusScreen() {
   }, [requestData, router, selectedOffer]);
 
   const onRateDriver = useCallback((): void => {
-    Alert.alert(
-      'Rating is ready',
-      'The rating flow is now available. We can connect it to the final rating screen once that route is added.',
+    if (!requestData) {
+      return;
+    }
+
+    router.push(
+      (`/customer-rate-driver?tripId=${encodeURIComponent(requestData.id)}`) as Href,
     );
-  }, []);
+  }, [requestData, router]);
 
   if (isLoading && !requestData) {
     return (

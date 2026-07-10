@@ -336,6 +336,21 @@ export interface RequestTracking {
   updatedAt: string;
 }
 
+export interface CreateDriverRatingPayload {
+  rating: number;
+  comment?: string;
+}
+
+export interface CreateDriverRatingResponse {
+  id: string;
+  tripId: string;
+  driverId: string;
+  customerId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+}
+
 export type PaymentMethod =
   | 'CREDIT_CARD'
   | 'DEBIT_CARD'
