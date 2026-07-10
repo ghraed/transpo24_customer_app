@@ -579,7 +579,7 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
     bodyType: data.bodyType ?? data.bodyClass,
     errorCode: data.errorCode,
     errorText: data.errorText,
-    source: 'NHTSA_VPIC',
+    source: 'VEHICLE_DATABASES',
   };
 }
 

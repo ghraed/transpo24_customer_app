@@ -22,7 +22,7 @@ export interface DecodedVinResult {
   manufactureYear?: number;
   estimatedWeightKg?: number;
   bodyType?: string;
-  source: 'NHTSA_VPIC';
+  source: 'VEHICLE_DATABASES';
 }
 
 export type VehicleVinDecodeResult = DecodedVinResult;
