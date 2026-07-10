@@ -19,6 +19,8 @@ import type {
   LocalPhotoAsset,
   PendingFurnitureDetailsPayload,
 } from '@/types/customer-request';
+import { M3LoginColors } from '@/constants/theme';
+import { M3Styles } from '@/lib/m3-styles';
 
 const MAX_PHOTOS = 8;
 
@@ -483,7 +485,7 @@ export default function FurnitureDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: M3LoginColors.background,
     paddingBottom: 30,
   },
   header: {
@@ -492,40 +494,40 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   backButtonText: {
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
     fontWeight: '600',
     fontSize: 13,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
     marginTop: 4,
     lineHeight: 22,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1f2937',
+    color: M3LoginColors.textPrimary,
     marginBottom: 6,
     marginTop: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
     marginTop: 14,
     marginBottom: 10,
   },
@@ -538,33 +540,33 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
-    backgroundColor: '#ffffff',
+    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   optionChipActive: {
-    borderColor: '#1a73e8',
-    backgroundColor: '#e8f0fe',
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primaryContainer,
   },
   optionChipText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#344054',
+    color: M3LoginColors.textPrimary,
   },
   optionChipTextActive: {
-    color: '#1a73e8',
+    color: M3LoginColors.primary,
   },
   input: {
     minHeight: 52,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 10,
     paddingHorizontal: 14,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#ffffff',
+    color: M3LoginColors.textPrimary,
+    backgroundColor: M3LoginColors.surface,
   },
   multilineInput: {
     minHeight: 96,
@@ -574,11 +576,11 @@ const styles = StyleSheet.create({
   pickerButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   datetimeContainer: {
     flexDirection: 'row',
@@ -587,17 +589,17 @@ const styles = StyleSheet.create({
   },
   pickerButtonLabel: {
     fontSize: 13,
-    color: '#667085',
+    color: M3LoginColors.textTertiary,
     marginBottom: 4,
   },
   pickerButtonValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
   },
   helperText: {
     marginTop: 8,
-    color: '#667085',
+    color: M3LoginColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -611,7 +613,7 @@ const styles = StyleSheet.create({
   switchLabel: {
     flex: 1,
     fontSize: 15,
-    color: '#344054',
+    color: M3LoginColors.textPrimary,
     fontWeight: '500',
   },
   switchChip: {
@@ -619,27 +621,27 @@ const styles = StyleSheet.create({
     minHeight: 38,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
-    backgroundColor: '#ffffff',
+    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
   },
   switchChipActive: {
-    borderColor: '#1a73e8',
-    backgroundColor: '#e8f0fe',
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primaryContainer,
   },
   switchChipText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#344054',
+    color: M3LoginColors.textPrimary,
   },
   switchChipTextActive: {
-    color: '#1a73e8',
+    color: M3LoginColors.primary,
   },
   photoCounter: {
     marginBottom: 8,
-    color: '#667085',
+    color: M3LoginColors.textSecondary,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -655,14 +657,14 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#1a73e8',
+    borderColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     paddingHorizontal: 14,
   },
   secondaryButtonText: {
-    color: '#1a73e8',
+    color: M3LoginColors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -671,11 +673,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1a73e8',
+    backgroundColor: M3LoginColors.primary,
     paddingHorizontal: 14,
   },
   photoButtonText: {
-    color: '#ffffff',
+    color: M3LoginColors.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -694,7 +696,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 120,
     borderRadius: 12,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: M3LoginColors.surfaceContainer,
     marginBottom: 6,
   },
   removePhotoButton: {

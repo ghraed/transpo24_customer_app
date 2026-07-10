@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { M3LoginColors } from '@/constants/theme';
 import { getServices } from '@/lib/api';
 import type { Service } from '@/types/service';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 const serviceIcons: Record<Service['key'], string> = { VEHICLE_TRANSPORT: '🚗', MOTORCYCLE_TRANSPORT: '🏍️', GOODS_TRANSPORT: '📦', FURNITURE_TRANSPORT: '🚚' };
 export default function ChooseServiceScreen() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function ChooseServiceScreen() {
             ? '/goods-details'
             : isFurnitureService
               ? '/furniture-details'
-          : '/pickup-location',
+              : '/pickup-location',
       params: { serviceId: selectedService.id, serviceKey: selectedService.key },
     });
   }, [router, selectedService]);
@@ -60,29 +61,70 @@ export default function ChooseServiceScreen() {
       </View>
       <FlatList data={services} keyExtractor={(item) => item.id} contentContainerStyle={styles.listContent} renderItem={({ item }) => {
         const isSelected = selectedService?.id === item.id;
-        return <Pressable style={[styles.card, isSelected && styles.cardSelected]} onPress={() => setSelectedService(item)}><View style={styles.cardTop}><Text style={styles.icon}>{serviceIcons[item.key] ?? '📦'}</Text><Text style={[styles.cardTitle, isSelected && styles.cardTitleSelected]}>{item.nameEn}</Text></View><Text style={styles.cardDescription}>{item.descriptionEn}</Text></Pressable>;
+        return <Pressable style={[styles.card, isSelected && styles.cardSelected]} onPress={() => setSelectedService(item)}><View style={styles.cardTop}><Text style={styles.icon}>{serviceIcons[item.key] ?? '📦'}</Text><Text style={[styles.cardTitle, isSelected && styles.cardTitleSelected]}>{item.nameEn}</Text></View><Text style={isSelected && styles.cardTitleSelected}>{item.descriptionEn}</Text></Pressable>;
       }} />
       <Pressable style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]} onPress={onContinue} disabled={!canContinue}><Text style={styles.continueText}>Continue</Text></Pressable>
     </View>
   );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7f9fc', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 },
-  header: { marginBottom: 12 }, title: { fontSize: 28, fontWeight: '700', color: '#101828' }, subtitle: { fontSize: 15, color: '#475467', marginTop: 4 },
+  container: { flex: 1, backgroundColor: M3LoginColors.background, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 },
+  header: { marginBottom: 12 },
+  title: { fontSize: 28, fontWeight: '700', color: M3LoginColors.textPrimary },
+  subtitle: { fontSize: 15, color: M3LoginColors.textSecondary, marginTop: 4 },
   backButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 8,
-    backgroundColor: '#ffffff',
+    borderColor: M3LoginColors.outline,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    backgroundColor: M3LoginColors.surface,
   },
-  backButtonText: { color: '#334155', fontWeight: '600', fontSize: 13 },
+  backButtonText: { color: M3LoginColors.textPrimary, fontWeight: '600', fontSize: 14 },
   listContent: { paddingBottom: 16, gap: 10 },
-  card: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 14, padding: 14 }, cardSelected: { borderColor: '#1a73e8', backgroundColor: '#eef5ff' },
-  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 10 }, icon: { fontSize: 24 }, cardTitle: { fontSize: 17, fontWeight: '700', color: '#111827' }, cardTitleSelected: { color: '#0b57d0' }, cardDescription: { fontSize: 14, color: '#4b5563', lineHeight: 20 },
-  continueButton: { marginTop: 'auto', height: 50, borderRadius: 12, backgroundColor: '#1a73e8', alignItems: 'center', justifyContent: 'center' }, continueButtonDisabled: { opacity: 0.45 }, continueText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  centerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#f7f9fc' }, stateText: { marginTop: 10, color: '#475467', textAlign: 'center', fontSize: 14 }, errorTitle: { fontSize: 20, fontWeight: '700', color: '#101828', marginBottom: 2 }, retryButton: { marginTop: 16, backgroundColor: '#1a73e8', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 }, retryText: { color: '#fff', fontWeight: '600' },
+  card: {
+    backgroundColor: M3LoginColors.surface,
+    borderWidth: 1,
+    borderColor: M3LoginColors.outline,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardSelected: {
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primaryContainer,
+    shadowColor: M3LoginColors.primary,
+    shadowOpacity: 0.15,
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 12 },
+  icon: { fontSize: 28 },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: M3LoginColors.textPrimary },
+  cardTitleSelected: { color: M3LoginColors.onPrimary },
+  cardDescription: { fontSize: 14, color: M3LoginColors.textSecondary, lineHeight: 20 },
+  continueButton: {
+    marginTop: 'auto',
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: M3LoginColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  continueButtonDisabled: { opacity: 0.5 },
+  continueText: { color: M3LoginColors.onPrimary, fontSize: 16, fontWeight: '700' },
+  centerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: M3LoginColors.background },
+  stateText: { marginTop: 10, color: M3LoginColors.textSecondary, textAlign: 'center', fontSize: 14 },
+  errorTitle: { fontSize: 20, fontWeight: '700', color: M3LoginColors.textPrimary, marginBottom: 2 },
+  retryButton: { marginTop: 16, backgroundColor: M3LoginColors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 },
+  retryText: { color: M3LoginColors.onPrimary, fontWeight: '600' },
 });

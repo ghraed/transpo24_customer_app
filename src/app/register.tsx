@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { getApiBaseUrl } from '@/config/backend';
+import { M3LoginColors } from '@/constants/theme';
 
 interface RegisterRequest {
   name: string;
@@ -89,51 +90,65 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
+      <View style={styles.backgroundAccent} />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Full name"
-        autoCapitalize="words"
-        value={name}
-        onChangeText={setName}
-      />
+      <View style={styles.card}>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Join Transpo24 to start making requests</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Full name"
+            placeholderTextColor={M3LoginColors.textTertiary}
+            autoCapitalize="words"
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
 
-      <TextInput
-        style={[styles.input, styles.passwordInput]}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor={M3LoginColors.textTertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
 
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={M3LoginColors.textTertiary}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+        </View>
 
-      <Pressable
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={onRegisterPress}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Register</Text>
-        )}
-      </Pressable>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-      <Link href="/" style={styles.linkText}>
-        Already have an account? Login
-      </Link>
+        <Pressable
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={onRegisterPress}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={M3LoginColors.onPrimary} />
+          ) : (
+            <Text style={styles.buttonText}>Create Account</Text>
+          )}
+        </Pressable>
+
+        <Link href="/" style={styles.linkText}>
+          Already have an account? Sign in
+        </Link>
+      </View>
     </View>
   );
 }
@@ -143,50 +158,79 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: M3LoginColors.background,
+    overflow: 'hidden',
+  },
+  backgroundAccent: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '100%',
+    height: '35%',
+    backgroundColor: M3LoginColors.primaryContainer,
+    opacity: 0.06,
+  },
+  card: {
+    backgroundColor: M3LoginColors.surface,
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: M3LoginColors.outlineVariant,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
-    marginBottom: 20,
-    color: '#111111',
+    marginBottom: 8,
+    color: M3LoginColors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: M3LoginColors.textSecondary,
+    marginBottom: 24,
+  },
+  inputWrapper: {
+    borderWidth: 1,
+    borderColor: M3LoginColors.outline,
+    borderRadius: 16,
+    marginBottom: 12,
+    backgroundColor: M3LoginColors.surfaceContainer,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 12,
-    backgroundColor: '#ffffff',
-  },
-  passwordInput: {
-    color: '#000000',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: M3LoginColors.textPrimary,
   },
   button: {
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#1a73e8',
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#fff',
+    color: M3LoginColors.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   linkText: {
     marginTop: 16,
-    color: '#1a73e8',
+    color: M3LoginColors.primary,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   errorText: {
-    color: '#d93025',
+    color: M3LoginColors.error,
     marginBottom: 8,
+    fontSize: 14,
   },
 });

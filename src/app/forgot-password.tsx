@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { getApiBaseUrl } from '@/config/backend';
+import { M3LoginColors } from '@/constants/theme';
 
 interface ForgotPasswordRequest {
   email: string;
@@ -72,37 +73,44 @@ export default function ForgotPasswordScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Reset Password</Text>
-      <Text style={styles.subtitle}>Enter your email to receive a password reset link.</Text>
+      <View style={styles.backgroundAccent} />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
+      <View style={styles.card}>
+        <Text style={styles.title}>Reset Password</Text>
+        <Text style={styles.subtitle}>Enter your email to receive a password reset link.</Text>
 
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
-      {!!successMessage && <Text style={styles.successText}>{successMessage}</Text>}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor={M3LoginColors.textTertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
 
-      <Pressable
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={onResetPress}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Send Reset Link</Text>
-        )}
-      </Pressable>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        {!!successMessage && <Text style={styles.successText}>{successMessage}</Text>}
 
-      <Link href="/" style={styles.linkText}>
-        Back to Login
-      </Link>
+        <Pressable
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={onResetPress}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={M3LoginColors.onPrimary} />
+          ) : (
+            <Text style={styles.buttonText}>Send Reset Link</Text>
+          )}
+        </Pressable>
+
+        <Link href="/" style={styles.linkText}>
+          Back to Sign in
+        </Link>
+      </View>
     </View>
   );
 }
@@ -112,56 +120,84 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: M3LoginColors.background,
+    overflow: 'hidden',
+  },
+  backgroundAccent: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '100%',
+    height: '35%',
+    backgroundColor: M3LoginColors.primaryContainer,
+    opacity: 0.06,
+  },
+  card: {
+    backgroundColor: M3LoginColors.surface,
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: M3LoginColors.outlineVariant,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    color: '#111111',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#555555',
-    marginBottom: 16,
+    fontSize: 15,
+    color: M3LoginColors.textSecondary,
+    marginBottom: 24,
+  },
+  inputWrapper: {
+    borderWidth: 1,
+    borderColor: M3LoginColors.outline,
+    borderRadius: 16,
+    marginBottom: 12,
+    backgroundColor: M3LoginColors.surfaceContainer,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 12,
-    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: M3LoginColors.textPrimary,
   },
   button: {
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#1a73e8',
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#fff',
+    color: M3LoginColors.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   linkText: {
     marginTop: 16,
-    color: '#1a73e8',
+    color: M3LoginColors.primary,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   errorText: {
-    color: '#d93025',
+    color: M3LoginColors.error,
     marginBottom: 8,
+    fontSize: 14,
   },
   successText: {
     color: '#188038',
     marginBottom: 8,
+    fontSize: 14,
   },
 });

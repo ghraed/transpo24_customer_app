@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
+import { M3LoginColors } from '@/constants/theme';
 import { getCustomerHome } from '@/lib/api';
 import { clearAccessToken } from '@/lib/auth-token';
 import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';

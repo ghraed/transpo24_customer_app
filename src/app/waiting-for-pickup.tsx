@@ -9,6 +9,7 @@ import {
   NativeMarker,
 } from '@/components/native-maps';
 import { ChatEntryButton } from '@/components/chat-entry-button';
+import { M3LoginColors } from '@/constants/theme';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -302,41 +303,41 @@ export default function WaitingForPickupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: M3LoginColors.background },
   map: { flex: 1 },
   bottomCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: M3LoginColors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: M3LoginColors.outlineVariant,
     padding: 16,
     gap: 8,
   },
-  title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
-  statusText: { color: '#1E293B', fontWeight: '600' },
-  helperText: { color: '#475569' },
-  infoText: { color: '#1D4ED8', fontWeight: '600' },
-  errorText: { color: '#B91C1C' },
+  title: { fontSize: 20, fontWeight: '700', color: M3LoginColors.textPrimary },
+  statusText: { color: M3LoginColors.textPrimary, fontWeight: '600' },
+  helperText: { color: M3LoginColors.textSecondary },
+  infoText: { color: M3LoginColors.primary, fontWeight: '600' },
+  errorText: { color: M3LoginColors.error },
   centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   infoCard: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+    backgroundColor: M3LoginColors.primaryContainer,
+    borderColor: M3LoginColors.outline,
     borderWidth: 1,
     borderRadius: 10,
     padding: 10,
     gap: 4,
   },
-  infoTitle: { color: '#1E3A8A', fontWeight: '700' },
+  infoTitle: { color: M3LoginColors.primary, fontWeight: '700' },
   secondaryButton: {
     minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: M3LoginColors.outline,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
   },
-  secondaryButtonText: { color: '#1E293B', fontWeight: '600' },
+  secondaryButtonText: { color: M3LoginColors.textPrimary, fontWeight: '600' },
 });

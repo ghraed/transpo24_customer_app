@@ -5,8 +5,7 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { getAccessToken } from '@/lib/auth-token';
-import { initializeNotifications } from '@/notifications/registerPushNotifications';
-import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
+import { initializeNotifications , registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
 import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
 
 export default function RootLayout() {

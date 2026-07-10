@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import { M3LoginColors } from '@/constants/theme';
+import { M3Styles } from '@/lib/m3-styles';
 import {
   createFurnitureTransportRequest,
   createGoodsTransportRequest,
@@ -1113,7 +1115,7 @@ export default function SubmitRequestScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: M3LoginColors.background,
   },
   content: {
     paddingHorizontal: 16,
@@ -1127,32 +1129,32 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   backButtonText: {
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
     fontWeight: '600',
     fontSize: 13,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
     marginTop: 4,
     fontSize: 15,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   section: {
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     borderWidth: 1,
-    borderColor: '#e4e7ec',
+    borderColor: M3LoginColors.outlineVariant,
     borderRadius: 12,
     padding: 12,
     gap: 6,
@@ -1165,16 +1167,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   editText: {
-    color: '#1a73e8',
+    color: M3LoginColors.primary,
     fontWeight: '700',
     fontSize: 13,
   },
   value: {
     fontSize: 14,
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
   },
   photosRow: {
     gap: 8,
@@ -1183,43 +1185,43 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: M3LoginColors.outlineVariant,
   },
   noteInput: {
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 10,
     minHeight: 84,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     paddingHorizontal: 12,
     paddingTop: 10,
     textAlignVertical: 'top',
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
     fontSize: 14,
   },
   helperText: {
     fontSize: 13,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   errorCard: {
     borderWidth: 1,
-    borderColor: '#fecdca',
-    backgroundColor: '#fef3f2',
+    borderColor: M3LoginColors.error,
+    backgroundColor: M3LoginColors.errorContainer,
     borderRadius: 10,
     padding: 10,
     gap: 4,
   },
   errorText: {
-    color: '#b42318',
+    color: M3LoginColors.error,
     fontSize: 12,
   },
   progressText: {
-    color: '#0b57d0',
+    color: M3LoginColors.primary,
     fontWeight: '600',
     fontSize: 13,
   },
   successText: {
-    color: '#027a48',
+    color: M3LoginColors.primary,
     fontWeight: '600',
     fontSize: 13,
   },
@@ -1227,7 +1229,7 @@ const styles = StyleSheet.create({
     margin: 16,
     height: 52,
     borderRadius: 12,
-    backgroundColor: '#1a73e8',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1235,7 +1237,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   submitText: {
-    color: '#ffffff',
+    color: M3LoginColors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },

@@ -14,6 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getApiBaseUrl } from '@/config/backend';
+import { M3LoginColors } from '@/constants/theme';
+import { M3Styles } from '@/lib/m3-styles';
 import { getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
 
@@ -164,16 +166,16 @@ export default function CustomerTripDeliveredScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: M3LoginColors.background,
   },
   content: {
     padding: 20,
     gap: 12,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: M3LoginColors.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: M3LoginColors.outlineVariant,
     borderRadius: 12,
     padding: 16,
     gap: 8,
@@ -181,18 +183,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   meta: {
-    color: '#475569',
+    color: M3LoginColors.textSecondary,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -206,17 +208,17 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 12,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: M3LoginColors.outlineVariant,
   },
   photoFallback: {
     width: '100%',
     height: 220,
     borderRadius: 12,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: M3LoginColors.outlineVariant,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    backgroundColor: 'rgba(28, 27, 31, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -229,29 +231,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
     minHeight: 46,
     borderRadius: 10,
-    backgroundColor: '#2563EB',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: M3LoginColors.onPrimary,
     fontWeight: '700',
   },
   secondaryButton: {
     minHeight: 46,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
     fontWeight: '600',
   },
   errorText: {
-    color: '#DC2626',
+    color: M3LoginColors.error,
     textAlign: 'center',
   },
 });

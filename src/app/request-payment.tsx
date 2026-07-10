@@ -19,6 +19,8 @@ import {
   PlatformPay,
 } from '@stripe/stripe-react-native';
 
+import { M3LoginColors } from '@/constants/theme';
+import { M3Styles } from '@/lib/m3-styles';
 import {
   cancelPaymentHold,
   confirmDriverOffer,
@@ -613,7 +615,7 @@ export default function RequestPaymentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: M3LoginColors.background,
   },
   centeredContainer: {
     flex: 1,
@@ -621,7 +623,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: M3LoginColors.background,
   },
   content: {
     padding: 16,
@@ -629,67 +631,67 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: M3LoginColors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: M3LoginColors.outlineVariant,
     padding: 16,
     gap: 6,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
-    color: '#475569',
+    color: M3LoginColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
     marginBottom: 4,
   },
   label: {
     marginTop: 8,
-    color: '#64748B',
+    color: M3LoginColors.textSecondary,
     fontSize: 12,
     fontWeight: '600',
   },
   value: {
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
     fontSize: 15,
   },
   helperText: {
-    color: '#475569',
+    color: M3LoginColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
   methodCard: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: M3LoginColors.outline,
     borderRadius: 12,
     padding: 12,
     marginTop: 8,
     gap: 4,
   },
   methodCardSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primaryContainer,
   },
   methodTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   methodDescription: {
-    color: '#475569',
+    color: M3LoginColors.textSecondary,
     fontSize: 13,
   },
   methodHint: {
-    color: '#B45309',
+    color: M3LoginColors.textSecondary,
     fontSize: 12,
   },
   cardField: {
@@ -706,7 +708,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     minHeight: 48,
     borderRadius: 12,
-    backgroundColor: '#2563EB',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -715,8 +717,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -725,17 +727,17 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: M3LoginColors.onPrimary,
     fontWeight: '700',
     fontSize: 15,
   },
   secondaryButtonText: {
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
     fontWeight: '600',
     fontSize: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: M3LoginColors.error,
     fontSize: 14,
     textAlign: 'center',
   },

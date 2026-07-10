@@ -26,6 +26,8 @@ import {
   createCustomerRequest,
   updatePickupLocation,
 } from '@/lib/api';
+import { M3LoginColors } from '@/constants/theme';
+import { M3Styles } from '@/lib/m3-styles';
 import {
   resolvePlaceFromQuery,
   resolvePlaceSuggestion,
@@ -770,7 +772,7 @@ export default function PickupLocationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: M3LoginColors.background,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 18,
@@ -781,32 +783,32 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   backButtonText: {
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
     fontWeight: '600',
     fontSize: 13,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
     marginTop: 4,
     fontSize: 15,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   searchContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     borderWidth: 1,
-    borderColor: '#e4e7ec',
+    borderColor: M3LoginColors.outline,
     borderRadius: 12,
     padding: 10,
     marginBottom: 10,
@@ -814,17 +816,17 @@ const styles = StyleSheet.create({
   searchInput: {
     height: 44,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 10,
     paddingHorizontal: 12,
     fontSize: 15,
-    color: '#101828',
-    backgroundColor: '#ffffff',
+    color: M3LoginColors.textPrimary,
+    backgroundColor: M3LoginColors.surface,
   },
   searchHint: {
     marginTop: 6,
     fontSize: 12,
-    color: '#667085',
+    color: M3LoginColors.textTertiary,
   },
   searchSpinner: {
     marginTop: 8,
@@ -833,20 +835,20 @@ const styles = StyleSheet.create({
   suggestionsList: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   suggestionItem: {
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eaecf0',
+    borderTopColor: M3LoginColors.outlineVariant,
   },
   suggestionText: {
     fontSize: 14,
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   locationButton: {
     marginTop: 10,
@@ -854,7 +856,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#bfdbfe',
-    backgroundColor: '#eff6ff',
+    backgroundColor: M3LoginColors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -871,8 +873,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e4e7ec',
-    backgroundColor: '#ffffff',
+    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.surface,
   },
   map: {
     flex: 1,
@@ -894,7 +896,7 @@ const styles = StyleSheet.create({
   mapFallbackText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
     textAlign: 'center',
   },
   mapOverlay: {
@@ -910,7 +912,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   mapOverlayText: {
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -922,31 +924,31 @@ const styles = StyleSheet.create({
   bottomCard: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     padding: 12,
   },
   bottomTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
   },
   bottomDetails: {
     marginTop: 4,
     fontSize: 13,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   errorText: {
     marginTop: 10,
-    color: '#b42318',
+    color: M3LoginColors.error,
     fontSize: 13,
   },
   continueButton: {
     marginTop: 12,
     height: 52,
     borderRadius: 12,
-    backgroundColor: '#1a73e8',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -954,7 +956,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   continueText: {
-    color: '#ffffff',
+    color: M3LoginColors.surface,
     fontSize: 16,
     fontWeight: '700',
   },

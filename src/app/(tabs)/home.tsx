@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { M3LoginColors } from '@/constants/theme';
 import { getCustomerHome } from '@/lib/api';
 import type { CustomerHomeResponse } from '@/types/customer-request';
 

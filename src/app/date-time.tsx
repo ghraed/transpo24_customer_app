@@ -20,6 +20,8 @@ import {
   updateScheduleAndItemDetails,
   uploadRequestPhotos,
 } from '@/lib/api';
+import { M3LoginColors } from '@/constants/theme';
+import { M3Styles } from '@/lib/m3-styles';
 import type {
   DateTimeRouteParams,
   ItemCondition,
@@ -59,7 +61,7 @@ const MAX_PHOTOS = 8;
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-const ITEM_TYPE_OPTIONS: Array<{ label: string; value: ItemType }> = [
+const ITEM_TYPE_OPTIONS: { label: string; value: ItemType }[] = [
   { label: 'Vehicle', value: 'VEHICLE' },
   { label: 'Motorcycle', value: 'MOTORCYCLE' },
   { label: 'Goods', value: 'GOODS' },
@@ -67,7 +69,7 @@ const ITEM_TYPE_OPTIONS: Array<{ label: string; value: ItemType }> = [
   { label: 'Other', value: 'OTHER' },
 ];
 
-const ITEM_CONDITION_OPTIONS: Array<{ label: string; value: ItemCondition }> = [
+const ITEM_CONDITION_OPTIONS: { label: string; value: ItemCondition }[] = [
   { label: 'Working', value: 'WORKING' },
   { label: 'Not working', value: 'NOT_WORKING' },
   { label: 'New', value: 'NEW' },
@@ -208,7 +210,7 @@ export default function DateTimeScreen() {
       }
     }
 
-    const numericFields: Array<{ label: string; value: string | undefined }> = [
+    const numericFields: { label: string; value: string | undefined }[] = [
       { label: 'Weight (kg)', value: form.itemWeightKg },
       { label: 'Length (cm)', value: form.itemLengthCm },
       { label: 'Width (cm)', value: form.itemWidthCm },
@@ -746,7 +748,7 @@ export default function DateTimeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: M3LoginColors.background,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 18,
@@ -761,32 +763,32 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   backButtonText: {
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
     fontWeight: '600',
     fontSize: 13,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
     marginTop: 4,
     fontSize: 15,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   section: {
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     borderWidth: 1,
-    borderColor: '#e4e7ec',
+    borderColor: M3LoginColors.outline,
     borderRadius: 12,
     padding: 12,
     gap: 10,
@@ -794,7 +796,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -802,23 +804,23 @@ const styles = StyleSheet.create({
   },
   optionChip: {
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   optionChipActive: {
-    borderColor: '#1a73e8',
-    backgroundColor: '#eef5ff',
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primaryContainer,
   },
   optionChipText: {
-    color: '#344054',
+    color: M3LoginColors.textPrimary,
     fontSize: 13,
     fontWeight: '600',
   },
   optionChipTextActive: {
-    color: '#0b57d0',
+    color: M3LoginColors.primary,
   },
   datetimeContainer: {
     flexDirection: 'row',
@@ -827,29 +829,29 @@ const styles = StyleSheet.create({
   pickerButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 10,
   },
   pickerButtonLabel: {
     fontSize: 12,
-    color: '#667085',
+    color: M3LoginColors.textTertiary,
   },
   pickerButtonValue: {
     marginTop: 2,
     fontSize: 14,
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
     fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     height: 46,
     paddingHorizontal: 12,
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
     fontSize: 14,
   },
   textarea: {
@@ -871,7 +873,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#344054',
+    color: M3LoginColors.textPrimary,
   },
   optionsWrap: {
     flexDirection: 'row',
@@ -885,39 +887,39 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 14,
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
     fontWeight: '600',
   },
   helperText: {
     fontSize: 12,
-    color: '#667085',
+    color: M3LoginColors.textTertiary,
   },
   photoCounter: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   actionButton: {
-    backgroundColor: '#1a73e8',
+    backgroundColor: M3LoginColors.primary,
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
   },
   actionButtonSecondary: {
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     borderWidth: 1,
-    borderColor: '#1a73e8',
+    borderColor: M3LoginColors.primary,
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
   },
   actionButtonText: {
-    color: '#ffffff',
+    color: M3LoginColors.surface,
     fontWeight: '700',
     fontSize: 14,
   },
   actionButtonSecondaryText: {
-    color: '#1a73e8',
+    color: M3LoginColors.primary,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -934,19 +936,19 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: 10,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: M3LoginColors.outlineVariant,
   },
   removePhotoButton: {
     marginTop: 6,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#fca5a5',
+    borderColor: M3LoginColors.error,
     borderRadius: 8,
     paddingVertical: 4,
   },
   removePhotoText: {
     fontSize: 12,
-    color: '#b42318',
+    color: M3LoginColors.error,
     fontWeight: '600',
   },
   validationCard: {
@@ -958,23 +960,23 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   validationText: {
-    color: '#b42318',
+    color: M3LoginColors.error,
     fontSize: 12,
   },
   progressText: {
     fontSize: 13,
-    color: '#0b57d0',
+    color: M3LoginColors.primary,
     fontWeight: '600',
   },
   errorText: {
-    color: '#b42318',
+    color: M3LoginColors.error,
     fontSize: 13,
   },
   continueButton: {
     marginTop: 8,
     height: 52,
     borderRadius: 12,
-    backgroundColor: '#1a73e8',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -982,7 +984,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   continueText: {
-    color: '#ffffff',
+    color: M3LoginColors.surface,
     fontSize: 16,
     fontWeight: '700',
   },

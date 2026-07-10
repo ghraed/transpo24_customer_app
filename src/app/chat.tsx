@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { M3LoginColors } from '@/constants/theme';
 import {
   getChatRoomByTransportRequestId,
   getChatRoomMessages,
@@ -456,15 +457,15 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: M3LoginColors.background,
   },
   keyboardContainer: {
     flex: 1,
   },
   headerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: M3LoginColors.surface,
     borderBottomWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: M3LoginColors.outlineVariant,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 6,
@@ -472,16 +473,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: M3LoginColors.textSecondary,
   },
   statusPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
+    backgroundColor: M3LoginColors.primaryContainer,
+    color: M3LoginColors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
   },
   socketText: {
     fontSize: 12,
-    color: '#475569',
+    color: M3LoginColors.textSecondary,
   },
   centeredContainer: {
     flex: 1,
@@ -499,7 +500,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mutedText: {
-    color: '#64748B',
+    color: M3LoginColors.textSecondary,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -507,13 +508,13 @@ const styles = StyleSheet.create({
     minHeight: 42,
     minWidth: 120,
     borderRadius: 10,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: M3LoginColors.onPrimary,
     fontWeight: '700',
   },
   messagesContent: {
@@ -542,28 +543,28 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   clientBubble: {
-    backgroundColor: '#1D4ED8',
+    backgroundColor: M3LoginColors.primary,
     borderBottomRightRadius: 4,
   },
   driverBubble: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: M3LoginColors.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: M3LoginColors.outlineVariant,
     borderBottomLeftRadius: 4,
   },
   messageText: {
     fontSize: 15,
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   clientMessageText: {
-    color: '#FFFFFF',
+    color: M3LoginColors.onPrimary,
   },
   messageTime: {
     fontSize: 11,
-    color: '#64748B',
+    color: M3LoginColors.textSecondary,
   },
   clientMessageTime: {
-    color: '#DBEAFE',
+    color: M3LoginColors.primaryContainer,
   },
   emptyState: {
     alignItems: 'center',
@@ -572,12 +573,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   inputPanel: {
     borderTopWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: M3LoginColors.outlineVariant,
+    backgroundColor: M3LoginColors.surface,
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 12,
@@ -594,16 +595,16 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#0F172A',
+    color: M3LoginColors.textPrimary,
   },
   sendButton: {
     minHeight: 44,
     borderRadius: 10,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -612,16 +613,16 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonText: {
-    color: '#FFFFFF',
+    color: M3LoginColors.onPrimary,
     fontWeight: '700',
     fontSize: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: M3LoginColors.error,
     textAlign: 'center',
   },
   closedText: {
-    color: '#92400E',
+    color: M3LoginColors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
   },

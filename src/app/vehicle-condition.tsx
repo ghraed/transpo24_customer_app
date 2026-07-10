@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-
+import { M3LoginColors } from '@/constants/theme';
+import { M3Styles } from '@/lib/m3-styles';
 import type { VehicleConditionFormValues, VehicleConditionOption } from '@/types/vehicle-condition';
 
 type RouteParams = {
@@ -136,31 +137,31 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: '#f7f9fc',
+    backgroundColor: M3LoginColors.background,
     gap: 12,
   },
   backButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
   },
   backButtonText: {
-    color: '#334155',
+    color: M3LoginColors.textSecondary,
     fontWeight: '600',
     fontSize: 13,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   cardList: {
     gap: 10,
@@ -169,34 +170,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 14,
     padding: 14,
   },
   optionCardSelected: {
-    borderColor: '#1a73e8',
-    backgroundColor: '#eef5ff',
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primaryContainer,
   },
   radio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#98a2b3',
+    borderColor: M3LoginColors.outline,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
   radioSelected: {
-    borderColor: '#1a73e8',
+    borderColor: M3LoginColors.primary,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#1a73e8',
+    backgroundColor: M3LoginColors.primary,
   },
   optionContent: {
     flex: 1,
@@ -205,37 +206,37 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#101828',
+    color: M3LoginColors.textPrimary,
   },
   optionLabelSelected: {
-    color: '#0b57d0',
+    color: M3LoginColors.primary,
   },
   optionDescription: {
     fontSize: 14,
-    color: '#475467',
+    color: M3LoginColors.textSecondary,
   },
   notesLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
   },
   notesInput: {
     minHeight: 110,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: M3LoginColors.outline,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: M3LoginColors.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#111827',
+    color: M3LoginColors.textPrimary,
   },
   notesCount: {
     alignSelf: 'flex-end',
     fontSize: 12,
-    color: '#667085',
+    color: M3LoginColors.textTertiary,
   },
   errorText: {
-    color: '#b42318',
+    color: M3LoginColors.error,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -243,12 +244,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     height: 52,
     borderRadius: 12,
-    backgroundColor: '#1a73e8',
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   continueText: {
-    color: '#ffffff',
+    color: M3LoginColors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
