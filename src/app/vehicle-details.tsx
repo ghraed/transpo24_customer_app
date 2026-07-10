@@ -22,16 +22,23 @@ import {
   getVehicleYears,
 } from '@/lib/api';
 import { M3LoginColors } from '@/constants/theme';
-import { M3Styles } from '@/lib/m3-styles';
 import type { ItemType, LocalPhotoAsset, UpdateScheduleAndItemDetailsPayload } from '@/types/customer-request';
 import type {
   VehicleCatalogBrand,
   VehicleCatalogModel,
   VehicleCatalogSeries,
-  VehicleDetailsPayload,
   VehicleCatalogYearOption,
   VehicleDetailsFormValues,
+  VehicleDetailsPayload,
 } from '@/types/vehicle';
+import {
+  getVinValidationMessage,
+  INVALID_VIN_MESSAGE,
+  normalizeVinInput,
+  sanitizeVin,
+  VIN_DECODE_EMPTY_RESULT_MESSAGE,
+  VIN_DECODE_NETWORK_ERROR_MESSAGE,
+} from '@/utils/vin';
 
 type RouteParams = {
   serviceId?: string;
@@ -82,6 +89,28 @@ function parsePositiveInteger(value: string | undefined): number | undefined {
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isInteger(parsed) ? parsed : undefined;
+}
+
+function hasDecodedVehicleData(input: {
+  make?: string;
+  model?: string;
+  year?: string;
+  trim?: string;
+  bodyClass?: string;
+  vehicleType?: string;
+  manufactureYear?: number;
+  estimatedWeightKg?: number;
+}): boolean {
+  return Boolean(
+    input.make ||
+      input.model ||
+      input.year ||
+      input.trim ||
+      input.bodyClass ||
+      input.vehicleType ||
+      input.manufactureYear ||
+      input.estimatedWeightKg,
+  );
 }
 
 function inferMimeType(uri: string): string | undefined {
@@ -356,13 +385,20 @@ export default function VehicleDetailsScreen() {
     [bodyTypeSearch],
   );
 
+  const normalizedVin = useMemo(() => sanitizeVin(form.vin ?? ''), [form.vin]);
+  const vinValidationMessage = useMemo(
+    () => (normalizedVin ? getVinValidationMessage(normalizedVin) : null),
+    [normalizedVin],
+  );
+  const canDecodeVin = normalizedVin.length > 0 && !vinValidationMessage && !isDecodingVin;
+
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
     const nowYear = new Date().getFullYear();
-    if (form.vin?.trim()) {
-      const vinLength = form.vin.trim().length;
-      if (vinLength < 6 || vinLength > 32) {
-        errors.push('VIN/chassis number must be between 6 and 32 characters.');
+    if (normalizedVin) {
+      const vinError = getVinValidationMessage(normalizedVin);
+      if (vinError) {
+        errors.push(vinError);
       }
     }
 
@@ -411,18 +447,18 @@ export default function VehicleDetailsScreen() {
     }
 
     return errors;
-  }, [form, isVehicleTransport, requestForm.isImmediate, requestForm.loadingWorkersCount, requestForm.requiresLoadingHelp, requestForm.scheduledPickupAt, selectedPhotos]);
+  }, [form, isVehicleTransport, normalizedVin, requestForm.isImmediate, requestForm.loadingWorkersCount, requestForm.requiresLoadingHelp, requestForm.scheduledPickupAt, selectedPhotos]);
 
   const decodeVin = useCallback(async () => {
-    const vin = form.vin?.trim();
+    const vin = sanitizeVin(form.vin ?? '');
     if (!vin) {
-      setFallbackMessage('');
+      setFallbackMessage(INVALID_VIN_MESSAGE);
       return;
     }
 
-    const vinLength = vin.length;
-    if (vinLength < 6 || vinLength > 32) {
-      setFallbackMessage('VIN/chassis number must be between 6 and 32 characters.');
+    const vinError = getVinValidationMessage(vin);
+    if (vinError) {
+      setFallbackMessage(vinError);
       return;
     }
 
@@ -431,151 +467,136 @@ export default function VehicleDetailsScreen() {
     setErrorMessage('');
     setOpenDropdown(null);
 
-    setForm((prev) => ({
-      ...prev,
-      brandId: undefined,
-      brandName: '',
-      modelId: undefined,
-      modelName: '',
-      seriesId: undefined,
-      seriesName: '',
-      variantName: '',
-      manufactureYear: undefined,
-      estimatedWeightKg: undefined,
-      bodyType: '',
-      source: 'MANUAL',
-    }));
-    setModels([]);
-    setSeries([]);
-    setYears([]);
-
     try {
       const decoded = await decodeVehicleVin(vin);
-      const hasUsefulData = Boolean(decoded.brand || decoded.model || decoded.manufactureYear || decoded.estimatedWeightKg);
+      const hasUsefulData = hasDecodedVehicleData(decoded);
 
       if (!hasUsefulData) {
-        setFallbackMessage('We could not fetch vehicle details from the VIN. Please select the vehicle details manually.');
+        setFallbackMessage(VIN_DECODE_EMPTY_RESULT_MESSAGE);
         return;
+      }
+
+      const shouldResolveBrand = !form.brandName.trim() && Boolean(decoded.make);
+      const shouldResolveModel = !form.modelName.trim() && Boolean(decoded.model);
+      const shouldResolveSeries = !form.seriesName?.trim() && Boolean(decoded.series ?? decoded.trim);
+
+      let matchedBrand: VehicleCatalogBrand | undefined;
+      let loadedModels: VehicleCatalogModel[] = [];
+      let matchedModel: VehicleCatalogModel | undefined;
+      let loadedSeries: VehicleCatalogSeries[] = [];
+      let matchedSeries: VehicleCatalogSeries | undefined;
+      let loadedYears: VehicleCatalogYearOption[] = [];
+
+      if (shouldResolveBrand && decoded.make) {
+        const decodedBrand = normalizeForMatch(decoded.make);
+        matchedBrand = brands.find(
+          (brand) => normalizeForMatch(brand.name) === decodedBrand,
+        );
+      }
+
+      if (matchedBrand) {
+        await pickBrand(matchedBrand);
+        loadedModels = await getVehicleModels(matchedBrand.id);
+        setModels(loadedModels);
+      }
+
+      if (shouldResolveModel && decoded.model && loadedModels.length > 0) {
+        const decodedModel = normalizeForMatch(decoded.model);
+        matchedModel =
+          loadedModels.find(
+            (model) => normalizeForMatch(model.name) === decodedModel,
+          ) ??
+          loadedModels.find((model) =>
+            normalizeForMatch(model.name).includes(decodedModel),
+          ) ??
+          loadedModels.find((model) =>
+            decodedModel.includes(normalizeForMatch(model.name)),
+          );
+      }
+
+      if (matchedModel) {
+        await pickModel(matchedModel);
+        loadedSeries = await getVehicleSeries(matchedModel.id);
+        setSeries(loadedSeries);
+      }
+
+      if (shouldResolveSeries && loadedSeries.length > 0) {
+        const decodedSeriesRaw = decoded.series ?? decoded.trim ?? '';
+        const decodedSeries = normalizeForMatch(decodedSeriesRaw);
+        matchedSeries =
+          loadedSeries.find(
+            (seriesItem) =>
+              normalizeForMatch(seriesItem.name) === decodedSeries ||
+              normalizeForMatch(seriesItem.variantName ?? '') === decodedSeries,
+          ) ??
+          loadedSeries.find(
+            (seriesItem) =>
+              normalizeForMatch(seriesItem.name).includes(decodedSeries) ||
+              normalizeForMatch(seriesItem.variantName ?? '').includes(decodedSeries),
+          ) ??
+          loadedSeries.find(
+            (seriesItem) =>
+              decodedSeries.includes(normalizeForMatch(seriesItem.name)) ||
+              decodedSeries.includes(normalizeForMatch(seriesItem.variantName ?? '')),
+          );
+      }
+
+      if (matchedSeries) {
+        await pickSeries(matchedSeries);
+        loadedYears = await getVehicleYears(matchedSeries.id);
+        setYears(loadedYears);
       }
 
       setForm((prev) => ({
         ...prev,
         vin,
-        brandName: decoded.brand ?? prev.brandName,
-        modelName: decoded.model ?? prev.modelName,
-        seriesName: decoded.series ?? prev.seriesName,
-        variantName: decoded.variant ?? prev.variantName,
-        manufactureYear: decoded.manufactureYear ?? prev.manufactureYear,
+        brandId: prev.brandId ?? matchedBrand?.id,
+        brandName: prev.brandName.trim() ? prev.brandName : decoded.make ?? prev.brandName,
+        modelId: prev.modelId ?? matchedModel?.id,
+        modelName: prev.modelName.trim() ? prev.modelName : decoded.model ?? prev.modelName,
+        seriesId: prev.seriesId ?? matchedSeries?.id,
+        seriesName:
+          prev.seriesName?.trim()
+            ? prev.seriesName
+            : matchedSeries?.name ?? decoded.series ?? prev.seriesName,
+        variantName:
+          prev.variantName?.trim()
+            ? prev.variantName
+            : decoded.trim ?? matchedSeries?.variantName ?? prev.variantName,
+        manufactureYear:
+          prev.manufactureYear ??
+          (decoded.manufactureYear &&
+          loadedYears.length > 0 &&
+          !loadedYears.some((yearOption) => yearOption.year === decoded.manufactureYear)
+            ? undefined
+            : decoded.manufactureYear),
         estimatedWeightKg:
-          decoded.estimatedWeightKg && decoded.estimatedWeightKg > 0
-            ? decoded.estimatedWeightKg
-            : prev.estimatedWeightKg,
-        bodyType: decoded.bodyType ?? prev.bodyType,
+          prev.estimatedWeightKg && prev.estimatedWeightKg > 0
+            ? prev.estimatedWeightKg
+            : decoded.estimatedWeightKg && decoded.estimatedWeightKg > 0
+              ? decoded.estimatedWeightKg
+              : matchedSeries?.estimatedWeightKg ?? prev.estimatedWeightKg,
+        bodyType:
+          prev.bodyType?.trim()
+            ? prev.bodyType
+            : decoded.bodyClass ?? decoded.bodyType ?? matchedSeries?.bodyType ?? prev.bodyType,
         source: 'VIN_API',
       }));
-
-      if (decoded.brand) {
-        const decodedBrand = normalizeForMatch(decoded.brand);
-        const matchedBrand = brands.find(
-          (brand) => normalizeForMatch(brand.name) === decodedBrand,
-        );
-        if (matchedBrand) {
-          await pickBrand(matchedBrand);
-
-          if (decoded.model) {
-            const decodedModel = normalizeForMatch(decoded.model);
-            const loadedModels = await getVehicleModels(matchedBrand.id);
-            setModels(loadedModels);
-            const matchedModel =
-              loadedModels.find(
-                (model) => normalizeForMatch(model.name) === decodedModel,
-              ) ??
-              loadedModels.find((model) =>
-                normalizeForMatch(model.name).includes(decodedModel),
-              ) ??
-              loadedModels.find((model) =>
-                decodedModel.includes(normalizeForMatch(model.name)),
-              );
-            if (matchedModel) {
-              await pickModel(matchedModel);
-              setForm((prev) => ({ ...prev, modelName: matchedModel.name }));
-
-              const decodedSeriesRaw = decoded.series ?? decoded.variant ?? '';
-              if (decodedSeriesRaw) {
-                const decodedSeries = normalizeForMatch(decodedSeriesRaw);
-                const loadedSeries = await getVehicleSeries(matchedModel.id);
-                setSeries(loadedSeries);
-                const matchedSeries =
-                  loadedSeries.find(
-                    (seriesItem) =>
-                      normalizeForMatch(seriesItem.name) === decodedSeries ||
-                      normalizeForMatch(seriesItem.variantName ?? '') === decodedSeries,
-                  ) ??
-                  loadedSeries.find(
-                    (seriesItem) =>
-                      normalizeForMatch(seriesItem.name).includes(decodedSeries) ||
-                      normalizeForMatch(seriesItem.variantName ?? '').includes(decodedSeries),
-                  ) ??
-                  loadedSeries.find(
-                    (seriesItem) =>
-                      decodedSeries.includes(normalizeForMatch(seriesItem.name)) ||
-                      decodedSeries.includes(normalizeForMatch(seriesItem.variantName ?? '')),
-                  );
-                if (matchedSeries) {
-                  await pickSeries(matchedSeries);
-                  setForm((prev) => ({
-                    ...prev,
-                    seriesName: matchedSeries.name,
-                    variantName: decoded.variant ?? matchedSeries.variantName ?? prev.variantName,
-                    bodyType: decoded.bodyType ?? matchedSeries.bodyType ?? prev.bodyType,
-                    estimatedWeightKg:
-                      decoded.estimatedWeightKg && decoded.estimatedWeightKg > 0
-                        ? decoded.estimatedWeightKg
-                        : matchedSeries.estimatedWeightKg ?? prev.estimatedWeightKg,
-                  }));
-
-                  if (decoded.manufactureYear) {
-                    const loadedYears = await getVehicleYears(matchedSeries.id);
-                    setYears(loadedYears);
-                    const matchedYear = loadedYears.find(
-                      (yearOption) => yearOption.year === decoded.manufactureYear,
-                    );
-                    setForm((prev) => ({
-                      ...prev,
-                      manufactureYear: matchedYear?.year ?? decoded.manufactureYear ?? prev.manufactureYear,
-                    }));
-                  }
-                } else if (decoded.manufactureYear) {
-                  setForm((prev) => ({
-                    ...prev,
-                    seriesName: decodedSeriesRaw || prev.seriesName,
-                    variantName: decoded.variant ?? prev.variantName,
-                    manufactureYear: decoded.manufactureYear,
-                  }));
-                } else {
-                  setForm((prev) => ({
-                    ...prev,
-                    seriesName: decodedSeriesRaw || prev.seriesName,
-                    variantName: decoded.variant ?? prev.variantName,
-                  }));
-                }
-              } else if (decoded.manufactureYear) {
-                setForm((prev) => ({ ...prev, manufactureYear: decoded.manufactureYear }));
-              }
-            }
-          }
-        } else if (decoded.manufactureYear) {
-          setForm((prev) => ({ ...prev, manufactureYear: decoded.manufactureYear }));
-        }
-      } else if (decoded.manufactureYear) {
-        setForm((prev) => ({ ...prev, manufactureYear: decoded.manufactureYear }));
-      }
     } catch {
-      setFallbackMessage('We could not fetch vehicle details from the VIN. Please select the vehicle details manually.');
+      setFallbackMessage(VIN_DECODE_NETWORK_ERROR_MESSAGE);
     } finally {
       setIsDecodingVin(false);
     }
-  }, [brands, form.vin, pickBrand, pickModel, pickSeries]);
+  }, [
+    brands,
+    form.brandName,
+    form.modelName,
+    form.seriesName,
+    form.vin,
+    pickBrand,
+    pickModel,
+    pickSeries,
+  ]);
 
   const canContinue = validationErrors.length === 0 && !isDecodingVin;
 
@@ -650,7 +671,7 @@ export default function VehicleDetailsScreen() {
       serviceId,
       serviceKey,
       vehicleDetails: JSON.stringify({
-        vehicleVin: form.vin?.trim() || undefined,
+        vehicleVin: normalizedVin || undefined,
         vehicleBrand: form.brandName.trim(),
         vehicleModel: form.modelName.trim(),
         vehicleSeries: form.seriesName?.trim() || undefined,
@@ -677,7 +698,7 @@ export default function VehicleDetailsScreen() {
             itemBrand: form.brandName.trim(),
             itemModel: form.modelName.trim(),
             itemYear: form.manufactureYear,
-            vehicleVin: form.vin?.trim() || undefined,
+            vehicleVin: normalizedVin || undefined,
             vehicleBrand: form.brandName.trim(),
             vehicleModel: form.modelName.trim(),
             vehicleSeries: form.seriesName?.trim() || undefined,
@@ -701,7 +722,7 @@ export default function VehicleDetailsScreen() {
       pathname: '/vehicle-condition',
       params: nextParams,
     } as unknown as Href);
-  }, [canContinue, form, isVehicleTransport, requestForm, router, selectedPhotos, serviceId, serviceKey, validationErrors]);
+  }, [canContinue, form, isVehicleTransport, normalizedVin, requestForm, router, selectedPhotos, serviceId, serviceKey, validationErrors]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -716,8 +737,12 @@ export default function VehicleDetailsScreen() {
       <View style={styles.vinInputRow}>
         <TextInput
           value={form.vin ?? ''}
-          onChangeText={(value) => setForm((prev) => ({ ...prev, vin: value }))}
-          placeholder="Enter VIN or chassis number"
+          onChangeText={(value) => {
+            setForm((prev) => ({ ...prev, vin: normalizeVinInput(value) }));
+            setFallbackMessage('');
+            setErrorMessage('');
+          }}
+          placeholder="Enter 17-character VIN"
           placeholderTextColor="#98a2b3"
           style={styles.vinInput}
           autoCapitalize="characters"
@@ -751,7 +776,11 @@ export default function VehicleDetailsScreen() {
           </Pressable>
         ) : null}
       </View>
-      <Pressable style={styles.secondaryButton} onPress={() => void decodeVin()} disabled={isDecodingVin}>
+      <Pressable
+        style={[styles.secondaryButton, !canDecodeVin && styles.secondaryButtonDisabled]}
+        onPress={() => void decodeVin()}
+        disabled={!canDecodeVin}
+      >
         {isDecodingVin ? <ActivityIndicator color="#1a73e8" /> : <Text style={styles.secondaryButtonText}>Decode VIN</Text>}
       </Pressable>
 
@@ -1215,6 +1244,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: M3LoginColors.primaryContainer,
+  },
+  secondaryButtonDisabled: {
+    opacity: 0.5,
   },
   secondaryButtonText: {
     color: M3LoginColors.primary,

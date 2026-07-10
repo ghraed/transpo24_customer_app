@@ -34,12 +34,14 @@ import type {
 } from '@/types/customer-request';
 import type { Service } from '@/types/service';
 import type {
+  DecodedVinResult,
   VehicleCatalogBrand,
   VehicleCatalogModel,
   VehicleCatalogSeries,
   VehicleCatalogYearOption,
   VehicleVinDecodeResult,
 } from '@/types/vehicle';
+import { sanitizeVin } from '@/utils/vin';
 
 interface ApiErrorResponse {
   message?: string | string[];
@@ -533,7 +535,8 @@ export async function uploadRequestPhotos(
 }
 
 export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeResult> {
-  const endpoint = `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(vin)}`;
+  const normalizedVin = sanitizeVin(vin);
+  const endpoint = `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(normalizedVin)}`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
@@ -544,22 +547,39 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
   }
 
   const payload = await parseJsonBody<
-    { data?: Partial<VehicleVinDecodeResult> | null } | Partial<VehicleVinDecodeResult>
+    { data?: Partial<DecodedVinResult> | null } | Partial<DecodedVinResult>
   >(response, 'Failed to parse vehicle VIN response.');
-  const data: Partial<VehicleVinDecodeResult> =
+  const data: Partial<DecodedVinResult> =
     payload && typeof payload === 'object' && 'data' in payload
       ? (payload.data ?? {})
-      : (payload as Partial<VehicleVinDecodeResult>);
+      : (payload as Partial<DecodedVinResult>);
   return {
-    vin,
-    brand: data.brand,
+    vin: normalizedVin,
+    make: data.make ?? data.brand,
+    brand: data.brand ?? data.make,
     model: data.model,
+    year: data.year ?? (typeof data.manufactureYear === 'number' ? String(data.manufactureYear) : undefined),
+    trim: data.trim ?? data.variant,
+    vehicleType: data.vehicleType,
+    bodyClass: data.bodyClass ?? data.bodyType,
+    manufacturer: data.manufacturer,
+    plantCountry: data.plantCountry,
+    engineCylinders: data.engineCylinders,
+    displacementL: data.displacementL,
+    fuelTypePrimary: data.fuelTypePrimary,
+    transmissionStyle: data.transmissionStyle,
+    driveType: data.driveType,
+    doors: data.doors,
     series: data.series,
-    variant: data.variant,
-    manufactureYear: data.manufactureYear,
+    variant: data.variant ?? data.trim,
+    manufactureYear:
+      data.manufactureYear ??
+      (data.year && /^\d{4}$/.test(data.year) ? Number(data.year) : undefined),
     estimatedWeightKg: data.estimatedWeightKg,
-    bodyType: data.bodyType,
-    source: 'VIN_API',
+    bodyType: data.bodyType ?? data.bodyClass,
+    errorCode: data.errorCode,
+    errorText: data.errorText,
+    source: 'NHTSA_VPIC',
   };
 }
 

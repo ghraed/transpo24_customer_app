@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { decodeVehicleVin } from '@/lib/api';
 import type {
   LocalPhotoAsset,
   MotorcycleCondition,
@@ -21,8 +22,16 @@ import type {
   MotorcycleType,
   PendingMotorcycleDetailsPayload,
 } from '@/types/customer-request';
+import type { DecodedVinResult } from '@/types/vehicle';
 import { M3LoginColors } from '@/constants/theme';
-import { M3Styles } from '@/lib/m3-styles';
+import {
+  getVinValidationMessage,
+  INVALID_VIN_MESSAGE,
+  normalizeVinInput,
+  sanitizeVin,
+  VIN_DECODE_EMPTY_RESULT_MESSAGE,
+  VIN_DECODE_NETWORK_ERROR_MESSAGE,
+} from '@/utils/vin';
 
 const MAX_PHOTOS = 8;
 
@@ -93,6 +102,13 @@ function SearchableDropdown(props: {
 }
 
 function formatValidationMessage(form: MotorcycleTransportFormData): string | null {
+  if (form.chassisNumber.trim()) {
+    const vinError = getVinValidationMessage(form.chassisNumber);
+    if (vinError) {
+      return vinError;
+    }
+  }
+
   if (!form.motorcycleType) {
     return 'Please select the motorcycle type.';
   }
@@ -162,6 +178,36 @@ function buildDefaultScheduledPickupAt(raw?: string): Date {
   return nextDate;
 }
 
+function hasDecodedMotorcycleData(decoded: DecodedVinResult): boolean {
+  return Boolean(
+    decoded.make ||
+      decoded.model ||
+      decoded.year ||
+      decoded.trim ||
+      decoded.vehicleType ||
+      decoded.bodyClass,
+  );
+}
+
+function resolveMotorcycleType(decoded: DecodedVinResult): MotorcycleType | '' {
+  const hints = [
+    decoded.vehicleType,
+    decoded.bodyClass,
+    decoded.trim,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (hints.includes('scooter')) return 'SCOOTER';
+  if (hints.includes('electric') && hints.includes('motorcycle'))
+    return 'ELECTRIC_MOTORCYCLE';
+  if (hints.includes('cruiser')) return 'CRUISER';
+  if (hints.includes('sport bike') || hints.includes('sportbike')) return 'SPORT_BIKE';
+
+  return '';
+}
+
 export default function MotorcycleDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<MotorcycleDetailsRouteParams>();
@@ -188,14 +234,23 @@ export default function MotorcycleDetailsScreen() {
   }));
   const [selectedPhotos, setSelectedPhotos] = useState<LocalPhotoAsset[]>(pendingMotorcyclePhotoAssets);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [vinMessage, setVinMessage] = useState<string>('');
+  const [decodedVin, setDecodedVin] = useState<DecodedVinResult | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [isPickingPhoto, setIsPickingPhoto] = useState<boolean>(false);
+  const [isDecodingVin, setIsDecodingVin] = useState<boolean>(false);
   const [typeSearch, setTypeSearch] = useState<string>('');
   const [conditionSearch, setConditionSearch] = useState<string>('');
   const [openDropdown, setOpenDropdown] = useState<'type' | 'condition' | null>(null);
 
   const validationMessage = useMemo(() => formatValidationMessage(form), [form]);
+  const normalizedVin = useMemo(() => sanitizeVin(form.chassisNumber), [form.chassisNumber]);
+  const vinValidationMessage = useMemo(
+    () => (normalizedVin ? getVinValidationMessage(normalizedVin) : null),
+    [normalizedVin],
+  );
+  const canDecodeVin = normalizedVin.length > 0 && !vinValidationMessage && !isDecodingVin;
   const canContinue = serviceId.length > 0;
   const typeOptions = useMemo(
     () =>
@@ -211,6 +266,46 @@ export default function MotorcycleDetailsScreen() {
       ).map((option) => ({ id: option.value, label: option.label })),
     [conditionSearch],
   );
+
+  const decodeVin = async (): Promise<void> => {
+    const vin = sanitizeVin(form.chassisNumber);
+    if (!vin) {
+      setVinMessage(INVALID_VIN_MESSAGE);
+      return;
+    }
+
+    const vinError = getVinValidationMessage(vin);
+    if (vinError) {
+      setVinMessage(vinError);
+      return;
+    }
+
+    setIsDecodingVin(true);
+    setVinMessage('');
+    setErrorMessage('');
+
+    try {
+      const decoded = await decodeVehicleVin(vin);
+      if (!hasDecodedMotorcycleData(decoded)) {
+        setDecodedVin(null);
+        setVinMessage(VIN_DECODE_EMPTY_RESULT_MESSAGE);
+        return;
+      }
+
+      const resolvedType = resolveMotorcycleType(decoded);
+      setDecodedVin(decoded);
+      setForm((prev) => ({
+        ...prev,
+        chassisNumber: vin,
+        motorcycleType: prev.motorcycleType || resolvedType,
+      }));
+    } catch {
+      setDecodedVin(null);
+      setVinMessage(VIN_DECODE_NETWORK_ERROR_MESSAGE);
+    } finally {
+      setIsDecodingVin(false);
+    }
+  };
 
   const onContinue = (): void => {
     if (!canContinue) {
@@ -232,7 +327,7 @@ export default function MotorcycleDetailsScreen() {
         serviceKey,
         pendingMotorcycleDetails: JSON.stringify({
           motorcycleType: form.motorcycleType,
-          chassisNumber: form.chassisNumber.trim() || undefined,
+          chassisNumber: normalizedVin || undefined,
           motorcycleCondition: form.motorcycleCondition,
           requiresSpecialWrapping: form.requiresSpecialWrapping,
           requiresDedicatedCarrier: form.requiresDedicatedCarrier,
@@ -345,14 +440,43 @@ export default function MotorcycleDetailsScreen() {
       <TextInput
         value={form.chassisNumber}
         onChangeText={(value) => {
-          setForm((prev) => ({ ...prev, chassisNumber: value }));
+          setForm((prev) => ({ ...prev, chassisNumber: normalizeVinInput(value) }));
+          setDecodedVin(null);
+          setVinMessage('');
           setErrorMessage('');
         }}
-        placeholder="Enter VIN or chassis number"
+        placeholder="Enter 17-character VIN"
         placeholderTextColor="#98a2b3"
         style={styles.input}
         autoCapitalize="characters"
       />
+      <Pressable
+        style={[styles.secondaryButton, !canDecodeVin && styles.secondaryButtonDisabled]}
+        onPress={() => void decodeVin()}
+        disabled={!canDecodeVin}
+      >
+        {isDecodingVin ? (
+          <ActivityIndicator color="#1a73e8" />
+        ) : (
+          <Text style={styles.secondaryButtonText}>Decode VIN</Text>
+        )}
+      </Pressable>
+      {vinMessage ? <Text style={styles.infoText}>{vinMessage}</Text> : null}
+      {decodedVin ? (
+        <View style={styles.decodedCard}>
+          <Text style={styles.decodedTitle}>Decoded VIN details</Text>
+          {decodedVin.make ? <Text style={styles.decodedText}>Make: {decodedVin.make}</Text> : null}
+          {decodedVin.model ? <Text style={styles.decodedText}>Model: {decodedVin.model}</Text> : null}
+          {decodedVin.year ? <Text style={styles.decodedText}>Year: {decodedVin.year}</Text> : null}
+          {decodedVin.trim ? <Text style={styles.decodedText}>Trim: {decodedVin.trim}</Text> : null}
+          {decodedVin.vehicleType ? (
+            <Text style={styles.decodedText}>Vehicle type: {decodedVin.vehicleType}</Text>
+          ) : null}
+          {decodedVin.bodyClass ? (
+            <Text style={styles.decodedText}>Body class: {decodedVin.bodyClass}</Text>
+          ) : null}
+        </View>
+      ) : null}
 
       <SearchableDropdown
         label="Motorcycle Condition"
@@ -637,6 +761,30 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
     backgroundColor: M3LoginColors.surface,
   },
+  infoText: {
+    color: M3LoginColors.textSecondary,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  decodedCard: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: M3LoginColors.outlineVariant,
+    backgroundColor: M3LoginColors.surface,
+    gap: 4,
+  },
+  decodedTitle: {
+    color: M3LoginColors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  decodedText: {
+    color: M3LoginColors.textSecondary,
+    fontSize: 14,
+  },
   toggleRow: {
     flexDirection: 'row',
     gap: 10,
@@ -738,6 +886,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     minHeight: 48,
+    marginTop: 10,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: M3LoginColors.primary,
@@ -745,6 +894,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: M3LoginColors.surface,
     paddingHorizontal: 14,
+  },
+  secondaryButtonDisabled: {
+    opacity: 0.5,
   },
   secondaryButtonText: {
     color: M3LoginColors.primary,

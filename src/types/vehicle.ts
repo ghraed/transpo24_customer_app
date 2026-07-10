@@ -1,5 +1,20 @@
-export interface VehicleVinDecodeResult {
+export interface DecodedVinResult {
   vin: string;
+  make?: string;
+  year?: string;
+  trim?: string;
+  vehicleType?: string;
+  bodyClass?: string;
+  manufacturer?: string;
+  plantCountry?: string;
+  engineCylinders?: string;
+  displacementL?: string;
+  fuelTypePrimary?: string;
+  transmissionStyle?: string;
+  driveType?: string;
+  doors?: string;
+  errorCode?: string;
+  errorText?: string;
   brand?: string;
   model?: string;
   series?: string;
@@ -7,8 +22,10 @@ export interface VehicleVinDecodeResult {
   manufactureYear?: number;
   estimatedWeightKg?: number;
   bodyType?: string;
-  source: 'VIN_API' | 'MANUAL';
+  source: 'NHTSA_VPIC';
 }
+
+export type VehicleVinDecodeResult = DecodedVinResult;
 
 export interface VehicleDetailsFormValues {
   vin?: string;
