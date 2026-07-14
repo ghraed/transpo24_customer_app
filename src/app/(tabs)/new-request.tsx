@@ -1,12 +1,15 @@
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function NewRequestTabScreen() {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>New Request</Text>
-        <Text style={styles.subtitle}>Opening request flow...</Text>
+        <Text style={styles.title}>{t('New Request')}</Text>
+        <Text style={styles.subtitle}>{t('Opening request flow...')}</Text>
       </View>
     </SafeAreaView>
   );

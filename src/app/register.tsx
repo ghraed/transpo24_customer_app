@@ -1,13 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
 import { getApiBaseUrl } from '@/config/backend';
 import { M3LoginColors } from '@/constants/theme';
 
@@ -33,19 +28,20 @@ interface RegisterErrorResponse {
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
-  const [name, setName] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [error, setError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const onRegisterPress = useCallback(async () => {
     setError('');
 
     if (!name.trim() || !email.trim() || !password) {
-      setError('Name, email, and password are required.');
+      setError(t('Name, email, and password are required.'));
       return;
     }
 
@@ -69,37 +65,37 @@ export default function RegisterScreen() {
         const message = Array.isArray(errorData.message)
           ? errorData.message[0]
           : errorData.message;
-        setError(message ?? 'Registration failed. Please try again.');
+        setError(message ?? t('Registration failed. Please try again.'));
         return;
       }
 
       const data = (await response.json()) as RegisterSuccessResponse;
 
       if (!data.user && !data.accessToken) {
-        setError('Invalid server response. Please try again.');
+        setError(t('Invalid server response. Please try again.'));
         return;
       }
 
       router.replace('/home');
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('Network error. Please try again.'));
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, email, name, password, router]);
+  }, [apiBaseUrl, email, name, password, router, t]);
 
   return (
     <View style={styles.container}>
       <View style={styles.backgroundAccent} />
 
       <View style={styles.card}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join Transpo24 to start making requests</Text>
+        <Text style={styles.title}>{t('Create Account')}</Text>
+        <Text style={styles.subtitle}>{t('Join Transpo24 to start making requests')}</Text>
 
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Full name"
+            placeholder={t('Full name')}
             placeholderTextColor={M3LoginColors.textTertiary}
             autoCapitalize="words"
             value={name}
@@ -110,7 +106,7 @@ export default function RegisterScreen() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('Email')}
             placeholderTextColor={M3LoginColors.textTertiary}
             autoCapitalize="none"
             autoCorrect={false}
@@ -123,7 +119,7 @@ export default function RegisterScreen() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={t('Password')}
             placeholderTextColor={M3LoginColors.textTertiary}
             secureTextEntry
             value={password}
@@ -141,12 +137,12 @@ export default function RegisterScreen() {
           {isLoading ? (
             <ActivityIndicator color={M3LoginColors.onPrimary} />
           ) : (
-            <Text style={styles.buttonText}>Create Account</Text>
+            <Text style={styles.buttonText}>{t('Create Account')}</Text>
           )}
         </Pressable>
 
         <Link href="/" style={styles.linkText}>
-          Already have an account? Sign in
+          {t('Already have an account? Sign in')}
         </Link>
       </View>
     </View>

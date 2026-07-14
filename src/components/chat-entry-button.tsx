@@ -1,6 +1,7 @@
 import { useRouter, type Href } from 'expo-router';
 import React, { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useTransportRequestChatRoom } from '@/hooks/use-transport-request-chat-room';
 import { isHistoryRequestStatus } from '@/lib/request-status';
@@ -16,10 +17,11 @@ interface ChatEntryButtonProps {
 export function ChatEntryButton({
   transportRequestId,
   enabled = true,
-  label = 'Chat with driver',
+  label,
   requestStatus,
 }: ChatEntryButtonProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const chatEnabled = enabled && !isHistoryRequestStatus(requestStatus);
   const { room, isLoading } = useTransportRequestChatRoom({
     transportRequestId,
@@ -38,11 +40,7 @@ export function ChatEntryButton({
     );
   }, [room, router]);
 
-  if (!enabled) {
-    return null;
-  }
-
-  if (!chatEnabled) {
+  if (!enabled || !chatEnabled) {
     return null;
   }
 
@@ -50,7 +48,7 @@ export function ChatEntryButton({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color="#1D4ED8" />
-        <Text style={styles.loadingText}>Checking chat availability…</Text>
+        <Text style={styles.loadingText}>{t('Checking chat availability…')}</Text>
       </View>
     );
   }
@@ -61,7 +59,7 @@ export function ChatEntryButton({
 
   return (
     <Pressable style={styles.button} onPress={openChat}>
-      <Text style={styles.buttonText}>{label}</Text>
+      <Text style={styles.buttonText}>{label || t('Chat with driver')}</Text>
       {(room.unreadCount ?? 0) > 0 ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{room.unreadCount}</Text>

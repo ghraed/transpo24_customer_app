@@ -1,22 +1,25 @@
+import { Link, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
 import { M3LoginColors } from '@/constants/theme';
 import { postLogin } from '@/lib/api';
 import { setAccessToken } from '@/lib/auth-token';
 import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
-import { Link, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState<string>('raed.ghanim.2014@gmail.com');
-  const [password, setPassword] = useState<string>('Voltermot1');
-  const [error, setError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { t } = useTranslation();
+  const [email, setEmail] = useState('raed.ghanim.2014@gmail.com');
+  const [password, setPassword] = useState('Voltermot1');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const onLoginPress = useCallback(async () => {
     setError('');
     if (!email.trim() || !password) {
-      setError('Email and password are required.');
+      setError(t('Email and password are required.'));
       return;
     }
 
@@ -24,7 +27,7 @@ export default function LoginScreen() {
     try {
       const data = await postLogin({ email: email.trim().toLowerCase(), password });
       if (!data.accessToken) {
-        setError('Invalid server response. Please try again.');
+        setError(t('Invalid server response. Please try again.'));
         return;
       }
 
@@ -32,33 +35,35 @@ export default function LoginScreen() {
       try {
         await registerCustomerPushNotifications();
       } catch (pushError) {
-        // Push registration is best-effort and should not block login.
         console.warn('Customer push registration failed after login.', pushError);
       }
 
       router.replace('/(tabs)/home');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error. Please try again.');
+      setError(err instanceof Error ? err.message : t('Network error. Please try again.'));
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, router]);
+  }, [email, password, router, t]);
 
   return (
     <View style={styles.container}>
       <View style={styles.backgroundAccent} />
       <View style={styles.logoWrapper}>
-        <Image source={require('@/assets/images/run_and_Transpo24.png')} style={styles.logo} resizeMode="contain" />
+        <Image
+          source={require('@/assets/images/run_and_Transpo24.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
       <View style={styles.card}>
-
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to continue your ride requests</Text>
+        <Text style={styles.title}>{t('Welcome back')}</Text>
+        <Text style={styles.subtitle}>{t('Sign in to continue your ride requests')}</Text>
 
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('Email')}
             placeholderTextColor={M3LoginColors.textTertiary}
             autoCapitalize="none"
             autoCorrect={false}
@@ -71,7 +76,7 @@ export default function LoginScreen() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={t('Password')}
             placeholderTextColor={M3LoginColors.textTertiary}
             secureTextEntry
             value={password}
@@ -81,15 +86,20 @@ export default function LoginScreen() {
 
         {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-        <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={onLoginPress} disabled={isLoading}>
-          {isLoading ? <ActivityIndicator color={M3LoginColors.onPrimary} /> : <Text style={styles.buttonText}>Sign in</Text>}
+        <Pressable
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={onLoginPress}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={M3LoginColors.onPrimary} />
+          ) : (
+            <Text style={styles.buttonText}>{t('Sign in')}</Text>
+          )}
         </Pressable>
 
-        {/* <Link href="/forgot-password" style={styles.linkText}>
-          Forgot your password?
-        </Link> */}
         <Link href="/register" style={styles.linkTextSecondary}>
-          <Text style={styles.black}>New customer?</Text> Create an account
+          <Text style={styles.black}>{t('New customer?')}</Text> {t('Create an account')}
         </Link>
       </View>
     </View>
@@ -124,20 +134,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 24,
     elevation: 8,
-  },
-  brandBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: M3LoginColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  brandText: {
-    color: M3LoginColors.onPrimary,
-    fontSize: 24,
-    fontWeight: '700',
   },
   title: {
     fontSize: 28,
@@ -180,12 +176,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: M3LoginColors.onPrimary,
     fontSize: 16,
-    fontWeight: '600',
-  },
-  linkText: {
-    marginTop: 16,
-    color: M3LoginColors.primary,
-    textAlign: 'center',
     fontWeight: '600',
   },
   linkTextSecondary: {

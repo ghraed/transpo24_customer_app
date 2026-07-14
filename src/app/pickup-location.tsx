@@ -29,6 +29,7 @@ import {
 import { M3LoginColors } from '@/constants/theme';
 import { M3Styles } from '@/lib/m3-styles';
 import {
+  reverseGeocodeCoordinates,
   resolvePlaceFromQuery,
   resolvePlaceSuggestion,
   searchPlacesAutocomplete,
@@ -211,17 +212,6 @@ export default function PickupLocationScreen() {
 
   const hasValidServiceId = serviceId.trim().length > 0;
 
-  const onMapPress = useCallback((event: MapPressEvent) => {
-    const coordinates: Coordinates = event.nativeEvent.coordinate;
-
-    setSelectedLocation({
-      latitude: coordinates.latitude,
-      longitude: coordinates.longitude,
-      source: 'manual',
-    });
-    setErrorMessage('');
-  }, []);
-
   const canContinue = useMemo(() => {
     return selectedLocation !== null && hasValidServiceId && !isSaving;
   }, [selectedLocation, hasValidServiceId, isSaving]);
@@ -238,6 +228,61 @@ export default function PickupLocationScreen() {
     mapRef.current?.animateToRegion?.(nextRegion, 300);
   }, []);
 
+  const resolveSelectionAddress = useCallback(
+    async (latitude: number, longitude: number): Promise<{ address?: string; placeId?: string }> => {
+      try {
+        const resolved = await reverseGeocodeCoordinates(latitude, longitude);
+        if (resolved?.address) {
+          return {
+            address: resolved.address,
+            placeId: resolved.placeId || undefined,
+          };
+        }
+      } catch {
+        // Fall back to expo-location reverse geocoding below.
+      }
+
+      try {
+        const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+        const formattedAddress = formatAddressFromReverseGeocode(reverse[0]);
+        return formattedAddress ? { address: formattedAddress } : {};
+      } catch {
+        return {};
+      }
+    },
+    [],
+  );
+
+  const onMapPress = useCallback((event: MapPressEvent) => {
+    const coordinates: Coordinates = event.nativeEvent.coordinate;
+
+    setSelectedLocation({
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      source: 'manual',
+    });
+    setErrorMessage('');
+
+    void resolveSelectionAddress(coordinates.latitude, coordinates.longitude).then((resolved) => {
+      setSelectedLocation((previous) => {
+        if (
+          !previous ||
+          previous.latitude !== coordinates.latitude ||
+          previous.longitude !== coordinates.longitude ||
+          previous.source !== 'manual'
+        ) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          address: resolved.address,
+          placeId: resolved.placeId,
+        };
+      });
+    });
+  }, [resolveSelectionAddress]);
+
   const applyCurrentLocation = useCallback(
     async (location: Location.LocationObject) => {
       setLocationAccuracy(typeof location.coords.accuracy === 'number' ? location.coords.accuracy : null);
@@ -249,26 +294,28 @@ export default function PickupLocationScreen() {
       setIsLocationServicesDisabled(false);
       setShouldRetryLocationOnAppFocus(false);
 
-      const reverse = await Location.reverseGeocodeAsync({
+      const resolved = await resolveSelectionAddress(
+        location.coords.latitude,
+        location.coords.longitude,
+      );
+
+      const nextLocation = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      });
-      const formattedAddress = formatAddressFromReverseGeocode(reverse[0]);
+        address: resolved.address || 'Current location',
+        placeId: resolved.placeId,
+        source: 'device' as const,
+      };
 
-      setSelectedLocation((previous) => {
-        if (previous && previous.source && previous.source !== 'device') {
-          return previous;
-        }
-
-        return {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          address: formattedAddress || 'Current location',
-          source: 'device',
-        };
+      suppressAutocompleteRef.current = true;
+      setAddressQuery(nextLocation.address);
+      setPlaceSuggestions([]);
+      setSearchMessage(`Pinned: ${nextLocation.address}`);
+      setSelectedLocation(() => {
+        return nextLocation;
       });
     },
-    [focusMapOnLocation],
+    [focusMapOnLocation, resolveSelectionAddress],
   );
 
   const loadCurrentLocation = useCallback(async (requestPermission: boolean) => {

@@ -1,13 +1,17 @@
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
 import { M3LoginColors } from '@/constants/theme';
 
 export default function NotificationsTabScreen() {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Notifications</Text>
-        <Text style={styles.subtitle}>No notifications yet.</Text>
+        <Text style={styles.title}>{t('Notifications')}</Text>
+        <Text style={styles.subtitle}>{t('No notifications yet.')}</Text>
       </View>
     </SafeAreaView>
   );

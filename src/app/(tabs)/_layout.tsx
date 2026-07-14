@@ -1,10 +1,12 @@
-import { Redirect, Tabs , useRouter } from 'expo-router';
+import { Redirect, Tabs, useRouter } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getAccessToken } from '@/lib/auth-token';
 
 export default function CustomerTabsLayout() {
   const router = useRouter();
+  const { t } = useTranslation();
   const token = getAccessToken();
 
   if (!token) {
@@ -22,19 +24,19 @@ export default function CustomerTabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
+          title: t('Home'),
         }}
       />
       <Tabs.Screen
         name="requests"
         options={{
-          title: 'Requests',
+          title: t('Requests'),
         }}
       />
       <Tabs.Screen
         name="new-request"
         options={{
-          title: 'New Request',
+          title: t('New Request'),
         }}
         listeners={{
           tabPress: (event) => {
@@ -46,13 +48,13 @@ export default function CustomerTabsLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Notifications',
+          title: t('Notifications'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('Profile'),
         }}
       />
     </Tabs>

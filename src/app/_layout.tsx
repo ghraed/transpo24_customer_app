@@ -1,15 +1,22 @@
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, useColorScheme } from 'react-native';
-import { StripeProvider } from '@stripe/stripe-react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { getAccessToken, hydrateAccessToken } from '@/lib/auth-token';
-import { initializeNotifications, registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
+import { LocalizationProvider, useAppLanguage } from '@/localization/provider';
+import {
+  initializeNotifications,
+  registerCustomerPushNotifications,
+} from '@/notifications/registerPushNotifications';
 import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
 
-export default function RootLayout() {
+function RootNavigator() {
   const colorScheme = useColorScheme();
+  const { t } = useTranslation();
+  const { ready: localizationReady } = useAppLanguage();
   const [authReady, setAuthReady] = useState(false);
   const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
   const publishableKey =
@@ -37,14 +44,16 @@ export default function RootLayout() {
     }
 
     void registerCustomerPushNotifications().catch((error) => {
-      // Best-effort token registration on app boot for already-authenticated sessions.
       console.warn('Customer push registration failed during app bootstrap.', error);
     });
   }, [authReady]);
 
-  if (!authReady) {
+  if (!authReady || !localizationReady) {
     return (
-      <StripeProvider publishableKey={publishableKey} merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}>
+      <StripeProvider
+        publishableKey={publishableKey}
+        merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
+      >
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -56,40 +65,54 @@ export default function RootLayout() {
   }
 
   return (
-    <StripeProvider publishableKey={publishableKey} merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}>
+    <StripeProvider
+      publishableKey={publishableKey}
+      merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
+    >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
         <Stack>
-          <Stack.Screen name="index" options={{ title: 'Login' }} />
-          <Stack.Screen name="register" options={{ title: 'Create Account' }} />
-          <Stack.Screen name="forgot-password" options={{ title: 'Reset Password' }} />
+          <Stack.Screen name="index" options={{ title: t('Login') }} />
+          <Stack.Screen name="register" options={{ title: t('Create Account') }} />
+          <Stack.Screen name="forgot-password" options={{ title: t('Reset Password') }} />
 
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-          <Stack.Screen name="choose-service" options={{ title: 'Choose Service' }} />
-          <Stack.Screen name="vehicle-details" options={{ title: 'Vehicle Details' }} />
-          <Stack.Screen name="motorcycle-details" options={{ title: 'Motorcycle Details' }} />
-          <Stack.Screen name="goods-details" options={{ title: 'Goods Details' }} />
-          <Stack.Screen name="furniture-details" options={{ title: 'Furniture Details' }} />
-          <Stack.Screen name="vehicle-condition" options={{ title: 'Vehicle Condition' }} />
-          <Stack.Screen name="pickup-location" options={{ title: 'Pickup Location' }} />
-          <Stack.Screen name="dropoff-location" options={{ title: 'Dropoff Location' }} />
-          <Stack.Screen name="date-time" options={{ title: 'Date & Item Details' }} />
-          <Stack.Screen name="submit-request" options={{ title: 'Submit Request' }} />
-          <Stack.Screen name="request-status" options={{ title: 'Request Status' }} />
-          <Stack.Screen name="request-payment" options={{ title: 'Payment Hold' }} />
-          <Stack.Screen name="chat" options={{ title: 'Chat with Driver' }} />
-          <Stack.Screen name="customer-tracking" options={{ title: 'Customer Tracking' }} />
-          <Stack.Screen name="waiting-for-pickup" options={{ title: 'Waiting for Pickup' }} />
-          <Stack.Screen name="customer-delivery-tracking" options={{ title: 'Delivery Tracking' }} />
-          <Stack.Screen name="customer-trip-delivered" options={{ title: 'Trip Delivered' }} />
-          <Stack.Screen name="customer-rate-driver" options={{ title: 'Rate Driver' }} />
-          <Stack.Screen name="socket-debug" options={{ title: 'Socket Debug' }} />
+          <Stack.Screen name="choose-service" options={{ title: t('Choose Service') }} />
+          <Stack.Screen name="vehicle-details" options={{ title: t('Vehicle Details') }} />
+          <Stack.Screen name="motorcycle-details" options={{ title: t('Motorcycle Details') }} />
+          <Stack.Screen name="goods-details" options={{ title: t('Goods Details') }} />
+          <Stack.Screen name="furniture-details" options={{ title: t('Furniture Details') }} />
+          <Stack.Screen name="vehicle-condition" options={{ title: t('Vehicle Condition') }} />
+          <Stack.Screen name="pickup-location" options={{ title: t('Pickup Location') }} />
+          <Stack.Screen name="dropoff-location" options={{ title: t('Dropoff Location') }} />
+          <Stack.Screen name="date-time" options={{ title: t('Date & Item Details') }} />
+          <Stack.Screen name="submit-request" options={{ title: t('Submit Request') }} />
+          <Stack.Screen name="request-status" options={{ title: t('Request Status') }} />
+          <Stack.Screen name="request-payment" options={{ title: t('Payment Hold') }} />
+          <Stack.Screen name="chat" options={{ title: t('Chat with Driver') }} />
+          <Stack.Screen name="customer-tracking" options={{ title: t('Customer Tracking') }} />
+          <Stack.Screen name="waiting-for-pickup" options={{ title: t('Waiting for Pickup') }} />
+          <Stack.Screen
+            name="customer-delivery-tracking"
+            options={{ title: t('Delivery Tracking') }}
+          />
+          <Stack.Screen name="customer-trip-delivered" options={{ title: t('Trip Delivered') }} />
+          <Stack.Screen name="customer-rate-driver" options={{ title: t('Rate Driver') }} />
+          <Stack.Screen name="socket-debug" options={{ title: t('Socket Debug') }} />
 
-          <Stack.Screen name="home" options={{ title: 'Home' }} />
-          <Stack.Screen name="explore" options={{ title: 'Explore' }} />
+          <Stack.Screen name="home" options={{ title: t('Home') }} />
+          <Stack.Screen name="explore" options={{ title: t('Explore') }} />
         </Stack>
       </ThemeProvider>
     </StripeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <LocalizationProvider>
+      <RootNavigator />
+    </LocalizationProvider>
   );
 }

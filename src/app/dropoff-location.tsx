@@ -31,6 +31,7 @@ import {
 import { M3LoginColors } from '@/constants/theme';
 import { M3Styles } from '@/lib/m3-styles';
 import {
+  reverseGeocodeCoordinates,
   resolvePlaceFromQuery,
   resolvePlaceSuggestion,
   searchPlacesAutocomplete,
@@ -240,19 +241,6 @@ export default function DropoffLocationScreen() {
   const suppressAutocompleteRef = useRef<boolean>(false);
   const mapRef = useRef<any>(null);
 
-  const onMapPress = useCallback((event: MapPressEvent) => {
-    const coordinates: Coordinates = event.nativeEvent.coordinate;
-
-    setSelectedLocation({
-      latitude: coordinates.latitude,
-      longitude: coordinates.longitude,
-      source: 'manual',
-    });
-    setRouteDistanceKm(null);
-    setRouteMessage('');
-    setErrorMessage('');
-  }, []);
-
   const canContinue = useMemo(() => {
     const hasDraftContext =
       serviceKey === 'MOTORCYCLE_TRANSPORT' ||
@@ -275,25 +263,90 @@ export default function DropoffLocationScreen() {
     mapRef.current?.animateToRegion?.(nextRegion, 300);
   }, []);
 
-  const applyCurrentLocation = useCallback((location: Location.LocationObject) => {
+  const resolveSelectionAddress = useCallback(
+    async (latitude: number, longitude: number): Promise<{ address?: string; placeId?: string }> => {
+      try {
+        const resolved = await reverseGeocodeCoordinates(latitude, longitude);
+        if (resolved?.address) {
+          return {
+            address: resolved.address,
+            placeId: resolved.placeId || undefined,
+          };
+        }
+      } catch {
+        // Keep expo-location as a fallback.
+      }
+
+      try {
+        const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+        const name = [reverse[0]?.name, reverse[0]?.street, reverse[0]?.city, reverse[0]?.region]
+          .filter(Boolean)
+          .join(', ');
+        return name ? { address: name } : {};
+      } catch {
+        return {};
+      }
+    },
+    [],
+  );
+
+  const onMapPress = useCallback((event: MapPressEvent) => {
+    const coordinates: Coordinates = event.nativeEvent.coordinate;
+
+    setSelectedLocation({
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      source: 'manual',
+    });
+    setRouteDistanceKm(null);
+    setRouteMessage('');
+    setErrorMessage('');
+
+    void resolveSelectionAddress(coordinates.latitude, coordinates.longitude).then((resolved) => {
+      setSelectedLocation((previous) => {
+        if (
+          !previous ||
+          previous.latitude !== coordinates.latitude ||
+          previous.longitude !== coordinates.longitude ||
+          previous.source !== 'manual'
+        ) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          address: resolved.address,
+          placeId: resolved.placeId,
+        };
+      });
+    });
+  }, [resolveSelectionAddress]);
+
+  const applyCurrentLocation = useCallback(async (location: Location.LocationObject) => {
     focusMapOnLocation(location.coords.latitude, location.coords.longitude);
     setLocationMessage('');
     setErrorMessage('');
     setIsLocationServicesDisabled(false);
     setShouldRetryLocationOnAppFocus(false);
-    setSelectedLocation((previous) => {
-      if (previous && previous.source && previous.source !== 'device') {
-        return previous;
-      }
 
-      return {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        address: 'Current location',
-        source: 'device',
-      };
+    const resolved = await resolveSelectionAddress(location.coords.latitude, location.coords.longitude);
+
+    const nextLocation = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      address: resolved.address || 'Current location',
+      placeId: resolved.placeId,
+      source: 'device' as const,
+    };
+
+    suppressAutocompleteRef.current = true;
+    setAddressQuery(nextLocation.address);
+    setPlaceSuggestions([]);
+    setSearchMessage(`Pinned: ${nextLocation.address}`);
+    setSelectedLocation(() => {
+      return nextLocation;
     });
-  }, [focusMapOnLocation]);
+  }, [focusMapOnLocation, resolveSelectionAddress]);
 
   const loadCurrentLocation = useCallback(async (requestPermission: boolean) => {
     setIsLoadingLocation(true);
@@ -327,7 +380,7 @@ export default function DropoffLocationScreen() {
         accuracy: Location.Accuracy.Balanced,
       });
 
-      applyCurrentLocation(current);
+      await applyCurrentLocation(current);
     } catch {
       setIsLocationServicesDisabled(false);
       setShouldRetryLocationOnAppFocus(false);
@@ -859,7 +912,7 @@ export default function DropoffLocationScreen() {
                 mode="DRIVING"
                 strokeWidth={4}
                 strokeColor="#2563EB"
-                onReady={(result) => {
+                onReady={(result: { distance: number }) => {
                   setRouteDistanceKm(result.distance);
                   setRouteMessage('');
                 }}

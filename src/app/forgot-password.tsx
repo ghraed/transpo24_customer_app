@@ -1,13 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
 import { Link } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
 import { getApiBaseUrl } from '@/config/backend';
 import { M3LoginColors } from '@/constants/theme';
 
@@ -24,19 +19,20 @@ interface ForgotPasswordErrorResponse {
 }
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
-  const [email, setEmail] = useState<string>('');
-  const [error, setError] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const onResetPress = useCallback(async () => {
     setError('');
     setSuccessMessage('');
 
     if (!email.trim()) {
-      setError('Email is required.');
+      setError(t('Email is required.'));
       return;
     }
 
@@ -58,31 +54,33 @@ export default function ForgotPasswordScreen() {
         const message = Array.isArray(errorData.message)
           ? errorData.message[0]
           : errorData.message;
-        setError(message ?? 'Could not send reset link. Please try again.');
+        setError(message ?? t('Could not send reset link. Please try again.'));
         return;
       }
 
       const data = (await response.json()) as ForgotPasswordResponse;
-      setSuccessMessage(data.message ?? 'If this email exists, a reset link has been sent.');
+      setSuccessMessage(data.message ?? t('If this email exists, a reset link has been sent.'));
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('Network error. Please try again.'));
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, email]);
+  }, [apiBaseUrl, email, t]);
 
   return (
     <View style={styles.container}>
       <View style={styles.backgroundAccent} />
 
       <View style={styles.card}>
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.subtitle}>Enter your email to receive a password reset link.</Text>
+        <Text style={styles.title}>{t('Reset Password')}</Text>
+        <Text style={styles.subtitle}>
+          {t('Enter your email to receive a password reset link.')}
+        </Text>
 
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('Email')}
             placeholderTextColor={M3LoginColors.textTertiary}
             autoCapitalize="none"
             autoCorrect={false}
@@ -103,12 +101,12 @@ export default function ForgotPasswordScreen() {
           {isLoading ? (
             <ActivityIndicator color={M3LoginColors.onPrimary} />
           ) : (
-            <Text style={styles.buttonText}>Send Reset Link</Text>
+            <Text style={styles.buttonText}>{t('Send Reset Link')}</Text>
           )}
         </Pressable>
 
         <Link href="/" style={styles.linkText}>
-          Back to Sign in
+          {t('Back to Sign in')}
         </Link>
       </View>
     </View>

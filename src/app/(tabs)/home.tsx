@@ -10,24 +10,40 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { M3LoginColors } from '@/constants/theme';
 import { getCustomerHome } from '@/lib/api';
+import { formatDateTime, formatNumber } from '@/localization/format';
+import { useAppLanguage } from '@/localization/provider';
 import type { CustomerHomeResponse } from '@/types/customer-request';
 
-function formatDate(value: string | null): string {
-  if (!value) return 'N/A';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+function getServiceLabel(
+  serviceKey: string | null | undefined,
+  fallback: string | null | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  switch (serviceKey) {
+    case 'VEHICLE_TRANSPORT':
+      return t('Vehicle transport');
+    case 'MOTORCYCLE_TRANSPORT':
+      return t('Motorcycle transport');
+    case 'GOODS_TRANSPORT':
+      return t('Goods transport');
+    case 'FURNITURE_TRANSPORT':
+      return t('Furniture transport');
+    default:
+      return fallback || t('Service');
+  }
 }
 
 export default function HomeTabScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { isRTL } = useAppLanguage();
   const [data, setData] = useState<CustomerHomeResponse | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const loadHome = useCallback(async (isRefresh: boolean): Promise<void> => {
     if (isRefresh) {
@@ -42,16 +58,20 @@ export default function HomeTabScreen() {
       const response = await getCustomerHome();
       setData(response);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load home data.';
+      const message = error instanceof Error ? error.message : t('Unable to load home data.');
       setErrorMessage(message);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
-    void loadHome(false);
+    const timeoutId = setTimeout(() => {
+      void loadHome(false);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [loadHome]);
 
   const onStartNewRequest = (): void => {
@@ -66,7 +86,7 @@ export default function HomeTabScreen() {
     return (
       <SafeAreaView style={styles.centeredContainer}>
         <ActivityIndicator size="large" color="#1D4ED8" />
-        <Text style={styles.loadingText}>Loading home...</Text>
+        <Text style={styles.loadingText}>{t('Loading home...')}</Text>
       </SafeAreaView>
     );
   }
@@ -74,70 +94,102 @@ export default function HomeTabScreen() {
   if (!data) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.title}>Home</Text>
-        <Text style={styles.errorText}>{errorMessage || 'Unable to load home data.'}</Text>
+        <Text style={styles.title}>{t('Home')}</Text>
+        <Text style={styles.errorText}>{errorMessage || t('Unable to load home data.')}</Text>
         <Pressable style={styles.primaryButton} onPress={() => void loadHome(false)}>
-          <Text style={styles.primaryButtonText}>Retry</Text>
+          <Text style={styles.primaryButtonText}>{t('Retry')}</Text>
         </Pressable>
       </SafeAreaView>
     );
   }
 
-  const customerName = data.customer.fullName?.trim() || 'there';
+  const customerName = data.customer.fullName?.trim() || t('there');
+  const directionArrow = isRTL ? '←' : '→';
+  const activeRequest = data.activeRequest;
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadHome(true)} />}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => void loadHome(true)} />
+        }
       >
         <View style={styles.headerCard}>
-          <Text style={styles.title}>Hello, {customerName}</Text>
-          <Text style={styles.subtitle}>What would you like to transport today?</Text>
+          <Text style={styles.title}>{t('Hello, {{name}}', { name: customerName })}</Text>
+          <Text style={styles.subtitle}>{t('What would you like to transport today?')}</Text>
           <Pressable style={styles.primaryButton} onPress={onStartNewRequest}>
-            <Text style={styles.primaryButtonText}>New Transport Request</Text>
+            <Text style={styles.primaryButtonText}>{t('New Transport Request')}</Text>
           </Pressable>
           <Pressable style={styles.debugButton} onPress={() => router.push('/socket-debug')}>
-            <Text style={styles.primaryButtonText}>Socket Debug</Text>
+            <Text style={styles.primaryButtonText}>{t('Socket Debug')}</Text>
           </Pressable>
         </View>
 
-        {data.activeRequest ? (
+        {activeRequest ? (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Active Request</Text>
-            <Text style={styles.statusPill}>{data.activeRequest.statusLabel}</Text>
+            <Text style={styles.cardTitle}>{t('Active Request')}</Text>
+            <Text style={styles.statusPill}>{activeRequest.statusLabel}</Text>
             <Text style={styles.rowText}>
-              {data.activeRequest.serviceName || data.activeRequest.serviceKey || 'Service'}
+              {getServiceLabel(activeRequest.serviceKey, activeRequest.serviceName, t)}
             </Text>
-            <Text style={styles.rowText}>{data.activeRequest.pickupAddress || 'Pickup not set'}</Text>
-            <Text style={styles.rowText}>{data.activeRequest.dropoffAddress || 'Dropoff not set'}</Text>
-            <Text style={styles.mutedText}>Scheduled: {formatDate(data.activeRequest.scheduledPickupAt)}</Text>
-            <Pressable style={styles.secondaryButton} onPress={() => onViewStatus(data.activeRequest!.id)}>
-              <Text style={styles.secondaryButtonText}>View Status</Text>
+            <Text style={styles.rowText}>{activeRequest.pickupAddress || t('Pickup not set')}</Text>
+            <Text style={styles.rowText}>{activeRequest.dropoffAddress || t('Dropoff not set')}</Text>
+            <Text style={styles.mutedText}>
+              {t('Scheduled: {{value}}', {
+                value: formatDateTime(activeRequest.scheduledPickupAt),
+              })}
+            </Text>
+            <Pressable style={styles.secondaryButton} onPress={() => onViewStatus(activeRequest.id)}>
+              <Text style={styles.secondaryButtonText}>{t('View Status')}</Text>
             </Pressable>
           </View>
         ) : null}
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Overview</Text>
+          <Text style={styles.cardTitle}>{t('Overview')}</Text>
           <View style={styles.countersRow}>
-            <View style={styles.counterBox}><Text style={styles.counterValue}>{data.counters.totalRequests}</Text><Text style={styles.counterLabel}>Total</Text></View>
-            <View style={styles.counterBox}><Text style={styles.counterValue}>{data.counters.activeRequests}</Text><Text style={styles.counterLabel}>Active</Text></View>
-            <View style={styles.counterBox}><Text style={styles.counterValue}>{data.counters.completedRequests}</Text><Text style={styles.counterLabel}>Completed</Text></View>
-            <View style={styles.counterBox}><Text style={styles.counterValue}>{data.counters.pendingQuotesRequests}</Text><Text style={styles.counterLabel}>Pending Offers</Text></View>
+            <View style={styles.counterBox}>
+              <Text style={styles.counterValue}>{formatNumber(data.counters.totalRequests)}</Text>
+              <Text style={styles.counterLabel}>{t('Total')}</Text>
+            </View>
+            <View style={styles.counterBox}>
+              <Text style={styles.counterValue}>{formatNumber(data.counters.activeRequests)}</Text>
+              <Text style={styles.counterLabel}>{t('Active')}</Text>
+            </View>
+            <View style={styles.counterBox}>
+              <Text style={styles.counterValue}>{formatNumber(data.counters.completedRequests)}</Text>
+              <Text style={styles.counterLabel}>{t('Completed')}</Text>
+            </View>
+            <View style={styles.counterBox}>
+              <Text style={styles.counterValue}>
+                {formatNumber(data.counters.pendingQuotesRequests)}
+              </Text>
+              <Text style={styles.counterLabel}>{t('Pending Offers')}</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Recent Requests</Text>
+          <Text style={styles.cardTitle}>{t('Recent Requests')}</Text>
           {data.recentRequests.length === 0 ? (
-            <Text style={styles.mutedText}>No requests yet. Start your first transport request.</Text>
+            <Text style={styles.mutedText}>
+              {t('No requests yet. Start your first transport request.')}
+            </Text>
           ) : (
             data.recentRequests.map((request) => (
-              <Pressable key={request.id} style={styles.requestRow} onPress={() => onViewStatus(request.id)}>
-                <Text style={styles.requestTitle}>{request.serviceName || request.serviceKey || 'Service'}</Text>
+              <Pressable
+                key={request.id}
+                style={styles.requestRow}
+                onPress={() => onViewStatus(request.id)}
+              >
+                <Text style={styles.requestTitle}>
+                  {getServiceLabel(request.serviceKey, request.serviceName, t)}
+                </Text>
                 <Text style={styles.mutedText}>{request.statusLabel}</Text>
-                <Text style={styles.mutedText}>{request.pickupAddress || 'Pickup'} → {request.dropoffAddress || 'Dropoff'}</Text>
+                <Text style={styles.mutedText}>
+                  {(request.pickupAddress || t('Pickup'))} {directionArrow} {(request.dropoffAddress || t('Dropoff'))}
+                </Text>
               </Pressable>
             ))
           )}
