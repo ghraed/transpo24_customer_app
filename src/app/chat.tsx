@@ -21,6 +21,9 @@ import {
   sendChatMessage,
 } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth-token';
+import { LANGUAGE_CONFIGS, SUPPORTED_LANGUAGES, type AppLanguage } from '@/localization/languages';
+import { useAppLanguage } from '@/localization/provider';
+import { translateDynamicText } from '@/services/translation-service';
 import {
   connectSocket,
   isSocketConnected,
@@ -41,6 +44,48 @@ type RouteParams = {
 };
 
 const INITIAL_PAGE_LIMIT = 100;
+
+function containsArabicCharacters(value: string): boolean {
+  return /[\u0600-\u06FF]/.test(value);
+}
+
+function containsSpanishMarkers(value: string): boolean {
+  return /[ñáéíóúü¡¿]/i.test(value);
+}
+
+function containsFrenchMarkers(value: string): boolean {
+  return /[àâæçéèêëîïôœùûüÿ]/i.test(value);
+}
+
+function containsGermanMarkers(value: string): boolean {
+  return /[äöüß]/i.test(value);
+}
+
+function normalizeComparableText(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function buildSourceLanguageCandidates(text: string, targetLanguage: AppLanguage): AppLanguage[] {
+  const prioritized: AppLanguage[] = [];
+
+  if (containsArabicCharacters(text)) {
+    prioritized.push('ar');
+  } else {
+    if (containsSpanishMarkers(text)) prioritized.push('es');
+    if (containsFrenchMarkers(text)) prioritized.push('fr');
+    if (containsGermanMarkers(text)) prioritized.push('de');
+    prioritized.push('en');
+  }
+
+  for (const language of SUPPORTED_LANGUAGES) {
+    if (language === targetLanguage || prioritized.includes(language)) {
+      continue;
+    }
+    prioritized.push(language);
+  }
+
+  return prioritized.filter((language) => language !== targetLanguage);
+}
 
 function formatTime(value: string): string {
   const parsed = new Date(value);
@@ -109,6 +154,7 @@ async function loadAllRoomMessages(roomId: string): Promise<ChatRoomMessagesResp
 
 export default function ChatScreen() {
   const params = useLocalSearchParams<RouteParams>();
+  const { language } = useAppLanguage();
   const initialRoomId =
     typeof params.chatRoomId === 'string' ? params.chatRoomId.trim() : '';
   const transportRequestId =
@@ -122,10 +168,19 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSending, setIsSending] = useState<boolean>(false);
   const [socketStatusText, setSocketStatusText] = useState<string>('');
+  const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
+  const [expandedTranslations, setExpandedTranslations] = useState<Record<string, boolean>>({});
+  const [translatingMessageIds, setTranslatingMessageIds] = useState<Record<string, boolean>>({});
 
   const resolvedRoomId = room?.id ?? initialRoomId;
   const effectiveSocketStatusText =
     socketStatusText || (!getAccessToken() ? 'Realtime unavailable. Please login again.' : '');
+
+  useEffect(() => {
+    setTranslatedMessages({});
+    setExpandedTranslations({});
+    setTranslatingMessageIds({});
+  }, [language]);
 
   const loadConversation = useCallback(async (): Promise<ChatRoom | null> => {
     setIsLoading(true);
@@ -324,6 +379,55 @@ export default function ChatScreen() {
     }
   }, [draft, room]);
 
+  const translateMessage = useCallback(async (message: ChatMessage): Promise<void> => {
+    const body = message.body?.trim() ?? '';
+    if (!body) {
+      return;
+    }
+
+    const existingTranslation = translatedMessages[message.id];
+    if (existingTranslation) {
+      setExpandedTranslations((current) => ({
+        ...current,
+        [message.id]: !current[message.id],
+      }));
+      return;
+    }
+
+    setTranslatingMessageIds((current) => ({ ...current, [message.id]: true }));
+
+    try {
+      const candidates = buildSourceLanguageCandidates(body, language);
+      let translated = body;
+
+      for (const sourceLanguage of candidates) {
+        const attempt = await translateDynamicText({
+          text: body,
+          sourceLanguage,
+          targetLanguage: language,
+          context: 'client chat message',
+        });
+
+        if (normalizeComparableText(attempt) !== normalizeComparableText(body)) {
+          translated = attempt;
+          break;
+        }
+      }
+
+      setTranslatedMessages((current) => ({ ...current, [message.id]: translated }));
+      setExpandedTranslations((current) => ({
+        ...current,
+        [message.id]: normalizeComparableText(translated) !== normalizeComparableText(body),
+      }));
+    } finally {
+      setTranslatingMessageIds((current) => {
+        const next = { ...current };
+        delete next[message.id];
+        return next;
+      });
+    }
+  }, [language, translatedMessages]);
+
   const sortedMessages = useMemo(
     () =>
       [...messages].sort(
@@ -378,6 +482,10 @@ export default function ChatScreen() {
               ]}
               renderItem={({ item }) => {
                 const isClientMessage = item.senderRole === 'CLIENT';
+                const translatedText = translatedMessages[item.id];
+                const isShowingTranslation = Boolean(expandedTranslations[item.id] && translatedText);
+                const isTranslating = Boolean(translatingMessageIds[item.id]);
+                const displayedBody = isShowingTranslation ? translatedText : item.body;
 
                 return (
                   <View
@@ -386,21 +494,60 @@ export default function ChatScreen() {
                       isClientMessage ? styles.messageRowClient : styles.messageRowDriver,
                     ]}
                   >
-                    <View
+                    <Pressable
                       style={[
                         styles.messageBubble,
                         isClientMessage ? styles.clientBubble : styles.driverBubble,
                       ]}
+                      onPress={() => void translateMessage(item)}
+                      disabled={!item.body || isTranslating}
                     >
-                      {item.body ? (
+                      {displayedBody ? (
                         <Text
                           style={[
                             styles.messageText,
                             isClientMessage ? styles.clientMessageText : undefined,
                           ]}
                         >
-                          {item.body}
+                          {displayedBody}
                         </Text>
+                      ) : null}
+                      {isTranslating ? (
+                        <Text
+                          style={[
+                            styles.translationHint,
+                            isClientMessage ? styles.clientTranslationHint : undefined,
+                          ]}
+                        >
+                          Translating...
+                        </Text>
+                      ) : null}
+                      {isShowingTranslation ? (
+                        <View
+                          style={[
+                            styles.translationBlock,
+                            isClientMessage ? styles.clientTranslationBlock : undefined,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.translationLabel,
+                              isClientMessage ? styles.clientTranslationLabel : undefined,
+                            ]}
+                          >
+                            {`Translated to ${LANGUAGE_CONFIGS[language].nativeLabel}`}
+                          </Text>
+                          {item.body ? (
+                            <Text
+                              style={[
+                                styles.translationText,
+                                isClientMessage ? styles.clientTranslationText : undefined,
+                              ]}
+                            >
+                              {item.body}
+                            </Text>
+                          ) : null}
+                        </View>
                       ) : null}
                       <Text
                         style={[
@@ -410,7 +557,7 @@ export default function ChatScreen() {
                       >
                         {formatTime(item.createdAt)}
                       </Text>
-                    </View>
+                    </Pressable>
                   </View>
                 );
               }}
@@ -559,6 +706,38 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   clientMessageText: {
+    color: M3LoginColors.onPrimary,
+  },
+  translationHint: {
+    fontSize: 12,
+    color: M3LoginColors.textSecondary,
+  },
+  clientTranslationHint: {
+    color: M3LoginColors.primaryContainer,
+  },
+  translationBlock: {
+    borderTopWidth: 1,
+    borderTopColor: M3LoginColors.outlineVariant,
+    marginTop: 2,
+    paddingTop: 6,
+    gap: 4,
+  },
+  clientTranslationBlock: {
+    borderTopColor: M3LoginColors.primaryContainer,
+  },
+  translationLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: M3LoginColors.textSecondary,
+  },
+  clientTranslationLabel: {
+    color: M3LoginColors.primaryContainer,
+  },
+  translationText: {
+    fontSize: 14,
+    color: M3LoginColors.textPrimary,
+  },
+  clientTranslationText: {
     color: M3LoginColors.onPrimary,
   },
   messageTime: {

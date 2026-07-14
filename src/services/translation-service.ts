@@ -111,22 +111,23 @@ function readBatchTranslations(
     }
 
     const record = item as Record<string, unknown>;
-    const key = typeof record.key === 'string' ? record.key : '';
+    const originalText = typeof record.originalText === 'string' ? record.originalText : '';
     const translatedText = typeof record.translatedText === 'string'
       ? record.translatedText
       : typeof record.translation === 'string'
         ? record.translation
         : '';
 
-    if (!key || !translatedText.trim()) {
+    if (!originalText.trim() || !translatedText.trim()) {
       continue;
     }
 
-    next[key] = translatedText;
-    const original = items.find((entry) => entry.key === key)?.text;
-    if (original) {
-      void setCachedTranslation(buildCacheKey(sourceLanguage, targetLanguage, original), translatedText);
+    const matchingItems = items.filter((entry) => entry.text === originalText);
+    for (const entry of matchingItems) {
+      next[entry.key] = translatedText;
     }
+
+    void setCachedTranslation(buildCacheKey(sourceLanguage, targetLanguage, originalText), translatedText);
   }
 
   return next;
@@ -136,7 +137,6 @@ export async function translateDynamicText({
   text,
   targetLanguage,
   sourceLanguage = DEFAULT_LANGUAGE,
-  context,
 }: TranslateTextRequest): Promise<string> {
   const trimmed = text.trim();
 
@@ -155,7 +155,6 @@ export async function translateDynamicText({
       text: trimmed,
       sourceLanguage,
       targetLanguage,
-      context,
     });
     const translated = readSingleTranslation(response, text);
     if (translated.trim()) {
@@ -200,7 +199,7 @@ export async function translateDynamicBatch({
 
   try {
     const response = await postJson<unknown>('/translations/batch', {
-      items: missingItems,
+      texts: missingItems.map((item) => item.text),
       sourceLanguage,
       targetLanguage,
     });
