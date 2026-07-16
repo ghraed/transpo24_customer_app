@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   },
   optionChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   optionChipText: {
     fontSize: 14,
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   optionChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   input: {
     minHeight: 52,
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   },
   switchChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   switchChipText: {
     fontSize: 14,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   switchChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   photoCounter: {
     marginBottom: 8,

@@ -174,7 +174,7 @@ export default function ChooseServiceScreen() {
                   {serviceCopy.title}
                 </Text>
               </View>
-              <Text style={[styles.cardDescription, isSelected && styles.cardTitleSelected]}>
+              <Text style={[styles.cardDescription, isSelected && styles.cardDescriptionSelected]}>
                 {serviceCopy.description}
               </Text>
             </Pressable>
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
     shadowColor: M3LoginColors.primary,
     shadowOpacity: 0.15,
   },
@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '700', color: M3LoginColors.textPrimary },
   cardTitleSelected: { color: M3LoginColors.onPrimary },
   cardDescription: { fontSize: 14, color: M3LoginColors.textSecondary, lineHeight: 20 },
+  cardDescriptionSelected: { color: '#FFFFFF' },
   continueButton: {
     marginTop: 'auto',
     height: 52,

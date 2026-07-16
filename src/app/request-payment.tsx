@@ -302,6 +302,16 @@ export default function RequestPaymentScreen() {
     }
   };
 
+  const recoverExistingPaymentState = async (): Promise<PaymentSummary | null> => {
+    try {
+      const existingPayment = await getRequestPaymentStatus(requestId);
+      setPaymentResult(existingPayment);
+      return existingPayment;
+    } catch {
+      return null;
+    }
+  };
+
   const confirmStripeBackedPayment = async (payment: PaymentSummary): Promise<void> => {
     if (!payment.stripeClientSecret) {
       throw new Error('Missing Stripe client secret from the backend.');
@@ -392,11 +402,23 @@ export default function RequestPaymentScreen() {
         }
       } catch (error) {
         const message = error instanceof Error ? error.message.toLowerCase() : '';
-        if (!message.includes('payment attempt is already in progress')) {
+        const canRecoverFromExistingState =
+          message.includes('payment attempt is already in progress') ||
+          message.includes('internal server error');
+
+        if (!canRecoverFromExistingState) {
           throw error;
         }
 
-        const existingPayment = await getRequestPaymentStatus(requestId);
+        if (await recoverFinalizedRequestState()) {
+          return;
+        }
+
+        const existingPayment = await recoverExistingPaymentState();
+        if (!existingPayment) {
+          throw error;
+        }
+
         createdPayment = existingPayment;
         setPaymentResult(existingPayment);
       }
@@ -511,21 +533,46 @@ export default function RequestPaymentScreen() {
                 style={[styles.methodCard, isSelected ? styles.methodCardSelected : undefined]}
                 onPress={() => setSelectedMethod(option.method)}
               >
-                <Text style={styles.methodTitle}>{option.title}</Text>
-                <Text style={styles.methodDescription}>{option.description}</Text>
+                <Text
+                  style={[styles.methodTitle, isSelected ? styles.methodTitleSelected : undefined]}
+                >
+                  {option.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.methodDescription,
+                    isSelected ? styles.methodDescriptionSelected : undefined,
+                  ]}
+                >
+                  {option.description}
+                </Text>
                 {isUnavailableInExpoGo ? (
-                  <Text style={styles.methodHint}>
+                  <Text
+                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
+                  >
                     Development build required. Native wallets do not work in Expo Go.
                   </Text>
                 ) : null}
                 {isUnavailableOnPlatform ? (
-                  <Text style={styles.methodHint}>This payment method is not available on this platform.</Text>
+                  <Text
+                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
+                  >
+                    This payment method is not available on this platform.
+                  </Text>
                 ) : null}
                 {option.method === 'APPLE_PAY' && supportCheckComplete && Platform.OS === 'ios' && !isExpoGo && !applePaySupported ? (
-                  <Text style={styles.methodHint}>Apple Pay is currently unavailable on this device.</Text>
+                  <Text
+                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
+                  >
+                    Apple Pay is currently unavailable on this device.
+                  </Text>
                 ) : null}
                 {option.method === 'GOOGLE_PAY' && supportCheckComplete && Platform.OS === 'android' && !isExpoGo && !googlePaySupported ? (
-                  <Text style={styles.methodHint}>Google Pay is currently unavailable on this device.</Text>
+                  <Text
+                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
+                  >
+                    Google Pay is currently unavailable on this device.
+                  </Text>
                 ) : null}
               </Pressable>
             );
@@ -681,20 +728,29 @@ const styles = StyleSheet.create({
   },
   methodCardSelected: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   methodTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: M3LoginColors.textPrimary,
   },
+  methodTitleSelected: {
+    color: '#FFFFFF',
+  },
   methodDescription: {
     color: M3LoginColors.textSecondary,
     fontSize: 13,
   },
+  methodDescriptionSelected: {
+    color: '#FFFFFF',
+  },
   methodHint: {
     color: M3LoginColors.textSecondary,
     fontSize: 12,
+  },
+  methodHintSelected: {
+    color: '#FFFFFF',
   },
   cardField: {
     width: '100%',

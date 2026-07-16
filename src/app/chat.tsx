@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   statusPill: {
     alignSelf: 'flex-start',
     backgroundColor: M3LoginColors.primaryContainer,
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,

@@ -749,7 +749,7 @@ export default function PickupLocationScreen() {
           disabled={isLoadingLocation}
         >
           {isLoadingLocation ? (
-            <ActivityIndicator size="small" color="#1a73e8" />
+            <ActivityIndicator size="small" color={M3LoginColors.onPrimary} />
           ) : (
             <Text style={styles.locationButtonText}>Use Current Location</Text>
           )}
@@ -810,7 +810,7 @@ export default function PickupLocationScreen() {
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
       <Pressable style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]} onPress={() => void onContinue()} disabled={!canContinue}>
-        {isSaving ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.continueText}>Continue</Text>}
+        {isSaving ? <ActivityIndicator size="small" color={M3LoginColors.onPrimary} /> : <Text style={styles.continueText}>Continue</Text>}
       </Pressable>
     </KeyboardAvoidingView>
   );
@@ -902,8 +902,8 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
-    backgroundColor: M3LoginColors.primaryContainer,
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   locationButtonText: {
-    color: '#1d4ed8',
+    color: M3LoginColors.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   continueText: {
-    color: M3LoginColors.surface,
+    color: M3LoginColors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },

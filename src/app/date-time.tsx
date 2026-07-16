@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   },
   optionChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   optionChipText: {
     color: M3LoginColors.textPrimary,
@@ -829,19 +829,20 @@ const styles = StyleSheet.create({
   pickerButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
+    borderColor: M3LoginColors.primary,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 10,
+    backgroundColor: M3LoginColors.primaryContainer,
   },
   pickerButtonLabel: {
     fontSize: 12,
-    color: M3LoginColors.textTertiary,
+    color: '#FFFFFF',
   },
   pickerButtonValue: {
     marginTop: 2,
     fontSize: 14,
-    color: M3LoginColors.textPrimary,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   input: {

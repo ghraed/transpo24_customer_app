@@ -157,12 +157,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   languageButtonSelected: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#000000',
     borderColor: '#1D4ED8',
   },
   languageName: { color: '#0F172A', fontWeight: '700' },
   languageMeta: { color: '#64748B', fontSize: 12 },
-  languageNameSelected: { color: '#1D4ED8' },
+  languageNameSelected: { color: '#FFFFFF' },
   languageCode: { color: '#0F172A', fontWeight: '700' },
   secondaryButton: {
     minHeight: 42,

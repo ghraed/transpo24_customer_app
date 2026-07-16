@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
   },
   optionChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   optionChipText: {
     fontSize: 14,
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   optionChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   datetimeContainer: {
     marginTop: 12,
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
   },
   switchChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   switchChipText: {
     fontSize: 14,
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   switchChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   photoCounter: {
     marginBottom: 8,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   secondaryButtonText: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -912,7 +912,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   photoButtonText: {
-    color: M3LoginColors.surface,
+    color: M3LoginColors.onPrimary,
     fontSize: 14,
     fontWeight: '700',
   },

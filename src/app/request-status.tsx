@@ -914,12 +914,14 @@ export default function RequestStatusScreen() {
 
           {acceptedOffer ? (
             <View style={styles.offerCardAccepted}>
-              <Text style={styles.offerCardTitle}>Accepted Offer</Text>
-              <Text style={styles.offerPrimaryValue}>
+              <Text style={[styles.offerCardTitle, styles.offerTextOnDark]}>Accepted Offer</Text>
+              <Text style={[styles.offerPrimaryValue, styles.offerTextOnDark]}>
                 {acceptedOffer.driverName || 'Driver'} •{' '}
                 {formatMoney(acceptedOffer.proposedPrice ?? acceptedOffer.price, acceptedOffer.currency)}
               </Text>
-              <Text style={styles.rowValue}>Accepted at: {formatDate(acceptedOffer.acceptedAt)}</Text>
+              <Text style={[styles.rowValue, styles.offerSubtextOnDark]}>
+                Accepted at: {formatDate(acceptedOffer.acceptedAt)}
+              </Text>
             </View>
           ) : null}
 
@@ -949,27 +951,43 @@ export default function RequestStatusScreen() {
                     </View>
                   )}
                   <View style={styles.offerTopText}>
-                    <Text style={styles.offerCardTitle}>{offer.driverName || 'Driver'}</Text>
-                    <Text style={styles.offerRatingText}>{getRatingText(offer.driverRating)}</Text>
-                    <Text style={styles.offerStatusText}>
+                    <Text style={[styles.offerCardTitle, isSelected ? styles.offerTextOnDark : undefined]}>
+                      {offer.driverName || 'Driver'}
+                    </Text>
+                    <Text
+                      style={[styles.offerRatingText, isSelected ? styles.offerSubtextOnDark : undefined]}
+                    >
+                      {getRatingText(offer.driverRating)}
+                    </Text>
+                    <Text
+                      style={[styles.offerStatusText, isSelected ? styles.offerSubtextOnDark : undefined]}
+                    >
                       Status: {offer.offerStatus || offer.status}
                     </Text>
                   </View>
                   <View style={styles.offerPriceBlock}>
-                    <Text style={styles.offerPriceValue}>
+                    <Text
+                      style={[styles.offerPriceValue, isSelected ? styles.offerTextOnDark : undefined]}
+                    >
                       {formatMoney(offer.proposedPrice ?? offer.price, offer.currency)}
                     </Text>
-                    <Text style={styles.offerArrivalText}>
+                    <Text
+                      style={[styles.offerArrivalText, isSelected ? styles.offerSubtextOnDark : undefined]}
+                    >
                       ETA {offer.estimatedArrivalTime ? formatDate(offer.estimatedArrivalTime) : 'N/A'}
                     </Text>
                   </View>
                 </View>
 
-                <Text style={styles.rowValue}>
+                <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
                   Estimated delivery:{' '}
                   {offer.estimatedDeliveryAt ? formatDate(offer.estimatedDeliveryAt) : 'N/A'}
                 </Text>
-                {offer.message ? <Text style={styles.rowValue}>Message: {offer.message}</Text> : null}
+                {offer.message ? (
+                  <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
+                    Message: {offer.message}
+                  </Text>
+                ) : null}
 
                 {isPending ? (
                   <Pressable
@@ -1221,7 +1239,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignSelf: 'flex-start',
     backgroundColor: M3LoginColors.primaryContainer,
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -1343,26 +1361,26 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
     borderWidth: 1,
     borderColor: M3LoginColors.outline,
   },
   selectedOfferLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
   },
   selectedOfferValue: {
     marginTop: 4,
-    color: M3LoginColors.textPrimary,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   offerCardAccepted: {
     marginTop: 12,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
     borderColor: M3LoginColors.outline,
     borderWidth: 1,
   },
@@ -1377,7 +1395,7 @@ const styles = StyleSheet.create({
   },
   offerCardSelected: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   offerTopRow: {
     flexDirection: 'row',
@@ -1441,6 +1459,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: M3LoginColors.textPrimary,
   },
+  offerTextOnDark: {
+    color: '#FFFFFF',
+  },
+  offerSubtextOnDark: {
+    color: '#FFFFFF',
+  },
   additionalChargeCard: {
     marginTop: 8,
     borderRadius: 10,
@@ -1494,8 +1518,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: M3LoginColors.primary,
+    backgroundColor: M3LoginColors.primary,
     marginTop: 8,
   },
   deleteButton: {
@@ -1518,7 +1542,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   secondaryButtonText: {
-    color: M3LoginColors.textPrimary,
+    color: M3LoginColors.onPrimary,
     fontWeight: '600',
     fontSize: 14,
   },

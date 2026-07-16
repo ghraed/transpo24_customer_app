@@ -725,11 +725,11 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   summaryLine: {
     fontSize: 14,
-    color: M3LoginColors.textSecondary,
+    color: '#FFFFFF',
   },
   input: {
     minHeight: 52,
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   },
   optionChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   optionChipText: {
     fontSize: 14,
@@ -776,11 +776,11 @@ const styles = StyleSheet.create({
   pickerButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
+    borderColor: M3LoginColors.primary,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: M3LoginColors.primaryContainer,
   },
   datetimeContainer: {
     flexDirection: 'row',
@@ -789,13 +789,13 @@ const styles = StyleSheet.create({
   },
   pickerButtonLabel: {
     fontSize: 13,
-    color: M3LoginColors.textTertiary,
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   pickerButtonValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: M3LoginColors.textPrimary,
+    color: '#FFFFFF',
   },
   helperText: {
     marginTop: 8,
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
   },
   switchChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   switchChipText: {
     fontSize: 14,

@@ -1256,7 +1256,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   secondaryButtonText: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   toggleRow: {
@@ -1274,7 +1274,7 @@ const styles = StyleSheet.create({
   },
   optionChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   optionChipText: {
     color: M3LoginColors.textPrimary,
@@ -1282,7 +1282,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   datetimeContainer: {
     flexDirection: 'row',
@@ -1329,14 +1329,14 @@ const styles = StyleSheet.create({
   },
   switchChipActive: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   switchChipText: {
     color: M3LoginColors.textPrimary,
     fontWeight: '700',
   },
   switchChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   photoCounter: {
     marginTop: 8,

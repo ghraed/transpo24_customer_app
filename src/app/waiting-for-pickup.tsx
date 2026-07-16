@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', color: M3LoginColors.textPrimary },
   statusText: { color: M3LoginColors.textPrimary, fontWeight: '600' },
   helperText: { color: M3LoginColors.textSecondary },
-  infoText: { color: M3LoginColors.primary, fontWeight: '600' },
+  infoText: { color: '#FFFFFF', fontWeight: '600' },
   errorText: { color: M3LoginColors.error },
   centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 4,
   },
-  infoTitle: { color: M3LoginColors.primary, fontWeight: '700' },
+  infoTitle: { color: '#FFFFFF', fontWeight: '700' },
   secondaryButton: {
     minHeight: 44,
     borderRadius: 10,

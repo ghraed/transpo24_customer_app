@@ -101,7 +101,14 @@ export default function VehicleConditionScreen() {
                 <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
                   {option.label}
                 </Text>
-                <Text style={styles.optionDescription}>{option.description}</Text>
+                <Text
+                  style={[
+                    styles.optionDescription,
+                    isSelected && styles.optionDescriptionSelected,
+                  ]}
+                >
+                  {option.description}
+                </Text>
               </View>
             </Pressable>
           );
@@ -178,7 +185,7 @@ const styles = StyleSheet.create({
   },
   optionCardSelected: {
     borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: M3LoginColors.primary,
   },
   radio: {
     width: 22,
@@ -209,11 +216,14 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   optionLabelSelected: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   optionDescription: {
     fontSize: 14,
     color: M3LoginColors.textSecondary,
+  },
+  optionDescriptionSelected: {
+    color: '#FFFFFF',
   },
   notesLabel: {
     fontSize: 14,
