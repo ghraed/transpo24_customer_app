@@ -89,8 +89,10 @@ function RootNavigator() {
           <Stack.Screen name="date-time" options={{ title: t('Date & Item Details') }} />
           <Stack.Screen name="submit-request" options={{ title: t('Submit Request') }} />
           <Stack.Screen name="request-status" options={{ title: t('Request Status') }} />
-          <Stack.Screen name="request-payment" options={{ title: t('Payment Hold') }} />
+          <Stack.Screen name="request-payment" options={{ title: t('Pay Now') }} />
           <Stack.Screen name="payment-method" options={{ title: t('Payment Method') }} />
+          <Stack.Screen name="wallet" options={{ title: t('Wallet') }} />
+          <Stack.Screen name="wallet-top-up" options={{ title: t('Add Money') }} />
           <Stack.Screen name="chat" options={{ title: t('Chat with Driver') }} />
           <Stack.Screen name="customer-tracking" options={{ title: t('Customer Tracking') }} />
           <Stack.Screen name="waiting-for-pickup" options={{ title: t('Waiting for Pickup') }} />

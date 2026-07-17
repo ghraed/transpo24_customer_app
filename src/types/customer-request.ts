@@ -365,13 +365,42 @@ export type PaymentStatus =
   | 'DELIVERY_CONFIRMED'
   | 'PAYMENT_CAPTURE_PENDING'
   | 'PAYMENT_CAPTURED'
+  | 'PAYMENT_REFUND_PENDING'
+  | 'PAYMENT_PARTIALLY_REFUNDED'
   | 'PAYMENT_RELEASED'
   | 'PAYMENT_CANCELLED'
-  | 'PAYMENT_REFUNDED';
+  | 'PAYMENT_REFUNDED'
+  | 'PAYMENT_DISPUTED';
 
 export type PaymentProvider = 'STRIPE' | 'APP_WALLET';
 
 export type AdditionalChargeStatus = 'PENDING' | 'CAPTURED' | 'CANCELLED' | 'FAILED';
+
+export type PaymentTransactionType =
+  | 'TOP_UP'
+  | 'HOLD'
+  | 'CAPTURE'
+  | 'RELEASE'
+  | 'ADDITIONAL_CHARGE'
+  | 'REFUND';
+
+export type WalletTopUpStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+
+export type TripPaymentSettlementStatus =
+  | 'COLLECTED'
+  | 'REFUND_PENDING'
+  | 'PARTIALLY_REFUNDED'
+  | 'REFUNDED'
+  | 'DISPUTED'
+  | 'MANUAL_REVIEW';
+
+export type DriverPayoutState =
+  | 'NOT_EARNED'
+  | 'EARNING_CREATED'
+  | 'PENDING_TRANSFER'
+  | 'PAID_OUT'
+  | 'TRANSFER_FAILED'
+  | 'NOT_APPLICABLE';
 
 export interface SavedPaymentMethodSummary {
   id: string;
@@ -433,6 +462,80 @@ export interface AdditionalCharge {
   status: AdditionalChargeStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CustomerWalletTransaction {
+  id: string;
+  amount: number;
+  currency: string;
+  type: PaymentTransactionType;
+  description: string | null;
+  paymentHoldId: string | null;
+  walletTopUpId: string | null;
+  additionalChargeId: string | null;
+  createdAt: string;
+}
+
+export interface CustomerWalletSummary {
+  id: string | null;
+  customerId: string;
+  currency: string | null;
+  balance: number;
+  reservedBalance: number;
+  availableBalance: number;
+  recentTransactions: CustomerWalletTransaction[];
+}
+
+export interface CustomerWalletTopUp {
+  id: string;
+  walletId: string | null;
+  customerId: string;
+  amount: number;
+  currency: string;
+  paymentMethod: PaymentMethod;
+  provider: PaymentProvider;
+  status: WalletTopUpStatus;
+  stripePaymentIntentId: string | null;
+  stripeClientSecret: string | null;
+  stripeChargeId: string | null;
+  failureReason: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerWalletTopUpResponse {
+  topUp: CustomerWalletTopUp;
+  wallet: CustomerWalletSummary;
+}
+
+export interface TripPaymentSettlement {
+  id: string;
+  requestId: string;
+  paymentHoldId: string;
+  customerId: string;
+  driverId: string | null;
+  currency: string;
+  collectedAmount: number;
+  refundableAmount: number;
+  refundedAmount: number;
+  retainedAmount: number;
+  driverShareAmount: number;
+  platformShareAmount: number;
+  status: TripPaymentSettlementStatus;
+  driverPayoutState: DriverPayoutState;
+  requiresManualReview: boolean;
+  lastStripeRefundId: string | null;
+  disputeReportedAt: string | null;
+  payoutFailureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CancelTripPaymentResponse {
+  payment: PaymentSummary;
+  settlement: TripPaymentSettlement;
+  requestStatus: CustomerRequestStatus;
 }
 
 export interface CustomerRequest {

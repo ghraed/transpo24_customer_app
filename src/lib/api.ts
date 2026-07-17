@@ -9,6 +9,7 @@ import type {
   SendChatMessagePayload,
 } from '@/types/chat';
 import type {
+  CancelTripPaymentResponse,
   CreateGoodsTransportRequestPayload,
   CreateFurnitureTransportRequestPayload,
   CreateMotorcycleTransportRequestPayload,
@@ -21,6 +22,8 @@ import type {
   CustomerRequestApiResponse,
   CreateDriverRatingPayload,
   CreateDriverRatingResponse,
+  CustomerWalletSummary,
+  CustomerWalletTopUpResponse,
   LocalPhotoAsset,
   PaymentMethod,
   PaymentSummary,
@@ -814,6 +817,64 @@ export async function saveDefaultPaymentMethod(
   );
 }
 
+export async function getCustomerWallet(): Promise<CustomerWalletSummary> {
+  const endpoint = `${getApiBaseUrl()}/customer/wallet`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load wallet.');
+  }
+
+  return parseJsonBody<CustomerWalletSummary>(
+    response,
+    'Failed to parse wallet response.',
+  );
+}
+
+export async function createWalletTopUp(payload: {
+  amount: number;
+  currency: string;
+  paymentMethod: PaymentMethod;
+}): Promise<CustomerWalletTopUpResponse> {
+  const endpoint = `${getApiBaseUrl()}/customer/wallet/top-ups`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to create wallet top-up.');
+  }
+
+  return parseJsonBody<CustomerWalletTopUpResponse>(
+    response,
+    'Failed to parse wallet top-up response.',
+  );
+}
+
+export async function getWalletTopUpStatus(
+  topUpId: string,
+): Promise<CustomerWalletTopUpResponse> {
+  const endpoint = `${getApiBaseUrl()}/customer/wallet/top-ups/${encodeURIComponent(topUpId)}`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load wallet top-up status.');
+  }
+
+  return parseJsonBody<CustomerWalletTopUpResponse>(
+    response,
+    'Failed to parse wallet top-up status response.',
+  );
+}
+
 export async function approveAdditionalCharge(
   requestId: string,
   chargeId: string,
@@ -1113,5 +1174,24 @@ export async function cancelPaymentHold(requestId: string): Promise<PaymentSumma
   return parseJsonBody<PaymentSummary>(
     response,
     'Failed to parse cancel payment hold response.',
+  );
+}
+
+export async function cancelCollectedTrip(
+  requestId: string,
+): Promise<CancelTripPaymentResponse> {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/cancel`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to cancel trip payment.');
+  }
+
+  return parseJsonBody<CancelTripPaymentResponse>(
+    response,
+    'Failed to parse cancel trip payment response.',
   );
 }

@@ -111,6 +111,9 @@ export default function ProfileTabScreen() {
         <Pressable style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>{t('Settings')}</Text>
         </Pressable>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/wallet')}>
+          <Text style={styles.secondaryButtonText}>{t('Wallet')}</Text>
+        </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => void onRegisterPush()}>
           <Text style={styles.secondaryButtonText}>
             {isRegisteringPush ? t('Registering Push...') : t('Register Push Notifications')}

@@ -22,6 +22,7 @@ import { M3LoginColors } from '@/constants/theme';
 import { isDeliveryCompletedStatus, isHistoryRequestStatus } from '@/lib/request-status';
 import {
   approveAdditionalCharge,
+  cancelCollectedTrip,
   deleteCustomerRequest,
   getDefaultPaymentMethod,
   getRequestAdditionalCharges,
@@ -247,6 +248,26 @@ function canDeleteRequest(status: CustomerRequestStatus): boolean {
   );
 }
 
+function canCancelPaidTrip(status: CustomerRequestStatus): boolean {
+  return (
+    status === 'ACCEPTED' ||
+    status === 'DRIVER_ASSIGNED' ||
+    status === 'DRIVER_GOING_TO_PICKUP' ||
+    status === 'DRIVER_ARRIVED_PICKUP' ||
+    status === 'PICKUP_IN_PROGRESS'
+  );
+}
+
+function requiresManualCancellationReview(status: CustomerRequestStatus): boolean {
+  return (
+    status === 'ITEM_PICKED_UP' ||
+    status === 'IN_TRANSIT' ||
+    status === 'DRIVER_GOING_TO_DROPOFF' ||
+    status === 'DELIVERED' ||
+    status === 'COMPLETED'
+  );
+}
+
 function buildOffersHelperText(requestData: RequestStatusResponse, offersCount: number): string {
   if (offersCount > 0) {
     const lowestOffer = requestData.quotesSummary.lowestPrice;
@@ -384,6 +405,7 @@ export default function RequestStatusScreen() {
   const [isOpeningPaymentOfferId, setIsOpeningPaymentOfferId] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(!initialRequest);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isCancellingTrip, setIsCancellingTrip] = useState<boolean>(false);
   const [activeAdditionalCharge, setActiveAdditionalCharge] = useState<AdditionalCharge | null>(null);
   const [additionalChargeConfirmationText, setAdditionalChargeConfirmationText] = useState<string>('');
   const [isApprovingAdditionalCharge, setIsApprovingAdditionalCharge] = useState<boolean>(false);
@@ -758,6 +780,62 @@ export default function RequestStatusScreen() {
     setTimeout(() => setIsOpeningPaymentOfferId(''), 0);
   }, [requestData, router, selectedOffer]);
 
+  const onCancelTrip = useCallback((): void => {
+    if (!requestData || isCancellingTrip) {
+      return;
+    }
+
+    Alert.alert(
+      'Cancel trip?',
+      'If you cancel before pickup, 85% will be refunded automatically and 15% will be kept as the cancellation fee.',
+      [
+        { text: 'Keep trip', style: 'cancel' },
+        {
+          text: 'Cancel trip',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                setIsCancellingTrip(true);
+                setErrorMessage('');
+                setSuccessMessage('');
+
+                const result = await cancelCollectedTrip(requestData.id);
+                setRequestData((previousRequestData) =>
+                  previousRequestData
+                    ? {
+                        ...previousRequestData,
+                        status: result.requestStatus,
+                        statusLabel: 'Cancelled',
+                      }
+                    : previousRequestData,
+                );
+                setSuccessMessage(
+                  `Trip cancelled. Refunded ${formatMoney(
+                    result.settlement.refundedAmount,
+                    result.payment.currency,
+                  )}. Cancellation fee kept: ${formatMoney(
+                    result.settlement.retainedAmount,
+                    result.payment.currency,
+                  )}.`,
+                );
+                await loadStatus(true);
+              } catch (error) {
+                setErrorMessage(
+                  error instanceof Error
+                    ? error.message
+                    : 'Failed to cancel this trip.',
+                );
+              } finally {
+                setIsCancellingTrip(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [isCancellingTrip, loadStatus, requestData]);
+
   const onRateDriver = useCallback((): void => {
     if (!requestData) {
       return;
@@ -862,6 +940,8 @@ export default function RequestStatusScreen() {
   const helperText = buildOffersHelperText(requestData, offers.length);
   const canChooseOffer = requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED';
   const canDeleteCurrentRequest = canDeleteRequest(requestData.status);
+  const canCancelCurrentTrip = canCancelPaidTrip(requestData.status);
+  const showManualCancellationReviewNote = requiresManualCancellationReview(requestData.status);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -894,6 +974,29 @@ export default function RequestStatusScreen() {
           </View>
           {socketMessage ? <Text style={styles.socketMessage}>{socketMessage}</Text> : null}
         </View>
+
+        {(canCancelCurrentTrip || showManualCancellationReviewNote) ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Cancellation policy</Text>
+            <Text style={styles.rowValue}>
+              Before pickup: 85% automatic refund, 15% cancellation fee.
+            </Text>
+            <Text style={styles.helperText}>
+              After pickup, automatic refunds are disabled and the case requires admin review.
+            </Text>
+            {canCancelCurrentTrip ? (
+              <Pressable
+                style={[styles.deleteButton, isCancellingTrip && styles.disabledButton]}
+                disabled={isCancellingTrip}
+                onPress={onCancelTrip}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {isCancellingTrip ? 'Cancelling…' : 'Cancel Trip'}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Progress</Text>

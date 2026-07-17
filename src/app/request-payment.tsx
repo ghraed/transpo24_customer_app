@@ -45,27 +45,27 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
   {
     method: 'CREDIT_CARD',
     title: 'Credit Card',
-    description: 'Authorize the amount now and capture it after delivery.',
+    description: 'Pay the agreed amount now with your credit card.',
   },
   {
     method: 'DEBIT_CARD',
     title: 'Debit Card',
-    description: 'Authorize the amount now and capture it after delivery.',
+    description: 'Pay the agreed amount now with your debit card.',
   },
   {
     method: 'APPLE_PAY',
     title: 'Apple Pay',
-    description: 'Use Apple Pay in a development build or production build.',
+    description: 'Pay now with Apple Pay in a development or production build.',
   },
   {
     method: 'GOOGLE_PAY',
     title: 'Google Pay',
-    description: 'Use Google Pay in a development build or production build.',
+    description: 'Pay now with Google Pay in a development or production build.',
   },
   {
     method: 'APP_WALLET',
     title: 'App Wallet',
-    description: 'Reserve the amount from your in-app wallet balance.',
+    description: 'Pay now using your available in-app wallet balance.',
   },
 ];
 
@@ -273,10 +273,10 @@ export default function RequestPaymentScreen() {
   ]);
 
   const submitLabel = useMemo(() => {
-    if (selectedMethod === 'APP_WALLET') return 'Hold Amount from Wallet';
-    if (selectedMethod === 'APPLE_PAY') return 'Authorize with Apple Pay';
-    if (selectedMethod === 'GOOGLE_PAY') return 'Authorize with Google Pay';
-    return 'Authorize Payment Hold';
+    if (selectedMethod === 'APP_WALLET') return 'Pay from Wallet';
+    if (selectedMethod === 'APPLE_PAY') return 'Pay with Apple Pay';
+    if (selectedMethod === 'GOOGLE_PAY') return 'Pay with Google Pay';
+    return 'Pay Now';
   }, [selectedMethod]);
 
   const navigateToNextStep = (nextRequestId: string): void => {
@@ -424,7 +424,7 @@ export default function RequestPaymentScreen() {
       }
 
       if (!createdPayment) {
-        throw new Error('Missing payment hold information.');
+        throw new Error('Missing payment information.');
       }
 
       if (selectedMethod !== 'APP_WALLET' && isPendingPaymentStatus(createdPayment.status)) {
@@ -436,7 +436,7 @@ export default function RequestPaymentScreen() {
 
       if (!isSuccessfulPaymentStatus(latestPayment.status)) {
         throw new Error(
-          `Payment was not authorized successfully. Current status: ${latestPayment.status}.`,
+          `Payment was not completed successfully. Current status: ${latestPayment.status}.`,
         );
       }
 
@@ -444,7 +444,7 @@ export default function RequestPaymentScreen() {
       const finalizedRequest = await getCustomerRequestStatus(requestId);
       if (!isFinalizedRequestStatus(finalizedRequest.status)) {
         throw new Error(
-          `Payment hold succeeded but request finalization is still pending. Current request status: ${finalizedRequest.status}.`,
+          `Payment succeeded but request finalization is still pending. Current request status: ${finalizedRequest.status}.`,
         );
       }
 
@@ -472,7 +472,7 @@ export default function RequestPaymentScreen() {
       }
 
       setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to authorize the payment hold.',
+        error instanceof Error ? error.message : 'Failed to complete payment.',
       );
     } finally {
       setIsSubmitting(false);
@@ -496,9 +496,9 @@ export default function RequestPaymentScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.title}>Confirm Payment Hold</Text>
+          <Text style={styles.title}>Pay Now</Text>
           <Text style={styles.subtitle}>
-            We’ll place a hold on the agreed amount now and capture it only after final delivery is confirmed.
+            The agreed amount will be collected now when you confirm the driver. If you cancel before pickup, 85% is refunded automatically and 15% is kept as the cancellation fee.
           </Text>
         </View>
 
@@ -513,7 +513,7 @@ export default function RequestPaymentScreen() {
           <Text style={styles.label}>Estimated pickup</Text>
           <Text style={styles.value}>{formatDate(offerData.estimatedPickupAt)}</Text>
           <Text style={styles.helperText}>
-            The agreed amount will be held now and will only be permanently deducted after final delivery is confirmed.
+            This payment is collected now and held in the platform until the trip outcome is resolved.
           </Text>
         </View>
 
@@ -598,8 +598,8 @@ export default function RequestPaymentScreen() {
             />
             <Text style={styles.helperText}>
               {selectedMethod === 'CREDIT_CARD'
-                ? 'Your credit card will be authorized now and captured after delivery.'
-                : 'Your debit card will be authorized now and captured after delivery.'}
+                ? 'Your credit card will be charged now when you confirm the payment.'
+                : 'Your debit card will be charged now when you confirm the payment.'}
             </Text>
           </View>
         ) : null}
@@ -629,11 +629,14 @@ export default function RequestPaymentScreen() {
           ) : null}
           {paymentResult ? (
             <>
-              <Text style={styles.label}>Hold status</Text>
+              <Text style={styles.label}>Payment status</Text>
               <Text style={styles.value}>{paymentResult.status}</Text>
-              <Text style={styles.label}>Held amount</Text>
+              <Text style={styles.label}>Collected amount</Text>
               <Text style={styles.value}>
-                {formatMoney(paymentResult.heldAmount, paymentResult.currency)}
+                {formatMoney(
+                  paymentResult.capturedAmount > 0 ? paymentResult.capturedAmount : paymentResult.amount,
+                  paymentResult.currency,
+                )}
               </Text>
             </>
           ) : null}
@@ -647,7 +650,7 @@ export default function RequestPaymentScreen() {
           onPress={() => void onSubmit()}
         >
           <Text style={styles.primaryButtonText}>
-            {isSubmitting ? 'Authorizing…' : submitLabel}
+            {isSubmitting ? 'Processing payment…' : submitLabel}
           </Text>
         </Pressable>
 
