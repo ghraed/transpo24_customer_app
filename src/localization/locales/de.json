@@ -111,5 +111,32 @@
   "Transport home furniture or bulky household items.": "Transportieren Sie Möbel oder sperrige Haushaltsgegenstände.",
   "Checking chat availability…": "Chat-Verfügbarkeit wird geprüft…",
   "Chat with driver": "Mit dem Fahrer chatten",
-  "there": "da"
+  "there": "da",
+  "extra_expense": {
+    "confirm_keyword": "Einverstanden",
+    "confirm_title": "Zusatzkosten genehmigen",
+    "confirm_prompt": "Geben Sie \"{{keyword}}\" ein, um zu bestätigen und Ihre gespeicherte Karte sofort zu belasten.",
+    "saved_card_notice": "Ihre gespeicherte Standardkarte wird direkt nach der Genehmigung belastet",
+    "saved_card_label": "Gespeicherte Karte",
+    "expense_amount_label": "Kostenbetrag",
+    "app_fee_label": "App-Gebühr (10 %)",
+    "approve_button": "Kosten genehmigen",
+    "retry_button": "Erneut versuchen",
+    "add_payment_method_button": "Zahlungsmethode hinzufügen",
+    "cancel_button": "Abbrechen",
+    "confirm_button": "Belastung bestätigen",
+    "processing_button": "Wird verarbeitet...",
+    "success_message": "Die Zusatzkosten wurden erfolgreich genehmigt.",
+    "approval_failed": "Die Zusatzkosten konnten nicht genehmigt werden."
+  },
+  "payment_method": {
+    "title": "Zahlungsmethode",
+    "subtitle": "Speichern Sie einmal eine Standardkarte, damit zukünftige Zusatzkosten ohne erneute Karteneingabe genehmigt werden können.",
+    "save_button": "Karte speichern",
+    "cancel_button": "Abbrechen",
+    "card_required": "Vervollständigen Sie die Kartendaten, um fortzufahren.",
+    "create_failed": "Die Kartenzahlungsmethode konnte nicht erstellt werden.",
+    "save_failed": "Die Zahlungsmethode konnte nicht gespeichert werden."
+  },
+  "Payment Method": "Zahlungsmethode"
 }

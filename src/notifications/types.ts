@@ -6,6 +6,7 @@ export type PushNotificationType =
   | 'CHAT_MESSAGE'
   | 'ITEM_PICKED_UP'
   | 'ITEM_DELIVERED'
+  | 'ADDITIONAL_CHARGE_ADDED'
   | 'TRIP_FUNDS_TRANSFERRED'
   | 'TEST_NOTIFICATION'
   | string;
@@ -20,6 +21,8 @@ export interface RegisterPushTokenPayload {
 export interface PushNotificationData {
   type?: PushNotificationType;
   requestId?: string;
+  tripId?: string;
+  chargeId?: string;
   offerId?: string;
   chatRoomId?: string;
   transportRequestId?: string;

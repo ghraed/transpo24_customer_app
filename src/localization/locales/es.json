@@ -111,5 +111,32 @@
   "Transport home furniture or bulky household items.": "Transporta muebles del hogar o artículos voluminosos.",
   "Checking chat availability…": "Comprobando disponibilidad del chat…",
   "Chat with driver": "Chatear con el conductor",
-  "there": "allí"
+  "there": "allí",
+  "extra_expense": {
+    "confirm_keyword": "Acepto",
+    "confirm_title": "Aprobar cargo adicional",
+    "confirm_prompt": "Escribe \"{{keyword}}\" para confirmar y cobrar de inmediato a tu tarjeta guardada.",
+    "saved_card_notice": "Tu tarjeta predeterminada guardada se cobrará inmediatamente después de la aprobación",
+    "saved_card_label": "Tarjeta guardada",
+    "expense_amount_label": "Monto del gasto",
+    "app_fee_label": "Tarifa de la app (10%)",
+    "approve_button": "Aprobar cargo",
+    "retry_button": "Reintentar cargo",
+    "add_payment_method_button": "Agregar método de pago",
+    "cancel_button": "Cancelar",
+    "confirm_button": "Confirmar cobro",
+    "processing_button": "Procesando...",
+    "success_message": "El cargo adicional se aprobó correctamente.",
+    "approval_failed": "No se pudo aprobar el cargo adicional."
+  },
+  "payment_method": {
+    "title": "Método de pago",
+    "subtitle": "Guarda una tarjeta predeterminada una vez para aprobar futuros cargos adicionales sin volver a ingresar los datos de la tarjeta.",
+    "save_button": "Guardar tarjeta",
+    "cancel_button": "Cancelar",
+    "card_required": "Completa los datos de tu tarjeta para continuar.",
+    "create_failed": "No se pudo crear el método de pago con tarjeta.",
+    "save_failed": "No se pudo guardar el método de pago."
+  },
+  "Payment Method": "Método de pago"
 }

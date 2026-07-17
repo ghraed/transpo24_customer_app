@@ -11,20 +11,27 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { getApiBaseUrl } from '@/config/backend';
 import { ChatEntryButton } from '@/components/chat-entry-button';
 import { M3LoginColors } from '@/constants/theme';
 import { isDeliveryCompletedStatus, isHistoryRequestStatus } from '@/lib/request-status';
 import {
+  approveAdditionalCharge,
   deleteCustomerRequest,
+  getDefaultPaymentMethod,
+  getRequestAdditionalCharges,
   getCustomerRequestOffers,
   getCustomerRequestStatus,
   getRequestTracking,
 } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth-token';
+import { DEFAULT_LANGUAGE } from '@/localization/languages';
+import { useAppLanguage } from '@/localization/provider';
 import {
   connectSocket,
   joinTripRoom,
@@ -51,6 +58,7 @@ import type {
   RequestTracking,
   RequestTrackingStatus,
   RequestStatusResponse,
+  SavedPaymentMethodSummary,
 } from '@/types/customer-request';
 import {
   validateDriverLocationUpdatedPayload,
@@ -276,6 +284,16 @@ function formatMoney(amount: number, currency: string | null | undefined): strin
   }
 }
 
+function formatSavedPaymentMethod(paymentMethod: SavedPaymentMethodSummary | null): string {
+  if (!paymentMethod) {
+    return 'No saved card';
+  }
+
+  const brand = paymentMethod.brand?.toUpperCase() || 'CARD';
+  const last4 = paymentMethod.last4 ?? '----';
+  return `${brand} •••• ${last4}`;
+}
+
 function dedupeProofPhotos(photos: ProofPhoto[]): ProofPhoto[] {
   const seen = new Set<string>();
   return photos.filter((photo) => {
@@ -346,7 +364,10 @@ function buildTrackingHref(
 export default function RequestStatusScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { t } = useTranslation();
+  const { language } = useAppLanguage();
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
+  const refreshTs = typeof params.refreshTs === 'string' ? params.refreshTs : '';
   const initialRequest = useMemo(
     () => parseInitialRequest(typeof params.initialRequest === 'string' ? params.initialRequest : undefined),
     [params.initialRequest],
@@ -358,10 +379,14 @@ export default function RequestStatusScreen() {
   const [trackingData, setTrackingData] = useState<RequestTracking | null>(null);
   const [latestDriverLocation, setLatestDriverLocation] = useState<DriverLocation | null>(null);
   const [additionalCharges, setAdditionalCharges] = useState<AdditionalCharge[]>([]);
+  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<SavedPaymentMethodSummary | null>(null);
   const [selectedOfferId, setSelectedOfferId] = useState<string>('');
   const [isOpeningPaymentOfferId, setIsOpeningPaymentOfferId] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(!initialRequest);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [activeAdditionalCharge, setActiveAdditionalCharge] = useState<AdditionalCharge | null>(null);
+  const [additionalChargeConfirmationText, setAdditionalChargeConfirmationText] = useState<string>('');
+  const [isApprovingAdditionalCharge, setIsApprovingAdditionalCharge] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [nearDeliveryMessage, setNearDeliveryMessage] = useState<string>('');
@@ -389,8 +414,12 @@ export default function RequestStatusScreen() {
       setErrorMessage('');
 
       try {
-        const data = await getCustomerRequestStatus(requestId);
-        const offersResponse = await getCustomerRequestOffers(requestId);
+        const [data, offersResponse, chargesResponse, paymentMethodResponse] = await Promise.all([
+          getCustomerRequestStatus(requestId),
+          getCustomerRequestOffers(requestId),
+          getRequestAdditionalCharges(requestId),
+          getDefaultPaymentMethod(),
+        ]);
         let nextTracking: RequestTracking | null = null;
 
         try {
@@ -406,6 +435,8 @@ export default function RequestStatusScreen() {
 
         setRequestData(data);
         setOffers(sortOffers(offersResponse.offers ?? []));
+        setAdditionalCharges(chargesResponse);
+        setDefaultPaymentMethod(paymentMethodResponse);
         setTrackingData(nextTracking);
         setLatestDriverLocation(nextTracking?.latestDriverLocation ?? null);
         setNearDeliveryMessage(
@@ -438,7 +469,7 @@ export default function RequestStatusScreen() {
     }, 0);
 
     return () => clearTimeout(timeoutId);
-  }, [loadStatus]);
+  }, [loadStatus, refreshTs]);
 
   useEffect(() => {
     if (!requestId || !accessToken) return;
@@ -701,6 +732,11 @@ export default function RequestStatusScreen() {
       (acceptedOffer || requestData?.driverSummary.assigned) &&
       (requestData?.driverSummary.driverId || acceptedOffer?.driverId),
   );
+  const confirmationKeyword = t('extra_expense.confirm_keyword', { defaultValue: 'Agree' });
+  const resolvedConfirmationLocale = language || DEFAULT_LANGUAGE;
+  const trimmedAdditionalChargeConfirmationText = additionalChargeConfirmationText.trim();
+  const isAdditionalChargeConfirmationValid =
+    trimmedAdditionalChargeConfirmationText === confirmationKeyword;
 
   const openTracking = useCallback((): void => {
     if (!requestData || !canOpenTrackingMap) return;
@@ -731,6 +767,74 @@ export default function RequestStatusScreen() {
       (`/customer-rate-driver?tripId=${encodeURIComponent(requestData.id)}`) as Href,
     );
   }, [requestData, router]);
+
+  const openAdditionalChargeFlow = useCallback((charge: AdditionalCharge): void => {
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!defaultPaymentMethod) {
+      router.push(
+        (`/payment-method?requestId=${encodeURIComponent(requestId)}`) as Href,
+      );
+      return;
+    }
+
+    setActiveAdditionalCharge(charge);
+    setAdditionalChargeConfirmationText('');
+  }, [defaultPaymentMethod, requestId, router]);
+
+  const closeAdditionalChargeModal = useCallback((): void => {
+    if (isApprovingAdditionalCharge) {
+      return;
+    }
+
+    setActiveAdditionalCharge(null);
+    setAdditionalChargeConfirmationText('');
+  }, [isApprovingAdditionalCharge]);
+
+  const onApproveAdditionalCharge = useCallback(async (): Promise<void> => {
+    if (!activeAdditionalCharge || !isAdditionalChargeConfirmationValid) {
+      return;
+    }
+
+    setIsApprovingAdditionalCharge(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      const updatedCharge = await approveAdditionalCharge(requestId, activeAdditionalCharge.id, {
+        confirmationLocale: resolvedConfirmationLocale,
+        confirmationText: trimmedAdditionalChargeConfirmationText,
+      });
+
+      setAdditionalCharges((previousCharges) =>
+        previousCharges.map((charge) =>
+          charge.id === updatedCharge.id ? updatedCharge : charge,
+        ),
+      );
+      if (updatedCharge.payment.savedPaymentMethod) {
+        setDefaultPaymentMethod(updatedCharge.payment.savedPaymentMethod);
+      }
+      setActiveAdditionalCharge(null);
+      setAdditionalChargeConfirmationText('');
+      setSuccessMessage(t('extra_expense.success_message'));
+      await loadStatus(true);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : t('extra_expense.approval_failed'),
+      );
+    } finally {
+      setIsApprovingAdditionalCharge(false);
+    }
+  }, [
+    activeAdditionalCharge,
+    isAdditionalChargeConfirmationValid,
+    loadStatus,
+    requestId,
+    resolvedConfirmationLocale,
+    t,
+    trimmedAdditionalChargeConfirmationText,
+  ]);
 
   if (isLoading && !requestData) {
     return (
@@ -1090,13 +1194,22 @@ export default function RequestStatusScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Additional Charges</Text>
+          <Text style={styles.rowValue}>
+            {t('extra_expense.saved_card_notice')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+          </Text>
           {additionalCharges.length === 0 ? (
             <Text style={styles.rowValue}>No additional charges yet.</Text>
           ) : (
             additionalCharges.map((charge) => (
               <View key={charge.id} style={styles.additionalChargeCard}>
                 <Text style={styles.offerPrimaryValue}>
-                  {formatMoney(charge.amount, charge.currency)}
+                  {formatMoney(charge.totalChargeAmount, charge.currency)}
+                </Text>
+                <Text style={styles.rowValue}>
+                  {t('extra_expense.expense_amount_label')}: {formatMoney(charge.amount, charge.currency)}
+                </Text>
+                <Text style={styles.rowValue}>
+                  {t('extra_expense.app_fee_label')}: {formatMoney(charge.appFeeAmount, charge.currency)}
                 </Text>
                 <Text style={styles.rowValue}>Reason: {charge.reason}</Text>
                 {charge.equipmentType ? (
@@ -1104,8 +1217,31 @@ export default function RequestStatusScreen() {
                 ) : null}
                 <Text style={styles.rowValue}>Status: {charge.status}</Text>
                 <Text style={styles.rowValue}>Added: {formatDate(charge.createdAt)}</Text>
+                {charge.payment.savedPaymentMethod ? (
+                  <Text style={styles.rowValue}>
+                    {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(charge.payment.savedPaymentMethod)}
+                  </Text>
+                ) : null}
+                {charge.payment.failureReason ? (
+                  <Text style={styles.errorText}>{charge.payment.failureReason}</Text>
+                ) : null}
                 {charge.invoiceUrl ? (
                   <Text style={styles.rowValue}>Invoice: {resolveAssetUrl(charge.invoiceUrl)}</Text>
+                ) : null}
+                {(charge.status === 'PENDING' || charge.status === 'FAILED') ? (
+                  <Pressable
+                    style={[styles.primaryButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                    disabled={isApprovingAdditionalCharge}
+                    onPress={() => openAdditionalChargeFlow(charge)}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {defaultPaymentMethod
+                        ? charge.status === 'FAILED'
+                          ? t('extra_expense.retry_button')
+                          : t('extra_expense.approve_button')
+                        : t('extra_expense.add_payment_method_button')}
+                    </Text>
+                  </Pressable>
                 ) : null}
               </View>
             ))
@@ -1182,6 +1318,77 @@ export default function RequestStatusScreen() {
             <Text style={styles.secondaryButtonText}>Back to Home</Text>
           </Pressable>
         </View>
+        <Modal
+          visible={Boolean(activeAdditionalCharge)}
+          transparent
+          animationType="fade"
+          onRequestClose={closeAdditionalChargeModal}
+        >
+          <View style={styles.dialogBackdrop}>
+            <View style={styles.dialogCard}>
+              <Text style={styles.cardTitle}>{t('extra_expense.confirm_title')}</Text>
+              <Text style={styles.rowValue}>
+                {activeAdditionalCharge
+                  ? formatMoney(activeAdditionalCharge.totalChargeAmount, activeAdditionalCharge.currency)
+                  : ''}
+              </Text>
+              {activeAdditionalCharge ? (
+                <Text style={styles.rowValue}>
+                  {t('extra_expense.expense_amount_label')}: {formatMoney(activeAdditionalCharge.amount, activeAdditionalCharge.currency)}
+                </Text>
+              ) : null}
+              {activeAdditionalCharge ? (
+                <Text style={styles.rowValue}>
+                  {t('extra_expense.app_fee_label')}: {formatMoney(activeAdditionalCharge.appFeeAmount, activeAdditionalCharge.currency)}
+                </Text>
+              ) : null}
+              {activeAdditionalCharge ? (
+                <Text style={styles.rowValue}>{activeAdditionalCharge.reason}</Text>
+              ) : null}
+              <Text style={styles.helperText}>{t('extra_expense.saved_card_notice')}</Text>
+              <Text style={styles.helperText}>
+                {t('extra_expense.confirm_prompt', {
+                  keyword: confirmationKeyword,
+                })}
+              </Text>
+              <TextInput
+                value={additionalChargeConfirmationText}
+                onChangeText={setAdditionalChargeConfirmationText}
+                placeholder={confirmationKeyword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.confirmationInput}
+              />
+              <Text style={styles.rowValue}>
+                {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+              </Text>
+              <View style={styles.dialogActions}>
+                <Pressable
+                  style={[styles.secondaryOutlineButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                  disabled={isApprovingAdditionalCharge}
+                  onPress={closeAdditionalChargeModal}
+                >
+                  <Text style={styles.secondaryOutlineButtonText}>{t('extra_expense.cancel_button')}</Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.primaryButton,
+                    (!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge) &&
+                      styles.disabledButton,
+                  ]}
+                  disabled={!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge}
+                  onPress={() => void onApproveAdditionalCharge()}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {isApprovingAdditionalCharge
+                      ? t('extra_expense.processing_button')
+                      : t('extra_expense.confirm_button')}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
         <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
           <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
             {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
@@ -1496,6 +1703,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  dialogBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(28, 27, 31, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: M3LoginColors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: M3LoginColors.outlineVariant,
+    gap: 10,
+  },
+  confirmationInput: {
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: M3LoginColors.outline,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    color: M3LoginColors.textPrimary,
+  },
+  dialogActions: {
+    gap: 10,
+  },
   expandedPhoto: {
     width: '100%',
     height: '100%',
@@ -1522,6 +1758,16 @@ const styles = StyleSheet.create({
     backgroundColor: M3LoginColors.primary,
     marginTop: 8,
   },
+  secondaryOutlineButton: {
+    borderRadius: 10,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.surface,
+  },
   deleteButton: {
     borderRadius: 10,
     minHeight: 44,
@@ -1543,6 +1789,11 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: M3LoginColors.onPrimary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  secondaryOutlineButtonText: {
+    color: M3LoginColors.textPrimary,
     fontWeight: '600',
     fontSize: 14,
   },

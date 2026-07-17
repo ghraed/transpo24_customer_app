@@ -111,5 +111,32 @@
   "Transport home furniture or bulky household items.": "Transportez des meubles ou des objets ménagers volumineux.",
   "Checking chat availability…": "Vérification de la disponibilité du chat…",
   "Chat with driver": "Discuter avec le chauffeur",
-  "there": "vous"
+  "there": "vous",
+  "extra_expense": {
+    "confirm_keyword": "Accepte",
+    "confirm_title": "Approuver les frais supplémentaires",
+    "confirm_prompt": "Saisissez \"{{keyword}}\" pour confirmer et débiter immédiatement votre carte enregistrée.",
+    "saved_card_notice": "Votre carte par défaut enregistrée sera débitée immédiatement après l'approbation",
+    "saved_card_label": "Carte enregistrée",
+    "expense_amount_label": "Montant des frais",
+    "app_fee_label": "Frais de l'application (10 %)",
+    "approve_button": "Approuver les frais",
+    "retry_button": "Réessayer",
+    "add_payment_method_button": "Ajouter un moyen de paiement",
+    "cancel_button": "Annuler",
+    "confirm_button": "Confirmer le débit",
+    "processing_button": "Traitement...",
+    "success_message": "Les frais supplémentaires ont été approuvés avec succès.",
+    "approval_failed": "Impossible d'approuver les frais supplémentaires."
+  },
+  "payment_method": {
+    "title": "Moyen de paiement",
+    "subtitle": "Enregistrez une carte par défaut une seule fois pour approuver de futurs frais supplémentaires sans ressaisir les données de la carte.",
+    "save_button": "Enregistrer la carte",
+    "cancel_button": "Annuler",
+    "card_required": "Complétez les informations de votre carte pour continuer.",
+    "create_failed": "Impossible de créer le moyen de paiement par carte.",
+    "save_failed": "Impossible d'enregistrer le moyen de paiement."
+  },
+  "Payment Method": "Moyen de paiement"
 }

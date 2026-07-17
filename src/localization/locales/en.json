@@ -111,5 +111,32 @@
   "Transport home furniture or bulky household items.": "Transport home furniture or bulky household items.",
   "Checking chat availability…": "Checking chat availability…",
   "Chat with driver": "Chat with driver",
-  "there": "there"
+  "there": "there",
+  "extra_expense": {
+    "confirm_keyword": "Agree",
+    "confirm_title": "Approve additional charge",
+    "confirm_prompt": "Type \"{{keyword}}\" to confirm and charge your saved card immediately.",
+    "saved_card_notice": "Your saved default card will be charged immediately after approval",
+    "saved_card_label": "Saved card",
+    "expense_amount_label": "Expense amount",
+    "app_fee_label": "App fee (10%)",
+    "approve_button": "Approve charge",
+    "retry_button": "Retry charge",
+    "add_payment_method_button": "Add payment method",
+    "cancel_button": "Cancel",
+    "confirm_button": "Confirm charge",
+    "processing_button": "Processing...",
+    "success_message": "Additional charge approved successfully.",
+    "approval_failed": "Failed to approve additional charge."
+  },
+  "payment_method": {
+    "title": "Payment Method",
+    "subtitle": "Save a default card once so future additional charges can be approved without re-entering card details.",
+    "save_button": "Save card",
+    "cancel_button": "Cancel",
+    "card_required": "Complete your card details to continue.",
+    "create_failed": "Failed to create the card payment method.",
+    "save_failed": "Failed to save the payment method."
+  },
+  "Payment Method": "Payment Method"
 }

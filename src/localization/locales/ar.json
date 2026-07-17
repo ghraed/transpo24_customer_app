@@ -111,5 +111,32 @@
   "Transport home furniture or bulky household items.": "انقل أثاث المنزل أو الأغراض المنزلية الكبيرة.",
   "Checking chat availability…": "جارٍ التحقق من توفر الدردشة…",
   "Chat with driver": "الدردشة مع السائق",
-  "there": "هناك"
+  "there": "هناك",
+  "extra_expense": {
+    "confirm_keyword": "أوافق",
+    "confirm_title": "الموافقة على الرسوم الإضافية",
+    "confirm_prompt": "اكتب \"{{keyword}}\" للتأكيد وخصم المبلغ من بطاقتك المحفوظة فوراً.",
+    "saved_card_notice": "سيتم خصم الرسوم من بطاقتك الافتراضية المحفوظة مباشرة بعد الموافقة",
+    "saved_card_label": "البطاقة المحفوظة",
+    "expense_amount_label": "قيمة المصروف",
+    "app_fee_label": "رسوم التطبيق (10%)",
+    "approve_button": "الموافقة على الرسوم",
+    "retry_button": "إعادة المحاولة",
+    "add_payment_method_button": "إضافة وسيلة دفع",
+    "cancel_button": "إلغاء",
+    "confirm_button": "تأكيد الخصم",
+    "processing_button": "جارٍ المعالجة...",
+    "success_message": "تمت الموافقة على الرسوم الإضافية بنجاح.",
+    "approval_failed": "تعذر الموافقة على الرسوم الإضافية."
+  },
+  "payment_method": {
+    "title": "وسيلة الدفع",
+    "subtitle": "احفظ بطاقة افتراضية مرة واحدة حتى تتمكن من الموافقة على الرسوم الإضافية مستقبلاً بدون إعادة إدخال بيانات البطاقة.",
+    "save_button": "حفظ البطاقة",
+    "cancel_button": "إلغاء",
+    "card_required": "أكمل بيانات البطاقة للمتابعة.",
+    "create_failed": "تعذر إنشاء وسيلة الدفع للبطاقة.",
+    "save_failed": "تعذر حفظ وسيلة الدفع."
+  },
+  "Payment Method": "وسيلة الدفع"
 }

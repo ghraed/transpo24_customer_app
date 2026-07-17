@@ -26,6 +26,8 @@ import type {
   PaymentSummary,
   RequestTracking,
   RequestStatusResponse,
+  AdditionalCharge,
+  SavedPaymentMethodSummary,
   SubmitCustomerRequestPayload,
   UploadRequestPhotosResponse,
   UpdateDropoffLocationPayload,
@@ -122,6 +124,33 @@ async function parseJsonBody<T>(response: Response, fallback: string): Promise<T
 
   if (!raw.trim()) {
     throw new Error(fallback);
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const sanitized = sanitizeMalformedJson(raw);
+
+    if (sanitized !== raw) {
+      try {
+        return JSON.parse(sanitized) as T;
+      } catch {
+        // Fall through to the detailed error below.
+      }
+    }
+
+    throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+  }
+}
+
+async function parseNullableJsonBody<T>(
+  response: Response,
+  fallback: string,
+): Promise<T | null> {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    return null;
   }
 
   try {
@@ -726,6 +755,88 @@ export async function getRequestTracking(requestId: string): Promise<RequestTrac
   return parseJsonBody<RequestTracking>(
     response,
     'Failed to parse request tracking response.',
+  );
+}
+
+export async function getRequestAdditionalCharges(requestId: string): Promise<AdditionalCharge[]> {
+  const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/additional-charges`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load additional charges.');
+  }
+
+  return parseJsonBody<AdditionalCharge[]>(
+    response,
+    'Failed to parse additional charges response.',
+  );
+}
+
+export async function getDefaultPaymentMethod(): Promise<SavedPaymentMethodSummary | null> {
+  const endpoint = `${getApiBaseUrl()}/customer/payment-method/default`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to load saved payment method.');
+  }
+
+  return parseNullableJsonBody<SavedPaymentMethodSummary>(
+    response,
+    'Failed to parse saved payment method response.',
+  );
+}
+
+export async function saveDefaultPaymentMethod(
+  stripePaymentMethodId: string,
+): Promise<SavedPaymentMethodSummary> {
+  const endpoint = `${getApiBaseUrl()}/customer/payment-method/default`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      stripePaymentMethodId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to save payment method.');
+  }
+
+  return parseJsonBody<SavedPaymentMethodSummary>(
+    response,
+    'Failed to parse saved payment method response.',
+  );
+}
+
+export async function approveAdditionalCharge(
+  requestId: string,
+  chargeId: string,
+  payload: {
+    confirmationLocale: string;
+    confirmationText: string;
+  },
+): Promise<AdditionalCharge> {
+  const endpoint =
+    `${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/additional-charges/${encodeURIComponent(chargeId)}/approve`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to approve additional charge.');
+  }
+
+  return parseJsonBody<AdditionalCharge>(
+    response,
+    'Failed to parse additional charge approval response.',
   );
 }
 

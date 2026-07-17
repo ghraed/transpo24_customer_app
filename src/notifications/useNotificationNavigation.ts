@@ -42,6 +42,7 @@ function resolveNotificationRoute(data: PushNotificationData): Href | null {
       return null;
     case 'ITEM_PICKED_UP':
     case 'ITEM_DELIVERED':
+    case 'ADDITIONAL_CHARGE_ADDED':
     case 'TRIP_FUNDS_TRANSFERRED':
       if (typeof data.requestId === 'string' && data.requestId.trim()) {
         return (`/request-status?requestId=${encodeURIComponent(data.requestId)}`) as Href;

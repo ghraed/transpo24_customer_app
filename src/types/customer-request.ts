@@ -373,6 +373,14 @@ export type PaymentProvider = 'STRIPE' | 'APP_WALLET';
 
 export type AdditionalChargeStatus = 'PENDING' | 'CAPTURED' | 'CANCELLED' | 'FAILED';
 
+export interface SavedPaymentMethodSummary {
+  id: string;
+  brand: string | null;
+  last4: string | null;
+  expMonth: number | null;
+  expYear: number | null;
+}
+
 export interface PaymentSummary {
   id: string;
   requestId: string;
@@ -399,10 +407,29 @@ export interface AdditionalCharge {
   driverId: string;
   customerId: string;
   amount: number;
+  appFeeAmount: number;
+  totalChargeAmount: number;
   currency: string;
   reason: string;
   equipmentType: string | null;
   invoiceUrl: string | null;
+  invoice: {
+    originalFilename: string | null;
+    mimeType: string | null;
+    sizeBytes: number | null;
+  };
+  approval: {
+    approvedAt: string | null;
+    approvedByCustomerId: string | null;
+    confirmationLocale: string | null;
+    confirmationText: string | null;
+  };
+  payment: {
+    stripePaymentIntentId: string | null;
+    stripeChargeId: string | null;
+    savedPaymentMethod: SavedPaymentMethodSummary | null;
+    failureReason: string | null;
+  };
   status: AdditionalChargeStatus;
   createdAt: string;
   updatedAt: string;
