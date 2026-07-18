@@ -984,22 +984,28 @@ export default function VehicleDetailsScreen() {
           ) : null}
 
           <Text style={styles.sectionTitle}>Request Details</Text>
-          <TextInput
-            value={requestForm.itemTitle}
-            onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemTitle: value }))}
-            placeholder="Transport title (optional)"
-            placeholderTextColor="#98a2b3"
-            style={styles.input}
-          />
-          <TextInput
-            value={requestForm.itemDescription ?? ''}
-            onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemDescription: value }))}
-            placeholder="Extra details for the driver (optional)"
-            placeholderTextColor="#98a2b3"
-            style={[styles.input, styles.textarea]}
-            multiline
-          />
-          <View style={styles.switchRow}>
+          <View style={styles.fieldRow}>
+            <Text style={styles.label}>Transport Title</Text>
+            <TextInput
+              value={requestForm.itemTitle}
+              onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemTitle: value }))}
+              placeholder="Transport title (optional)"
+              placeholderTextColor="#98a2b3"
+              style={styles.input}
+            />
+          </View>
+          <View style={styles.fieldRow}>
+            <Text style={styles.label}>Extra Details</Text>
+            <TextInput
+              value={requestForm.itemDescription ?? ''}
+              onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemDescription: value }))}
+              placeholder="Extra details for the driver (optional)"
+              placeholderTextColor="#98a2b3"
+              style={[styles.input, styles.textarea]}
+              multiline
+            />
+          </View>
+          <View style={[styles.switchRow, styles.fieldRow]}>
             <Text style={styles.switchLabel}>Requires loading help</Text>
             <Pressable
               style={[styles.switchChip, requestForm.requiresLoadingHelp && styles.switchChipActive]}
@@ -1022,27 +1028,33 @@ export default function VehicleDetailsScreen() {
             </Pressable>
           </View>
           {requestForm.requiresLoadingHelp ? (
-            <TextInput
-              value={requestForm.loadingWorkersCount ?? ''}
-              onChangeText={(value) =>
-                setRequestForm((prev) => ({ ...prev, loadingWorkersCount: value }))
-              }
-              placeholder="Loading workers count"
-              placeholderTextColor="#98a2b3"
-              style={styles.input}
-              keyboardType="number-pad"
-            />
+            <View style={styles.fieldRow}>
+              <Text style={styles.label}>Loading Workers Count</Text>
+              <TextInput
+                value={requestForm.loadingWorkersCount ?? ''}
+                onChangeText={(value) =>
+                  setRequestForm((prev) => ({ ...prev, loadingWorkersCount: value }))
+                }
+                placeholder="Loading workers count"
+                placeholderTextColor="#98a2b3"
+                style={styles.input}
+                keyboardType="number-pad"
+              />
+            </View>
           ) : null}
-          <TextInput
-            value={requestForm.specialInstructions ?? ''}
-            onChangeText={(value) =>
-              setRequestForm((prev) => ({ ...prev, specialInstructions: value }))
-            }
-            placeholder="Special instructions (optional)"
-            placeholderTextColor="#98a2b3"
-            style={[styles.input, styles.textarea]}
-            multiline
-          />
+          <View style={styles.fieldRow}>
+            <Text style={styles.label}>Special Instructions</Text>
+            <TextInput
+              value={requestForm.specialInstructions ?? ''}
+              onChangeText={(value) =>
+                setRequestForm((prev) => ({ ...prev, specialInstructions: value }))
+              }
+              placeholder="Special instructions (optional)"
+              placeholderTextColor="#98a2b3"
+              style={[styles.input, styles.textarea]}
+              multiline
+            />
+          </View>
 
           <Text style={styles.sectionTitle}>Upload Photos</Text>
           <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
@@ -1309,10 +1321,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   switchRow: {
-    marginTop: 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  fieldRow: {
+    marginBottom: 16,
   },
   switchLabel: {
     fontSize: 14,
