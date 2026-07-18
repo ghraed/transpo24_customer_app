@@ -1,20 +1,24 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  ColorValue,
   Image,
   Modal,
   Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getApiBaseUrl } from '@/config/backend';
 import { ChatEntryButton } from '@/components/chat-entry-button';
@@ -239,6 +243,18 @@ function getRatingText(rating: number | null): string {
   return `★ ${rating.toFixed(1)}`;
 }
 
+function IconSymbol({
+  name,
+  color,
+  size = 20,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
+
 function canDeleteRequest(status: CustomerRequestStatus): boolean {
   return (
     status === 'DRAFT' ||
@@ -387,6 +403,7 @@ export default function RequestStatusScreen() {
   const params = useLocalSearchParams();
   const { t } = useTranslation();
   const { language } = useAppLanguage();
+  const insets = useSafeAreaInsets();
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const refreshTs = typeof params.refreshTs === 'string' ? params.refreshTs : '';
   const initialRequest = useMemo(
@@ -945,8 +962,12 @@ export default function RequestStatusScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={M3LoginColors.background} />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: Math.max(20, insets.top + 8) },
+        ]}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadStatus(true)} />}
       >
         <View style={styles.headerCard}>
@@ -1386,8 +1407,8 @@ export default function RequestStatusScreen() {
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
         <View style={styles.actionsRow}>
-          <Pressable style={styles.primaryButton} onPress={() => void loadStatus(false)}>
-            <Text style={styles.primaryButtonText}>{isRefreshing ? 'Refreshing…' : 'Refresh'}</Text>
+          <Pressable style={styles.refreshButton} onPress={() => void loadStatus(false)}>
+            <Text style={styles.refreshButtonText}>{isRefreshing ? 'Refreshing…' : 'Refresh'}</Text>
           </Pressable>
           {canDeleteCurrentRequest ? (
             <Pressable
@@ -1670,28 +1691,28 @@ const styles = StyleSheet.create({
   selectedOfferBanner: {
     marginTop: 12,
     padding: 12,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.primary,
+    borderRadius: 12,
+    backgroundColor: M3LoginColors.primaryContainer,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
+    borderColor: M3LoginColors.primaryContainer,
   },
   selectedOfferLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: M3LoginColors.onSecondary,
     textTransform: 'uppercase',
   },
   selectedOfferValue: {
     marginTop: 4,
-    color: '#FFFFFF',
+    color: M3LoginColors.onSecondary,
     fontWeight: '600',
   },
   offerCardAccepted: {
     marginTop: 12,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: M3LoginColors.primary,
-    borderColor: M3LoginColors.outline,
+    backgroundColor: M3LoginColors.secondary,
+    borderColor: M3LoginColors.secondary,
     borderWidth: 1,
   },
   offerCard: {
@@ -1704,8 +1725,8 @@ const styles = StyleSheet.create({
     backgroundColor: M3LoginColors.surface,
   },
   offerCardSelected: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: M3LoginColors.secondary,
+    backgroundColor: `${M3LoginColors.secondary}20`,
   },
   offerTopRow: {
     flexDirection: 'row',
@@ -1770,10 +1791,10 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   offerTextOnDark: {
-    color: '#FFFFFF',
+    color: M3LoginColors.onSecondary,
   },
   offerSubtextOnDark: {
-    color: '#FFFFFF',
+    color: M3LoginColors.onSecondary,
   },
   additionalChargeCard: {
     marginTop: 8,
@@ -1844,11 +1865,24 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: M3LoginColors.primary,
-    borderRadius: 10,
-    minHeight: 44,
+    borderRadius: 12,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
+  },
+  refreshButton: {
+    backgroundColor: M3LoginColors.secondary,
+    borderRadius: 12,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  refreshButtonText: {
+    color: M3LoginColors.onSecondary,
+    fontWeight: '700',
+    fontSize: 15,
   },
   secondaryButton: {
     borderRadius: 10,

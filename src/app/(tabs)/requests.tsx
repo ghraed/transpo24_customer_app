@@ -107,10 +107,16 @@ function RequestCard({
           {request.pickupAddress || t('Pickup not set')}
         </Text>
       </View>
-      <View style={styles.routeDivider}>
-        <View style={styles.dottedLine} />
-        <Text style={styles.routeArrow}>{directionArrow}</Text>
-        <View style={styles.dottedLine} />
+      <View style={styles.routeConnector}>
+        <View style={styles.routeLine} />
+        <View style={styles.routeVehicleCircle}>
+          <IconSymbol
+            name={{ ios: 'arrow.down', android: 'south', web: 'arrow_downward' }}
+            color={M3LoginColors.onPrimary}
+            size={14}
+          />
+        </View>
+        <View style={styles.routeLine} />
       </View>
       <View style={styles.routeRow}>
         <IconSymbol
@@ -357,23 +363,24 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
     fontWeight: '500',
   },
-  routeDivider: {
+  routeConnector: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingLeft: 26,
   },
-  dottedLine: {
+  routeLine: {
     flex: 1,
-    height: 1,
-    borderStyle: 'dashed',
-    borderWidth: 0.5,
-    borderColor: M3LoginColors.outlineVariant,
+    width: 2,
+    backgroundColor: M3LoginColors.outlineVariant,
   },
-  routeArrow: {
-    fontSize: 14,
-    color: M3LoginColors.textTertiary,
-    fontWeight: '600',
+  routeVehicleCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: M3LoginColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptySectionCard: {
     backgroundColor: M3LoginColors.surface,
