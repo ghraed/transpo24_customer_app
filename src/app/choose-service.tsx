@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -52,6 +52,7 @@ export default function ChooseServiceScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { isRTL } = useAppLanguage();
+  const { preselectedServiceKey } = useLocalSearchParams<{ preselectedServiceKey?: string }>();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,13 +67,18 @@ export default function ChooseServiceScreen() {
       setServices(list);
       if (list.length === 0) {
         setSelectedService(null);
+      } else if (preselectedServiceKey) {
+        const preselected = list.find((service) => service.key === preselectedServiceKey);
+        if (preselected) {
+          setSelectedService(preselected);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("Couldn't load services"));
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [t, preselectedServiceKey]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {

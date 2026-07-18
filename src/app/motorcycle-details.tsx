@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
     borderColor: M3LoginColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: M3LoginColors.primary,
     paddingHorizontal: 14,
   },
   secondaryButtonDisabled: {

@@ -10,16 +10,16 @@ export interface BackendConnectionTarget {
 const BACKEND_CONNECTION_TARGETS: readonly BackendConnectionTarget[] = [
   {
     label: 'Android USB device',
-    url: 'http://127.0.0.1:3000',
+    url: 'http://127.0.0.1:3001',
     note: 'use adb reverse',
   },
   {
     label: 'Android emulator',
-    url: 'http://10.0.2.2:3000',
+    url: 'http://10.0.2.2:3001',
   },
   {
     label: 'iOS simulator',
-    url: 'http://localhost:3000',
+    url: 'http://localhost:3001',
   },
   {
     label: 'Physical device over Wi-Fi',
@@ -72,14 +72,14 @@ export function getApiBaseUrl(): string {
 
   const devHost = getDevServerHost();
   if (devHost) {
-    return `http://${devHost}:3000`;
+    return `http://${devHost}:3001`;
   }
 
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:3000';
+    return 'http://10.0.2.2:3001';
   }
 
-  return 'http://localhost:3000';
+  return 'http://localhost:3001';
 }
 
 export function getSocketBaseUrl(): string {

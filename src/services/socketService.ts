@@ -29,16 +29,6 @@ import type {
   ChatTypingPayload,
 } from '@/types/chat';
 
-export type SocketDebugPongPayload = {
-  ok: true;
-  serverTime: string;
-  socketId: string;
-  userId: string;
-  role: string;
-  tripId: string | null;
-  note: string | null;
-};
-
 export type OfferNewPayload = {
   requestId: string;
   requestStatus: CustomerRequestStatus;
@@ -217,13 +207,6 @@ export function emitDriverLocationUpdate(payload: DriverLocationUpdatePayload): 
 
 export function emitDriverArrivedPickup(payload: DriverArrivedPickupPayload): void {
   getSocket().emit('driverArrivedPickup', payload);
-}
-
-export function emitSocketDebugPing(payload: { tripId?: string; note?: string }): void {
-  getSocket().emit('socketDebugPing', {
-    ...payload,
-    timestamp: new Date().toISOString(),
-  });
 }
 
 export function onOfferAccepted(callback: (payload: OfferAcceptedPayload) => void): () => void {
@@ -434,11 +417,4 @@ export function onSocketError(callback: (message: string) => void): () => void {
   const handler = (error: Error): void => callback(error.message || 'Socket connection error.');
   instance.on('connect_error', handler);
   return () => instance.off('connect_error', handler);
-}
-
-export function onSocketDebugPong(callback: (payload: SocketDebugPongPayload) => void): () => void {
-  const instance = getSocket();
-  instance.off('socketDebugPong', callback);
-  instance.on('socketDebugPong', callback);
-  return () => instance.off('socketDebugPong', callback);
 }

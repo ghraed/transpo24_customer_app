@@ -102,7 +102,6 @@ function RootNavigator() {
           />
           <Stack.Screen name="customer-trip-delivered" options={{ title: t('Trip Delivered') }} />
           <Stack.Screen name="customer-rate-driver" options={{ title: t('Rate Driver') }} />
-          <Stack.Screen name="socket-debug" options={{ title: t('Socket Debug') }} />
 
           <Stack.Screen name="home" options={{ title: t('Home') }} />
           <Stack.Screen name="explore" options={{ title: t('Explore') }} />
