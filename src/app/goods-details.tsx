@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
     color: M3LoginColors.textPrimary,
   },
   switchChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#FFFFFF',
   },
   photoCounter: {
     marginBottom: 8,

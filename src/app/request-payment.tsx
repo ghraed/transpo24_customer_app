@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Platform,
   Pressable,
   SafeAreaView,
@@ -191,6 +192,7 @@ export default function RequestPaymentScreen() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [paymentResult, setPaymentResult] = useState<PaymentSummary | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showPaymentNotice, setShowPaymentNotice] = useState<boolean>(false);
 
   const amount = offerData ? offerData.proposedPrice ?? offerData.price : 0;
   const currency = offerData?.currency ?? 'USD';
@@ -479,6 +481,31 @@ export default function RequestPaymentScreen() {
     }
   };
 
+  const openPaymentNotice = (): void => {
+    if (isSubmitting || methodDisabledReason) {
+      if (methodDisabledReason) {
+        setErrorMessage(methodDisabledReason);
+      }
+      return;
+    }
+
+    setErrorMessage('');
+    setShowPaymentNotice(true);
+  };
+
+  const closePaymentNotice = (): void => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setShowPaymentNotice(false);
+  };
+
+  const confirmPaymentNotice = (): void => {
+    setShowPaymentNotice(false);
+    void onSubmit();
+  };
+
   if (!requestData || !offerData || !requestId || !offerId) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
@@ -647,7 +674,7 @@ export default function RequestPaymentScreen() {
         <Pressable
           style={[styles.primaryButton, (Boolean(methodDisabledReason) || isSubmitting) && styles.disabledButton]}
           disabled={Boolean(methodDisabledReason) || isSubmitting}
-          onPress={() => void onSubmit()}
+          onPress={openPaymentNotice}
         >
           <Text style={styles.primaryButtonText}>
             {isSubmitting ? 'Processing payment…' : submitLabel}
@@ -660,6 +687,54 @@ export default function RequestPaymentScreen() {
           <Text style={styles.secondaryButtonText}>Back to Offers</Text>
         </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={showPaymentNotice}
+        transparent
+        animationType="fade"
+        onRequestClose={closePaymentNotice}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalBadge}>
+              <Text style={styles.modalBadgeText}>Important</Text>
+            </View>
+            <Text style={styles.modalTitle}>Immediate payment capture</Text>
+            <Text style={styles.modalBody}>
+              Confirming this driver charges {formatMoney(amount, currency)} immediately.
+            </Text>
+
+            <View style={styles.noticePanel}>
+              <Text style={styles.noticePanelTitle}>Cancellation policy</Text>
+              <Text style={styles.noticePanelText}>
+                Before pickup: 85% is refunded automatically and 15% is kept as the cancellation fee.
+              </Text>
+              <Text style={styles.noticePanelText}>
+                After pickup: automatic cancellation is not available and the case goes to manual review.
+              </Text>
+            </View>
+
+            <Text style={styles.modalFootnote}>
+              Continue only if you want to pay now and lock this offer for the selected driver.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalSecondaryButton} onPress={closePaymentNotice}>
+                <Text style={styles.modalSecondaryButtonText}>Review again</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalPrimaryButton, isSubmitting && styles.disabledButton]}
+                disabled={isSubmitting}
+                onPress={confirmPaymentNotice}
+              >
+                <Text style={styles.modalPrimaryButtonText}>
+                  {isSubmitting ? 'Processing…' : 'Confirm and Pay'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -759,6 +834,105 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 50,
     marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.52)',
+  },
+  modalCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#D8E2F0',
+    padding: 20,
+    gap: 14,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  modalBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  modalBadgeText: {
+    color: '#1D4ED8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalTitle: {
+    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  modalBody: {
+    color: '#334155',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  noticePanel: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+    padding: 14,
+    gap: 8,
+  },
+  noticePanelTitle: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  noticePanelText: {
+    color: '#334155',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  modalFootnote: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  modalSecondaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  modalSecondaryButtonText: {
+    color: '#334155',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalPrimaryButton: {
+    flex: 1.25,
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  modalPrimaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
   },
   inlineRow: {
     flexDirection: 'row',
