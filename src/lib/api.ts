@@ -122,6 +122,55 @@ function sanitizeMalformedJson(raw: string): string {
     .replace(/,\s*([}\]])/g, '$1');
 }
 
+function tryParseJsonLenient<T>(raw: string): T | null {
+  const trimmed = raw.trim();
+
+  const directCandidates = [trimmed, sanitizeMalformedJson(trimmed)];
+  for (const candidate of directCandidates) {
+    try {
+      return JSON.parse(candidate) as T;
+    } catch {
+      // Try broader recovery below.
+    }
+  }
+
+  const firstObject = trimmed.indexOf('{');
+  const firstArray = trimmed.indexOf('[');
+  const startCandidates = [firstObject, firstArray].filter(
+    (index) => index >= 0,
+  );
+
+  if (startCandidates.length === 0) {
+    return null;
+  }
+
+  const start = Math.min(...startCandidates);
+  const lastObject = trimmed.lastIndexOf('}');
+  const lastArray = trimmed.lastIndexOf(']');
+  const end = Math.max(lastObject, lastArray);
+
+  if (end <= start) {
+    return null;
+  }
+
+  const extracted = trimmed.slice(start, end + 1);
+  const extractedCandidates = [
+    extracted,
+    sanitizeMalformedJson(extracted),
+    extracted.replace(/^[^[{]+/, '').replace(/[^\]}]+$/, ''),
+  ];
+
+  for (const candidate of extractedCandidates) {
+    try {
+      return JSON.parse(candidate) as T;
+    } catch {
+      // Keep trying recovery candidates.
+    }
+  }
+
+  return null;
+}
+
 async function parseJsonBody<T>(response: Response, fallback: string): Promise<T> {
   const raw = await response.text();
 
@@ -129,21 +178,12 @@ async function parseJsonBody<T>(response: Response, fallback: string): Promise<T
     throw new Error(fallback);
   }
 
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    const sanitized = sanitizeMalformedJson(raw);
-
-    if (sanitized !== raw) {
-      try {
-        return JSON.parse(sanitized) as T;
-      } catch {
-        // Fall through to the detailed error below.
-      }
-    }
-
-    throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+  const parsed = tryParseJsonLenient<T>(raw);
+  if (parsed !== null) {
+    return parsed;
   }
+
+  throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
 }
 
 async function parseNullableJsonBody<T>(
@@ -156,21 +196,12 @@ async function parseNullableJsonBody<T>(
     return null;
   }
 
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    const sanitized = sanitizeMalformedJson(raw);
-
-    if (sanitized !== raw) {
-      try {
-        return JSON.parse(sanitized) as T;
-      } catch {
-        // Fall through to the detailed error below.
-      }
-    }
-
-    throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+  const parsed = tryParseJsonLenient<T>(raw);
+  if (parsed !== null) {
+    return parsed;
   }
+
+  throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -193,6 +224,25 @@ function getMultipartAuthHeaders(): Record<string, string> {
     headers.Authorization = `Bearer ${token}`;
   }
   return headers;
+}
+
+function isValidCancelTripPaymentResponse(
+  value: unknown,
+): value is CancelTripPaymentResponse {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<CancelTripPaymentResponse>;
+
+  return (
+    typeof candidate.requestStatus === 'string' &&
+    typeof candidate.currency === 'string' &&
+    typeof candidate.refundedAmount === 'number' &&
+    Number.isFinite(candidate.refundedAmount) &&
+    typeof candidate.retainedAmount === 'number' &&
+    Number.isFinite(candidate.retainedAmount)
+  );
 }
 
 export async function registerPushToken(
@@ -1181,17 +1231,62 @@ export async function cancelCollectedTrip(
   requestId: string,
 ): Promise<CancelTripPaymentResponse> {
   const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/cancel`;
-  const response = await fetchWithNetworkError(endpoint, {
-    method: 'POST',
-    headers: getAuthHeaders(),
+  const headers = getAuthHeaders();
+
+  return await new Promise<CancelTripPaymentResponse>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', endpoint);
+
+    Object.entries(headers).forEach(([key, value]) => {
+      request.setRequestHeader(key, value);
+    });
+
+    request.onreadystatechange = () => {
+      if (request.readyState !== XMLHttpRequest.DONE) {
+        return;
+      }
+
+      const responseText = request.responseText ?? '';
+
+      if (request.status >= 200 && request.status < 300) {
+        const parsed = tryParseJsonLenient<CancelTripPaymentResponse>(responseText);
+
+        if (!parsed) {
+          reject(
+            new Error(
+              `Failed to parse cancel trip payment response. Server returned: ${responseText.slice(0, 200)}`,
+            ),
+          );
+          return;
+        }
+
+        if (!isValidCancelTripPaymentResponse(parsed)) {
+          reject(
+            new Error(
+              'Trip cancellation completed but the refund details response was invalid.',
+            ),
+          );
+          return;
+        }
+
+        resolve(parsed);
+        return;
+      }
+
+      const errorData = tryParseJsonLenient<ApiErrorResponse>(responseText);
+      reject(
+        new Error(
+          errorData
+            ? toMessage(errorData, 'Failed to cancel trip payment.')
+            : `Failed to cancel trip payment. Server returned: ${responseText.slice(0, 200)}`,
+        ),
+      );
+    };
+
+    request.onerror = () => {
+      reject(createBackendReachabilityError(endpoint));
+    };
+
+    request.send('{}');
   });
-
-  if (!response.ok) {
-    throw await parseError(response, 'Failed to cancel trip payment.');
-  }
-
-  return parseJsonBody<CancelTripPaymentResponse>(
-    response,
-    'Failed to parse cancel trip payment response.',
-  );
 }

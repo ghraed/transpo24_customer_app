@@ -39,6 +39,7 @@ import { DEFAULT_LANGUAGE } from '@/localization/languages';
 import { useAppLanguage } from '@/localization/provider';
 import {
   connectSocket,
+  disconnectSocket,
   joinTripRoom,
   leaveTripRoom,
   onAdditionalChargeAdded,
@@ -118,21 +119,17 @@ const STATUS_LABELS: Partial<Record<CustomerRequestStatus, string>> = {
   COMPLETED: 'Delivered',
 };
 
-function parseInitialRequest(raw: string | undefined): RequestStatusResponse | null {
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as RequestStatusResponse;
-  } catch {
-    return null;
-  }
-}
-
 function formatDate(value: string | null | undefined): string {
   if (!value) return 'N/A';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleString();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function shortRequestId(id: string): string {
@@ -243,6 +240,26 @@ function getRatingText(rating: number | null): string {
   return `★ ${rating.toFixed(1)}`;
 }
 
+async function waitForCancelledStatus(
+  requestId: string,
+  attempts = 10,
+  delayMs = 1000,
+): Promise<RequestStatusResponse | null> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const status = await getCustomerRequestStatus(requestId).catch(() => null);
+
+    if (status?.status === 'CANCELLED') {
+      return status;
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep(delayMs);
+    }
+  }
+
+  return null;
+}
+
 function IconSymbol({
   name,
   color,
@@ -261,26 +278,6 @@ function canDeleteRequest(status: CustomerRequestStatus): boolean {
     status === 'PENDING_QUOTES' ||
     status === 'QUOTED' ||
     status === 'CANCELLED'
-  );
-}
-
-function canCancelPaidTrip(status: CustomerRequestStatus): boolean {
-  return (
-    status === 'ACCEPTED' ||
-    status === 'DRIVER_ASSIGNED' ||
-    status === 'DRIVER_GOING_TO_PICKUP' ||
-    status === 'DRIVER_ARRIVED_PICKUP' ||
-    status === 'PICKUP_IN_PROGRESS'
-  );
-}
-
-function requiresManualCancellationReview(status: CustomerRequestStatus): boolean {
-  return (
-    status === 'ITEM_PICKED_UP' ||
-    status === 'IN_TRANSIT' ||
-    status === 'DRIVER_GOING_TO_DROPOFF' ||
-    status === 'DELIVERED' ||
-    status === 'COMPLETED'
   );
 }
 
@@ -406,13 +403,9 @@ export default function RequestStatusScreen() {
   const insets = useSafeAreaInsets();
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const refreshTs = typeof params.refreshTs === 'string' ? params.refreshTs : '';
-  const initialRequest = useMemo(
-    () => parseInitialRequest(typeof params.initialRequest === 'string' ? params.initialRequest : undefined),
-    [params.initialRequest],
-  );
   const accessToken = useMemo(() => getAccessToken(), []);
 
-  const [requestData, setRequestData] = useState<RequestStatusResponse | null>(initialRequest);
+  const [requestData, setRequestData] = useState<RequestStatusResponse | null>(null);
   const [offers, setOffers] = useState<CustomerRequestOfferSummary[]>([]);
   const [trackingData, setTrackingData] = useState<RequestTracking | null>(null);
   const [latestDriverLocation, setLatestDriverLocation] = useState<DriverLocation | null>(null);
@@ -420,12 +413,14 @@ export default function RequestStatusScreen() {
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<SavedPaymentMethodSummary | null>(null);
   const [selectedOfferId, setSelectedOfferId] = useState<string>('');
   const [isOpeningPaymentOfferId, setIsOpeningPaymentOfferId] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(!initialRequest);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isCancellingTrip, setIsCancellingTrip] = useState<boolean>(false);
+  const [isCancelTripModalVisible, setIsCancelTripModalVisible] = useState<boolean>(false);
   const [activeAdditionalCharge, setActiveAdditionalCharge] = useState<AdditionalCharge | null>(null);
   const [additionalChargeConfirmationText, setAdditionalChargeConfirmationText] = useState<string>('');
   const [isApprovingAdditionalCharge, setIsApprovingAdditionalCharge] = useState<boolean>(false);
+  const [cancelTripDebugMessage, setCancelTripDebugMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [nearDeliveryMessage, setNearDeliveryMessage] = useState<string>('');
@@ -433,6 +428,12 @@ export default function RequestStatusScreen() {
   const [socketState, setSocketState] = useState<SocketState>(accessToken ? 'idle' : 'unavailable');
   const [socketMessage, setSocketMessage] = useState<string>(
     accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
+  );
+  const canUseRealtime = Boolean(
+    accessToken &&
+      requestId &&
+      requestData &&
+      !isHistoryRequestStatus(requestData.status),
   );
 
   const loadStatus = useCallback(
@@ -453,12 +454,54 @@ export default function RequestStatusScreen() {
       setErrorMessage('');
 
       try {
-        const [data, offersResponse, chargesResponse, paymentMethodResponse] = await Promise.all([
-          getCustomerRequestStatus(requestId),
-          getCustomerRequestOffers(requestId),
-          getRequestAdditionalCharges(requestId),
-          getDefaultPaymentMethod(),
-        ]);
+        let data: RequestStatusResponse;
+        try {
+          data = await getCustomerRequestStatus(requestId);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Unknown status error.';
+          throw new Error(`Request status failed: ${message}`);
+        }
+
+        if (data.status === 'CANCELLED') {
+          setRequestData(data);
+          setOffers([]);
+          setAdditionalCharges([]);
+          setDefaultPaymentMethod(null);
+          setTrackingData(null);
+          setLatestDriverLocation(null);
+          setNearDeliveryMessage('');
+          return;
+        }
+
+        const [offersResponse, chargesResponse, paymentMethodResponse] =
+          await Promise.all([
+            getCustomerRequestOffers(requestId).catch((error: unknown) => {
+              throw new Error(
+                `Request offers failed: ${
+                  error instanceof Error ? error.message : 'Unknown offers error.'
+                }`,
+              );
+            }),
+            getRequestAdditionalCharges(requestId).catch((error: unknown) => {
+              throw new Error(
+                `Additional charges failed: ${
+                  error instanceof Error
+                    ? error.message
+                    : 'Unknown additional charges error.'
+                }`,
+              );
+            }),
+            getDefaultPaymentMethod().catch((error: unknown) => {
+              throw new Error(
+                `Default payment method failed: ${
+                  error instanceof Error
+                    ? error.message
+                    : 'Unknown payment method error.'
+                }`,
+              );
+            }),
+          ]);
         let nextTracking: RequestTracking | null = null;
 
         try {
@@ -468,7 +511,13 @@ export default function RequestStatusScreen() {
             trackingError instanceof Error ? trackingError.message.toLowerCase() : '';
 
           if (!trackingMessage.includes('not found')) {
-            throw trackingError;
+            throw new Error(
+              `Request tracking failed: ${
+                trackingError instanceof Error
+                  ? trackingError.message
+                  : 'Unknown tracking error.'
+              }`,
+            );
           }
         }
 
@@ -511,12 +560,24 @@ export default function RequestStatusScreen() {
   }, [loadStatus, refreshTs]);
 
   useEffect(() => {
-    if (!requestId || !accessToken) return;
+    if (!canUseRealtime) {
+      disconnectSocket();
+      setSocketState(accessToken ? 'idle' : 'unavailable');
+      setSocketMessage(
+        accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
+      );
+      return;
+    }
+
+    const socketAccessToken = accessToken;
+    if (!socketAccessToken) {
+      return;
+    }
 
     setTimeout(() => setSocketState('connecting'), 0);
 
     try {
-      connectSocket(accessToken);
+      connectSocket(socketAccessToken);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to connect realtime socket.';
       setTimeout(() => {
@@ -739,7 +800,7 @@ export default function RequestStatusScreen() {
       unsubSocketError();
       leaveTripRoom(requestId);
     };
-  }, [accessToken, loadStatus, requestId, router]);
+  }, [accessToken, canUseRealtime, loadStatus, requestId, router]);
 
   const pendingOffers = offers.filter((offer) => (offer.offerStatus ?? offer.status) === 'PENDING');
   const acceptedOffer = offers.find((offer) => (offer.offerStatus ?? offer.status) === 'ACCEPTED') ?? null;
@@ -797,61 +858,131 @@ export default function RequestStatusScreen() {
     setTimeout(() => setIsOpeningPaymentOfferId(''), 0);
   }, [requestData, router, selectedOffer]);
 
+  const closeCancelTripModal = useCallback((): void => {
+    if (isCancellingTrip) {
+      return;
+    }
+
+    setIsCancelTripModalVisible(false);
+  }, [isCancellingTrip]);
+
+  const confirmCancelTrip = useCallback(async (): Promise<void> => {
+    if (!requestData || isCancellingTrip) {
+      return;
+    }
+
+    try {
+      setIsCancelTripModalVisible(false);
+      setIsCancellingTrip(true);
+      setCancelTripDebugMessage('Starting cancellation request…');
+      setErrorMessage('');
+      setSuccessMessage('');
+
+      const result = await cancelCollectedTrip(requestData.id);
+
+      setRequestData((previousRequestData) =>
+        previousRequestData
+          ? {
+              ...previousRequestData,
+              status: result.requestStatus,
+              statusLabel: 'Cancelled',
+              cancellation: {
+                canCancelCollectedTrip: false,
+                reason: 'Trip already cancelled.',
+                refundPreview: null,
+                action: 'NONE',
+              },
+            }
+          : previousRequestData,
+      );
+      setCancelTripDebugMessage('Cancellation response received. Waiting for backend status sync…');
+      const latestStatus = await waitForCancelledStatus(requestData.id);
+
+      setRequestData((previousRequestData) =>
+        previousRequestData
+          ? {
+              ...previousRequestData,
+              status: latestStatus?.status ?? result.requestStatus,
+              statusLabel: latestStatus?.statusLabel ?? 'Cancelled',
+              cancellation:
+                latestStatus?.cancellation ?? {
+                  canCancelCollectedTrip: false,
+                  reason: 'Trip already cancelled.',
+                  refundPreview: null,
+                  action: 'NONE',
+                },
+            }
+          : previousRequestData,
+      );
+      setOffers([]);
+      setAdditionalCharges([]);
+      setDefaultPaymentMethod(null);
+      setTrackingData(null);
+      setLatestDriverLocation(null);
+      setNearDeliveryMessage('');
+      setSuccessMessage(
+        `Trip cancelled. Refunded ${formatMoney(
+          result.refundedAmount,
+          result.currency,
+        )}. Cancellation fee kept: ${formatMoney(
+          result.retainedAmount,
+          result.currency,
+        )}.`,
+      );
+      setCancelTripDebugMessage('Cancellation completed successfully.');
+    } catch (error) {
+      const primaryErrorMessage =
+        error instanceof Error ? error.message : 'Failed to cancel this trip.';
+      setCancelTripDebugMessage(
+        `Primary cancellation call failed: ${primaryErrorMessage}`,
+      );
+
+      try {
+        setCancelTripDebugMessage('Primary cancellation call failed. Retrying once…');
+        await sleep(800);
+        await cancelCollectedTrip(requestData.id).catch(() => null);
+        setCancelTripDebugMessage('Retry finished. Checking backend status…');
+        const latestStatus = await waitForCancelledStatus(requestData.id);
+
+        if (latestStatus?.status === 'CANCELLED') {
+          setRequestData(latestStatus);
+          setOffers([]);
+          setAdditionalCharges([]);
+          setDefaultPaymentMethod(null);
+          setTrackingData(null);
+          setLatestDriverLocation(null);
+          setNearDeliveryMessage('');
+          setErrorMessage('');
+          setSuccessMessage('Trip cancelled successfully.');
+          setCancelTripDebugMessage('Fallback status refresh confirmed cancellation.');
+          return;
+        }
+
+        setCancelTripDebugMessage(
+          `Backend status did not switch to cancelled yet. Last error: ${primaryErrorMessage}`,
+        );
+      } catch (statusError) {
+        setCancelTripDebugMessage(
+          `Fallback status refresh failed: ${
+            statusError instanceof Error ? statusError.message : 'Unknown error.'
+          }`,
+        );
+      }
+
+      setErrorMessage(primaryErrorMessage);
+    } finally {
+      setIsCancellingTrip(false);
+    }
+  }, [isCancellingTrip, requestData]);
+
   const onCancelTrip = useCallback((): void => {
     if (!requestData || isCancellingTrip) {
       return;
     }
 
-    Alert.alert(
-      'Cancel trip?',
-      'If you cancel before pickup, 85% will be refunded automatically and 15% will be kept as the cancellation fee.',
-      [
-        { text: 'Keep trip', style: 'cancel' },
-        {
-          text: 'Cancel trip',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              try {
-                setIsCancellingTrip(true);
-                setErrorMessage('');
-                setSuccessMessage('');
-
-                const result = await cancelCollectedTrip(requestData.id);
-                setRequestData((previousRequestData) =>
-                  previousRequestData
-                    ? {
-                        ...previousRequestData,
-                        status: result.requestStatus,
-                        statusLabel: 'Cancelled',
-                      }
-                    : previousRequestData,
-                );
-                setSuccessMessage(
-                  `Trip cancelled. Refunded ${formatMoney(
-                    result.settlement.refundedAmount,
-                    result.payment.currency,
-                  )}. Cancellation fee kept: ${formatMoney(
-                    result.settlement.retainedAmount,
-                    result.payment.currency,
-                  )}.`,
-                );
-                await loadStatus(true);
-              } catch (error) {
-                setErrorMessage(
-                  error instanceof Error
-                    ? error.message
-                    : 'Failed to cancel this trip.',
-                );
-              } finally {
-                setIsCancellingTrip(false);
-              }
-            })();
-          },
-        },
-      ],
-    );
-  }, [isCancellingTrip, loadStatus, requestData]);
+    setCancelTripDebugMessage('Waiting for cancellation confirmation…');
+    setIsCancelTripModalVisible(true);
+  }, [isCancellingTrip, requestData]);
 
   const onRateDriver = useCallback((): void => {
     if (!requestData) {
@@ -957,8 +1088,9 @@ export default function RequestStatusScreen() {
   const helperText = buildOffersHelperText(requestData, offers.length);
   const canChooseOffer = requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED';
   const canDeleteCurrentRequest = canDeleteRequest(requestData.status);
-  const canCancelCurrentTrip = canCancelPaidTrip(requestData.status);
-  const showManualCancellationReviewNote = requiresManualCancellationReview(requestData.status);
+  const canCancelCurrentTrip = requestData.cancellation.canCancelCollectedTrip;
+  const cancellationReason = requestData.cancellation.reason;
+  const refundPreview = requestData.cancellation.refundPreview;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -996,25 +1128,36 @@ export default function RequestStatusScreen() {
           {socketMessage ? <Text style={styles.socketMessage}>{socketMessage}</Text> : null}
         </View>
 
-        {(canCancelCurrentTrip || showManualCancellationReviewNote) ? (
+        {requestData.status !== 'CANCELLED' ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Cancellation policy</Text>
-            <Text style={styles.rowValue}>
-              Before pickup: 85% automatic refund, 15% cancellation fee.
-            </Text>
+            {refundPreview ? (
+              <Text style={styles.rowValue}>
+                If you cancel now, {formatMoney(refundPreview.refundedAmount, refundPreview.currency)} will be refunded and {formatMoney(refundPreview.retainedAmount, refundPreview.currency)} will be kept as the cancellation fee.
+              </Text>
+            ) : (
+              <Text style={styles.rowValue}>
+                Before pickup: 85% automatic refund, 15% cancellation fee.
+              </Text>
+            )}
             <Text style={styles.helperText}>
-              After pickup, automatic refunds are disabled and the case requires admin review.
+              {cancellationReason ??
+                'After pickup, automatic refunds are disabled and the case requires admin review.'}
             </Text>
-            {canCancelCurrentTrip ? (
-              <Pressable
-                style={[styles.deleteButton, isCancellingTrip && styles.disabledButton]}
-                disabled={isCancellingTrip}
-                onPress={onCancelTrip}
-              >
-                <Text style={styles.deleteButtonText}>
-                  {isCancellingTrip ? 'Cancelling…' : 'Cancel Trip'}
-                </Text>
-              </Pressable>
+            <Pressable
+              style={[
+                styles.deleteButton,
+                (isCancellingTrip || !canCancelCurrentTrip) && styles.disabledButton,
+              ]}
+              disabled={isCancellingTrip || !canCancelCurrentTrip}
+              onPress={onCancelTrip}
+            >
+              <Text style={styles.deleteButtonText}>
+                {isCancellingTrip ? 'Cancelling…' : 'Cancel Trip'}
+              </Text>
+            </Pressable>
+            {cancelTripDebugMessage ? (
+              <Text style={styles.helperText}>{cancelTripDebugMessage}</Text>
             ) : null}
           </View>
         ) : null}
@@ -1442,6 +1585,47 @@ export default function RequestStatusScreen() {
             <Text style={styles.secondaryButtonText}>Back to Home</Text>
           </Pressable>
         </View>
+        <Modal
+          visible={isCancelTripModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeCancelTripModal}
+        >
+          <View style={styles.dialogBackdrop}>
+            <View style={styles.dialogCard}>
+              <Text style={styles.cardTitle}>Cancel trip?</Text>
+              <Text style={styles.rowValue}>
+                {requestData.cancellation.refundPreview
+                  ? `If you cancel now, ${formatMoney(
+                      requestData.cancellation.refundPreview.refundedAmount,
+                      requestData.cancellation.refundPreview.currency,
+                    )} will be refunded automatically and ${formatMoney(
+                      requestData.cancellation.refundPreview.retainedAmount,
+                      requestData.cancellation.refundPreview.currency,
+                    )} will be kept as the cancellation fee.`
+                  : 'If you cancel before pickup, 85% will be refunded automatically and 15% will be kept as the cancellation fee.'}
+              </Text>
+              <View style={styles.dialogActions}>
+                <Pressable
+                  style={[styles.secondaryOutlineButton, isCancellingTrip && styles.disabledButton]}
+                  disabled={isCancellingTrip}
+                  onPress={closeCancelTripModal}
+                >
+                  <Text style={styles.secondaryOutlineButtonText}>Keep trip</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.deleteButton, isCancellingTrip && styles.disabledButton]}
+                  disabled={isCancellingTrip}
+                  onPress={() => void confirmCancelTrip()}
+                >
+                  <Text style={styles.deleteButtonText}>
+                    {isCancellingTrip ? 'Cancelling…' : 'Cancel trip'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
         <Modal
           visible={Boolean(activeAdditionalCharge)}
           transparent

@@ -533,9 +533,10 @@ export interface TripPaymentSettlement {
 }
 
 export interface CancelTripPaymentResponse {
-  payment: PaymentSummary;
-  settlement: TripPaymentSettlement;
   requestStatus: CustomerRequestStatus;
+  currency: string;
+  refundedAmount: number;
+  retainedAmount: number;
 }
 
 export interface CustomerRequest {
@@ -754,6 +755,16 @@ export interface RequestStatusResponse {
   serviceId: string;
   service?: RequestServiceSummary;
   status: CustomerRequestStatus;
+  cancellation: {
+    canCancelCollectedTrip: boolean;
+    reason: string | null;
+    refundPreview: {
+      currency: string;
+      refundedAmount: number;
+      retainedAmount: number;
+    } | null;
+    action: 'CANCEL_COLLECTED_TRIP' | 'CANCEL_PAYMENT_HOLD' | 'NONE';
+  };
   statusLabel: string;
   submittedAt: string | null;
   createdAt: string;
