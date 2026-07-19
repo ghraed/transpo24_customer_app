@@ -18,6 +18,19 @@ interface ForgotPasswordErrorResponse {
   message?: string | string[];
 }
 
+function getResponseMessage(raw: string, fallback: string): string {
+  try {
+    const parsed = JSON.parse(raw) as ForgotPasswordErrorResponse | ForgotPasswordResponse;
+    const message = parsed?.message;
+    if (Array.isArray(message)) {
+      return message[0] ?? fallback;
+    }
+    return message ?? fallback;
+  } catch {
+    return raw.trim() || fallback;
+  }
+}
+
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
@@ -50,16 +63,18 @@ export default function ForgotPasswordScreen() {
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as ForgotPasswordErrorResponse;
-        const message = Array.isArray(errorData.message)
-          ? errorData.message[0]
-          : errorData.message;
-        setError(message ?? t('Could not send reset link. Please try again.'));
+        const raw = await response.text();
+        setError(getResponseMessage(raw, t('Could not send reset link. Please try again.')));
         return;
       }
 
-      const data = (await response.json()) as ForgotPasswordResponse;
-      setSuccessMessage(data.message ?? t('If this email exists, a reset link has been sent.'));
+      const raw = await response.text();
+      setSuccessMessage(
+        getResponseMessage(
+          raw,
+          t('If this email exists, a reset link has been sent.'),
+        ),
+      );
     } catch {
       setError(t('Network error. Please try again.'));
     } finally {

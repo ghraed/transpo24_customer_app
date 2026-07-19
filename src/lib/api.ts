@@ -115,6 +115,10 @@ async function parseError(response: Response, fallback: string): Promise<Error> 
   }
 }
 
+function toResponseParseError(fallback: string, raw: string): Error {
+  return new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+}
+
 function sanitizeMalformedJson(raw: string): string {
   return raw
     .replace(/^\uFEFF/, '')
@@ -447,24 +451,32 @@ export async function createFurnitureTransportRequest(
 
       const responseText = request.responseText ?? '';
       if (request.status >= 200 && request.status < 300) {
-        try {
-          resolve(mapCustomerRequest(JSON.parse(responseText) as CustomerRequestApiResponse));
-        } catch {
-          reject(new Error('Failed to create furniture transport request.'));
+        const parsed = tryParseJsonLenient<CustomerRequestApiResponse>(responseText);
+        if (!parsed) {
+          reject(
+            toResponseParseError(
+              'Failed to create furniture transport request.',
+              responseText,
+            ),
+          );
+          return;
         }
+
+        resolve(mapCustomerRequest(parsed));
         return;
       }
 
-      try {
-        const errorData = JSON.parse(responseText) as ApiErrorResponse;
-        reject(
-          new Error(
-            toMessage(errorData, 'Failed to create furniture transport request.'),
-          ),
-        );
-      } catch {
-        reject(new Error('Failed to create furniture transport request.'));
-      }
+      const errorData = tryParseJsonLenient<ApiErrorResponse>(responseText);
+      reject(
+        new Error(
+          errorData
+            ? toMessage(errorData, 'Failed to create furniture transport request.')
+            : toResponseParseError(
+                'Failed to create furniture transport request.',
+                responseText,
+              ).message,
+        ),
+      );
     };
 
     request.onerror = () => {
@@ -592,20 +604,27 @@ export async function uploadRequestPhotos(
 
       const responseText = request.responseText ?? '';
       if (request.status >= 200 && request.status < 300) {
-        try {
-          resolve(JSON.parse(responseText) as UploadRequestPhotosResponse);
-        } catch {
-          reject(new Error('Failed to upload request photos.'));
+        const parsed = tryParseJsonLenient<UploadRequestPhotosResponse>(responseText);
+        if (!parsed) {
+          reject(
+            toResponseParseError('Failed to upload request photos.', responseText),
+          );
+          return;
         }
+
+        resolve(parsed);
         return;
       }
 
-      try {
-        const errorData = JSON.parse(responseText) as ApiErrorResponse;
-        reject(new Error(toMessage(errorData, 'Failed to upload request photos.')));
-      } catch {
-        reject(new Error('Failed to upload request photos.'));
-      }
+      const errorData = tryParseJsonLenient<ApiErrorResponse>(responseText);
+      reject(
+        new Error(
+          errorData
+            ? toMessage(errorData, 'Failed to upload request photos.')
+            : toResponseParseError('Failed to upload request photos.', responseText)
+                .message,
+        ),
+      );
     };
 
     request.onerror = () => {

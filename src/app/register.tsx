@@ -26,6 +26,19 @@ interface RegisterErrorResponse {
   message?: string | string[];
 }
 
+function getResponseMessage(raw: string, fallback: string): string {
+  try {
+    const parsed = JSON.parse(raw) as RegisterErrorResponse | RegisterSuccessResponse;
+    const message = parsed?.message;
+    if (Array.isArray(message)) {
+      return message[0] ?? fallback;
+    }
+    return message ?? fallback;
+  } catch {
+    return raw.trim() || fallback;
+  }
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -61,15 +74,19 @@ export default function RegisterScreen() {
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as RegisterErrorResponse;
-        const message = Array.isArray(errorData.message)
-          ? errorData.message[0]
-          : errorData.message;
-        setError(message ?? t('Registration failed. Please try again.'));
+        const raw = await response.text();
+        setError(getResponseMessage(raw, t('Registration failed. Please try again.')));
         return;
       }
 
-      const data = (await response.json()) as RegisterSuccessResponse;
+      const raw = await response.text();
+      let data: RegisterSuccessResponse;
+      try {
+        data = JSON.parse(raw) as RegisterSuccessResponse;
+      } catch {
+        setError(raw.trim() || t('Invalid server response. Please try again.'));
+        return;
+      }
 
       if (!data.user && !data.accessToken) {
         setError(t('Invalid server response. Please try again.'));
