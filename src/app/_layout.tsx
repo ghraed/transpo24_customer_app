@@ -13,6 +13,91 @@ import {
 } from '@/notifications/registerPushNotifications';
 import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
 
+if (__DEV__) {
+  const globalState = globalThis as typeof globalThis & {
+    __transpoJsonParsePatched?: boolean;
+    __transpoResponseJsonPatched?: boolean;
+    __transpoGlobalErrorPatched?: boolean;
+    ErrorUtils?: {
+      getGlobalHandler?: () => (error: Error, isFatal?: boolean) => void;
+      setGlobalHandler?: (handler: (error: Error, isFatal?: boolean) => void) => void;
+    };
+  };
+
+  if (!globalState.__transpoJsonParsePatched) {
+    const originalJsonParse = JSON.parse;
+
+    JSON.parse = ((text: string, reviver?: (this: unknown, key: string, value: unknown) => unknown) => {
+      try {
+        return originalJsonParse(text, reviver);
+      } catch (error) {
+        const preview = typeof text === 'string' ? text.slice(0, 200) : String(text);
+        console.error('JSON.parse failed in dev runtime.', {
+          preview,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        throw error;
+      }
+    }) as typeof JSON.parse;
+
+    globalState.__transpoJsonParsePatched = true;
+  }
+
+  if (!globalState.__transpoResponseJsonPatched && typeof Response !== 'undefined') {
+    const originalResponseJson = Response.prototype.json;
+
+    Response.prototype.json = (async function (
+      this: Response,
+      ...args: Parameters<typeof originalResponseJson>
+    ) {
+      try {
+        return await originalResponseJson.apply(this, args);
+      } catch (error) {
+        let preview = '';
+
+        try {
+          preview = (await this.clone().text()).slice(0, 200);
+        } catch {
+          preview = '<unavailable>';
+        }
+
+        console.error('Response.json failed in dev runtime.', {
+          url: this.url,
+          status: this.status,
+          preview,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        throw error;
+      }
+    }) as typeof Response.prototype.json;
+
+    globalState.__transpoResponseJsonPatched = true;
+  }
+
+  if (
+    !globalState.__transpoGlobalErrorPatched &&
+    globalState.ErrorUtils?.getGlobalHandler &&
+    globalState.ErrorUtils?.setGlobalHandler
+  ) {
+    const originalGlobalHandler = globalState.ErrorUtils.getGlobalHandler();
+
+    globalState.ErrorUtils.setGlobalHandler((error, isFatal) => {
+      console.error('Global JS error intercepted in dev runtime.', {
+        isFatal: Boolean(isFatal),
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+      });
+
+      originalGlobalHandler(error, isFatal);
+    });
+
+    globalState.__transpoGlobalErrorPatched = true;
+  }
+}
+
 function RootNavigator() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
