@@ -1144,7 +1144,7 @@ export default function RequestStatusScreen() {
               {cancellationReason ??
                 'After pickup, automatic refunds are disabled and the case requires admin review.'}
             </Text>
-            <Pressable
+            {/* <Pressable
               style={[
                 styles.deleteButton,
                 (isCancellingTrip || !canCancelCurrentTrip) && styles.disabledButton,
@@ -1155,7 +1155,7 @@ export default function RequestStatusScreen() {
               <Text style={styles.deleteButtonText}>
                 {isCancellingTrip ? 'Cancelling…' : 'Cancel Trip'}
               </Text>
-            </Pressable>
+            </Pressable> */}
             {cancelTripDebugMessage ? (
               <Text style={styles.helperText}>{cancelTripDebugMessage}</Text>
             ) : null}
