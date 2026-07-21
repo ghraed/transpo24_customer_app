@@ -278,7 +278,9 @@ export default function CustomerDeliveryTrackingScreen() {
         <NativeMarker coordinate={dropoffLocation} title="Dropoff" pinColor="#DC2626" />
         {driverLocation ? (
           <>
-            <NativeMarker coordinate={driverLocation} title="Driver" pinColor="#2563EB" />
+            <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
+              <Text style={styles.driverMarkerIcon}>🚗</Text>
+            </NativeMarker>
             <NativeMapViewDirections
               origin={driverLocation}
               destination={dropoffLocation}
@@ -337,6 +339,7 @@ const styles = StyleSheet.create({
   helperText: { color: '#475569' },
   infoText: { color: '#1D4ED8', fontWeight: '600' },
   errorText: { color: '#B91C1C' },
+  driverMarkerIcon: { fontSize: 28 },
   centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   infoCard: {
