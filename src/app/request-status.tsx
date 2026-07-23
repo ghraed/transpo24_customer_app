@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -397,6 +397,7 @@ function buildTrackingHref(
 
 export default function RequestStatusScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams();
   const { t } = useTranslation();
   const { language } = useAppLanguage();
@@ -857,6 +858,25 @@ export default function RequestStatusScreen() {
 
     setTimeout(() => setIsOpeningPaymentOfferId(''), 0);
   }, [requestData, router, selectedOffer]);
+
+  const goToHome = useCallback((): void => {
+    router.replace('/(tabs)/home' as Href);
+  }, [router]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      const actionType = event.data.action.type;
+
+      if (actionType !== 'GO_BACK' && actionType !== 'POP') {
+        return;
+      }
+
+      event.preventDefault();
+      goToHome();
+    });
+
+    return unsubscribe;
+  }, [goToHome, navigation]);
 
   const closeCancelTripModal = useCallback((): void => {
     if (isCancellingTrip) {
@@ -1405,20 +1425,22 @@ export default function RequestStatusScreen() {
           ) : (
             <Text style={styles.rowValue}>Tracking is not available yet.</Text>
           )}
-          <Pressable
-            style={[styles.primaryButton, !canOpenTrackingMap && styles.disabledButton]}
-            onPress={openTracking}
-            disabled={!canOpenTrackingMap}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isDeliveryCompleted ? 'Open Delivery Summary' : 'Open Tracking Map'}
-            </Text>
-          </Pressable>
-          <ChatEntryButton
-            transportRequestId={requestData.id}
-            enabled={canOpenChat}
-            requestStatus={requestData.status}
-          />
+          {!isDeliveryCompleted ? (
+            <>
+              <Pressable
+                style={[styles.primaryButton, !canOpenTrackingMap && styles.disabledButton]}
+                onPress={openTracking}
+                disabled={!canOpenTrackingMap}
+              >
+                <Text style={styles.primaryButtonText}>Open Tracking Map</Text>
+              </Pressable>
+              <ChatEntryButton
+                transportRequestId={requestData.id}
+                enabled={canOpenChat}
+                requestStatus={requestData.status}
+              />
+            </>
+          ) : null}
         </View>
 
         <View style={styles.card}>

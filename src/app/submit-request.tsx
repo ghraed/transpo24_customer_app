@@ -590,7 +590,7 @@ export default function SubmitRequestScreen() {
     } as unknown as Href;
 
     setTimeout(() => {
-      router.push(statusRoute);
+      router.replace(statusRoute);
     }, 350);
   };
 
