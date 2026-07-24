@@ -950,6 +950,7 @@ export async function approveAdditionalCharge(
   payload: {
     confirmationLocale: string;
     confirmationText: string;
+    paymentOption: 'SAVED_CARD' | 'CASH_ON_DELIVERY';
   },
 ): Promise<AdditionalCharge> {
   const endpoint =

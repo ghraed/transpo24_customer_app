@@ -328,6 +328,35 @@ function formatSavedPaymentMethod(paymentMethod: SavedPaymentMethodSummary | nul
   return `${brand} •••• ${last4}`;
 }
 
+function getAdditionalChargePaymentOption(charge: AdditionalCharge): 'SAVED_CARD' | 'CASH_ON_DELIVERY' | null {
+  if (charge.payment.savedPaymentMethod || charge.payment.stripePaymentIntentId) {
+    return 'SAVED_CARD';
+  }
+
+  if (charge.status === 'CAPTURED' && charge.approval.approvedAt) {
+    return 'CASH_ON_DELIVERY';
+  }
+
+  return null;
+}
+
+function getAdditionalChargePaymentMethodLabel(
+  charge: AdditionalCharge,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const option = getAdditionalChargePaymentOption(charge);
+
+  if (option === 'CASH_ON_DELIVERY') {
+    return t('extra_expense.cash_on_delivery_option');
+  }
+
+  if (charge.payment.savedPaymentMethod) {
+    return formatSavedPaymentMethod(charge.payment.savedPaymentMethod);
+  }
+
+  return formatSavedPaymentMethod(null);
+}
+
 function dedupeProofPhotos(photos: ProofPhoto[]): ProofPhoto[] {
   const seen = new Set<string>();
   return photos.filter((photo) => {
@@ -420,6 +449,8 @@ export default function RequestStatusScreen() {
   const [isCancelTripModalVisible, setIsCancelTripModalVisible] = useState<boolean>(false);
   const [activeAdditionalCharge, setActiveAdditionalCharge] = useState<AdditionalCharge | null>(null);
   const [additionalChargeConfirmationText, setAdditionalChargeConfirmationText] = useState<string>('');
+  const [additionalChargePaymentOption, setAdditionalChargePaymentOption] =
+    useState<'SAVED_CARD' | 'CASH_ON_DELIVERY'>('SAVED_CARD');
   const [isApprovingAdditionalCharge, setIsApprovingAdditionalCharge] = useState<boolean>(false);
   const [cancelTripDebugMessage, setCancelTripDebugMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -432,9 +463,9 @@ export default function RequestStatusScreen() {
   );
   const canUseRealtime = Boolean(
     accessToken &&
-      requestId &&
-      requestData &&
-      !isHistoryRequestStatus(requestData.status),
+    requestId &&
+    requestData &&
+    !isHistoryRequestStatus(requestData.status),
   );
 
   const loadStatus = useCallback(
@@ -479,26 +510,23 @@ export default function RequestStatusScreen() {
           await Promise.all([
             getCustomerRequestOffers(requestId).catch((error: unknown) => {
               throw new Error(
-                `Request offers failed: ${
-                  error instanceof Error ? error.message : 'Unknown offers error.'
+                `Request offers failed: ${error instanceof Error ? error.message : 'Unknown offers error.'
                 }`,
               );
             }),
             getRequestAdditionalCharges(requestId).catch((error: unknown) => {
               throw new Error(
-                `Additional charges failed: ${
-                  error instanceof Error
-                    ? error.message
-                    : 'Unknown additional charges error.'
+                `Additional charges failed: ${error instanceof Error
+                  ? error.message
+                  : 'Unknown additional charges error.'
                 }`,
               );
             }),
             getDefaultPaymentMethod().catch((error: unknown) => {
               throw new Error(
-                `Default payment method failed: ${
-                  error instanceof Error
-                    ? error.message
-                    : 'Unknown payment method error.'
+                `Default payment method failed: ${error instanceof Error
+                  ? error.message
+                  : 'Unknown payment method error.'
                 }`,
               );
             }),
@@ -513,10 +541,9 @@ export default function RequestStatusScreen() {
 
           if (!trackingMessage.includes('not found')) {
             throw new Error(
-              `Request tracking failed: ${
-                trackingError instanceof Error
-                  ? trackingError.message
-                  : 'Unknown tracking error.'
+              `Request tracking failed: ${trackingError instanceof Error
+                ? trackingError.message
+                : 'Unknown tracking error.'
               }`,
             );
           }
@@ -639,15 +666,15 @@ export default function RequestStatusScreen() {
       setRequestData((previousRequestData) =>
         previousRequestData
           ? {
-              ...previousRequestData,
-              status: payload.request.status,
-              statusLabel: STATUS_LABELS[payload.request.status] ?? previousRequestData.statusLabel,
-              driverSummary: {
-                ...previousRequestData.driverSummary,
-                assigned: true,
-                driverId: payload.request.assignedDriverId,
-              },
-            }
+            ...previousRequestData,
+            status: payload.request.status,
+            statusLabel: STATUS_LABELS[payload.request.status] ?? previousRequestData.statusLabel,
+            driverSummary: {
+              ...previousRequestData.driverSummary,
+              assigned: true,
+              driverId: payload.request.assignedDriverId,
+            },
+          }
           : previousRequestData,
       );
       void loadStatus(true);
@@ -672,23 +699,23 @@ export default function RequestStatusScreen() {
       setRequestData((previousRequestData) =>
         previousRequestData
           ? {
-              ...previousRequestData,
-              status: validated.status as CustomerRequestStatus,
-              statusLabel:
-                STATUS_LABELS[validated.status as CustomerRequestStatus] ??
-                previousRequestData.statusLabel,
-              updatedAt: validated.updatedAt,
-            }
+            ...previousRequestData,
+            status: validated.status as CustomerRequestStatus,
+            statusLabel:
+              STATUS_LABELS[validated.status as CustomerRequestStatus] ??
+              previousRequestData.statusLabel,
+            updatedAt: validated.updatedAt,
+          }
           : previousRequestData,
       );
 
       setTrackingData((previousTrackingData) =>
         previousTrackingData
           ? {
-              ...previousTrackingData,
-              currentStatus: validated.status as RequestTrackingStatus,
-              updatedAt: validated.updatedAt,
-            }
+            ...previousTrackingData,
+            currentStatus: validated.status as RequestTrackingStatus,
+            updatedAt: validated.updatedAt,
+          }
           : previousTrackingData,
       );
     });
@@ -700,14 +727,14 @@ export default function RequestStatusScreen() {
       setTrackingData((previousTrackingData) =>
         previousTrackingData
           ? {
-              ...previousTrackingData,
-              currentStatus: 'ITEM_PICKED_UP',
-              pickupProofPhotos: dedupeProofPhotos([
-                ...previousTrackingData.pickupProofPhotos,
-                ...validated.pickupProofPhotos,
-              ]),
-              updatedAt: validated.pickedUpAt,
-            }
+            ...previousTrackingData,
+            currentStatus: 'ITEM_PICKED_UP',
+            pickupProofPhotos: dedupeProofPhotos([
+              ...previousTrackingData.pickupProofPhotos,
+              ...validated.pickupProofPhotos,
+            ]),
+            updatedAt: validated.pickedUpAt,
+          }
           : previousTrackingData,
       );
       setSuccessMessage('Pickup completed with proof photos.');
@@ -720,16 +747,16 @@ export default function RequestStatusScreen() {
       setTrackingData((previousTrackingData) =>
         previousTrackingData
           ? {
-              ...previousTrackingData,
-              currentStatus: 'DELIVERED',
-              deliveryProofPhotos: dedupeProofPhotos([
-                ...previousTrackingData.deliveryProofPhotos,
-                ...validated.deliveryProofPhotos,
-              ]),
-              deliveredAt: validated.deliveredAt,
-              ratingAvailable: validated.ratingAvailable,
-              updatedAt: validated.deliveredAt,
-            }
+            ...previousTrackingData,
+            currentStatus: 'DELIVERED',
+            deliveryProofPhotos: dedupeProofPhotos([
+              ...previousTrackingData.deliveryProofPhotos,
+              ...validated.deliveryProofPhotos,
+            ]),
+            deliveredAt: validated.deliveredAt,
+            ratingAvailable: validated.ratingAvailable,
+            updatedAt: validated.deliveredAt,
+          }
           : previousTrackingData,
       );
       setSuccessMessage('Delivery confirmed. Proof photos are now available.');
@@ -747,10 +774,10 @@ export default function RequestStatusScreen() {
       setTrackingData((previousTrackingData) =>
         previousTrackingData
           ? {
-              ...previousTrackingData,
-              nearDeliveryNotifiedAt: validated.notifiedAt,
-              updatedAt: validated.notifiedAt,
-            }
+            ...previousTrackingData,
+            nearDeliveryNotifiedAt: validated.notifiedAt,
+            updatedAt: validated.notifiedAt,
+          }
           : previousTrackingData,
       );
     });
@@ -816,10 +843,10 @@ export default function RequestStatusScreen() {
 
   const canOpenTrackingMap = Boolean(
     requestData &&
-      requestData.pickupLocation.latitude !== null &&
-      requestData.pickupLocation.longitude !== null &&
-      requestData.dropoffLocation.latitude !== null &&
-      requestData.dropoffLocation.longitude !== null,
+    requestData.pickupLocation.latitude !== null &&
+    requestData.pickupLocation.longitude !== null &&
+    requestData.dropoffLocation.latitude !== null &&
+    requestData.dropoffLocation.longitude !== null,
   );
 
   const effectiveTrackingStatus =
@@ -830,8 +857,8 @@ export default function RequestStatusScreen() {
   const isDeliveryCompleted = isDeliveryCompletedStatus(effectiveTrackingStatus);
   const canOpenChat = Boolean(
     !isHistoryRequest &&
-      (acceptedOffer || requestData?.driverSummary.assigned) &&
-      (requestData?.driverSummary.driverId || acceptedOffer?.driverId),
+    (acceptedOffer || requestData?.driverSummary.assigned) &&
+    (requestData?.driverSummary.driverId || acceptedOffer?.driverId),
   );
   const confirmationKeyword = t('extra_expense.confirm_keyword', { defaultValue: 'Agree' });
   const resolvedConfirmationLocale = language || DEFAULT_LANGUAGE;
@@ -903,16 +930,16 @@ export default function RequestStatusScreen() {
       setRequestData((previousRequestData) =>
         previousRequestData
           ? {
-              ...previousRequestData,
-              status: result.requestStatus,
-              statusLabel: 'Cancelled',
-              cancellation: {
-                canCancelCollectedTrip: false,
-                reason: 'Trip already cancelled.',
-                refundPreview: null,
-                action: 'NONE',
-              },
-            }
+            ...previousRequestData,
+            status: result.requestStatus,
+            statusLabel: 'Cancelled',
+            cancellation: {
+              canCancelCollectedTrip: false,
+              reason: 'Trip already cancelled.',
+              refundPreview: null,
+              action: 'NONE',
+            },
+          }
           : previousRequestData,
       );
       setCancelTripDebugMessage('Cancellation response received. Waiting for backend status sync…');
@@ -921,17 +948,17 @@ export default function RequestStatusScreen() {
       setRequestData((previousRequestData) =>
         previousRequestData
           ? {
-              ...previousRequestData,
-              status: latestStatus?.status ?? result.requestStatus,
-              statusLabel: latestStatus?.statusLabel ?? 'Cancelled',
-              cancellation:
-                latestStatus?.cancellation ?? {
-                  canCancelCollectedTrip: false,
-                  reason: 'Trip already cancelled.',
-                  refundPreview: null,
-                  action: 'NONE',
-                },
-            }
+            ...previousRequestData,
+            status: latestStatus?.status ?? result.requestStatus,
+            statusLabel: latestStatus?.statusLabel ?? 'Cancelled',
+            cancellation:
+              latestStatus?.cancellation ?? {
+                canCancelCollectedTrip: false,
+                reason: 'Trip already cancelled.',
+                refundPreview: null,
+                action: 'NONE',
+              },
+          }
           : previousRequestData,
       );
       setOffers([]);
@@ -983,8 +1010,7 @@ export default function RequestStatusScreen() {
         );
       } catch (statusError) {
         setCancelTripDebugMessage(
-          `Fallback status refresh failed: ${
-            statusError instanceof Error ? statusError.message : 'Unknown error.'
+          `Fallback status refresh failed: ${statusError instanceof Error ? statusError.message : 'Unknown error.'
           }`,
         );
       }
@@ -1017,17 +1043,10 @@ export default function RequestStatusScreen() {
   const openAdditionalChargeFlow = useCallback((charge: AdditionalCharge): void => {
     setErrorMessage('');
     setSuccessMessage('');
-
-    if (!defaultPaymentMethod) {
-      router.push(
-        (`/payment-method?requestId=${encodeURIComponent(requestId)}`) as Href,
-      );
-      return;
-    }
-
     setActiveAdditionalCharge(charge);
     setAdditionalChargeConfirmationText('');
-  }, [defaultPaymentMethod, requestId, router]);
+    setAdditionalChargePaymentOption(defaultPaymentMethod ? 'SAVED_CARD' : 'CASH_ON_DELIVERY');
+  }, [defaultPaymentMethod]);
 
   const closeAdditionalChargeModal = useCallback((): void => {
     if (isApprovingAdditionalCharge) {
@@ -1036,7 +1055,8 @@ export default function RequestStatusScreen() {
 
     setActiveAdditionalCharge(null);
     setAdditionalChargeConfirmationText('');
-  }, [isApprovingAdditionalCharge]);
+    setAdditionalChargePaymentOption(defaultPaymentMethod ? 'SAVED_CARD' : 'CASH_ON_DELIVERY');
+  }, [defaultPaymentMethod, isApprovingAdditionalCharge]);
 
   const onApproveAdditionalCharge = useCallback(async (): Promise<void> => {
     if (!activeAdditionalCharge || !isAdditionalChargeConfirmationValid) {
@@ -1051,6 +1071,7 @@ export default function RequestStatusScreen() {
       const updatedCharge = await approveAdditionalCharge(requestId, activeAdditionalCharge.id, {
         confirmationLocale: resolvedConfirmationLocale,
         confirmationText: trimmedAdditionalChargeConfirmationText,
+        paymentOption: additionalChargePaymentOption,
       });
 
       setAdditionalCharges((previousCharges) =>
@@ -1074,6 +1095,7 @@ export default function RequestStatusScreen() {
     }
   }, [
     activeAdditionalCharge,
+    additionalChargePaymentOption,
     isAdditionalChargeConfirmationValid,
     loadStatus,
     requestId,
@@ -1506,6 +1528,9 @@ export default function RequestStatusScreen() {
                 ) : null}
                 <Text style={styles.rowValue}>Status: {charge.status}</Text>
                 <Text style={styles.rowValue}>Added: {formatDate(charge.createdAt)}</Text>
+                <Text style={styles.rowValue}>
+                  {t('extra_expense.payment_option_label')}: {getAdditionalChargePaymentMethodLabel(charge, t)}
+                </Text>
                 {charge.payment.savedPaymentMethod ? (
                   <Text style={styles.rowValue}>
                     {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(charge.payment.savedPaymentMethod)}
@@ -1524,11 +1549,9 @@ export default function RequestStatusScreen() {
                     onPress={() => openAdditionalChargeFlow(charge)}
                   >
                     <Text style={styles.primaryButtonText}>
-                      {defaultPaymentMethod
-                        ? charge.status === 'FAILED'
-                          ? t('extra_expense.retry_button')
-                          : t('extra_expense.approve_button')
-                        : t('extra_expense.add_payment_method_button')}
+                      {charge.status === 'FAILED'
+                        ? t('extra_expense.retry_button')
+                        : t('extra_expense.approve_button')}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -1619,12 +1642,12 @@ export default function RequestStatusScreen() {
               <Text style={styles.rowValue}>
                 {requestData.cancellation.refundPreview
                   ? `If you cancel now, ${formatMoney(
-                      requestData.cancellation.refundPreview.refundedAmount,
-                      requestData.cancellation.refundPreview.currency,
-                    )} will be refunded automatically and ${formatMoney(
-                      requestData.cancellation.refundPreview.retainedAmount,
-                      requestData.cancellation.refundPreview.currency,
-                    )} will be kept as the cancellation fee.`
+                    requestData.cancellation.refundPreview.refundedAmount,
+                    requestData.cancellation.refundPreview.currency,
+                  )} will be refunded automatically and ${formatMoney(
+                    requestData.cancellation.refundPreview.retainedAmount,
+                    requestData.cancellation.refundPreview.currency,
+                  )} will be kept as the cancellation fee.`
                   : 'If you cancel before pickup, 85% will be refunded automatically and 15% will be kept as the cancellation fee.'}
               </Text>
               <View style={styles.dialogActions}>
@@ -1675,9 +1698,55 @@ export default function RequestStatusScreen() {
               {activeAdditionalCharge ? (
                 <Text style={styles.rowValue}>{activeAdditionalCharge.reason}</Text>
               ) : null}
-              <Text style={styles.helperText}>{t('extra_expense.saved_card_notice')}</Text>
+              <Text style={styles.helperText}>
+                {additionalChargePaymentOption === 'SAVED_CARD'
+                  ? t('extra_expense.saved_card_notice')
+                  : t('extra_expense.cash_on_delivery_notice')}
+              </Text>
               <Text style={styles.helperText}>
                 {t('extra_expense.confirm_prompt', {
+                  keyword: confirmationKeyword,
+                })}
+              </Text>
+              <View style={styles.paymentOptionList}>
+                <Pressable
+                  style={[
+                    styles.paymentOptionCard,
+                    additionalChargePaymentOption === 'SAVED_CARD' && styles.paymentOptionCardSelected,
+                    !defaultPaymentMethod && styles.paymentOptionCardDisabled,
+                  ]}
+                  disabled={!defaultPaymentMethod || isApprovingAdditionalCharge}
+                  onPress={() => setAdditionalChargePaymentOption('SAVED_CARD')}
+                >
+                  <Text style={styles.paymentOptionTitle}>{t('extra_expense.saved_card_option')}</Text>
+                  <Text style={styles.paymentOptionDescription}>
+                    {defaultPaymentMethod
+                      ? formatSavedPaymentMethod(defaultPaymentMethod)
+                      : t('extra_expense.no_saved_card_message')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.paymentOptionCard,
+                    additionalChargePaymentOption === 'CASH_ON_DELIVERY' && styles.paymentOptionCardSelected,
+                    isApprovingAdditionalCharge && styles.paymentOptionCardDisabled,
+                  ]}
+                  disabled={isApprovingAdditionalCharge}
+                  onPress={() => setAdditionalChargePaymentOption('CASH_ON_DELIVERY')}
+                >
+                  <Text style={styles.paymentOptionTitle}>
+                    {t('extra_expense.cash_on_delivery_option')}
+                  </Text>
+                  <Text style={styles.paymentOptionDescription}>
+                    {t('extra_expense.cash_on_delivery_notice')}
+                  </Text>
+                </Pressable>
+              </View>
+              <Text style={styles.rowLabel}>
+                {t('extra_expense.confirm_input_label')}
+              </Text>
+              <Text style={styles.helperText}>
+                {t('extra_expense.confirm_input_helper', {
                   keyword: confirmationKeyword,
                 })}
               </Text>
@@ -1690,8 +1759,29 @@ export default function RequestStatusScreen() {
                 style={styles.confirmationInput}
               />
               <Text style={styles.rowValue}>
-                {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+                {t('extra_expense.payment_option_label')}: {' '}
+                {additionalChargePaymentOption === 'SAVED_CARD'
+                  ? t('extra_expense.saved_card_option')
+                  : t('extra_expense.cash_on_delivery_option')}
               </Text>
+              {additionalChargePaymentOption === 'SAVED_CARD' ? (
+                <Text style={styles.rowValue}>
+                  {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+                </Text>
+              ) : null}
+              <Pressable
+                style={[styles.secondaryButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                disabled={isApprovingAdditionalCharge}
+                onPress={() =>
+                  router.push((`/payment-method?requestId=${encodeURIComponent(requestId)}`) as Href)
+                }
+              >
+                <Text style={styles.secondaryButtonText}>
+                  {defaultPaymentMethod
+                    ? t('extra_expense.change_card_button')
+                    : t('extra_expense.add_payment_method_button')}
+                </Text>
+              </Pressable>
               <View style={styles.dialogActions}>
                 <Pressable
                   style={[styles.secondaryOutlineButton, isApprovingAdditionalCharge && styles.disabledButton]}
@@ -1704,7 +1794,7 @@ export default function RequestStatusScreen() {
                   style={[
                     styles.primaryButton,
                     (!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge) &&
-                      styles.disabledButton,
+                    styles.disabledButton,
                   ]}
                   disabled={!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge}
                   onPress={() => void onApproveAdditionalCharge()}
@@ -2058,6 +2148,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
     color: M3LoginColors.textPrimary,
+  },
+  paymentOptionList: {
+    gap: 10,
+  },
+  paymentOptionCard: {
+    borderWidth: 1,
+    borderColor: M3LoginColors.outlineVariant,
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#FFFFFF',
+    gap: 4,
+  },
+  paymentOptionCardSelected: {
+    borderColor: M3LoginColors.primary,
+    backgroundColor: '#EFF6FF',
+  },
+  paymentOptionCardDisabled: {
+    opacity: 0.55,
+  },
+  paymentOptionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: M3LoginColors.textPrimary,
+  },
+  paymentOptionDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: M3LoginColors.textSecondary,
   },
   dialogActions: {
     gap: 10,
