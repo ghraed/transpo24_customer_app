@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { M3LoginColors } from '@/constants/theme';
 import { getCustomerHome } from '@/lib/api';
-import { formatDateTime, formatNumber } from '@/localization/format';
+import { formatDateOnly } from '@/localization/format';
 import { useAppLanguage } from '@/localization/provider';
 import type { CustomerHomeRequestSummary, CustomerHomeResponse } from '@/types/customer-request';
 
@@ -29,6 +29,11 @@ const serviceIcons: Record<string, SymbolViewProps['name']> = {
   FURNITURE_TRANSPORT: { ios: 'sofa.fill', android: 'chair', web: 'chair' },
 };
 
+type ServiceTileTheme = {
+  backgroundColor: string;
+  overlayColor: string;
+};
+
 function getServiceLabel(
   serviceKey: string | null | undefined,
   fallback: string | null | undefined,
@@ -36,15 +41,153 @@ function getServiceLabel(
 ): string {
   switch (serviceKey) {
     case 'VEHICLE_TRANSPORT':
-      return t('Vehicle transport');
+      return t('Vehicle');
     case 'MOTORCYCLE_TRANSPORT':
-      return t('Motorcycle transport');
+      return t('Motorcycle');
     case 'GOODS_TRANSPORT':
-      return t('Goods transport');
+      return t('Goods');
     case 'FURNITURE_TRANSPORT':
-      return t('Furniture transport');
+      return t('Furniture');
     default:
       return fallback || t('Service');
+  }
+}
+
+function getServiceSubtitle(
+  serviceKey: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  switch (serviceKey) {
+    case 'VEHICLE_TRANSPORT':
+      return t('Cars, SUVs, Trucks');
+    case 'MOTORCYCLE_TRANSPORT':
+      return t('Bikes, Scooters');
+    case 'GOODS_TRANSPORT':
+      return t('Packages, Cargo');
+    case 'FURNITURE_TRANSPORT':
+      return t('Home, Office items');
+    default:
+      return t('Transport anything');
+  }
+}
+
+function getServiceTheme(serviceKey: string): ServiceTileTheme {
+  switch (serviceKey) {
+    case 'VEHICLE_TRANSPORT':
+      return {
+        backgroundColor: '#F4BD3C',
+        overlayColor: '#FFD86F',
+      };
+    case 'MOTORCYCLE_TRANSPORT':
+      return {
+        backgroundColor: '#0F69D8',
+        overlayColor: '#3C8EF3',
+      };
+    case 'GOODS_TRANSPORT':
+      return {
+        backgroundColor: '#11B85E',
+        overlayColor: '#46D889',
+      };
+    case 'FURNITURE_TRANSPORT':
+      return {
+        backgroundColor: '#F08948',
+        overlayColor: '#FFB17E',
+      };
+    default:
+      return {
+        backgroundColor: M3LoginColors.primary,
+        overlayColor: M3LoginColors.outlineVariant,
+      };
+  }
+}
+
+function getGreeting(t: (key: string, options?: Record<string, unknown>) => string): string {
+  const hour = new Date().getHours();
+
+  if (hour < 12) {
+    return t('Good morning!');
+  }
+
+  if (hour < 18) {
+    return t('Good afternoon!');
+  }
+
+  return t('Good evening!');
+}
+
+function compactAddress(address: string | null | undefined, fallback: string): string {
+  if (!address?.trim()) {
+    return fallback;
+  }
+
+  const parts = address
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0]}, ${parts[1]}`;
+  }
+
+  return parts[0] ?? fallback;
+}
+
+function buildLocationLabel(
+  data: CustomerHomeResponse,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  return compactAddress(
+    data.activeRequest?.pickupAddress ??
+      data.recentRequests[0]?.pickupAddress ??
+      data.recentRequests[0]?.dropoffAddress,
+    t('Ready to book'),
+  );
+}
+
+function getRequestDateLabel(
+  request: CustomerHomeRequestSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const value = request.submittedAt ?? request.createdAt ?? request.scheduledPickupAt;
+  return value ? formatDateOnly(value) : t('Date pending');
+}
+
+function getRequestReference(requestId: string): string {
+  const compactId = requestId.replace(/-/g, '').slice(0, 8).toUpperCase();
+  return `ID ${compactId || requestId}`;
+}
+
+function getRouteLabel(
+  request: CustomerHomeRequestSummary,
+  directionArrow: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const pickup = compactAddress(request.pickupAddress, t('Pickup'));
+  const dropoff = compactAddress(request.dropoffAddress, t('Dropoff'));
+  return `${pickup} ${directionArrow} ${dropoff}`;
+}
+
+function getStatusTone(status: CustomerHomeRequestSummary['status']): {
+  backgroundColor: string;
+  textColor: string;
+} {
+  switch (status) {
+    case 'DELIVERED':
+    case 'COMPLETED':
+      return {
+        backgroundColor: '#E9F9EE',
+        textColor: '#1E9E4A',
+      };
+    case 'CANCELLED':
+      return {
+        backgroundColor: '#FDE8E7',
+        textColor: '#C0392B',
+      };
+    default:
+      return {
+        backgroundColor: '#FFF3D6',
+        textColor: '#D89A1A',
+      };
   }
 }
 
@@ -60,54 +203,122 @@ function IconSymbol({
   return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
-function StatusPill({ statusLabel }: { statusLabel: string }) {
+function StatusBadge({
+  status,
+  label,
+}: {
+  status: CustomerHomeRequestSummary['status'];
+  label: string;
+}) {
+  const tone = getStatusTone(status);
+
   return (
-    <View style={styles.pill}>
-      <Text style={styles.pillText}>{statusLabel}</Text>
+    <View style={[styles.statusBadge, { backgroundColor: tone.backgroundColor }]}>
+      <Text style={[styles.statusBadgeText, { color: tone.textColor }]} numberOfLines={2}>
+        {label}
+      </Text>
     </View>
   );
 }
 
-function QuickServiceChip({
+function ServiceTile({
   serviceKey,
   label,
+  subtitle,
   onPress,
 }: {
   serviceKey: string;
   label: string;
+  subtitle: string;
   onPress: () => void;
 }) {
+  const theme = getServiceTheme(serviceKey);
   const icon = serviceIcons[serviceKey];
 
   return (
-    <Pressable style={styles.chip} onPress={onPress}>
-      {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={20} /> : null}
-      <Text style={styles.chipLabel}>{label}</Text>
+    <Pressable
+      style={[styles.serviceTile, { backgroundColor: theme.backgroundColor }]}
+      onPress={onPress}
+    >
+      <View style={[styles.serviceGlow, { backgroundColor: theme.overlayColor, top: -22, right: 10 }]} />
+      <View
+        style={[styles.serviceGlow, { backgroundColor: theme.overlayColor, bottom: -34, left: -26, opacity: 0.4 }]}
+      />
+      <View style={styles.serviceIconWrap}>
+        {icon ? <IconSymbol name={icon} color="#FFFFFF" size={24} /> : null}
+      </View>
+      <Text style={styles.serviceTileTitle}>{label}</Text>
+      <Text style={styles.serviceTileSubtitle}>{subtitle}</Text>
     </Pressable>
   );
 }
 
-function StatCard({
-  value,
-  label,
-  icon,
+function ActiveOrderCard({
+  request,
+  directionArrow,
+  onPress,
+  t,
 }: {
-  value: string;
-  label: string;
-  icon: SymbolViewProps['name'];
+  request: CustomerHomeRequestSummary;
+  directionArrow: string;
+  onPress: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }) {
+  const icon = serviceIcons[request.serviceKey ?? ''];
+
   return (
-    <View style={styles.statCard}>
-      <View style={styles.statIconCircle}>
-        <IconSymbol name={icon} color={M3LoginColors.onPrimary} size={20} />
+    <Pressable style={styles.activeOrderCard} onPress={onPress}>
+      <View style={styles.activeOrderRow}>
+        <View style={styles.activeOrderIdentity}>
+          <View style={styles.activeOrderIcon}>
+            {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={20} /> : null}
+          </View>
+          <View style={styles.activeOrderTextBlock}>
+            <Text style={styles.activeOrderTitle}>
+              {getServiceLabel(request.serviceKey, request.serviceName, t)}
+            </Text>
+            <Text style={styles.activeOrderRoute} numberOfLines={2}>
+              {getRouteLabel(request, directionArrow, t)}
+            </Text>
+          </View>
+        </View>
+        <StatusBadge status={request.status} label={request.statusLabel} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+
+      <View style={styles.activeOrderDivider} />
+
+      <View style={styles.activeOrderMeta}>
+        <Text style={styles.activeOrderMetaText}>{getRequestReference(request.id)}</Text>
+        <Text style={styles.activeOrderMetaText}>{getRequestDateLabel(request, t)}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function EmptyActiveOrder({ onPress, t }: { onPress: () => void; t: (key: string) => string }) {
+  return (
+    <View style={styles.activeOrderCard}>
+      <View style={styles.emptyOrderHeader}>
+        <View style={styles.emptyOrderIcon}>
+          <IconSymbol
+            name={{ ios: 'shippingbox.fill', android: 'inventory_2', web: 'inventory_2' }}
+            color={M3LoginColors.primary}
+            size={20}
+          />
+        </View>
+        <View style={styles.emptyOrderTextBlock}>
+          <Text style={styles.activeOrderTitle}>{t('No active order')}</Text>
+          <Text style={styles.activeOrderRoute}>{t('Create a new request to start transporting.')}</Text>
+        </View>
+      </View>
+      <Pressable style={styles.inlineActionButton} onPress={onPress}>
+        <Text style={styles.inlineActionButtonText}>{t('New request')}</Text>
+      </Pressable>
     </View>
   );
 }
 
-function ActiveRequestCard({
+function RecentActivityRow({
   request,
   directionArrow,
   onPress,
@@ -118,104 +329,26 @@ function ActiveRequestCard({
   onPress: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const serviceKey = request.serviceKey ?? '';
-  const icon = serviceIcons[serviceKey];
-
-  return (
-    <Pressable style={styles.activeCard} onPress={onPress}>
-      <View style={styles.activeCardHeader}>
-        <View style={styles.serviceBadge}>
-          {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={18} /> : null}
-          <Text style={styles.serviceBadgeText}>
-            {getServiceLabel(request.serviceKey, request.serviceName, t)}
-          </Text>
-        </View>
-        <StatusPill statusLabel={request.statusLabel} />
-      </View>
-
-      <View style={styles.routeRow}>
-        <IconSymbol
-          name={{ ios: 'mappin.and.ellipse', android: 'location_on', web: 'location_on' }}
-          color={M3LoginColors.primary}
-          size={18}
-        />
-        <Text style={styles.routeText} numberOfLines={1}>
-          {request.pickupAddress || t('Pickup not set')}
-        </Text>
-      </View>
-      <View style={styles.routeConnector}>
-        <View style={styles.routeLine} />
-        <View style={styles.routeVehicleCircle}>
-          <IconSymbol
-            name={{ ios: 'arrow.down', android: 'south', web: 'arrow_downward' }}
-            color={M3LoginColors.onPrimary}
-            size={14}
-          />
-        </View>
-        <View style={styles.routeLine} />
-      </View>
-      <View style={styles.routeRow}>
-        <IconSymbol
-          name={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
-          color={M3LoginColors.primary}
-          size={18}
-        />
-        <Text style={styles.routeText} numberOfLines={1}>
-          {request.dropoffAddress || t('Dropoff not set')}
-        </Text>
-      </View>
-
-      <View style={styles.activeCardFooter}>
-        <IconSymbol
-          name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' }}
-          color={M3LoginColors.textTertiary}
-          size={14}
-        />
-        <Text style={styles.scheduledText}>
-          {formatDateTime(request.scheduledPickupAt)}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function RecentRequestRow({
-  request,
-  directionArrow,
-  onPress,
-  t,
-}: {
-  request: CustomerHomeRequestSummary;
-  directionArrow: string;
-  onPress: () => void;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  const serviceKey = request.serviceKey ?? '';
-  const icon = serviceIcons[serviceKey];
+  const icon = serviceIcons[request.serviceKey ?? ''];
+  const tone = getStatusTone(request.status);
 
   return (
     <Pressable style={styles.recentRow} onPress={onPress}>
-      <View style={styles.recentIconCircle}>
-        {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={22} /> : null}
+      <View style={styles.recentIcon}>
+        {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={18} /> : null}
       </View>
       <View style={styles.recentContent}>
         <Text style={styles.recentTitle}>
           {getServiceLabel(request.serviceKey, request.serviceName, t)}
         </Text>
-        <Text style={styles.recentRoute} numberOfLines={1}>
-          {request.pickupAddress || t('Pickup')} {directionArrow} {request.dropoffAddress || t('Dropoff')}
+        <Text style={styles.recentSubtitle} numberOfLines={1}>
+          {getRouteLabel(request, directionArrow, t)}
         </Text>
-        <StatusPill statusLabel={request.statusLabel} />
       </View>
-      <IconSymbol
-        name={{
-          ios: 'chevron.forward',
-          android: 'chevron_right',
-          web: 'chevron_right',
-        }}
-        color={M3LoginColors.textTertiary}
-        size={18}
-      />
+      <View style={styles.recentMeta}>
+        <Text style={styles.recentDate}>{getRequestDateLabel(request, t)}</Text>
+        <Text style={[styles.recentStatus, { color: tone.textColor }]}>{request.statusLabel}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -285,14 +418,29 @@ export default function HomeTabScreen() {
   }, [router]);
 
   const directionArrow = isRTL ? '←' : '→';
-  const unreadCount = data?.notifications?.unreadCount ?? 0;
 
   const quickServices = useMemo(
     () => [
-      { key: 'VEHICLE_TRANSPORT', label: t('Vehicle transport') },
-      { key: 'MOTORCYCLE_TRANSPORT', label: t('Motorcycle transport') },
-      { key: 'GOODS_TRANSPORT', label: t('Goods transport') },
-      { key: 'FURNITURE_TRANSPORT', label: t('Furniture transport') },
+      {
+        key: 'VEHICLE_TRANSPORT',
+        label: getServiceLabel('VEHICLE_TRANSPORT', null, t),
+        subtitle: getServiceSubtitle('VEHICLE_TRANSPORT', t),
+      },
+      {
+        key: 'MOTORCYCLE_TRANSPORT',
+        label: getServiceLabel('MOTORCYCLE_TRANSPORT', null, t),
+        subtitle: getServiceSubtitle('MOTORCYCLE_TRANSPORT', t),
+      },
+      {
+        key: 'GOODS_TRANSPORT',
+        label: getServiceLabel('GOODS_TRANSPORT', null, t),
+        subtitle: getServiceSubtitle('GOODS_TRANSPORT', t),
+      },
+      {
+        key: 'FURNITURE_TRANSPORT',
+        label: getServiceLabel('FURNITURE_TRANSPORT', null, t),
+        subtitle: getServiceSubtitle('FURNITURE_TRANSPORT', t),
+      },
     ],
     [t],
   );
@@ -300,8 +448,8 @@ export default function HomeTabScreen() {
   if (isLoading && !data) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color={M3LoginColors.onPrimary} />
-        <Text style={styles.loadingText}>{t('Loading home...')}</Text>
+        <ActivityIndicator size="large" color={M3LoginColors.primary} />
+        <Text style={styles.supportingText}>{t('Loading home...')}</Text>
       </SafeAreaView>
     );
   }
@@ -312,12 +460,12 @@ export default function HomeTabScreen() {
         <View style={styles.errorIconCircle}>
           <IconSymbol
             name={{ ios: 'exclamationmark.triangle.fill', android: 'error', web: 'error' }}
-            color={M3LoginColors.onPrimary}
-            size={32}
+            color={M3LoginColors.primary}
+            size={30}
           />
         </View>
         <Text style={styles.errorTitle}>{t('Unable to load home data.')}</Text>
-        <Text style={styles.errorText}>{errorMessage}</Text>
+        <Text style={styles.supportingText}>{errorMessage}</Text>
         <Pressable style={styles.primaryButton} onPress={() => void loadHome(false)}>
           <Text style={styles.primaryButtonText}>{t('Retry')}</Text>
         </Pressable>
@@ -325,148 +473,119 @@ export default function HomeTabScreen() {
     );
   }
 
-  const customerName = data.customer.fullName?.trim() || t('there');
+  const unreadCount = data.notifications?.unreadCount ?? 0;
+  const locationLabel = buildLocationLabel(data, t);
   const activeRequest = data.activeRequest;
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={M3LoginColors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: Math.max(20, insets.top + 8) },
+          {
+            paddingTop: Math.max(12, insets.top + 4),
+            paddingBottom: Math.max(28, insets.bottom + 18),
+          },
         ]}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={() => void loadHome(true)} />
         }
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topBar}>
-          <View style={styles.welcomeBlock}>
-            <Text style={styles.greeting}>{t('Hello, {{name}}', { name: customerName })}</Text>
-            <Text style={styles.subGreeting}>{t('What would you like to transport today?')}</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.locationWrap}>
+            <IconSymbol
+              name={{ ios: 'mappin.circle.fill', android: 'location_on', web: 'location_on' }}
+              color={M3LoginColors.secondary}
+              size={18}
+            />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {locationLabel}
+            </Text>
           </View>
+
           <Pressable style={styles.notificationButton} onPress={onNotifications}>
             <IconSymbol
-              name={{ ios: 'bell.fill', android: 'notifications', web: 'notifications' }}
-              color={M3LoginColors.primary}
+              name={{ ios: 'bell', android: 'notifications_none', web: 'notifications_none' }}
+              color={M3LoginColors.textPrimary}
               size={22}
             />
-            {unreadCount > 0 ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            ) : null}
+            {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
           </Pressable>
         </View>
 
-        <Pressable style={styles.ctaButton} onPress={onNewRequest}>
-          <View style={styles.ctaIconCircle}>
-            <IconSymbol
-              name={{ ios: 'plus', android: 'add', web: 'add' }}
-              color={M3LoginColors.secondary}
-              size={24}
-            />
-          </View>
-          <View style={styles.ctaTextBlock}>
-            <Text style={styles.ctaTitle}>{t('New Transport Request')}</Text>
-            <Text style={styles.ctaSubtitle}>{t('Get quotes from drivers in minutes')}</Text>
-          </View>
-          <IconSymbol
-            name={{
-              ios: 'chevron.forward',
-              android: 'chevron_right',
-              web: 'chevron_right',
-            }}
-            color={M3LoginColors.primary}
-            size={20}
-          />
-        </Pressable>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('Services')}</Text>
-          <View style={styles.chipRow}>
-            {quickServices.map((service) => (
-              <QuickServiceChip
-                key={service.key}
-                serviceKey={service.key}
-                label={service.label}
-                onPress={() => onChooseServiceByKey(service.key)}
-              />
-            ))}
-          </View>
+        <View style={styles.heroBlock}>
+          <Text style={styles.heroTitle}>
+            {getGreeting(t)} <Text>{'\uD83D\uDC4B'}</Text>
+          </Text>
+          <Text style={styles.heroSubtitle}>{t('What do you need to transport?')}</Text>
         </View>
 
-        {activeRequest ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('Active Request')}</Text>
-            <ActiveRequestCard
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.servicesScroller}
+        >
+          {quickServices.map((service) => (
+            <ServiceTile
+              key={service.key}
+              serviceKey={service.key}
+              label={service.label}
+              subtitle={service.subtitle}
+              onPress={() => onChooseServiceByKey(service.key)}
+            />
+          ))}
+        </ScrollView>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('Active Order')}</Text>
+            <Pressable onPress={() => router.push('/requests')}>
+              <Text style={styles.seeAllText}>{t('See All')}</Text>
+            </Pressable>
+          </View>
+
+          {activeRequest ? (
+            <ActiveOrderCard
               request={activeRequest}
               directionArrow={directionArrow}
               onPress={() => onViewStatus(activeRequest.id)}
               t={t}
             />
-          </View>
-        ) : null}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('Overview')}</Text>
-          <View style={styles.statsGrid}>
-            <StatCard
-              value={formatNumber(data.counters.totalRequests)}
-              label={t('Total')}
-              icon={{ ios: 'doc.text.fill', android: 'description', web: 'description' }}
-            />
-            <StatCard
-              value={formatNumber(data.counters.activeRequests)}
-              label={t('Active')}
-              icon={{ ios: 'bolt.fill', android: 'bolt', web: 'bolt' }}
-            />
-            <StatCard
-              value={formatNumber(data.counters.completedRequests)}
-              label={t('Completed')}
-              icon={{ ios: 'checkmark.seal.fill', android: 'verified', web: 'verified' }}
-            />
-            <StatCard
-              value={formatNumber(data.counters.pendingQuotesRequests)}
-              label={t('Pending Offers')}
-              icon={{ ios: 'tag.fill', android: 'sell', web: 'sell' }}
-            />
-          </View>
+          ) : (
+            <EmptyActiveOrder onPress={onNewRequest} t={t} />
+          )}
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('Recent Requests')}</Text>
+            <Text style={styles.sectionTitle}>{t('Recent Activity')}</Text>
             {data.recentRequests.length > 0 ? (
               <Pressable onPress={() => router.push('/requests')}>
-                <Text style={styles.seeAllText}>{t('See all')}</Text>
+                <Text style={styles.seeAllText}>{t('See All')}</Text>
               </Pressable>
             ) : null}
           </View>
+
           {data.recentRequests.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <IconSymbol
-                name={{ ios: 'shippingbox', android: 'inventory_2', web: 'inventory_2' }}
-                color={M3LoginColors.textTertiary}
-                size={32}
-              />
-              <Text style={styles.emptyText}>
-                {t('No requests yet. Start your first transport request.')}
+            <View style={styles.emptyRecentCard}>
+              <Text style={styles.supportingText}>
+                {t('Your recent transport requests will appear here.')}
               </Text>
-              <Pressable style={styles.outlineButton} onPress={onNewRequest}>
-                <Text style={styles.outlineButtonText}>{t('New Transport Request')}</Text>
-              </Pressable>
             </View>
           ) : (
             <View style={styles.recentList}>
-              {data.recentRequests.map((request) => (
-                <RecentRequestRow
-                  key={request.id}
-                  request={request}
-                  directionArrow={directionArrow}
-                  onPress={() => onViewStatus(request.id)}
-                  t={t}
-                />
+              {data.recentRequests.map((request, index) => (
+                <View key={request.id}>
+                  <RecentActivityRow
+                    request={request}
+                    directionArrow={directionArrow}
+                    onPress={() => onViewStatus(request.id)}
+                    t={t}
+                  />
+                  {index < data.recentRequests.length - 1 ? <View style={styles.rowDivider} /> : null}
+                </View>
               ))}
             </View>
           )}
@@ -479,361 +598,316 @@ export default function HomeTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: '#FAFAFA',
   },
   centeredContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: '#FAFAFA',
     padding: 24,
     gap: 12,
   },
   content: {
-    padding: 16,
-    paddingTop: 20,
-    paddingBottom: 32,
-    gap: 20,
+    paddingHorizontal: 20,
+    gap: 24,
   },
-  topBar: {
+  headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
-  welcomeBlock: {
+  locationWrap: {
     flex: 1,
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  greeting: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: M3LoginColors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  subGreeting: {
-    fontSize: 14,
-    color: M3LoginColors.textSecondary,
-    lineHeight: 20,
+  locationText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#68768A',
   },
   notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: M3LoginColors.surface,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  badge: {
+  notificationDot: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: M3LoginColors.background,
+    top: 8,
+    right: 7,
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: '#FF5A5F',
   },
-  badgeText: {
-    color: M3LoginColors.onPrimary,
-    fontSize: 10,
-    fontWeight: '700',
+  heroBlock: {
+    gap: 8,
   },
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
+  heroTitle: {
+    fontSize: 19,
+    lineHeight: 28,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#68768A',
+  },
+  servicesScroller: {
+    paddingRight: 20,
+    gap: 12,
+  },
+  serviceTile: {
+    width: 140,
+    minHeight: 120,
+    borderRadius: 22,
     padding: 16,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
   },
-  ctaIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: M3LoginColors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
+  serviceGlow: {
+    position: 'absolute',
+    width: 88,
+    height: 88,
+    borderRadius: 999,
+    opacity: 0.55,
   },
-  ctaTextBlock: {
-    flex: 1,
-    gap: 2,
+  serviceIconWrap: {
+    marginBottom: 18,
   },
-  ctaTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+  serviceTileTitle: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 6,
   },
-  ctaSubtitle: {
+  serviceTileSubtitle: {
     fontSize: 13,
-    color: M3LoginColors.textSecondary,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.86)',
   },
   section: {
-    gap: 10,
+    gap: 14,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
   },
   seeAllText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
-    color: M3LoginColors.primary,
+    color: '#136AF3',
   },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'space-between',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    width: '48%',
-    minHeight: 48,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: M3LoginColors.surface,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-  },
-  chipLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: M3LoginColors.textPrimary,
-  },
-  activeCard: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
+  activeOrderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 16,
-    gap: 10,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    borderColor: '#E5E8EF',
+    shadowColor: '#111827',
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    gap: 14,
   },
-  activeCardHeader: {
+  activeOrderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 12,
   },
-  serviceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: M3LoginColors.surfaceContainer,
-  },
-  serviceBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  pill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: M3LoginColors.surfaceContainer,
-  },
-  pillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: M3LoginColors.textSecondary,
-  },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  routeText: {
+  activeOrderIdentity: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  activeOrderIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFD35A',
+  },
+  activeOrderTextBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  activeOrderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  activeOrderRoute: {
     fontSize: 14,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '500',
+    lineHeight: 20,
+    color: '#627287',
   },
-  routeConnector: {
+  statusBadge: {
+    maxWidth: 92,
+    minHeight: 40,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  activeOrderDivider: {
+    height: 1,
+    backgroundColor: '#E9EDF3',
+  },
+  activeOrderMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingLeft: 28,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  routeLine: {
+  activeOrderMetaText: {
+    fontSize: 13,
+    color: '#66758A',
+  },
+  emptyOrderHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyOrderIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F4F5F8',
+  },
+  emptyOrderTextBlock: {
     flex: 1,
-    width: 2,
-    backgroundColor: M3LoginColors.outlineVariant,
+    gap: 4,
   },
-  routeVehicleCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  inlineActionButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#111827',
   },
-  activeCardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: M3LoginColors.surfaceContainerHigh,
-  },
-  scheduledText: {
-    fontSize: 12,
-    color: M3LoginColors.textSecondary,
-    fontWeight: '500',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  statCard: {
-    width: '47%',
-    flexGrow: 1,
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 16,
-    padding: 14,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-  },
-  statIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: M3LoginColors.primary,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: M3LoginColors.textPrimary,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: M3LoginColors.textSecondary,
-    fontWeight: '500',
+  inlineActionButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   recentList: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    borderColor: '#E5E8EF',
     overflow: 'hidden',
   },
   recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: M3LoginColors.surfaceContainerHigh,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  recentIconCircle: {
-    width: 44,
-    height: 44,
+  recentIcon: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.surfaceContainer,
+    backgroundColor: '#F4F5F8',
   },
   recentContent: {
     flex: 1,
     gap: 4,
   },
   recentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  recentSubtitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: '#627287',
   },
-  recentRoute: {
-    fontSize: 12,
-    color: M3LoginColors.textSecondary,
+  recentMeta: {
+    alignItems: 'flex-end',
+    gap: 4,
   },
-  emptyCard: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
-    padding: 24,
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: M3LoginColors.textSecondary,
-    textAlign: 'center',
-  },
-  outlineButton: {
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: M3LoginColors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  outlineButtonText: {
-    color: M3LoginColors.primary,
-    fontWeight: '700',
+  recentDate: {
     fontSize: 13,
+    color: '#111827',
+    fontWeight: '700',
+  },
+  recentStatus: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  rowDivider: {
+    height: 1,
+    backgroundColor: '#E9EDF3',
+    marginLeft: 66,
+  },
+  emptyRecentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
   },
   primaryButton: {
-    backgroundColor: M3LoginColors.primary,
-    borderRadius: 12,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    marginTop: 4,
   },
   primaryButtonText: {
-    color: M3LoginColors.onPrimary,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },
-  loadingText: {
+  supportingText: {
     fontSize: 14,
-    color: M3LoginColors.textSecondary,
+    lineHeight: 20,
+    color: '#627287',
+    textAlign: 'center',
   },
   errorIconCircle: {
     width: 64,
     height: 64,
-    borderRadius: 20,
-    backgroundColor: M3LoginColors.surfaceContainer,
+    borderRadius: 22,
+    backgroundColor: '#FFF3D6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
   },
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  errorText: {
-    fontSize: 14,
-    color: M3LoginColors.textSecondary,
-    textAlign: 'center',
+    color: '#111827',
   },
 });
