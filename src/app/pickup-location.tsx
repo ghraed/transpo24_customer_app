@@ -27,6 +27,7 @@ import {
   updatePickupLocation,
 } from '@/lib/api';
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { M3Styles } from '@/lib/m3-styles';
 import {
   reverseGeocodeCoordinates,
@@ -160,6 +161,7 @@ function parsePendingFurnitureDetails(
 }
 
 export default function PickupLocationScreen() {
+  const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const params = useLocalSearchParams<PickupLocationRouteParams>();
 
@@ -697,7 +699,10 @@ export default function PickupLocationScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+      style={[
+        styles.container,
+        keyboardInset > 0 ? { paddingBottom: 18 + keyboardInset } : undefined,
+      ]}
     >
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -809,7 +814,15 @@ export default function PickupLocationScreen() {
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-      <Pressable style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]} onPress={() => void onContinue()} disabled={!canContinue}>
+      <Pressable
+        style={[
+          styles.continueButton,
+          !canContinue && styles.continueButtonDisabled,
+          keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
+        ]}
+        onPress={() => void onContinue()}
+        disabled={!canContinue}
+      >
         {isSaving ? <ActivityIndicator size="small" color={M3LoginColors.onPrimary} /> : <Text style={styles.continueText}>Continue</Text>}
       </Pressable>
     </KeyboardAvoidingView>

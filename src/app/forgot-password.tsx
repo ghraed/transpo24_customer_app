@@ -1,10 +1,20 @@
 import { Link } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { getApiBaseUrl } from '@/config/backend';
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 
 interface ForgotPasswordRequest {
   email: string;
@@ -34,6 +44,7 @@ function getResponseMessage(raw: string, fallback: string): string {
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
+  const keyboardInset = useAndroidKeyboardInset();
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -83,7 +94,17 @@ export default function ForgotPasswordScreen() {
   }, [apiBaseUrl, email, t]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View
+        style={[
+          styles.container,
+          keyboardInset > 0 ? styles.containerKeyboardOpen : undefined,
+          keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
+        ]}
+      >
       <View style={styles.backgroundAccent} />
 
       <View style={styles.card}>
@@ -124,17 +145,25 @@ export default function ForgotPasswordScreen() {
           {t('Back to Sign in')}
         </Link>
       </View>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
     padding: 24,
     backgroundColor: M3LoginColors.background,
     overflow: 'hidden',
+  },
+  containerKeyboardOpen: {
+    justifyContent: 'flex-start',
+    paddingTop: 24,
   },
   backgroundAccent: {
     position: 'absolute',

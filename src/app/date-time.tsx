@@ -21,6 +21,7 @@ import {
   uploadRequestPhotos,
 } from '@/lib/api';
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { M3Styles } from '@/lib/m3-styles';
 import type {
   DateTimeRouteParams,
@@ -120,6 +121,7 @@ function mapPickerAssetToLocalPhoto(asset: ImagePicker.ImagePickerAsset): LocalP
 }
 
 export default function DateTimeScreen() {
+  const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const params = useLocalSearchParams<DateTimeRouteParams>();
 
@@ -460,7 +462,13 @@ export default function DateTimeScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          keyboardInset > 0 ? { paddingBottom: 18 + keyboardInset } : undefined,
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>← Back</Text>
@@ -704,7 +712,11 @@ export default function DateTimeScreen() {
       </ScrollView>
 
       <Pressable
-        style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
+        style={[
+          styles.continueButton,
+          !canContinue && styles.continueButtonDisabled,
+          keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
+        ]}
         disabled={!canContinue}
         onPress={() => void onContinue()}
       >

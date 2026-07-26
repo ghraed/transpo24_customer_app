@@ -5,6 +5,8 @@ import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +16,7 @@ import {
 } from 'react-native';
 
 import { decodeVehicleVin } from '@/lib/api';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import type {
   LocalPhotoAsset,
   MotorcycleCondition,
@@ -211,6 +214,7 @@ function resolveMotorcycleType(decoded: DecodedVinResult): MotorcycleType | '' {
 export default function MotorcycleDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<MotorcycleDetailsRouteParams>();
+  const keyboardInset = useAndroidKeyboardInset();
 
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
   const serviceKey = typeof params.serviceKey === 'string' ? params.serviceKey.trim() : '';
@@ -408,7 +412,17 @@ export default function MotorcycleDetailsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          keyboardInset > 0 ? { paddingBottom: 30 + keyboardInset } : undefined,
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Back</Text>
@@ -626,24 +640,28 @@ export default function MotorcycleDetailsScreen() {
         />
       ) : null}
 
-      {showTimePicker ? (
-        <DateTimePicker
-          value={form.scheduledPickupAt}
-          mode="time"
-          onChange={(_, selectedDate) => {
-            setShowTimePicker(false);
-            if (!selectedDate) return;
-            const next = new Date(form.scheduledPickupAt);
-            next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-            setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
-          }}
-        />
-      ) : null}
-    </ScrollView>
+        {showTimePicker ? (
+          <DateTimePicker
+            value={form.scheduledPickupAt}
+            mode="time"
+            onChange={(_, selectedDate) => {
+              setShowTimePicker(false);
+              if (!selectedDate) return;
+              const next = new Date(form.scheduledPickupAt);
+              next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+              setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+            }}
+          />
+        ) : null}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     padding: 16,
     backgroundColor: M3LoginColors.background,

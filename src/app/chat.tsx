@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import {
   getChatRoomByTransportRequestId,
   getChatRoomMessages,
@@ -44,6 +45,7 @@ type RouteParams = {
 };
 
 const INITIAL_PAGE_LIMIT = 100;
+const CHAT_INPUT_BOTTOM_PADDING = 12;
 
 function containsArabicCharacters(value: string): boolean {
   return /[\u0600-\u06FF]/.test(value);
@@ -153,7 +155,9 @@ async function loadAllRoomMessages(roomId: string): Promise<ChatRoomMessagesResp
 }
 
 export default function ChatScreen() {
+  const flatListRef = useRef<FlatList<ChatMessage> | null>(null);
   const params = useLocalSearchParams<RouteParams>();
+  const keyboardInset = useAndroidKeyboardInset();
   const { language } = useAppLanguage();
   const initialRoomId =
     typeof params.chatRoomId === 'string' ? params.chatRoomId.trim() : '';
@@ -436,6 +440,26 @@ export default function ChatScreen() {
     [messages],
   );
 
+  const scrollToLatestMessage = useCallback((animated: boolean) => {
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (sortedMessages.length === 0) {
+      return;
+    }
+
+    scrollToLatestMessage(false);
+  }, [scrollToLatestMessage, sortedMessages.length]);
+
+  useEffect(() => {
+    if (keyboardInset > 0) {
+      scrollToLatestMessage(true);
+    }
+  }, [keyboardInset, scrollToLatestMessage]);
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
@@ -474,8 +498,11 @@ export default function ChatScreen() {
         ) : (
           <>
             <FlatList
+              ref={flatListRef}
               data={sortedMessages}
               keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              onContentSizeChange={() => scrollToLatestMessage(false)}
               contentContainerStyle={[
                 styles.messagesContent,
                 sortedMessages.length === 0 ? styles.messagesContentEmpty : undefined,
@@ -571,12 +598,20 @@ export default function ChatScreen() {
               }
             />
 
-            <View style={styles.inputPanel}>
+            <View
+              style={[
+                styles.inputPanel,
+                keyboardInset > 0
+                  ? { paddingBottom: CHAT_INPUT_BOTTOM_PADDING + keyboardInset }
+                  : undefined,
+              ]}
+            >
               {sendErrorMessage ? <Text style={styles.errorText}>{sendErrorMessage}</Text> : null}
               <View style={styles.inputRow}>
                 <TextInput
                   value={draft}
                   onChangeText={setDraft}
+                  onFocus={() => scrollToLatestMessage(true)}
                   placeholder="Type a message"
                   style={styles.input}
                   multiline
@@ -762,7 +797,7 @@ const styles = StyleSheet.create({
     backgroundColor: M3LoginColors.surface,
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 12,
+    paddingBottom: CHAT_INPUT_BOTTOM_PADDING,
     gap: 8,
   },
   inputRow: {

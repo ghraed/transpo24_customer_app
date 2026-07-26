@@ -1,9 +1,20 @@
 import { Link, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { postLogin } from '@/lib/api';
 import { setAccessToken } from '@/lib/auth-token';
 import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
@@ -13,6 +24,7 @@ export default function LoginScreen() {
   const { t } = useTranslation();
   const [email, setEmail] = useState('raed.ghanim.2014@gmail.com');
   const [password, setPassword] = useState('Voltermot1');
+  const keyboardInset = useAndroidKeyboardInset();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,7 +59,17 @@ export default function LoginScreen() {
   }, [email, password, router, t]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View
+        style={[
+          styles.container,
+          keyboardInset > 0 ? styles.containerKeyboardOpen : undefined,
+          keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
+        ]}
+      >
       <View style={styles.backgroundAccent} />
       <View style={styles.logoWrapper}>
         <Image
@@ -102,17 +124,25 @@ export default function LoginScreen() {
           <Text style={styles.black}>{t('New customer?')}</Text> {t('Create an account')}
         </Link>
       </View>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
     padding: 24,
     backgroundColor: M3LoginColors.background,
     overflow: 'hidden',
+  },
+  containerKeyboardOpen: {
+    justifyContent: 'flex-start',
+    paddingTop: 24,
   },
   backgroundAccent: {
     position: 'absolute',

@@ -2,6 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { createDriverRating, getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
 
@@ -68,6 +71,7 @@ function StarButton({ fill, starNumber, onSelect }: StarButtonProps) {
 export default function CustomerRateDriverScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<RouteParams>();
+  const keyboardInset = useAndroidKeyboardInset();
   const tripId = typeof params.tripId === 'string' ? params.tripId.trim() : '';
 
   const [tracking, setTracking] = useState<RequestTracking | null>(null);
@@ -141,7 +145,17 @@ export default function CustomerRateDriverScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            keyboardInset > 0 ? { paddingBottom: 20 + keyboardInset } : undefined,
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.card}>
           <Text style={styles.title}>Rate Driver</Text>
           <Text style={styles.subtitle}>
@@ -231,12 +245,16 @@ export default function CustomerRateDriverScreen() {
         <Pressable style={styles.secondaryButton} onPress={handleBack}>
           <Text style={styles.secondaryButtonText}>Back to request status</Text>
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: M3LoginColors.background,

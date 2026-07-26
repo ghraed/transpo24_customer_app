@@ -1,7 +1,17 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { M3Styles } from '@/lib/m3-styles';
 import type { VehicleConditionFormValues, VehicleConditionOption } from '@/types/vehicle-condition';
 
@@ -32,6 +42,7 @@ export default function VehicleConditionScreen() {
   const pendingRequestDetails =
     typeof params.pendingRequestDetails === 'string' ? params.pendingRequestDetails : '';
   const pendingPhotoAssets = typeof params.pendingPhotoAssets === 'string' ? params.pendingPhotoAssets : '';
+  const keyboardInset = useAndroidKeyboardInset();
 
   const [form, setForm] = useState<VehicleConditionFormValues>({
     condition: null,
@@ -72,7 +83,17 @@ export default function VehicleConditionScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          keyboardInset > 0 ? { paddingBottom: 32 + keyboardInset } : undefined,
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
       <Pressable style={styles.backButton} onPress={() => router.back()}>
         <Text style={styles.backButtonText}>← Back</Text>
       </Pressable>
@@ -133,14 +154,18 @@ export default function VehicleConditionScreen() {
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-      <Pressable style={styles.continueButton} onPress={onContinue}>
-        <Text style={styles.continueText}>Continue to Pickup Location</Text>
-      </Pressable>
-    </ScrollView>
+        <Pressable style={styles.continueButton} onPress={onContinue}>
+          <Text style={styles.continueText}>Continue to Pickup Location</Text>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     padding: 16,
     paddingBottom: 32,

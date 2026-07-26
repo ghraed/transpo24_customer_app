@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   SafeAreaView,
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { createWalletTopUp, getWalletTopUpStatus } from '@/lib/api';
 import type { CustomerWalletTopUpResponse, PaymentMethod } from '@/types/customer-request';
 
@@ -80,6 +82,7 @@ function isTerminalStatus(status: CustomerWalletTopUpResponse['topUp']['status']
 export default function WalletTopUpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const keyboardInset = useAndroidKeyboardInset();
   const requestedCurrency =
     typeof params.currency === 'string' && params.currency.trim()
       ? params.currency.trim().toUpperCase()
@@ -282,7 +285,17 @@ export default function WalletTopUpScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            keyboardInset > 0 ? { paddingBottom: 16 + keyboardInset } : undefined,
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>Add Money</Text>
           <Text style={styles.heroSubtitle}>
@@ -377,12 +390,16 @@ export default function WalletTopUpScreen() {
         <Text style={styles.footerText}>
           Saved cards are not used automatically for wallet top-ups in this version.
         </Text>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

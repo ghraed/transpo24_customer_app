@@ -1,8 +1,10 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -13,6 +15,7 @@ import {
 } from 'react-native';
 
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { M3Styles } from '@/lib/m3-styles';
 import {
   createFurnitureTransportRequest,
@@ -271,6 +274,8 @@ function buildFurnitureSchedule(
 export default function SubmitRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<SubmitRequestRouteParams>();
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const keyboardInset = useAndroidKeyboardInset();
 
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
@@ -791,9 +796,26 @@ export default function SubmitRequestScreen() {
     }
   };
 
+  const scrollNoteIntoView = (): void => {
+    requestAnimationFrame(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={[
+            styles.content,
+            keyboardInset > 0 ? { paddingBottom: 32 + keyboardInset } : undefined,
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>← Back</Text>
@@ -1061,6 +1083,7 @@ export default function SubmitRequestScreen() {
               <TextInput
                 value={customerNote}
                 onChangeText={setCustomerNote}
+                onFocus={scrollNoteIntoView}
                 placeholder="Add a note for drivers, optional"
                 placeholderTextColor="#98a2b3"
                 style={styles.noteInput}
@@ -1076,6 +1099,7 @@ export default function SubmitRequestScreen() {
             <TextInput
               value={customerNote}
               onChangeText={setCustomerNote}
+              onFocus={scrollNoteIntoView}
               placeholder="Add a note for drivers, optional"
               placeholderTextColor="#98a2b3"
               style={styles.noteInput}
@@ -1099,20 +1123,23 @@ export default function SubmitRequestScreen() {
         {isSubmitting ? <Text style={styles.progressText}>Submitting request...</Text> : null}
         {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-      </ScrollView>
-
-      <Pressable
-        style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
-        disabled={!canSubmit}
-        onPress={() => void onSubmit()}
-      >
-        {isSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.submitText}>Submit Request</Text>}
-      </Pressable>
+          <Pressable
+            style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
+            disabled={!canSubmit}
+            onPress={() => void onSubmit()}
+          >
+            {isSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.submitText}>Submit Request</Text>}
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: M3LoginColors.background,
@@ -1120,7 +1147,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 20,
+    paddingBottom: 32,
     gap: 12,
   },
   header: {
@@ -1226,7 +1253,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   submitButton: {
-    margin: 16,
+    marginTop: 8,
+    marginBottom: 8,
     height: 52,
     borderRadius: 12,
     backgroundColor: M3LoginColors.primary,

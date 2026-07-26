@@ -28,6 +28,7 @@ import {
   updateScheduleAndItemDetails,
   uploadRequestPhotos,
 } from '@/lib/api';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { M3LoginColors } from '@/constants/theme';
 import { M3Styles } from '@/lib/m3-styles';
 import {
@@ -169,6 +170,7 @@ function serializeItemDetails(payload: UpdateScheduleAndItemDetailsPayload): str
 }
 
 export default function DropoffLocationScreen() {
+  const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const params = useLocalSearchParams<DropoffLocationRouteParams>();
 
@@ -814,7 +816,10 @@ export default function DropoffLocationScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+      style={[
+        styles.container,
+        keyboardInset > 0 ? { paddingBottom: 18 + keyboardInset } : undefined,
+      ]}
     >
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -973,7 +978,11 @@ export default function DropoffLocationScreen() {
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
       <Pressable
-        style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
+        style={[
+          styles.continueButton,
+          !canContinue && styles.continueButtonDisabled,
+          keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
+        ]}
         onPress={() => void onContinue()}
         disabled={!canContinue}
       >

@@ -5,6 +5,8 @@ import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +22,7 @@ import type {
   PendingFurnitureDetailsPayload,
 } from '@/types/customer-request';
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { M3Styles } from '@/lib/m3-styles';
 
 const MAX_PHOTOS = 8;
@@ -119,6 +122,7 @@ function formatValidationMessage(
 export default function FurnitureDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<FurnitureDetailsRouteParams>();
+  const keyboardInset = useAndroidKeyboardInset();
 
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
   const serviceKey = typeof params.serviceKey === 'string' ? params.serviceKey.trim() : '';
@@ -263,7 +267,17 @@ export default function FurnitureDetailsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          keyboardInset > 0 ? { paddingBottom: 30 + keyboardInset } : undefined,
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Back</Text>
@@ -462,27 +476,31 @@ export default function FurnitureDetailsScreen() {
         />
       ) : null}
 
-      {showTimePicker ? (
-        <DateTimePicker
-          value={form.movingDate}
-          mode="time"
-          onChange={(_, selectedDate) => {
-            setShowTimePicker(false);
-            if (!selectedDate) return;
-            const next = new Date(form.movingDate);
-            next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-            if (next.getTime() <= minimumMovingDate.getTime()) {
-              next.setTime(minimumMovingDate.getTime());
-            }
-            setForm((prev) => ({ ...prev, movingDate: next }));
-          }}
-        />
-      ) : null}
-    </ScrollView>
+        {showTimePicker ? (
+          <DateTimePicker
+            value={form.movingDate}
+            mode="time"
+            onChange={(_, selectedDate) => {
+              setShowTimePicker(false);
+              if (!selectedDate) return;
+              const next = new Date(form.movingDate);
+              next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+              if (next.getTime() <= minimumMovingDate.getTime()) {
+                next.setTime(minimumMovingDate.getTime());
+              }
+              setForm((prev) => ({ ...prev, movingDate: next }));
+            }}
+          />
+        ) : null}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     padding: 16,
     backgroundColor: M3LoginColors.background,

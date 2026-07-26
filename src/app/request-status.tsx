@@ -7,7 +7,9 @@ import {
   Alert,
   ColorValue,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -23,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getApiBaseUrl } from '@/config/backend';
 import { ChatEntryButton } from '@/components/chat-entry-button';
 import { M3LoginColors } from '@/constants/theme';
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { isDeliveryCompletedStatus, isHistoryRequestStatus } from '@/lib/request-status';
 import {
   approveAdditionalCharge,
@@ -425,6 +428,7 @@ function buildTrackingHref(
 }
 
 export default function RequestStatusScreen() {
+  const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const navigation = useNavigation();
   const params = useLocalSearchParams();
@@ -1137,13 +1141,19 @@ export default function RequestStatusScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={M3LoginColors.background} />
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: Math.max(20, insets.top + 8) },
-        ]}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadStatus(true)} />}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: Math.max(20, insets.top + 8) },
+            keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
+          ]}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadStatus(true)} />}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.headerCard}>
           <Text style={styles.title}>{headline}</Text>
           <Text style={styles.subtitle}>
@@ -1637,7 +1647,12 @@ export default function RequestStatusScreen() {
           onRequestClose={closeCancelTripModal}
         >
           <View style={styles.dialogBackdrop}>
-            <View style={styles.dialogCard}>
+            <View
+              style={[
+                styles.dialogCard,
+                keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
+              ]}
+            >
               <Text style={styles.cardTitle}>Cancel trip?</Text>
               <Text style={styles.rowValue}>
                 {requestData.cancellation.refundPreview
@@ -1678,7 +1693,12 @@ export default function RequestStatusScreen() {
           onRequestClose={closeAdditionalChargeModal}
         >
           <View style={styles.dialogBackdrop}>
-            <View style={styles.dialogCard}>
+            <View
+              style={[
+                styles.dialogCard,
+                keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
+              ]}
+            >
               <Text style={styles.cardTitle}>{t('extra_expense.confirm_title')}</Text>
               <Text style={styles.rowValue}>
                 {activeAdditionalCharge
@@ -1809,17 +1829,21 @@ export default function RequestStatusScreen() {
             </View>
           </View>
         </Modal>
-        <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
-            {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
-          </Pressable>
-        </Modal>
-      </ScrollView>
+          <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
+            <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
+              {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
+            </Pressable>
+          </Modal>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: M3LoginColors.background,
