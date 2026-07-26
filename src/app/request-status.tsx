@@ -23,10 +23,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getApiBaseUrl } from '@/config/backend';
-import { ChatEntryButton } from '@/components/chat-entry-button';
-import { M3LoginColors } from '@/constants/theme';
+import {
+  isNativeMapRuntimeAvailable,
+  NativeMapView,
+  NativeMapViewDirections,
+  NativeMarker,
+  type Region,
+} from '@/components/native-maps';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { isDeliveryCompletedStatus, isHistoryRequestStatus } from '@/lib/request-status';
+import { useTransportRequestChatRoom } from '@/hooks/use-transport-request-chat-room';
+import { isHistoryRequestStatus } from '@/lib/request-status';
 import {
   approveAdditionalCharge,
   cancelCollectedTrip,
@@ -77,35 +83,12 @@ import {
 } from '@/utils/pickupValidation';
 import { validateItemDeliveredPayload } from '@/utils/deliveryValidation';
 
-interface TimelineStep {
-  key: string;
+interface OrderProgressStep {
+  id: number;
   label: string;
 }
 
 type SocketState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error' | 'unavailable';
-
-const TIMELINE_STEPS: TimelineStep[] = [
-  { key: 'DRIVER_ASSIGNED', label: 'Driver before starting the order' },
-  { key: 'DRIVER_GOING_TO_PICKUP', label: 'Driver is on the way to the pickup location' },
-  { key: 'DRIVER_ARRIVED_PICKUP', label: 'Driver has arrived at the pickup location' },
-  { key: 'ITEM_PICKED_UP', label: 'Pickup completed' },
-  { key: 'DRIVER_GOING_TO_DROPOFF', label: 'Driver is on the way to the delivery location' },
-  { key: 'DELIVERED', label: 'Delivered' },
-];
-
-const STATUS_PROGRESS: Partial<Record<CustomerRequestStatus | RequestTrackingStatus, number>> = {
-  ACCEPTED: 0,
-  DRIVER_ASSIGNED: 0,
-  DRIVER_GOING_TO_PICKUP: 1,
-  DRIVER_ARRIVED_PICKUP: 2,
-  PICKUP_IN_PROGRESS: 2,
-  ITEM_PICKED_UP: 3,
-  IN_TRANSIT: 4,
-  DRIVER_GOING_TO_DROPOFF: 4,
-  DELIVERED: 5,
-  COMPLETED: 5,
-  CANCELLED: -1,
-};
 
 const STATUS_LABELS: Partial<Record<CustomerRequestStatus, string>> = {
   PENDING_QUOTES: 'Waiting for driver offers',
@@ -122,6 +105,14 @@ const STATUS_LABELS: Partial<Record<CustomerRequestStatus, string>> = {
   COMPLETED: 'Delivered',
 };
 
+const ORDER_PROGRESS_STEPS: OrderProgressStep[] = [
+  { id: 1, label: 'Submitted' },
+  { id: 2, label: 'Driver Found' },
+  { id: 3, label: 'Picked Up' },
+  { id: 4, label: 'In Transit' },
+  { id: 5, label: 'Delivered' },
+];
+
 function formatDate(value: string | null | undefined): string {
   if (!value) return 'N/A';
   const parsed = new Date(value);
@@ -135,9 +126,9 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-function shortRequestId(id: string): string {
-  if (id.length <= 12) return id;
-  return `${id.slice(0, 6)}...${id.slice(-4)}`;
+function getOrderReference(id: string): string {
+  const compact = id.replace(/-/g, '').slice(0, 8).toUpperCase();
+  return `TRP-${compact || id}`;
 }
 
 function resolveAssetUrl(url: string): string {
@@ -157,6 +148,74 @@ function formatLocation(
   if (location.address) return location.address;
   if (location.latitude === null || location.longitude === null) return 'N/A';
   return `Lat ${location.latitude.toFixed(6)}, Lng ${location.longitude.toFixed(6)}`;
+}
+
+function getOrderProgressStep(
+  status: CustomerRequestStatus | RequestTrackingStatus,
+): number {
+  switch (status) {
+    case 'DELIVERED':
+    case 'COMPLETED':
+      return 5;
+    case 'IN_TRANSIT':
+    case 'DRIVER_GOING_TO_DROPOFF':
+      return 4;
+    case 'ITEM_PICKED_UP':
+      return 3;
+    case 'ACCEPTED':
+    case 'DRIVER_ASSIGNED':
+    case 'DRIVER_GOING_TO_PICKUP':
+    case 'DRIVER_ARRIVED_PICKUP':
+    case 'PICKUP_IN_PROGRESS':
+      return 2;
+    case 'CANCELLED':
+      return 0;
+    default:
+      return 1;
+  }
+}
+
+function getDriverInitials(name: string | null | undefined): string {
+  const clean = name?.trim();
+  if (!clean) {
+    return 'DR';
+  }
+
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+}
+
+function buildMapRegion(
+  pickupLocation: RequestStatusResponse['pickupLocation'],
+  dropoffLocation: RequestStatusResponse['dropoffLocation'],
+  driverLocation: DriverLocation | null,
+): Region {
+  const coordinates = [
+    pickupLocation.latitude,
+    dropoffLocation.latitude,
+    driverLocation?.latitude ?? null,
+  ].filter((value): value is number => value !== null);
+  const coordinatesLng = [
+    pickupLocation.longitude,
+    dropoffLocation.longitude,
+    driverLocation?.longitude ?? null,
+  ].filter((value): value is number => value !== null);
+
+  const minLat = Math.min(...coordinates);
+  const maxLat = Math.max(...coordinates);
+  const minLng = Math.min(...coordinatesLng);
+  const maxLng = Math.max(...coordinatesLng);
+
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    latitudeDelta: Math.max((maxLat - minLat) * 1.8, 0.03),
+    longitudeDelta: Math.max((maxLng - minLng) * 1.8, 0.03),
+  };
 }
 
 function sortOffers(offers: CustomerRequestOfferSummary[]): CustomerRequestOfferSummary[] {
@@ -199,26 +258,6 @@ function upsertOffer(
   const nextOffers = [...previousOffers];
   nextOffers[index] = nextOffer;
   return sortOffers(nextOffers);
-}
-
-function getHeadline(status: CustomerRequestStatus, offersCount: number): string {
-  if (status === 'PENDING_QUOTES' && offersCount === 0) return 'Waiting for driver offers';
-  if (status === 'QUOTED' || offersCount > 0) return 'Choose your driver';
-  if (
-    status === 'ACCEPTED' ||
-    status === 'DRIVER_ASSIGNED' ||
-    status === 'DRIVER_GOING_TO_PICKUP' ||
-    status === 'DRIVER_ARRIVED_PICKUP' ||
-    status === 'PICKUP_IN_PROGRESS' ||
-    status === 'ITEM_PICKED_UP' ||
-    status === 'IN_TRANSIT' ||
-    status === 'DRIVER_GOING_TO_DROPOFF' ||
-    status === 'DELIVERED' ||
-    status === 'COMPLETED'
-  ) {
-    return 'Order Tracking';
-  }
-  return 'Request Status';
 }
 
 function getSocketStateLabel(socketState: SocketState): string {
@@ -438,6 +477,12 @@ export default function RequestStatusScreen() {
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const refreshTs = typeof params.refreshTs === 'string' ? params.refreshTs : '';
   const accessToken = useMemo(() => getAccessToken(), []);
+  const mapsApiKey =
+    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
+    (Platform.OS === 'ios'
+      ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY?.trim()
+      : process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY?.trim()) ||
+    '';
 
   const [requestData, setRequestData] = useState<RequestStatusResponse | null>(null);
   const [offers, setOffers] = useState<CustomerRequestOfferSummary[]>([]);
@@ -461,6 +506,7 @@ export default function RequestStatusScreen() {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [nearDeliveryMessage, setNearDeliveryMessage] = useState<string>('');
   const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string>('');
+  const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
   const [socketState, setSocketState] = useState<SocketState>(accessToken ? 'idle' : 'unavailable');
   const [socketMessage, setSocketMessage] = useState<string>(
     accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
@@ -594,10 +640,12 @@ export default function RequestStatusScreen() {
   useEffect(() => {
     if (!canUseRealtime) {
       disconnectSocket();
-      setSocketState(accessToken ? 'idle' : 'unavailable');
-      setSocketMessage(
-        accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
-      );
+      setTimeout(() => {
+        setSocketState(accessToken ? 'idle' : 'unavailable');
+        setSocketMessage(
+          accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
+        );
+      }, 0);
       return;
     }
 
@@ -858,24 +906,62 @@ export default function RequestStatusScreen() {
   const nearDeliveryNotifiedAt = trackingData?.nearDeliveryNotifiedAt ?? null;
   const ratingAvailable = trackingData?.ratingAvailable ?? false;
   const isHistoryRequest = isHistoryRequestStatus(requestData?.status);
-  const isDeliveryCompleted = isDeliveryCompletedStatus(effectiveTrackingStatus);
   const canOpenChat = Boolean(
     !isHistoryRequest &&
     (acceptedOffer || requestData?.driverSummary.assigned) &&
     (requestData?.driverSummary.driverId || acceptedOffer?.driverId),
   );
+  const { room: chatRoom, isLoading: isChatRoomLoading } = useTransportRequestChatRoom({
+    transportRequestId: requestId,
+    enabled: canOpenChat,
+  });
   const confirmationKeyword = t('extra_expense.confirm_keyword', { defaultValue: 'Agree' });
   const resolvedConfirmationLocale = language || DEFAULT_LANGUAGE;
   const trimmedAdditionalChargeConfirmationText = additionalChargeConfirmationText.trim();
   const isAdditionalChargeConfirmationValid =
     trimmedAdditionalChargeConfirmationText === confirmationKeyword;
+  const currentOrderStep = getOrderProgressStep(effectiveTrackingStatus);
+  const requestReference = getOrderReference(requestData?.id ?? requestId);
+  const driverName =
+    trackingData?.driverName ||
+    requestData?.driverSummary.driverName ||
+    acceptedOffer?.driverName ||
+    selectedOffer?.driverName ||
+    null;
+  const driverVehicleInfo =
+    requestData?.driverSummary.vehicleInfo ||
+    requestData?.itemDetails.title ||
+    null;
+  const driverRating = acceptedOffer?.driverRating ?? selectedOffer?.driverRating ?? null;
+  const shouldShowTrackingMap =
+    requestData?.status !== 'CANCELLED' &&
+    currentOrderStep >= 2 &&
+    canOpenTrackingMap;
+  const canRenderInlineMap = Boolean(
+    shouldShowTrackingMap &&
+    mapsApiKey &&
+    isNativeMapRuntimeAvailable &&
+    NativeMapView &&
+    NativeMarker,
+  );
+  const usesPickupDestination =
+    effectiveTrackingStatus === 'ACCEPTED' ||
+    effectiveTrackingStatus === 'DRIVER_ASSIGNED' ||
+    effectiveTrackingStatus === 'DRIVER_GOING_TO_PICKUP' ||
+    effectiveTrackingStatus === 'DRIVER_ARRIVED_PICKUP' ||
+    effectiveTrackingStatus === 'PICKUP_IN_PROGRESS';
+  const trackingDestination = requestData
+    ? usesPickupDestination
+      ? requestData.pickupLocation
+      : requestData.dropoffLocation
+    : null;
 
   const openTracking = useCallback((): void => {
     if (!requestData || !canOpenTrackingMap) return;
     router.push(buildTrackingHref(requestData, effectiveTrackingStatus));
   }, [canOpenTrackingMap, effectiveTrackingStatus, requestData, router]);
 
-  const openPaymentScreen = useCallback((): void => {
+  const openPaymentScreen = (): void => {
     if (!requestData || !selectedOffer) return;
 
     const offerId = selectedOffer.offerId || selectedOffer.id;
@@ -888,11 +974,30 @@ export default function RequestStatusScreen() {
     );
 
     setTimeout(() => setIsOpeningPaymentOfferId(''), 0);
-  }, [requestData, router, selectedOffer]);
+  };
 
   const goToHome = useCallback((): void => {
     router.replace('/(tabs)/home' as Href);
   }, [router]);
+
+  const openChat = useCallback((): void => {
+    if (!chatRoom) {
+      return;
+    }
+
+    router.push(
+      (`/chat?chatRoomId=${encodeURIComponent(chatRoom.id)}&transportRequestId=${encodeURIComponent(
+        chatRoom.transportRequestId,
+      )}`) as Href,
+    );
+  }, [chatRoom, router]);
+
+  const onContactSupport = useCallback((): void => {
+    Alert.alert(
+      'Support',
+      'Support contact is not configured in this app yet. Use the driver chat when available or try again later.',
+    );
+  }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
@@ -908,6 +1013,10 @@ export default function RequestStatusScreen() {
 
     return unsubscribe;
   }, [goToHome, navigation]);
+
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const closeCancelTripModal = useCallback((): void => {
     if (isCancellingTrip) {
@@ -1108,6 +1217,161 @@ export default function RequestStatusScreen() {
     trimmedAdditionalChargeConfirmationText,
   ]);
 
+  const renderTrackingMap = useCallback(
+    (expanded: boolean): React.ReactNode => {
+      if (!requestData || !shouldShowTrackingMap) {
+        return (
+          <View style={[styles.mapFallbackCard, expanded ? styles.mapFallbackCardExpanded : null]}>
+            <Text style={styles.cardTitle}>Live Map</Text>
+            <Text style={styles.supportingText}>
+              Live driver tracking becomes available after a driver is assigned and location updates start.
+            </Text>
+          </View>
+        );
+      }
+
+      if (!mapsApiKey || !isNativeMapRuntimeAvailable || !NativeMapView || !NativeMarker) {
+        return (
+          <View style={[styles.mapFallbackCard, expanded ? styles.mapFallbackCardExpanded : null]}>
+            <Text style={styles.cardTitle}>Live Map</Text>
+            <Text style={styles.supportingText}>
+              Map preview is available on iOS and Android with Google Maps configured.
+            </Text>
+            <Pressable style={styles.outlineButton} onPress={openTracking}>
+              <Text style={styles.outlineButtonText}>Open tracking screen</Text>
+            </Pressable>
+          </View>
+        );
+      }
+
+      const region = buildMapRegion(
+        requestData.pickupLocation,
+        requestData.dropoffLocation,
+        latestDriverLocation,
+      );
+      const mapHeightStyle = expanded ? styles.mapFrameExpanded : styles.mapFrameInline;
+      const nextTrackingDestination = trackingDestination;
+      const destinationCoordinate =
+        nextTrackingDestination &&
+        nextTrackingDestination.latitude !== null &&
+        nextTrackingDestination.longitude !== null
+          ? {
+              latitude: nextTrackingDestination.latitude,
+              longitude: nextTrackingDestination.longitude,
+            }
+          : null;
+      const pickupCoordinate =
+        requestData.pickupLocation.latitude !== null &&
+        requestData.pickupLocation.longitude !== null
+          ? {
+              latitude: requestData.pickupLocation.latitude,
+              longitude: requestData.pickupLocation.longitude,
+            }
+          : null;
+      const dropoffCoordinate =
+        requestData.dropoffLocation.latitude !== null &&
+        requestData.dropoffLocation.longitude !== null
+          ? {
+              latitude: requestData.dropoffLocation.latitude,
+              longitude: requestData.dropoffLocation.longitude,
+            }
+          : null;
+
+      return (
+        <View style={[styles.mapFrame, mapHeightStyle]}>
+          <NativeMapView style={styles.mapFill} initialRegion={region}>
+            {pickupCoordinate ? (
+              <NativeMarker coordinate={pickupCoordinate} title="Pickup" anchor={{ x: 0.5, y: 0.5 }}>
+                <View style={styles.pickupMarker}>
+                  <IconSymbol
+                    name={{ ios: 'mappin.circle.fill', android: 'location_on', web: 'location_on' }}
+                    color="#FFFFFF"
+                    size={18}
+                  />
+                </View>
+              </NativeMarker>
+            ) : null}
+            {dropoffCoordinate ? (
+              <NativeMarker coordinate={dropoffCoordinate} title="Dropoff" anchor={{ x: 0.5, y: 0.5 }}>
+                <View style={styles.dropoffMarker}>
+                  <IconSymbol
+                    name={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
+                    color="#FFFFFF"
+                    size={16}
+                  />
+                </View>
+              </NativeMarker>
+            ) : null}
+            {latestDriverLocation ? (
+              <NativeMarker
+                coordinate={{
+                  latitude: latestDriverLocation.latitude,
+                  longitude: latestDriverLocation.longitude,
+                }}
+                title="Driver"
+                anchor={{ x: 0.5, y: 0.5 }}
+              >
+                <View style={styles.driverMarker}>
+                  <IconSymbol
+                    name={{ ios: 'car.fill', android: 'directions_car', web: 'directions_car' }}
+                    color="#111827"
+                    size={18}
+                  />
+                </View>
+              </NativeMarker>
+            ) : null}
+            {latestDriverLocation && destinationCoordinate && NativeMapViewDirections ? (
+              <NativeMapViewDirections
+                origin={{
+                  latitude: latestDriverLocation.latitude,
+                  longitude: latestDriverLocation.longitude,
+                }}
+                destination={destinationCoordinate}
+                apikey={mapsApiKey}
+                mode="DRIVING"
+                strokeWidth={expanded ? 6 : 5}
+                strokeColor="#F5C11A"
+              />
+            ) : null}
+          </NativeMapView>
+
+          <Pressable
+            style={styles.mapExpandButton}
+            onPress={() => setIsMapExpanded((previous) => !previous)}
+          >
+            <IconSymbol
+              name={
+                expanded
+                  ? { ios: 'xmark', android: 'close', web: 'close' }
+                  : {
+                      ios: 'arrow.up.left.and.arrow.down.right',
+                      android: 'open_in_full',
+                      web: 'open_in_full',
+                    }
+              }
+              color="#111827"
+              size={18}
+            />
+          </Pressable>
+
+          <View style={styles.mapOverlayStatus}>
+            <Text style={styles.mapOverlayStatusText}>
+              {latestDriverLocation ? 'Live route' : 'Waiting for location'}
+            </Text>
+          </View>
+        </View>
+      );
+    },
+    [
+      latestDriverLocation,
+      mapsApiKey,
+      openTracking,
+      requestData,
+      shouldShowTrackingMap,
+      trackingDestination,
+    ],
+  );
+
   if (isLoading && !requestData) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
@@ -1129,18 +1393,21 @@ export default function RequestStatusScreen() {
     );
   }
 
-  const progressIndex = STATUS_PROGRESS[effectiveTrackingStatus] ?? -1;
-  const headline = getHeadline(requestData.status, offers.length);
   const helperText = buildOffersHelperText(requestData, offers.length);
   const canChooseOffer = requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED';
   const canDeleteCurrentRequest = canDeleteRequest(requestData.status);
   const canCancelCurrentTrip = requestData.cancellation.canCancelCollectedTrip;
   const cancellationReason = requestData.cancellation.reason;
   const refundPreview = requestData.cancellation.refundPreview;
+  const liveStatusLabel = getTrackingStatusLabel(
+    effectiveTrackingStatus,
+    nearDeliveryNotifiedAt,
+    ratingAvailable,
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={M3LoginColors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1148,173 +1415,227 @@ export default function RequestStatusScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingTop: Math.max(20, insets.top + 8) },
+            { paddingTop: Math.max(10, insets.top + 4) },
             keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
           ]}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadStatus(true)} />}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-        <View style={styles.headerCard}>
-          <Text style={styles.title}>{headline}</Text>
-          <Text style={styles.subtitle}>
-            Track the progress of your transport request and compare driver offers.
-          </Text>
-          <Text style={styles.statusPill}>
-            {getTrackingStatusLabel(effectiveTrackingStatus, nearDeliveryNotifiedAt, ratingAvailable)}
-          </Text>
-          <Text style={styles.metaText}>Request #{shortRequestId(requestData.id)}</Text>
-          <Text style={styles.metaText}>Submitted: {formatDate(requestData.submittedAt)}</Text>
-          <Text style={styles.helperText}>{helperText}</Text>
-          <View
-            style={[
-              styles.socketBadge,
-              socketState === 'connected'
-                ? styles.socketBadgeConnected
-                : socketState === 'error' || socketState === 'disconnected'
-                  ? styles.socketBadgeWarning
-                  : styles.socketBadgeNeutral,
-            ]}
-          >
-            <Text style={styles.socketBadgeText}>{getSocketStateLabel(socketState)}</Text>
+          <View style={styles.topBar}>
+            <Pressable style={styles.topBarButton} onPress={goToHome}>
+              <IconSymbol
+                name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
+                color="#111827"
+                size={24}
+              />
+            </Pressable>
+            <View style={styles.topBarTitleWrap}>
+              <Text style={styles.topBarTitle}>Order #{requestReference}</Text>
+              <Text style={styles.topBarSubtitle}>
+                {requestData.service?.nameEn || requestData.service?.key || requestData.serviceId}
+              </Text>
+            </View>
+            <Pressable style={styles.topBarButton} onPress={() => void loadStatus(true)}>
+              <IconSymbol
+                name={{ ios: 'ellipsis', android: 'more_horiz', web: 'more_horiz' }}
+                color="#111827"
+                size={22}
+              />
+            </Pressable>
           </View>
-          {socketMessage ? <Text style={styles.socketMessage}>{socketMessage}</Text> : null}
-        </View>
 
-        {requestData.status !== 'CANCELLED' ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Cancellation policy</Text>
-            {refundPreview ? (
-              <Text style={styles.rowValue}>
-                If you cancel now, {formatMoney(refundPreview.refundedAmount, refundPreview.currency)} will be refunded and {formatMoney(refundPreview.retainedAmount, refundPreview.currency)} will be kept as the cancellation fee.
-              </Text>
-            ) : (
-              <Text style={styles.rowValue}>
-                Before pickup: 85% automatic refund, 15% cancellation fee.
-              </Text>
-            )}
-            <Text style={styles.helperText}>
-              {cancellationReason ??
-                'After pickup, automatic refunds are disabled and the case requires admin review.'}
-            </Text>
-            {/* <Pressable
-              style={[
-                styles.deleteButton,
-                (isCancellingTrip || !canCancelCurrentTrip) && styles.disabledButton,
-              ]}
-              disabled={isCancellingTrip || !canCancelCurrentTrip}
-              onPress={onCancelTrip}
-            >
-              <Text style={styles.deleteButtonText}>
-                {isCancellingTrip ? 'Cancelling…' : 'Cancel Trip'}
-              </Text>
-            </Pressable> */}
-            {cancelTripDebugMessage ? (
-              <Text style={styles.helperText}>{cancelTripDebugMessage}</Text>
-            ) : null}
+          <View style={styles.progressSection}>
+            <View style={styles.progressRail} />
+            <View style={styles.progressRow}>
+              {ORDER_PROGRESS_STEPS.map((step) => {
+                const isDone = currentOrderStep > step.id;
+                const isCurrent = currentOrderStep === step.id;
+
+                return (
+                  <View key={step.id} style={styles.progressStep}>
+                    <View
+                      style={[
+                        styles.progressCircle,
+                        isDone ? styles.progressCircleDone : null,
+                        isCurrent ? styles.progressCircleCurrent : null,
+                        requestData.status === 'CANCELLED' ? styles.progressCircleDisabled : null,
+                      ]}
+                    >
+                      {isDone ? (
+                        <IconSymbol
+                          name={{ ios: 'checkmark', android: 'check', web: 'check' }}
+                          color="#111827"
+                          size={18}
+                        />
+                      ) : (
+                        <Text
+                          style={[
+                            styles.progressCircleText,
+                            isCurrent ? styles.progressCircleTextActive : null,
+                            requestData.status === 'CANCELLED' ? styles.progressCircleTextDisabled : null,
+                          ]}
+                        >
+                          {step.id}
+                        </Text>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.progressLabel,
+                        isDone || isCurrent ? styles.progressLabelActive : null,
+                        requestData.status === 'CANCELLED' ? styles.progressLabelDisabled : null,
+                      ]}
+                    >
+                      {step.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
-        ) : null}
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Progress</Text>
-          {requestData.status === 'CANCELLED' ? (
-            <Text style={styles.errorText}>This request has been cancelled.</Text>
-          ) : (
-            TIMELINE_STEPS.map((step, index) => {
-              const isDone = progressIndex > index;
-              const isCurrent = progressIndex === index;
-
-              return (
-                <View key={step.key} style={styles.timelineRow}>
-                  <View
-                    style={[
-                      styles.timelineDot,
-                      isDone ? styles.timelineDotDone : undefined,
-                      isCurrent ? styles.timelineDotCurrent : undefined,
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.timelineText,
-                      isDone ? styles.timelineTextDone : undefined,
-                      isCurrent ? styles.timelineTextCurrent : undefined,
-                    ]}
-                  >
-                    {step.label}
-                  </Text>
-                </View>
-              );
-            })
-          )}
-          <Text style={styles.helperText}>
-            Current update:{' '}
-            {getTrackingStatusLabel(effectiveTrackingStatus, nearDeliveryNotifiedAt, ratingAvailable)}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tracking Summary</Text>
+          {successMessage ? <View style={styles.successBanner}><Text style={styles.successBannerText}>{successMessage}</Text></View> : null}
+          {errorMessage ? <View style={styles.errorBanner}><Text style={styles.errorBannerText}>{errorMessage}</Text></View> : null}
           {nearDeliveryMessage ? (
-            <View style={styles.bannerCard}>
-              <Text style={styles.bannerTitle}>Delivery update</Text>
-              <Text style={styles.bannerText}>{nearDeliveryMessage}</Text>
+            <View style={styles.infoBanner}>
+              <Text style={styles.infoBannerText}>{nearDeliveryMessage}</Text>
             </View>
           ) : null}
-          <Text style={styles.rowLabel}>Assigned driver</Text>
-          <Text style={styles.rowValue}>
-            {trackingData?.driverName || requestData.driverSummary.driverName || 'Not assigned yet'}
-          </Text>
-          {trackingData?.driverVehiclePhoto ? (
-            <Image
-              source={{ uri: resolveAssetUrl(trackingData.driverVehiclePhoto) }}
-              style={styles.driverVehiclePhoto}
-              resizeMode="cover"
-            />
+          {requestData.status === 'CANCELLED' ? (
+            <View style={styles.noticeCard}>
+              <Text style={styles.noticeTitle}>Order cancelled</Text>
+              <Text style={styles.supportingText}>
+                {cancellationReason || 'This request has been cancelled.'}
+              </Text>
+              {cancelTripDebugMessage ? <Text style={styles.mutedCaption}>{cancelTripDebugMessage}</Text> : null}
+            </View>
           ) : null}
-          <Text style={styles.rowLabel}>Service</Text>
-          <Text style={styles.rowValue}>
-            {requestData.service?.nameEn || requestData.service?.key || requestData.serviceId}
-          </Text>
-          <Text style={styles.rowLabel}>Pickup</Text>
-          <Text style={styles.rowValue}>{formatLocation(requestData.pickupLocation)}</Text>
-          <Text style={styles.rowLabel}>Dropoff</Text>
-          <Text style={styles.rowValue}>{formatLocation(requestData.dropoffLocation)}</Text>
-          <Text style={styles.rowLabel}>Date & Time</Text>
-          <Text style={styles.rowValue}>
-            {requestData.schedule.isImmediate
-              ? 'Immediate pickup'
-              : formatDate(requestData.schedule.scheduledPickupAt)}
-          </Text>
-          <Text style={styles.rowLabel}>Item</Text>
-          <Text style={styles.rowValue}>
-            {requestData.itemDetails.title || 'N/A'} ({requestData.itemDetails.type || 'N/A'})
-          </Text>
-          {requestData.itemDetails.description ? (
-            <Text style={styles.rowValue}>{requestData.itemDetails.description}</Text>
-          ) : null}
-          <Text style={styles.rowLabel}>Latest driver location</Text>
-          {latestDriverLocation ? (
-            <Text style={styles.rowValue}>
-              {latestDriverLocation.latitude.toFixed(5)}, {latestDriverLocation.longitude.toFixed(5)} •{' '}
-              {formatDate(latestDriverLocation.recordedAt)}
-            </Text>
-          ) : (
-            <Text style={styles.rowValue}>No driver location yet.</Text>
-          )}
-          {trackingData?.deliveredAt ? (
-            <>
-              <Text style={styles.rowLabel}>Delivered at</Text>
-              <Text style={styles.rowValue}>{formatDate(trackingData.deliveredAt)}</Text>
-            </>
-          ) : null}
-          {ratingAvailable ? (
-            <>
-              <Text style={styles.rowLabel}>Rating</Text>
-              <Text style={styles.rowValue}>Rating pending</Text>
-            </>
-          ) : null}
-        </View>
 
-        <View style={styles.card}>
+          {shouldShowTrackingMap ? (
+            <View style={styles.mapCard}>
+              {renderTrackingMap(false)}
+            </View>
+          ) : null}
+
+          {(driverName || requestData.driverSummary.assigned || acceptedOffer || canOpenChat) ? (
+            <View style={styles.driverCard}>
+              <View style={styles.driverRow}>
+                <View style={styles.driverAvatar}>
+                  <Text style={styles.driverAvatarText}>{getDriverInitials(driverName)}</Text>
+                </View>
+                <View style={styles.driverInfo}>
+                  <Text style={styles.driverName}>{driverName || 'Driver pending'}</Text>
+                  <Text style={styles.driverMeta}>
+                    {driverRating !== null ? `★ ${driverRating.toFixed(1)} • ` : ''}
+                    {requestData.driverSummary.assigned ? 'Assigned driver' : 'Waiting assignment'}
+                  </Text>
+                  <Text style={styles.driverVehicleText}>
+                    {driverVehicleInfo || 'Vehicle details will appear here'}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.socketBadgeCompact,
+                    socketState === 'connected'
+                      ? styles.socketBadgeConnected
+                      : socketState === 'error' || socketState === 'disconnected'
+                        ? styles.socketBadgeWarning
+                        : styles.socketBadgeNeutral,
+                  ]}
+                >
+                  <Text style={styles.socketBadgeText}>{getSocketStateLabel(socketState)}</Text>
+                </View>
+              </View>
+
+              <Pressable
+                style={[styles.primaryActionButton, !canRenderInlineMap && styles.disabledButton]}
+                disabled={!canRenderInlineMap}
+                onPress={() => setIsMapExpanded(true)}
+              >
+                <IconSymbol
+                  name={{ ios: 'location', android: 'my_location', web: 'my_location' }}
+                  color="#111827"
+                  size={20}
+                />
+                <Text style={styles.primaryActionButtonText}>Track Driver Live</Text>
+              </Pressable>
+
+              {canOpenChat ? (
+                isChatRoomLoading && !chatRoom ? (
+                  <View style={styles.secondaryActionButton}>
+                    <ActivityIndicator size="small" color="#111827" />
+                    <Text style={styles.secondaryActionButtonText}>Checking chat…</Text>
+                  </View>
+                ) : chatRoom ? (
+                  <Pressable style={styles.secondaryActionButton} onPress={openChat}>
+                    <IconSymbol
+                      name={{ ios: 'message', android: 'chat_bubble_outline', web: 'chat' }}
+                      color="#111827"
+                      size={20}
+                    />
+                    <Text style={styles.secondaryActionButtonText}>Chat with Driver</Text>
+                    {(chatRoom.unreadCount ?? 0) > 0 ? (
+                      <View style={styles.inlineBadge}>
+                        <Text style={styles.inlineBadgeText}>{chatRoom.unreadCount}</Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                ) : null
+              ) : null}
+            </View>
+          ) : null}
+
+          <View style={styles.detailsCard}>
+            <View style={styles.detailsHeader}>
+              <Text style={styles.cardTitle}>Request Summary</Text>
+              <Text style={styles.inlineStatusPill}>{liveStatusLabel}</Text>
+            </View>
+            <Text style={styles.detailsMetaText}>Submitted: {formatDate(requestData.submittedAt)}</Text>
+            <Text style={styles.detailsMetaText}>{helperText}</Text>
+            {socketMessage ? <Text style={styles.mutedCaption}>{socketMessage}</Text> : null}
+            <View style={styles.detailsGrid}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Pickup</Text>
+                <Text style={styles.detailValue}>{formatLocation(requestData.pickupLocation)}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Dropoff</Text>
+                <Text style={styles.detailValue}>{formatLocation(requestData.dropoffLocation)}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Schedule</Text>
+                <Text style={styles.detailValue}>
+                  {requestData.schedule.isImmediate
+                    ? 'Immediate pickup'
+                    : formatDate(requestData.schedule.scheduledPickupAt)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Item</Text>
+                <Text style={styles.detailValue}>
+                  {requestData.itemDetails.title || 'N/A'} ({requestData.itemDetails.type || 'N/A'})
+                </Text>
+              </View>
+            </View>
+            {requestData.itemDetails.description ? (
+              <Text style={styles.supportingText}>{requestData.itemDetails.description}</Text>
+            ) : null}
+            {latestDriverLocation ? (
+              <Text style={styles.mutedCaption}>
+                Latest driver update: {latestDriverLocation.latitude.toFixed(5)},{' '}
+                {latestDriverLocation.longitude.toFixed(5)} • {formatDate(latestDriverLocation.recordedAt)}
+              </Text>
+            ) : null}
+            {refundPreview && requestData.status !== 'CANCELLED' ? (
+              <Text style={styles.mutedCaption}>
+                Cancel now: refund {formatMoney(refundPreview.refundedAmount, refundPreview.currency)} and keep fee{' '}
+                {formatMoney(refundPreview.retainedAmount, refundPreview.currency)}.
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={styles.card}>
           <Text style={styles.cardTitle}>Driver Offers</Text>
           {offers.length === 0 ? (
             <View style={styles.emptyState}>
@@ -1438,42 +1759,7 @@ export default function RequestStatusScreen() {
           {offers.length > 0 && pendingOffers.length === 0 && !acceptedOffer ? (
             <Text style={styles.rowValue}>All offers are no longer pending.</Text>
           ) : null}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Driver & Tracking</Text>
-          {requestData.driverSummary.assigned ? (
-            <>
-              <Text style={styles.rowValue}>Driver: {requestData.driverSummary.driverName || 'N/A'}</Text>
-              <Text style={styles.rowValue}>Vehicle: {requestData.driverSummary.vehicleInfo || 'N/A'}</Text>
-            </>
-          ) : (
-            <Text style={styles.rowValue}>No driver assigned yet.</Text>
-          )}
-          {requestData.trackingSummary.available ? (
-            <Text style={styles.rowValue}>
-              Tracking updated {formatDate(requestData.trackingSummary.lastUpdatedAt)}
-            </Text>
-          ) : (
-            <Text style={styles.rowValue}>Tracking is not available yet.</Text>
-          )}
-          {!isDeliveryCompleted ? (
-            <>
-              <Pressable
-                style={[styles.primaryButton, !canOpenTrackingMap && styles.disabledButton]}
-                onPress={openTracking}
-                disabled={!canOpenTrackingMap}
-              >
-                <Text style={styles.primaryButtonText}>Open Tracking Map</Text>
-              </Pressable>
-              <ChatEntryButton
-                transportRequestId={requestData.id}
-                enabled={canOpenChat}
-                requestStatus={requestData.status}
-              />
-            </>
-          ) : null}
-        </View>
+          </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Pickup Proof Photos</Text>
@@ -1554,11 +1840,11 @@ export default function RequestStatusScreen() {
                 ) : null}
                 {(charge.status === 'PENDING' || charge.status === 'FAILED') ? (
                   <Pressable
-                    style={[styles.primaryButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                    style={[styles.rateActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
                     disabled={isApprovingAdditionalCharge}
                     onPress={() => openAdditionalChargeFlow(charge)}
                   >
-                    <Text style={styles.primaryButtonText}>
+                    <Text style={styles.rateActionButtonText}>
                       {charge.status === 'FAILED'
                         ? t('extra_expense.retry_button')
                         : t('extra_expense.approve_button')}
@@ -1604,13 +1890,26 @@ export default function RequestStatusScreen() {
         {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-        <View style={styles.actionsRow}>
-          <Pressable style={styles.refreshButton} onPress={() => void loadStatus(false)}>
-            <Text style={styles.refreshButtonText}>{isRefreshing ? 'Refreshing…' : 'Refresh'}</Text>
+        <View style={styles.actionStack}>
+          <Pressable style={styles.statusActionButton} onPress={() => void loadStatus(false)}>
+            <Text style={styles.statusActionButtonText}>
+              {isRefreshing ? 'Refreshing…' : 'Request Status'}
+            </Text>
           </Pressable>
-          {canDeleteCurrentRequest ? (
+          {ratingAvailable ? (
+            <Pressable style={styles.rateActionButton} onPress={onRateDriver}>
+              <Text style={styles.rateActionButtonText}>Rate Driver</Text>
+            </Pressable>
+          ) : null}
+          <Pressable style={styles.supportActionButton} onPress={onContactSupport}>
+            <Text style={styles.supportActionButtonText}>Contact Support</Text>
+          </Pressable>
+          {canCancelCurrentTrip ? (
+            <Pressable onPress={onCancelTrip}>
+              <Text style={styles.cancelActionText}>{isCancellingTrip ? 'Cancelling…' : 'Cancel Order'}</Text>
+            </Pressable>
+          ) : canDeleteCurrentRequest ? (
             <Pressable
-              style={styles.deleteButton}
               onPress={() => {
                 Alert.alert('Delete request?', 'This will permanently delete the request.', [
                   { text: 'Cancel', style: 'cancel' },
@@ -1633,13 +1932,26 @@ export default function RequestStatusScreen() {
                 ]);
               }}
             >
-              <Text style={styles.deleteButtonText}>Delete Request</Text>
+              <Text style={styles.cancelActionText}>Delete Request</Text>
             </Pressable>
           ) : null}
-          <Pressable style={styles.secondaryButton} onPress={() => router.replace('/(tabs)/home' as Href)}>
-            <Text style={styles.secondaryButtonText}>Back to Home</Text>
-          </Pressable>
         </View>
+        <Modal visible={isMapExpanded} animationType="slide" onRequestClose={() => setIsMapExpanded(false)}>
+          <SafeAreaView style={styles.mapExpandedScreen}>
+            <View style={styles.expandedMapHeader}>
+              <Pressable style={styles.topBarButton} onPress={() => setIsMapExpanded(false)}>
+                <IconSymbol
+                  name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
+                  color="#111827"
+                  size={24}
+                />
+              </Pressable>
+              <Text style={styles.expandedMapTitle}>Live Map</Text>
+              <View style={styles.topBarButton} />
+            </View>
+            {renderTrackingMap(true)}
+          </SafeAreaView>
+        </Modal>
         <Modal
           visible={isCancelTripModalVisible}
           transparent
@@ -1695,35 +2007,43 @@ export default function RequestStatusScreen() {
           <View style={styles.dialogBackdrop}>
             <View
               style={[
-                styles.dialogCard,
+                styles.chargeDialogCard,
                 keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
               ]}
             >
-              <Text style={styles.cardTitle}>{t('extra_expense.confirm_title')}</Text>
-              <Text style={styles.rowValue}>
-                {activeAdditionalCharge
-                  ? formatMoney(activeAdditionalCharge.totalChargeAmount, activeAdditionalCharge.currency)
-                  : ''}
-              </Text>
-              {activeAdditionalCharge ? (
-                <Text style={styles.rowValue}>
-                  {t('extra_expense.expense_amount_label')}: {formatMoney(activeAdditionalCharge.amount, activeAdditionalCharge.currency)}
+              <View style={styles.chargeDialogHeader}>
+                <Text style={styles.cardTitle}>{t('extra_expense.confirm_title')}</Text>
+                <Text style={styles.chargeDialogAmount}>
+                  {activeAdditionalCharge
+                    ? formatMoney(activeAdditionalCharge.totalChargeAmount, activeAdditionalCharge.currency)
+                    : ''}
                 </Text>
-              ) : null}
+              </View>
+
               {activeAdditionalCharge ? (
-                <Text style={styles.rowValue}>
-                  {t('extra_expense.app_fee_label')}: {formatMoney(activeAdditionalCharge.appFeeAmount, activeAdditionalCharge.currency)}
-                </Text>
+                <View style={styles.chargeSummaryCard}>
+                  <Text style={styles.chargeSummaryReason}>{activeAdditionalCharge.reason}</Text>
+                  <View style={styles.chargeSummaryRow}>
+                    <Text style={styles.detailLabel}>{t('extra_expense.expense_amount_label')}</Text>
+                    <Text style={styles.chargeSummaryValue}>
+                      {formatMoney(activeAdditionalCharge.amount, activeAdditionalCharge.currency)}
+                    </Text>
+                  </View>
+                  <View style={styles.chargeSummaryRow}>
+                    <Text style={styles.detailLabel}>{t('extra_expense.app_fee_label')}</Text>
+                    <Text style={styles.chargeSummaryValue}>
+                      {formatMoney(activeAdditionalCharge.appFeeAmount, activeAdditionalCharge.currency)}
+                    </Text>
+                  </View>
+                </View>
               ) : null}
-              {activeAdditionalCharge ? (
-                <Text style={styles.rowValue}>{activeAdditionalCharge.reason}</Text>
-              ) : null}
-              <Text style={styles.helperText}>
+
+              <Text style={styles.supportingText}>
                 {additionalChargePaymentOption === 'SAVED_CARD'
                   ? t('extra_expense.saved_card_notice')
                   : t('extra_expense.cash_on_delivery_notice')}
               </Text>
-              <Text style={styles.helperText}>
+              <Text style={styles.supportingText}>
                 {t('extra_expense.confirm_prompt', {
                   keyword: confirmationKeyword,
                 })}
@@ -1765,7 +2085,7 @@ export default function RequestStatusScreen() {
               <Text style={styles.rowLabel}>
                 {t('extra_expense.confirm_input_label')}
               </Text>
-              <Text style={styles.helperText}>
+              <Text style={styles.supportingText}>
                 {t('extra_expense.confirm_input_helper', {
                   keyword: confirmationKeyword,
                 })}
@@ -1778,25 +2098,29 @@ export default function RequestStatusScreen() {
                 autoCorrect={false}
                 style={styles.confirmationInput}
               />
-              <Text style={styles.rowValue}>
-                {t('extra_expense.payment_option_label')}: {' '}
-                {additionalChargePaymentOption === 'SAVED_CARD'
-                  ? t('extra_expense.saved_card_option')
-                  : t('extra_expense.cash_on_delivery_option')}
-              </Text>
-              {additionalChargePaymentOption === 'SAVED_CARD' ? (
-                <Text style={styles.rowValue}>
-                  {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+
+              <View style={styles.selectedPaymentCard}>
+                <Text style={styles.detailLabel}>{t('extra_expense.payment_option_label')}</Text>
+                <Text style={styles.detailValue}>
+                  {additionalChargePaymentOption === 'SAVED_CARD'
+                    ? t('extra_expense.saved_card_option')
+                    : t('extra_expense.cash_on_delivery_option')}
                 </Text>
-              ) : null}
+                {additionalChargePaymentOption === 'SAVED_CARD' ? (
+                  <Text style={styles.mutedCaption}>
+                    {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+                  </Text>
+                ) : null}
+              </View>
+
               <Pressable
-                style={[styles.secondaryButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                style={[styles.supportActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
                 disabled={isApprovingAdditionalCharge}
                 onPress={() =>
                   router.push((`/payment-method?requestId=${encodeURIComponent(requestId)}`) as Href)
                 }
               >
-                <Text style={styles.secondaryButtonText}>
+                <Text style={styles.supportActionButtonText}>
                   {defaultPaymentMethod
                     ? t('extra_expense.change_card_button')
                     : t('extra_expense.add_payment_method_button')}
@@ -1804,22 +2128,22 @@ export default function RequestStatusScreen() {
               </Pressable>
               <View style={styles.dialogActions}>
                 <Pressable
-                  style={[styles.secondaryOutlineButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                  style={[styles.supportActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
                   disabled={isApprovingAdditionalCharge}
                   onPress={closeAdditionalChargeModal}
                 >
-                  <Text style={styles.secondaryOutlineButtonText}>{t('extra_expense.cancel_button')}</Text>
+                  <Text style={styles.supportActionButtonText}>{t('extra_expense.cancel_button')}</Text>
                 </Pressable>
                 <Pressable
                   style={[
-                    styles.primaryButton,
+                    styles.rateActionButton,
                     (!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge) &&
                     styles.disabledButton,
                   ]}
                   disabled={!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge}
                   onPress={() => void onApproveAdditionalCharge()}
                 >
-                  <Text style={styles.primaryButtonText}>
+                  <Text style={styles.rateActionButtonText}>
                     {isApprovingAdditionalCharge
                       ? t('extra_expense.processing_button')
                       : t('extra_expense.confirm_button')}
@@ -1846,161 +2170,465 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: '#FAFAFA',
   },
   centeredContainer: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: '#FAFAFA',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
     gap: 12,
   },
   content: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 24,
-  },
-  headerCard: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    paddingHorizontal: 20,
+    gap: 16,
+    paddingBottom: 28,
   },
   card: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    gap: 4,
+    borderColor: '#E5E8EF',
+    gap: 8,
+    shadowColor: '#111827',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  subtitle: {
-    marginTop: 6,
-    color: M3LoginColors.textSecondary,
-    fontSize: 14,
-  },
-  statusPill: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-    backgroundColor: M3LoginColors.primaryContainer,
-    color: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    fontWeight: '600',
-  },
-  metaText: {
-    marginTop: 8,
-    color: M3LoginColors.textSecondary,
-    fontSize: 13,
+    color: '#111827',
+    textAlign: 'center',
   },
   helperText: {
-    marginTop: 8,
-    color: M3LoginColors.textSecondary,
+    color: '#627287',
     fontSize: 13,
+    lineHeight: 18,
   },
-  bannerCard: {
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.secondary,
-    borderWidth: 1,
-    borderColor: M3LoginColors.secondary,
+  supportingText: {
+    color: '#627287',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
-  bannerTitle: {
-    color: M3LoginColors.textPrimary,
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  topBarButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  topBarTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  topBarSubtitle: {
+    fontSize: 13,
+    color: '#76869B',
+  },
+  progressSection: {
+    paddingTop: 2,
+    paddingBottom: 4,
+    position: 'relative',
+  },
+  progressRail: {
+    position: 'absolute',
+    top: 27,
+    left: 36,
+    right: 36,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#E5E7EB',
+  },
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  progressStep: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 10,
+  },
+  progressCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  progressCircleDone: {
+    backgroundColor: '#F9C30B',
+  },
+  progressCircleCurrent: {
+    backgroundColor: '#F9C30B',
+  },
+  progressCircleDisabled: {
+    backgroundColor: '#E5E7EB',
+  },
+  progressCircleText: {
+    fontSize: 24,
     fontWeight: '700',
+    color: '#9CA3AF',
   },
-  bannerText: {
-    color: M3LoginColors.textPrimary,
-    marginTop: 4,
+  progressCircleTextActive: {
+    color: '#111827',
   },
-  socketBadge: {
-    marginTop: 10,
+  progressCircleTextDisabled: {
+    color: '#9CA3AF',
+  },
+  progressLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    color: '#98A2B3',
+    maxWidth: 72,
+  },
+  progressLabelActive: {
+    color: '#374151',
+    fontWeight: '600',
+  },
+  progressLabelDisabled: {
+    color: '#B8C0CC',
+  },
+  successBanner: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#E9F9EE',
+  },
+  successBannerText: {
+    color: '#1E9E4A',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  errorBanner: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FDE8E7',
+  },
+  errorBannerText: {
+    color: '#C0392B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  infoBanner: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#EEF5FF',
+  },
+  infoBannerText: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  noticeCard: {
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F5D0CD',
+    gap: 8,
+  },
+  noticeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  mutedCaption: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#94A3B8',
+  },
+  mapCard: {
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  mapFrame: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#DDF0DD',
+  },
+  mapFrameInline: {
+    height: 420,
+  },
+  mapFrameExpanded: {
+    flex: 1,
+    minHeight: 0,
+  },
+  mapFill: {
+    ...StyleSheet.absoluteFill,
+  },
+  mapExpandButton: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapOverlayStatus: {
+    position: 'absolute',
+    left: 14,
+    top: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(17,24,39,0.82)',
+  },
+  mapOverlayStatusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mapFallbackCard: {
+    borderRadius: 20,
+    padding: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    gap: 10,
+  },
+  mapFallbackCardExpanded: {
+    flex: 1,
+    margin: 20,
+    justifyContent: 'center',
+  },
+  outlineButton: {
+    borderWidth: 1,
+    borderColor: '#D9DFE8',
+    borderRadius: 14,
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  outlineButtonText: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pickupMarker: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#1DB954',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropoffMarker: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#FF4B3E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverMarker: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#F9C30B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    gap: 14,
+    shadowColor: '#111827',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  driverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  driverAvatar: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#E4B200',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverAvatarText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  driverInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  driverName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  driverMeta: {
+    fontSize: 15,
+    color: '#6B7280',
+  },
+  driverVehicleText: {
+    fontSize: 13,
+    color: '#98A2B3',
+  },
+  socketBadgeCompact: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 999,
   },
   socketBadgeConnected: {
-    backgroundColor: M3LoginColors.primaryContainer,
+    backgroundColor: '#E9F9EE',
   },
   socketBadgeWarning: {
-    backgroundColor: M3LoginColors.secondary,
+    backgroundColor: '#FFF3D6',
   },
   socketBadgeNeutral: {
-    backgroundColor: M3LoginColors.outlineVariant,
+    backgroundColor: '#EEF2F7',
   },
   socketBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
-  socketMessage: {
-    marginTop: 8,
-    color: M3LoginColors.textSecondary,
-    fontSize: 13,
+  primaryActionButton: {
+    minHeight: 62,
+    borderRadius: 18,
+    backgroundColor: '#F9C30B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 18,
+  },
+  primaryActionButtonText: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  secondaryActionButton: {
+    minHeight: 58,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 18,
+  },
+  secondaryActionButtonText: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  inlineBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  inlineBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    gap: 10,
+  },
+  detailsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-    marginBottom: 8,
+    color: '#111827',
   },
-  timelineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+  inlineStatusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: '#F3F4F6',
+    color: '#111827',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: M3LoginColors.outline,
+  detailsMetaText: {
+    fontSize: 13,
+    color: '#627287',
   },
-  timelineDotDone: {
-    backgroundColor: M3LoginColors.primary,
+  detailsGrid: {
+    gap: 12,
   },
-  timelineDotCurrent: {
-    backgroundColor: M3LoginColors.primary,
+  detailItem: {
+    gap: 4,
   },
-  timelineText: {
-    color: M3LoginColors.textSecondary,
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#98A2B3',
+  },
+  detailValue: {
     fontSize: 14,
-  },
-  timelineTextDone: {
-    color: M3LoginColors.textPrimary,
-    fontWeight: '500',
-  },
-  timelineTextCurrent: {
-    color: M3LoginColors.primary,
-    fontWeight: '700',
+    lineHeight: 20,
+    color: '#111827',
   },
   rowLabel: {
     marginTop: 8,
     fontSize: 12,
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     fontWeight: '600',
   },
   rowValue: {
     fontSize: 14,
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     marginTop: 2,
-  },
-  driverVehiclePhoto: {
-    width: '100%',
-    height: 180,
-    borderRadius: 12,
-    marginTop: 10,
-    backgroundColor: M3LoginColors.outlineVariant,
+    lineHeight: 20,
   },
   emptyState: {
     minHeight: 90,
@@ -2009,44 +2637,44 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   selectedOfferBanner: {
-    marginTop: 12,
+    marginTop: 8,
     padding: 12,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primaryContainer,
+    borderRadius: 14,
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: M3LoginColors.primaryContainer,
+    borderColor: '#111827',
   },
   selectedOfferLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: M3LoginColors.onSecondary,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
   },
   selectedOfferValue: {
     marginTop: 4,
-    color: M3LoginColors.onSecondary,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   offerCardAccepted: {
-    marginTop: 12,
-    borderRadius: 12,
+    marginTop: 10,
+    borderRadius: 14,
     padding: 12,
-    backgroundColor: M3LoginColors.secondary,
-    borderColor: M3LoginColors.secondary,
+    backgroundColor: '#FFC548',
+    borderColor: '#FFC548',
     borderWidth: 1,
   },
   offerCard: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 12,
+    borderColor: '#E5E8EF',
+    borderRadius: 16,
     padding: 12,
     gap: 8,
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
   },
   offerCardSelected: {
-    borderColor: M3LoginColors.secondary,
-    backgroundColor: `${M3LoginColors.secondary}20`,
+    borderColor: '#FFC548',
+    backgroundColor: '#FFF8E6',
   },
   offerTopRow: {
     flexDirection: 'row',
@@ -2055,21 +2683,21 @@ const styles = StyleSheet.create({
   offerVehiclePhoto: {
     width: 72,
     height: 72,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.outlineVariant,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
   },
   offerVehiclePhotoPlaceholder: {
     width: 72,
     height: 72,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.outlineVariant,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
   offerVehiclePhotoPlaceholderText: {
     fontSize: 11,
-    color: M3LoginColors.textSecondary,
+    color: '#627287',
     textAlign: 'center',
   },
   offerTopText: {
@@ -2079,15 +2707,21 @@ const styles = StyleSheet.create({
   offerCardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   offerRatingText: {
-    color: M3LoginColors.textSecondary,
+    color: '#627287',
     fontSize: 13,
   },
   offerStatusText: {
-    color: M3LoginColors.textSecondary,
+    color: '#627287',
     fontSize: 12,
+  },
+  offerTextOnDark: {
+    color: '#111827',
+  },
+  offerSubtextOnDark: {
+    color: '#374151',
   },
   offerPriceBlock: {
     alignItems: 'flex-end',
@@ -2095,35 +2729,20 @@ const styles = StyleSheet.create({
   },
   offerPriceValue: {
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     fontSize: 14,
     textAlign: 'right',
   },
   offerArrivalText: {
     marginTop: 4,
-    color: M3LoginColors.textSecondary,
+    color: '#627287',
     fontSize: 12,
     textAlign: 'right',
   },
   offerPrimaryValue: {
     fontSize: 15,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  offerTextOnDark: {
-    color: M3LoginColors.onSecondary,
-  },
-  offerSubtextOnDark: {
-    color: M3LoginColors.onSecondary,
-  },
-  additionalChargeCard: {
-    marginTop: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surfaceContainer,
-    padding: 12,
-    gap: 4,
+    color: '#111827',
   },
   photoRow: {
     gap: 10,
@@ -2132,24 +2751,100 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 10,
-    backgroundColor: M3LoginColors.outlineVariant,
+    backgroundColor: '#D1D5DB',
   },
   photoLarge: {
     width: 120,
     height: 120,
     borderRadius: 12,
-    backgroundColor: M3LoginColors.outlineVariant,
+    backgroundColor: '#D1D5DB',
+  },
+  additionalChargeCard: {
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    gap: 4,
+  },
+  actionStack: {
+    gap: 14,
+    paddingTop: 6,
+  },
+  statusActionButton: {
+    minHeight: 58,
+    borderRadius: 20,
+    backgroundColor: '#3F7AE8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  statusActionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  rateActionButton: {
+    minHeight: 58,
+    borderRadius: 20,
+    backgroundColor: '#F9C30B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  rateActionButtonText: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  supportActionButton: {
+    minHeight: 56,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  supportActionButtonText: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  cancelActionText: {
+    textAlign: 'center',
+    color: '#FF3B30',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  mapExpandedScreen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
+  expandedMapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  expandedMapTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(28, 27, 31, 0.92)',
+    backgroundColor: 'rgba(17, 24, 39, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   dialogBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(28, 27, 31, 0.7)',
+    backgroundColor: 'rgba(17, 24, 39, 0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -2157,35 +2852,78 @@ const styles = StyleSheet.create({
   dialogCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    borderColor: '#E5E8EF',
     gap: 10,
+  },
+  chargeDialogCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    gap: 14,
+  },
+  chargeDialogHeader: {
+    gap: 6,
+  },
+  chargeDialogAmount: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  chargeSummaryCard: {
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: '#FFF8E6',
+    borderWidth: 1,
+    borderColor: '#F8E1A1',
+    gap: 10,
+  },
+  chargeSummaryReason: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  chargeSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  chargeSummaryValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
   confirmationInput: {
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
+    borderColor: '#CBD5E1',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   paymentOptionList: {
     gap: 10,
   },
   paymentOptionCard: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    borderColor: '#D9DFE8',
     borderRadius: 14,
     padding: 14,
     backgroundColor: '#FFFFFF',
     gap: 4,
   },
   paymentOptionCardSelected: {
-    borderColor: M3LoginColors.primary,
+    borderColor: '#3F7AE8',
     backgroundColor: '#EFF6FF',
   },
   paymentOptionCardDisabled: {
@@ -2194,12 +2932,20 @@ const styles = StyleSheet.create({
   paymentOptionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   paymentOptionDescription: {
     fontSize: 13,
     lineHeight: 18,
-    color: M3LoginColors.textSecondary,
+    color: '#627287',
+  },
+  selectedPaymentCard: {
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    gap: 4,
   },
   dialogActions: {
     gap: 10,
@@ -2212,58 +2958,43 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryButton: {
-    backgroundColor: M3LoginColors.primary,
-    borderRadius: 12,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
-  },
-  refreshButton: {
-    backgroundColor: M3LoginColors.secondary,
-    borderRadius: 12,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  refreshButtonText: {
-    color: M3LoginColors.onSecondary,
-    fontWeight: '700',
-    fontSize: 15,
   },
   secondaryButton: {
-    borderRadius: 10,
-    minHeight: 44,
+    borderRadius: 14,
+    minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
-    marginTop: 8,
+    borderColor: '#D9DFE8',
+    backgroundColor: '#FFFFFF',
   },
   secondaryOutlineButton: {
-    borderRadius: 10,
+    borderRadius: 12,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#D9DFE8',
+    backgroundColor: '#FFFFFF',
   },
   deleteButton: {
-    borderRadius: 10,
+    borderRadius: 12,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
-    backgroundColor: M3LoginColors.error,
-    marginTop: 8,
+    backgroundColor: '#FF3B30',
   },
   primaryButtonText: {
-    color: M3LoginColors.onPrimary,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },
@@ -2273,12 +3004,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   secondaryButtonText: {
-    color: M3LoginColors.onPrimary,
+    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
   },
   secondaryOutlineButtonText: {
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -2286,17 +3017,17 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   loadingText: {
-    color: M3LoginColors.textSecondary,
+    color: '#627287',
     marginTop: 8,
     fontSize: 14,
   },
   successText: {
-    color: M3LoginColors.primary,
+    color: '#1E9E4A',
     fontSize: 14,
     textAlign: 'center',
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: '#C0392B',
     fontSize: 14,
     textAlign: 'center',
   },
