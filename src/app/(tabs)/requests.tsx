@@ -16,11 +16,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { M3LoginColors } from '@/constants/theme';
 import { getCustomerRequests } from '@/lib/api';
-import { isHistoryRequestStatus } from '@/lib/request-status';
+import { formatDateOnly } from '@/localization/format';
 import { useAppLanguage } from '@/localization/provider';
-import type { CustomerHomeRequestSummary } from '@/types/customer-request';
+import type { CustomerHomeRequestSummary, CustomerRequestStatus } from '@/types/customer-request';
 
 const serviceIcons: Record<string, SymbolViewProps['name']> = {
   VEHICLE_TRANSPORT: { ios: 'car.fill', android: 'directions_car', web: 'directions_car' },
@@ -29,6 +28,11 @@ const serviceIcons: Record<string, SymbolViewProps['name']> = {
   FURNITURE_TRANSPORT: { ios: 'sofa.fill', android: 'chair', web: 'chair' },
 };
 
+type RequestFilter = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+
+const completedStatuses: CustomerRequestStatus[] = ['DELIVERED', 'COMPLETED'];
+const cancelledStatuses: CustomerRequestStatus[] = ['CANCELLED'];
+
 function getServiceLabel(
   serviceKey: string | null | undefined,
   fallback: string | null | undefined,
@@ -36,16 +40,79 @@ function getServiceLabel(
 ): string {
   switch (serviceKey) {
     case 'VEHICLE_TRANSPORT':
-      return t('Vehicle transport');
+      return t('Vehicle Transport');
     case 'MOTORCYCLE_TRANSPORT':
-      return t('Motorcycle transport');
+      return t('Motorcycle Transport');
     case 'GOODS_TRANSPORT':
-      return t('Goods transport');
+      return t('Goods Transport');
     case 'FURNITURE_TRANSPORT':
-      return t('Furniture transport');
+      return t('Furniture Transport');
     default:
       return fallback || t('Service');
   }
+}
+
+function getStatusTone(status: CustomerRequestStatus): { backgroundColor: string; textColor: string } {
+  if (cancelledStatuses.includes(status)) {
+    return {
+      backgroundColor: '#FDE8E7',
+      textColor: '#C0392B',
+    };
+  }
+
+  if (completedStatuses.includes(status)) {
+    return {
+      backgroundColor: '#E9F9EE',
+      textColor: '#1E9E4A',
+    };
+  }
+
+  return {
+    backgroundColor: '#FFF3D6',
+    textColor: '#D89A1A',
+  };
+}
+
+function compactAddress(address: string | null | undefined, fallback: string): string {
+  if (!address?.trim()) {
+    return fallback;
+  }
+
+  const parts = address
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0]}, ${parts[1]}`;
+  }
+
+  return parts[0] ?? fallback;
+}
+
+function getReference(requestId: string): string {
+  const compactId = requestId.replace(/-/g, '').slice(0, 8).toUpperCase();
+  return `TRP-${compactId || requestId}`;
+}
+
+function getRequestDate(request: CustomerHomeRequestSummary, t: (key: string) => string): string {
+  const value = request.submittedAt ?? request.createdAt ?? request.scheduledPickupAt;
+  return value ? formatDateOnly(value) : t('Date pending');
+}
+
+function getFooterStatusCopy(
+  request: CustomerHomeRequestSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (cancelledStatuses.includes(request.status)) {
+    return t('Request cancelled');
+  }
+
+  if (completedStatuses.includes(request.status)) {
+    return t('Transport completed');
+  }
+
+  return request.statusLabel;
 }
 
 function IconSymbol({
@@ -60,73 +127,67 @@ function IconSymbol({
   return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
-function StatusPill({ statusLabel }: { statusLabel: string }) {
+function FilterChip({
+  title,
+  active,
+  onPress,
+}: {
+  title: string;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
-    <View style={styles.pill}>
-      <Text style={styles.pillText}>{statusLabel}</Text>
-    </View>
+    <Pressable style={[styles.filterChip, active ? styles.filterChipActive : null]} onPress={onPress}>
+      <Text style={[styles.filterChipText, active ? styles.filterChipTextActive : null]}>{title}</Text>
+    </Pressable>
   );
 }
 
-function RequestCard({
+function OrderCard({
   request,
   directionArrow,
+  onPress,
   t,
 }: {
   request: CustomerHomeRequestSummary;
   directionArrow: string;
+  onPress: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const router = useRouter();
-  const serviceKey = request.serviceKey ?? '';
-  const icon = serviceIcons[serviceKey];
+  const icon = serviceIcons[request.serviceKey ?? ''];
+  const tone = getStatusTone(request.status);
+  const pickup = compactAddress(request.pickupAddress, t('Pickup'));
+  const dropoff = compactAddress(request.dropoffAddress, t('Dropoff'));
 
   return (
-    <Pressable
-      key={request.id}
-      style={styles.card}
-      onPress={() => router.push({ pathname: '/request-status', params: { requestId: request.id } })}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.serviceBadge}>
-          {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={18} /> : null}
-          <Text style={styles.serviceBadgeText}>
-            {getServiceLabel(request.serviceKey, request.serviceName, t)}
+    <Pressable style={styles.card} onPress={onPress}>
+      <View style={styles.cardTopRow}>
+        <View style={styles.cardIdentity}>
+          <View style={styles.cardIcon}>
+            {icon ? <IconSymbol name={icon} color="#111827" size={18} /> : null}
+          </View>
+          <View style={styles.cardIdentityText}>
+            <Text style={styles.cardTitle}>{getServiceLabel(request.serviceKey, request.serviceName, t)}</Text>
+            <Text style={styles.cardReference}>{getReference(request.id)}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.statusBadge, { backgroundColor: tone.backgroundColor }]}>
+          <Text style={[styles.statusBadgeText, { color: tone.textColor }]} numberOfLines={2}>
+            {request.statusLabel}
           </Text>
         </View>
-        <StatusPill statusLabel={request.statusLabel} />
       </View>
 
-      <View style={styles.routeRow}>
-        <IconSymbol
-          name={{ ios: 'mappin.and.ellipse', android: 'location_on', web: 'location_on' }}
-          color={M3LoginColors.primary}
-          size={16}
-        />
-        <Text style={styles.routeText} numberOfLines={1}>
-          {request.pickupAddress || t('Pickup not set')}
-        </Text>
-      </View>
-      <View style={styles.routeConnector}>
-        <View style={styles.routeLine} />
-        <View style={styles.routeVehicleCircle}>
-          <IconSymbol
-            name={{ ios: 'arrow.down', android: 'south', web: 'arrow_downward' }}
-            color={M3LoginColors.onPrimary}
-            size={14}
-          />
-        </View>
-        <View style={styles.routeLine} />
-      </View>
-      <View style={styles.routeRow}>
-        <IconSymbol
-          name={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
-          color={M3LoginColors.primary}
-          size={16}
-        />
-        <Text style={styles.routeText} numberOfLines={1}>
-          {request.dropoffAddress || t('Dropoff not set')}
-        </Text>
+      <Text style={styles.cardRoute} numberOfLines={2}>
+        {pickup} {directionArrow} {dropoff}
+      </Text>
+
+      <View style={styles.cardDivider} />
+
+      <View style={styles.cardFooter}>
+        <Text style={styles.cardFooterLeft}>{getFooterStatusCopy(request, t)}</Text>
+        <Text style={styles.cardFooterRight}>{getRequestDate(request, t)}</Text>
       </View>
     </Pressable>
   );
@@ -141,6 +202,7 @@ export default function RequestsTabScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [activeFilter, setActiveFilter] = useState<RequestFilter>('ACTIVE');
 
   const loadRequests = useCallback(
     async (isRefresh: boolean): Promise<void> => {
@@ -173,109 +235,116 @@ export default function RequestsTabScreen() {
     return () => clearTimeout(timeoutId);
   }, [loadRequests]);
 
-  const activeRequests = requests.filter((request) => !isHistoryRequestStatus(request.status));
-  const historyRequests = requests.filter((request) => isHistoryRequestStatus(request.status));
   const directionArrow = isRTL ? '←' : '→';
 
-  const emptyState = useMemo(
-    () => (
-      <View style={styles.emptyCard}>
-        <IconSymbol
-          name={{ ios: 'shippingbox', android: 'inventory_2', web: 'inventory_2' }}
-          color={M3LoginColors.textTertiary}
-          size={40}
-        />
-        <Text style={styles.emptyTitle}>{t('No requests yet')}</Text>
-        <Text style={styles.emptyText}>{t('Your transport requests will appear here.')}</Text>
-        <Pressable style={styles.primaryButton} onPress={() => router.push('/choose-service')}>
-          <Text style={styles.primaryButtonText}>{t('New Transport Request')}</Text>
-        </Pressable>
-      </View>
-    ),
-    [router, t],
-  );
+  const filteredRequests = useMemo(() => {
+    switch (activeFilter) {
+      case 'COMPLETED':
+        return requests.filter((request) => completedStatuses.includes(request.status));
+      case 'CANCELLED':
+        return requests.filter((request) => cancelledStatuses.includes(request.status));
+      case 'ACTIVE':
+      default:
+        return requests.filter(
+          (request) =>
+            !completedStatuses.includes(request.status) && !cancelledStatuses.includes(request.status),
+        );
+    }
+  }, [activeFilter, requests]);
 
   if (isLoading && requests.length === 0) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color={M3LoginColors.onPrimary} />
-        <Text style={styles.mutedText}>{t('Loading requests...')}</Text>
+        <ActivityIndicator size="large" color="#111827" />
+        <Text style={styles.supportingText}>{t('Loading requests...')}</Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={M3LoginColors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: Math.max(20, insets.top + 8) },
+          {
+            paddingTop: Math.max(12, insets.top + 4),
+            paddingBottom: Math.max(28, insets.bottom + 18),
+          },
         ]}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={() => void loadRequests(true)} />
         }
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>{t('My Requests')}</Text>
+        <Text style={styles.title}>{t('My Orders')}</Text>
+
+        <View style={styles.filtersRow}>
+          <FilterChip title={t('Active')} active={activeFilter === 'ACTIVE'} onPress={() => setActiveFilter('ACTIVE')} />
+          <FilterChip
+            title={t('Completed')}
+            active={activeFilter === 'COMPLETED'}
+            onPress={() => setActiveFilter('COMPLETED')}
+          />
+          <FilterChip
+            title={t('Cancelled')}
+            active={activeFilter === 'CANCELLED'}
+            onPress={() => setActiveFilter('CANCELLED')}
+          />
+        </View>
 
         {!!errorMessage ? (
           <View style={styles.errorCard}>
             <View style={styles.errorIconCircle}>
               <IconSymbol
                 name={{ ios: 'exclamationmark.triangle.fill', android: 'error', web: 'error' }}
-                color={M3LoginColors.onPrimary}
-                size={32}
+                color="#111827"
+                size={28}
               />
             </View>
             <Text style={styles.errorTitle}>{t('Unable to load requests')}</Text>
-            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Text style={styles.supportingText}>{errorMessage}</Text>
             <Pressable style={styles.primaryButton} onPress={() => void loadRequests(false)}>
               <Text style={styles.primaryButtonText}>{t('Retry')}</Text>
             </Pressable>
           </View>
         ) : null}
 
-        {requests.length === 0 ? (
-          emptyState
-        ) : (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('Active Requests')}</Text>
-              {activeRequests.length === 0 ? (
-                <View style={styles.emptySectionCard}>
-                  <Text style={styles.mutedText}>{t('No active requests right now.')}</Text>
-                </View>
-              ) : (
-                activeRequests.map((request) => (
-                  <RequestCard
-                    key={request.id}
-                    request={request}
-                    directionArrow={directionArrow}
-                    t={t}
-                  />
-                ))
-              )}
-            </View>
+        {!errorMessage && filteredRequests.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>
+              {activeFilter === 'ACTIVE'
+                ? t('No active orders')
+                : activeFilter === 'COMPLETED'
+                  ? t('No completed orders')
+                  : t('No cancelled orders')}
+            </Text>
+            <Text style={styles.supportingText}>
+              {activeFilter === 'ACTIVE'
+                ? t('Your current transport requests will appear here.')
+                : t('Orders in this section will appear here.')}
+            </Text>
+            {activeFilter === 'ACTIVE' ? (
+              <Pressable style={styles.primaryButton} onPress={() => router.push('/choose-service')}>
+                <Text style={styles.primaryButtonText}>{t('New request')}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('History Requests')}</Text>
-              {historyRequests.length === 0 ? (
-                <View style={styles.emptySectionCard}>
-                  <Text style={styles.mutedText}>{t('No history requests yet.')}</Text>
-                </View>
-              ) : (
-                historyRequests.map((request) => (
-                  <RequestCard
-                    key={request.id}
-                    request={request}
-                    directionArrow={directionArrow}
-                    t={t}
-                  />
-                ))
-              )}
-            </View>
-          </>
-        )}
+        {!errorMessage && filteredRequests.length > 0 ? (
+          <View style={styles.list}>
+            {filteredRequests.map((request) => (
+              <OrderCard
+                key={request.id}
+                request={request}
+                directionArrow={directionArrow}
+                onPress={() => router.push({ pathname: '/request-status', params: { requestId: request.id } })}
+                t={t}
+              />
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -284,173 +353,194 @@ export default function RequestsTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: '#FAFAFA',
   },
   centeredContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.background,
-    gap: 8,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: M3LoginColors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  section: {
+    backgroundColor: '#FAFAFA',
+    padding: 24,
     gap: 10,
   },
-  sectionTitle: {
+  content: {
+    paddingHorizontal: 20,
+    gap: 14,
+  },
+  title: {
     fontSize: 18,
+    lineHeight: 28,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  filterChip: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D9DFE8',
+  },
+  filterChipActive: {
+    backgroundColor: '#FFC548',
+    borderColor: '#FFC548',
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  filterChipTextActive: {
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+  },
+  list: {
+    gap: 12,
   },
   card: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 16,
-    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#111827',
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+    gap: 12,
   },
-  cardHeader: {
+  cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 12,
   },
-  serviceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: M3LoginColors.surfaceContainer,
-  },
-  serviceBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  pill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: M3LoginColors.surfaceContainer,
-  },
-  pillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: M3LoginColors.textSecondary,
-  },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  routeText: {
+  cardIdentity: {
     flex: 1,
-    fontSize: 14,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '500',
-  },
-  routeConnector: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingLeft: 26,
+    gap: 12,
   },
-  routeLine: {
-    flex: 1,
-    width: 2,
-    backgroundColor: M3LoginColors.outlineVariant,
-  },
-  routeVehicleCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+  cardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptySectionCard: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    padding: 16,
+  cardIdentityText: {
+    flex: 1,
+    gap: 2,
   },
-  emptyCard: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
-    padding: 28,
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  emptyText: {
+  cardTitle: {
     fontSize: 14,
-    color: M3LoginColors.textSecondary,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  cardReference: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#76869B',
+  },
+  statusBadge: {
+    maxWidth: 92,
+    minHeight: 36,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  mutedText: {
+  cardRoute: {
     fontSize: 14,
-    color: M3LoginColors.textSecondary,
+    lineHeight: 22,
+    color: '#627287',
   },
-  errorCard: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 18,
-    padding: 24,
+  cardDivider: {
+    height: 1,
+    backgroundColor: '#E9EDF3',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cardFooterLeft: {
+    flex: 1,
+    fontSize: 13,
+    color: '#A0ACBC',
+  },
+  cardFooterRight: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
     alignItems: 'center',
     gap: 10,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  errorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    borderColor: '#E5E8EF',
+    alignItems: 'center',
+    gap: 10,
   },
   errorIconCircle: {
-    width: 64,
-    height: 64,
+    width: 58,
+    height: 58,
     borderRadius: 20,
-    backgroundColor: M3LoginColors.surfaceContainer,
+    backgroundColor: '#FFF3D6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
-  errorText: {
+  supportingText: {
     fontSize: 14,
-    color: M3LoginColors.textSecondary,
+    lineHeight: 20,
+    color: '#627287',
     textAlign: 'center',
   },
   primaryButton: {
-    marginTop: 6,
-    backgroundColor: M3LoginColors.primary,
-    borderRadius: 12,
-    minHeight: 48,
+    marginTop: 4,
+    backgroundColor: '#111827',
+    borderRadius: 14,
+    minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
   },
   primaryButtonText: {
-    color: M3LoginColors.onPrimary,
+    fontSize: 14,
     fontWeight: '700',
-    fontSize: 15,
+    color: '#FFFFFF',
   },
 });
