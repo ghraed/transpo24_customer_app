@@ -1,5 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -8,12 +9,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ColorValue,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { decodeVehicleVin } from '@/lib/api';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
@@ -26,7 +31,6 @@ import type {
   PendingMotorcycleDetailsPayload,
 } from '@/types/customer-request';
 import type { DecodedVinResult } from '@/types/vehicle';
-import { M3LoginColors } from '@/constants/theme';
 import {
   getVinValidationMessage,
   INVALID_VIN_MESSAGE,
@@ -102,6 +106,18 @@ function SearchableDropdown(props: {
       ) : null}
     </View>
   );
+}
+
+function IconSymbol({
+  name,
+  color,
+  size = 20,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
 function formatValidationMessage(form: MotorcycleTransportFormData): string | null {
@@ -215,6 +231,7 @@ export default function MotorcycleDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<MotorcycleDetailsRouteParams>();
   const keyboardInset = useAndroidKeyboardInset();
+  const insets = useSafeAreaInsets();
 
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
   const serviceKey = typeof params.serviceKey === 'string' ? params.serviceKey.trim() : '';
@@ -412,27 +429,45 @@ export default function MotorcycleDetailsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          keyboardInset > 0 ? { paddingBottom: 30 + keyboardInset } : undefined,
+          {
+            paddingTop: Math.max(10, insets.top + 4),
+            paddingBottom: Math.max(30, insets.bottom + 18) + keyboardInset,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
+      <View style={styles.topBar}>
+        <Pressable style={styles.topBarButton} onPress={() => router.back()}>
+          <IconSymbol
+            name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
+            color="#111827"
+            size={24}
+          />
         </Pressable>
-        <Text style={styles.title}>Motorcycle Details</Text>
+        <View style={styles.topBarTitleWrap}>
+          <Text style={styles.topBarTitle}>Motorcycle Details</Text>
+        </View>
+        <View style={styles.topBarButton} />
+      </View>
+
+      <View style={styles.heroBlock}>
+        <Text style={styles.title}>Tell us about the motorcycle</Text>
         <Text style={styles.subtitle}>
-          Add your motorcycle details, pickup schedule, and photos before choosing pickup location.
+          Add the motorcycle details, pickup timing and photos before choosing the route.
         </Text>
       </View>
 
+      <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>Manual Motorcycle Selection</Text>
       <SearchableDropdown
         label="Motorcycle Type"
@@ -449,7 +484,11 @@ export default function MotorcycleDetailsScreen() {
           setErrorMessage('');
         }}
       />
+      </View>
 
+      <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>VIN / Chassis</Text>
+      <Text style={styles.sectionHint}>Use VIN decode if you want us to prefill the details automatically.</Text>
       <Text style={styles.label}>VIN / Chassis Number (optional)</Text>
       <TextInput
         value={form.chassisNumber}
@@ -470,7 +509,7 @@ export default function MotorcycleDetailsScreen() {
         disabled={!canDecodeVin}
       >
         {isDecodingVin ? (
-          <ActivityIndicator color="#1a73e8" />
+          <ActivityIndicator color="#111827" />
         ) : (
           <Text style={styles.secondaryButtonText}>Decode VIN</Text>
         )}
@@ -491,7 +530,9 @@ export default function MotorcycleDetailsScreen() {
           ) : null}
         </View>
       ) : null}
+      </View>
 
+      <View style={styles.sectionCard}>
       <SearchableDropdown
         label="Motorcycle Condition"
         placeholder="Select motorcycle condition"
@@ -507,7 +548,9 @@ export default function MotorcycleDetailsScreen() {
           setErrorMessage('');
         }}
       />
+      </View>
 
+      <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>Transport Requirements</Text>
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>Requires special wrapping</Text>
@@ -551,7 +594,9 @@ export default function MotorcycleDetailsScreen() {
           </Text>
         </Pressable>
       </View>
+      </View>
 
+      <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>Date & Time</Text>
       <View style={styles.toggleRow}>
         <Pressable
@@ -591,7 +636,9 @@ export default function MotorcycleDetailsScreen() {
           </Pressable>
         </View>
       ) : null}
+      </View>
 
+      <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>Upload Photos</Text>
       <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
       <View style={styles.actionsRow}>
@@ -602,7 +649,7 @@ export default function MotorcycleDetailsScreen() {
           <Text style={styles.photoButtonText}>Take Photo</Text>
         </Pressable>
       </View>
-      {isPickingPhoto ? <ActivityIndicator color="#1a73e8" style={styles.loader} /> : null}
+      {isPickingPhoto ? <ActivityIndicator color="#111827" style={styles.loader} /> : null}
       <View style={styles.photoGrid}>
         {selectedPhotos.map((photo, index) => (
           <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
@@ -613,6 +660,7 @@ export default function MotorcycleDetailsScreen() {
           </View>
         ))}
       </View>
+      </View>
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
@@ -622,6 +670,11 @@ export default function MotorcycleDetailsScreen() {
         disabled={!canContinue}
       >
         <Text style={styles.continueText}>Continue to Pickup Location</Text>
+        <IconSymbol
+          name={{ ios: 'arrow.right', android: 'east', web: 'east' }}
+          color="#FFFFFF"
+          size={18}
+        />
       </Pressable>
 
       {showDatePicker ? (
@@ -654,101 +707,132 @@ export default function MotorcycleDetailsScreen() {
           />
         ) : null}
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
   container: {
+    paddingHorizontal: 20,
+    gap: 16,
+    backgroundColor: '#FAFAFA',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  topBarButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  topBarTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  heroBlock: {
+    gap: 8,
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
     padding: 16,
-    backgroundColor: M3LoginColors.background,
-    paddingBottom: 30,
-  },
-  header: {
-    marginBottom: 12,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 8,
-    backgroundColor: M3LoginColors.surface,
-  },
-  backButtonText: {
-    color: M3LoginColors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
+    borderColor: '#E5E8EF',
+    gap: 2,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: '800',
+    color: '#111827',
   },
   subtitle: {
     fontSize: 15,
-    color: M3LoginColors.textSecondary,
-    marginTop: 4,
+    color: '#68768A',
     lineHeight: 22,
+  },
+  sectionHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#68768A',
+    marginBottom: 10,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     marginBottom: 6,
     marginTop: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-    marginTop: 14,
+    color: '#111827',
     marginBottom: 10,
   },
   dropdownButton: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    minHeight: 52,
+    borderColor: '#D9DFE8',
+    borderRadius: 14,
+    minHeight: 54,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
   },
   dropdownValue: {
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     fontSize: 15,
     fontWeight: '500',
   },
   dropdownPlaceholder: {
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     fontSize: 15,
   },
   dropdownChevron: {
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     fontSize: 12,
     fontWeight: '700',
   },
   dropdownPanel: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#D9DFE8',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   dropdownSearch: {
     borderBottomWidth: 1,
-    borderBottomColor: M3LoginColors.outlineVariant,
+    borderBottomColor: '#E5E8EF',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    color: '#111827',
   },
   dropdownList: {
     maxHeight: 210,
@@ -757,50 +841,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: M3LoginColors.surfaceContainer,
+    borderTopColor: '#EEF2F7',
   },
   dropdownItemText: {
     fontSize: 15,
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   emptyText: {
     paddingHorizontal: 14,
     paddingVertical: 16,
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     fontSize: 14,
   },
   input: {
     minHeight: 52,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
+    borderColor: '#D9DFE8',
+    borderRadius: 14,
     paddingHorizontal: 14,
     fontSize: 15,
-    color: M3LoginColors.textPrimary,
-    backgroundColor: M3LoginColors.surface,
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
   },
   infoText: {
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
     fontSize: 14,
     marginTop: 8,
+    lineHeight: 20,
   },
   decodedCard: {
     marginTop: 10,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#F8E1A1',
+    backgroundColor: '#FFF8E6',
     gap: 4,
   },
   decodedTitle: {
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 4,
   },
   decodedText: {
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
     fontSize: 14,
   },
   toggleRow: {
@@ -812,23 +897,23 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#D9DFE8',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   optionChipActive: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
   },
   optionChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   optionChipTextActive: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   datetimeContainer: {
     marginTop: 12,
@@ -836,21 +921,21 @@ const styles = StyleSheet.create({
   },
   pickerButton: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
+    borderColor: '#D9DFE8',
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
   },
   pickerButtonLabel: {
     fontSize: 13,
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     marginBottom: 4,
   },
   pickerButtonValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   switchRow: {
     flexDirection: 'row',
@@ -862,7 +947,7 @@ const styles = StyleSheet.create({
   switchLabel: {
     flex: 1,
     fontSize: 15,
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     fontWeight: '500',
   },
   switchChip: {
@@ -870,27 +955,27 @@ const styles = StyleSheet.create({
     minHeight: 38,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#D9DFE8',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
   },
   switchChipActive: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
   },
   switchChipText: {
     fontSize: 14,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   switchChipTextActive: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   photoCounter: {
     marginBottom: 8,
-    color: M3LoginColors.textTertiary,
+    color: '#68768A',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -905,32 +990,32 @@ const styles = StyleSheet.create({
   secondaryButton: {
     minHeight: 48,
     marginTop: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: M3LoginColors.primary,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: '#FFC548',
     paddingHorizontal: 14,
   },
   secondaryButtonDisabled: {
     opacity: 0.5,
   },
   secondaryButtonText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 14,
     fontWeight: '700',
   },
   photoButton: {
     minHeight: 48,
-    borderRadius: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#D9DFE8',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
   },
   photoButtonText: {
-    color: M3LoginColors.onPrimary,
+    color: '#111827',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -948,37 +1033,45 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     height: 120,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.outlineVariant,
+    borderRadius: 14,
+    backgroundColor: '#EEF2F7',
     marginBottom: 6,
   },
   removePhotoButton: {
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#F4C7C3',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   removePhotoText: {
-    color: M3LoginColors.error,
+    color: '#C0392B',
     fontSize: 13,
     fontWeight: '600',
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: '#C0392B',
     fontSize: 14,
     fontWeight: '500',
     marginTop: 16,
+    lineHeight: 20,
   },
   continueButton: {
-    marginTop: 24,
-    minHeight: 54,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+    marginTop: 8,
+    minHeight: 58,
+    borderRadius: 20,
+    backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
   },
   continueDisabled: {
     opacity: 0.5,
   },
   continueText: {
-    color: M3LoginColors.surface,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
