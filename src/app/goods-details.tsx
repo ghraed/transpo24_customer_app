@@ -1,5 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -8,13 +9,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ColorValue,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import type {
   GoodsDetailsRouteParams,
   GoodsShipmentSize,
@@ -22,9 +28,6 @@ import type {
   LocalPhotoAsset,
   PendingGoodsDetailsPayload,
 } from '@/types/customer-request';
-import { M3LoginColors } from '@/constants/theme';
-import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { M3Styles } from '@/lib/m3-styles';
 
 const MAX_PHOTOS = 8;
 
@@ -121,7 +124,7 @@ function SearchableDropdown(props: {
             value={props.searchText}
             onChangeText={props.onSearchChange}
             placeholder="Search..."
-            placeholderTextColor="#98a2b3"
+            placeholderTextColor="#98A2B3"
             style={styles.dropdownSearch}
           />
           <ScrollView style={styles.dropdownList} nestedScrollEnabled>
@@ -129,7 +132,11 @@ function SearchableDropdown(props: {
               <Text style={styles.emptyText}>No results</Text>
             ) : (
               props.options.map((option) => (
-                <Pressable key={option.id} style={styles.dropdownItem} onPress={() => props.onSelect(option)}>
+                <Pressable
+                  key={option.id}
+                  style={styles.dropdownItem}
+                  onPress={() => props.onSelect(option)}
+                >
                   <Text style={styles.dropdownItemText}>{option.label}</Text>
                 </Pressable>
               ))
@@ -139,6 +146,18 @@ function SearchableDropdown(props: {
       ) : null}
     </View>
   );
+}
+
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
 function parsePendingGoodsDetails(raw: string | undefined): PendingGoodsDetailsPayload | undefined {
@@ -223,6 +242,7 @@ export default function GoodsDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<GoodsDetailsRouteParams>();
   const keyboardInset = useAndroidKeyboardInset();
+  const insets = useSafeAreaInsets();
 
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
   const serviceKey = typeof params.serviceKey === 'string' ? params.serviceKey.trim() : '';
@@ -265,7 +285,10 @@ export default function GoodsDetailsScreen() {
   const sizeOptions = useMemo(
     () =>
       SHIPMENT_SIZE_OPTIONS.filter((option) =>
-        [option.label, option.approximateWeight, option.usage].join(' ').toLowerCase().includes(sizeSearch.trim().toLowerCase()),
+        [option.label, option.approximateWeight, option.usage]
+          .join(' ')
+          .toLowerCase()
+          .includes(sizeSearch.trim().toLowerCase()),
       ).map((option) => ({ id: option.value, label: option.label })),
     [sizeSearch],
   );
@@ -376,341 +399,469 @@ export default function GoodsDetailsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          keyboardInset > 0 ? { paddingBottom: 30 + keyboardInset } : undefined,
-        ]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Goods Details</Text>
-        <Text style={styles.subtitle}>
-          Add your shipment details, photos, and handling requirements before choosing pickup location.
-        </Text>
-      </View>
-
-      <Text style={styles.sectionTitle}>Shipment Size</Text>
-      <SearchableDropdown
-        label="Size"
-        placeholder="Select shipment size"
-        options={sizeOptions}
-        valueLabel={selectedShipmentSize?.label ?? ''}
-        isOpen={openDropdown === 'size'}
-        searchText={sizeSearch}
-        onToggle={() => setOpenDropdown((prev) => (prev === 'size' ? null : 'size'))}
-        onSearchChange={setSizeSearch}
-        onSelect={(option) => {
-          setForm((prev) => ({ ...prev, shipmentSize: option.id as GoodsShipmentSize }));
-          setOpenDropdown(null);
-          setErrorMessage('');
-        }}
-      />
-
-      {selectedShipmentSize ? (
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{selectedShipmentSize.label} shipment</Text>
-          <Text style={styles.summaryLine}>Approximate weight: {selectedShipmentSize.approximateWeight}</Text>
-          <Text style={styles.summaryLine}>Dimensions: {selectedShipmentSize.dimensions}</Text>
-          <Text style={styles.summaryLine}>Usage: {selectedShipmentSize.usage}</Text>
-        </View>
-      ) : null}
-
-      <Text style={styles.label}>Goods Description</Text>
-      <TextInput
-        value={form.goodsDescription}
-        onChangeText={(value) => {
-          setForm((prev) => ({ ...prev, goodsDescription: value }));
-          setErrorMessage('');
-        }}
-        placeholder="Examples: electronics, clothing, food items, furniture"
-        placeholderTextColor="#98a2b3"
-        style={[styles.input, styles.multilineInput]}
-        multiline
-        textAlignVertical="top"
-      />
-
-      <Text style={styles.sectionTitle}>Shipment Details</Text>
-      <Text style={styles.label}>Approximate Weight (kg)</Text>
-      <TextInput
-        value={form.approximateWeightKg}
-        onChangeText={(value) => {
-          setForm((prev) => ({
-            ...prev,
-            approximateWeightKg: value,
-            heavyShipmentType: inferHeavyShipmentType(
-              Number(value),
-              Number(prev.numberOfPieces),
-            ),
-          }));
-          setErrorMessage('');
-        }}
-        placeholder="Enter weight in kg"
-        placeholderTextColor="#98a2b3"
-        style={styles.input}
-        keyboardType="decimal-pad"
-      />
-
-      <Text style={styles.label}>Number of Pieces</Text>
-      <TextInput
-        value={form.numberOfPieces}
-        onChangeText={(value) => {
-          setForm((prev) => ({
-            ...prev,
-            numberOfPieces: value,
-            heavyShipmentType: inferHeavyShipmentType(
-              Number(prev.approximateWeightKg),
-              Number(value),
-            ),
-          }));
-          setErrorMessage('');
-        }}
-        placeholder="Enter number of pieces"
-        placeholderTextColor="#98a2b3"
-        style={styles.input}
-        keyboardType="number-pad"
-      />
-
-      <Text style={styles.sectionTitle}>Date & Time</Text>
-      <View style={styles.toggleRow}>
-        <Pressable
-          style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
-          onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            {
+              paddingTop: Math.max(insets.top, 10),
+              paddingBottom: keyboardInset > 0 ? keyboardInset + 32 : 44,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
-            Immediate pickup
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
-          onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
-        >
-          <Text
-            style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}
-          >
-            Schedule for later
-          </Text>
-        </Pressable>
-      </View>
-
-      {!form.isImmediate ? (
-        <View style={styles.datetimeContainer}>
-          <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
-            <Text style={styles.pickerButtonValue}>
-              {form.scheduledPickupAt.toLocaleDateString()}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
-            <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
-            <Text style={styles.pickerButtonValue}>
-              {form.scheduledPickupAt.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <Text style={styles.sectionTitle}>Upload Photos</Text>
-      <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
-      <View style={styles.actionsRow}>
-        <Pressable style={[styles.secondaryButton, styles.flexButton]} onPress={() => void pickFromLibrary()}>
-          <Text style={styles.secondaryButtonText}>Add Photos</Text>
-        </Pressable>
-        <Pressable style={[styles.photoButton, styles.flexButton]} onPress={() => void takePhoto()}>
-          <Text style={styles.photoButtonText}>Take Photo</Text>
-        </Pressable>
-      </View>
-      {isPickingPhoto ? <ActivityIndicator color="#1a73e8" style={styles.loader} /> : null}
-      <View style={styles.photoGrid}>
-        {selectedPhotos.map((photo, index) => (
-          <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
-            <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
-            <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
-              <Text style={styles.removePhotoText}>Remove</Text>
+          <View style={styles.topBar}>
+            <Pressable style={styles.topBarButton} onPress={() => router.back()}>
+              <IconSymbol name="chevron.left" size={18} color="#111827" />
             </Pressable>
+            <Text style={styles.topBarTitle}>Goods Details</Text>
+            <View style={styles.topBarSpacer} />
           </View>
-        ))}
-      </View>
 
-      <Text style={styles.sectionTitle}>Special Handling</Text>
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Fragile goods</Text>
-        <Pressable
-          style={[styles.switchChip, form.isFragile && styles.switchChipActive]}
-          onPress={() => setForm((prev) => ({ ...prev, isFragile: !prev.isFragile }))}
-        >
-          <Text style={[styles.switchChipText, form.isFragile && styles.switchChipTextActive]}>
-            {form.isFragile ? 'Yes' : 'No'}
-          </Text>
-        </Pressable>
-      </View>
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Requires refrigeration</Text>
-        <Pressable
-          style={[styles.switchChip, form.requiresRefrigeration && styles.switchChipActive]}
-          onPress={() =>
-            setForm((prev) => ({
-              ...prev,
-              requiresRefrigeration: !prev.requiresRefrigeration,
-            }))
-          }
-        >
-          <Text
-            style={[
-              styles.switchChipText,
-              form.requiresRefrigeration && styles.switchChipTextActive,
-            ]}
+          <View style={styles.heroCard}>
+            <View style={styles.heroIconWrap}>
+              <IconSymbol name="shippingbox.fill" size={22} color="#111827" />
+            </View>
+            <Text style={styles.title}>Describe the shipment</Text>
+            <Text style={styles.subtitle}>
+              Add size, weight, timing, and handling notes before choosing the pickup location.
+            </Text>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Shipment Size</Text>
+            <SearchableDropdown
+              label="Size"
+              placeholder="Select shipment size"
+              options={sizeOptions}
+              valueLabel={selectedShipmentSize?.label ?? ''}
+              isOpen={openDropdown === 'size'}
+              searchText={sizeSearch}
+              onToggle={() => setOpenDropdown((prev) => (prev === 'size' ? null : 'size'))}
+              onSearchChange={setSizeSearch}
+              onSelect={(option) => {
+                setForm((prev) => ({ ...prev, shipmentSize: option.id as GoodsShipmentSize }));
+                setOpenDropdown(null);
+                setErrorMessage('');
+              }}
+            />
+
+            {selectedShipmentSize ? (
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>{selectedShipmentSize.label} shipment</Text>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Approximate weight</Text>
+                  <Text style={styles.summaryValue}>{selectedShipmentSize.approximateWeight}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Dimensions</Text>
+                  <Text style={styles.summaryValue}>{selectedShipmentSize.dimensions}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Best for</Text>
+                  <Text style={styles.summaryValue}>{selectedShipmentSize.usage}</Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Goods Information</Text>
+            <Text style={styles.label}>Goods Description</Text>
+            <TextInput
+              value={form.goodsDescription}
+              onChangeText={(value) => {
+                setForm((prev) => ({ ...prev, goodsDescription: value }));
+                setErrorMessage('');
+              }}
+              placeholder="Examples: electronics, clothing, food items, furniture"
+              placeholderTextColor="#98A2B3"
+              style={[styles.input, styles.multilineInput]}
+              multiline
+              textAlignVertical="top"
+            />
+
+            <View style={styles.dualInputRow}>
+              <View style={styles.dualInputItem}>
+                <Text style={styles.label}>Approx. Weight (kg)</Text>
+                <TextInput
+                  value={form.approximateWeightKg}
+                  onChangeText={(value) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      approximateWeightKg: value,
+                      heavyShipmentType: inferHeavyShipmentType(
+                        Number(value),
+                        Number(prev.numberOfPieces),
+                      ),
+                    }));
+                    setErrorMessage('');
+                  }}
+                  placeholder="Enter weight"
+                  placeholderTextColor="#98A2B3"
+                  style={styles.input}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.dualInputItem}>
+                <Text style={styles.label}>Pieces</Text>
+                <TextInput
+                  value={form.numberOfPieces}
+                  onChangeText={(value) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      numberOfPieces: value,
+                      heavyShipmentType: inferHeavyShipmentType(
+                        Number(prev.approximateWeightKg),
+                        Number(value),
+                      ),
+                    }));
+                    setErrorMessage('');
+                  }}
+                  placeholder="Enter pieces"
+                  placeholderTextColor="#98A2B3"
+                  style={styles.input}
+                  keyboardType="number-pad"
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Pickup Time</Text>
+            <View style={styles.toggleRow}>
+              <Pressable
+                style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
+                onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
+              >
+                <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
+                  Immediate pickup
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
+                onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
+              >
+                <Text
+                  style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}
+                >
+                  Schedule later
+                </Text>
+              </Pressable>
+            </View>
+
+            {!form.isImmediate ? (
+              <View style={styles.datetimeContainer}>
+                <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+                  <View style={styles.pickerIconWrap}>
+                    <IconSymbol name="calendar" size={16} color="#111827" />
+                  </View>
+                  <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+                  <Text style={styles.pickerButtonValue}>
+                    {form.scheduledPickupAt.toLocaleDateString()}
+                  </Text>
+                </Pressable>
+                <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+                  <View style={styles.pickerIconWrap}>
+                    <IconSymbol name="clock" size={16} color="#111827" />
+                  </View>
+                  <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+                  <Text style={styles.pickerButtonValue}>
+                    {form.scheduledPickupAt.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={styles.helperText}>
+                We’ll start matching a driver as soon as the request is submitted.
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Shipment Photos</Text>
+              <Text style={styles.photoCounter}>
+                {selectedPhotos.length} / {MAX_PHOTOS}
+              </Text>
+            </View>
+
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={[styles.primaryButton, styles.flexButton]}
+                onPress={() => void pickFromLibrary()}
+              >
+                <IconSymbol name="photo.on.rectangle" size={16} color="#111827" />
+                <Text style={styles.primaryButtonText}>Add Photos</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.outlineButton, styles.flexButton]}
+                onPress={() => void takePhoto()}
+              >
+                <IconSymbol name="camera" size={16} color="#111827" />
+                <Text style={styles.outlineButtonText}>Take Photo</Text>
+              </Pressable>
+            </View>
+
+            {isPickingPhoto ? <ActivityIndicator color="#2563EB" style={styles.loader} /> : null}
+
+            {selectedPhotos.length > 0 ? (
+              <View style={styles.photoGrid}>
+                {selectedPhotos.map((photo, index) => (
+                  <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                    <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
+                      <Text style={styles.removePhotoText}>Remove</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyPhotoState}>
+                <IconSymbol name="photo" size={20} color="#98A2B3" />
+                <Text style={styles.emptyPhotoText}>
+                  Photos help drivers understand the shipment size and handling needs.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Special Handling</Text>
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchLabel}>Fragile goods</Text>
+                <Text style={styles.switchDescription}>Mark items that require careful handling.</Text>
+              </View>
+              <Pressable
+                style={[styles.switchChip, form.isFragile && styles.switchChipActive]}
+                onPress={() => setForm((prev) => ({ ...prev, isFragile: !prev.isFragile }))}
+              >
+                <Text style={[styles.switchChipText, form.isFragile && styles.switchChipTextActive]}>
+                  {form.isFragile ? 'Yes' : 'No'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchLabel}>Requires refrigeration</Text>
+                <Text style={styles.switchDescription}>Use this for temperature-sensitive goods.</Text>
+              </View>
+              <Pressable
+                style={[styles.switchChip, form.requiresRefrigeration && styles.switchChipActive]}
+                onPress={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    requiresRefrigeration: !prev.requiresRefrigeration,
+                  }))
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchChipText,
+                    form.requiresRefrigeration && styles.switchChipTextActive,
+                  ]}
+                >
+                  {form.requiresRefrigeration ? 'Yes' : 'No'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+          <Pressable
+            style={[styles.continueButton, !canContinue && styles.continueDisabled]}
+            onPress={onContinue}
+            disabled={!canContinue}
           >
-            {form.requiresRefrigeration ? 'Yes' : 'No'}
-          </Text>
-        </Pressable>
-      </View>
+            <Text style={styles.continueText}>Continue to Pickup Location</Text>
+          </Pressable>
 
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          {showDatePicker ? (
+            <DateTimePicker
+              value={form.scheduledPickupAt}
+              mode="date"
+              minimumDate={new Date()}
+              onChange={(_, selectedDate) => {
+                setShowDatePicker(false);
+                if (!selectedDate) return;
+                const base = form.scheduledPickupAt;
+                const next = new Date(selectedDate);
+                next.setHours(base.getHours(), base.getMinutes(), 0, 0);
+                setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+              }}
+            />
+          ) : null}
 
-      <Pressable
-        style={[styles.continueButton, !canContinue && styles.continueDisabled]}
-        onPress={onContinue}
-        disabled={!canContinue}
-      >
-        <Text style={styles.continueText}>Continue to Pickup Location</Text>
-      </Pressable>
-
-      {showDatePicker ? (
-        <DateTimePicker
-          value={form.scheduledPickupAt}
-          mode="date"
-          minimumDate={new Date()}
-          onChange={(_, selectedDate) => {
-            setShowDatePicker(false);
-            if (!selectedDate) return;
-            const base = form.scheduledPickupAt;
-            const next = new Date(selectedDate);
-            next.setHours(base.getHours(), base.getMinutes(), 0, 0);
-            setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
-          }}
-        />
-      ) : null}
-
-        {showTimePicker ? (
-          <DateTimePicker
-            value={form.scheduledPickupAt}
-            mode="time"
-            onChange={(_, selectedDate) => {
-              setShowTimePicker(false);
-              if (!selectedDate) return;
-              const next = new Date(form.scheduledPickupAt);
-              next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-              setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
-            }}
-          />
-        ) : null}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {showTimePicker ? (
+            <DateTimePicker
+              value={form.scheduledPickupAt}
+              mode="time"
+              onChange={(_, selectedDate) => {
+                setShowTimePicker(false);
+                if (!selectedDate) return;
+                const next = new Date(form.scheduledPickupAt);
+                next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+                setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+              }}
+            />
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
   container: {
-    padding: 16,
-    backgroundColor: M3LoginColors.background,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    backgroundColor: '#FAFAFA',
   },
-  header: {
-    marginBottom: 12,
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
-  backButton: {
-    alignSelf: 'flex-start',
+  topBarButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 8,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
-  backButtonText: {
-    color: M3LoginColors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
+  topBarTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  topBarSpacer: {
+    width: 42,
+    height: 42,
+  },
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    marginBottom: 16,
+  },
+  heroIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFC548',
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontWeight: '800',
+    color: '#111827',
   },
   subtitle: {
     fontSize: 15,
-    color: M3LoginColors.textSecondary,
-    marginTop: 4,
+    color: '#68768A',
+    marginTop: 8,
     lineHeight: 22,
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: M3LoginColors.textPrimary,
-    marginBottom: 6,
-    marginTop: 12,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    marginTop: 14,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-    marginTop: 14,
+    fontWeight: '800',
+    color: '#111827',
     marginBottom: 10,
   },
   dropdownButton: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    minHeight: 52,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    minHeight: 56,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#F8FAFC',
   },
   dropdownValue: {
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   dropdownPlaceholder: {
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     fontSize: 15,
   },
   dropdownChevron: {
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     fontSize: 12,
     fontWeight: '700',
   },
   dropdownPanel: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   dropdownSearch: {
     borderBottomWidth: 1,
-    borderBottomColor: M3LoginColors.outlineVariant,
+    borderBottomColor: '#EEF2F6',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    color: '#111827',
   },
   dropdownList: {
     maxHeight: 210,
@@ -719,185 +870,189 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: M3LoginColors.outlineVariant,
+    borderTopColor: '#EEF2F6',
   },
   dropdownItemText: {
     fontSize: 15,
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   emptyText: {
     paddingHorizontal: 14,
     paddingVertical: 16,
-    color: M3LoginColors.textTertiary,
+    color: '#98A2B3',
     fontSize: 14,
   },
   summaryCard: {
-    marginTop: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    backgroundColor: M3LoginColors.primaryContainer,
-    padding: 12,
-    gap: 4,
+    marginTop: 14,
+    borderRadius: 20,
+    backgroundColor: '#0F172A',
+    padding: 16,
   },
   summaryTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#FFFFFF',
+    marginBottom: 10,
   },
-  summaryLine: {
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#CBD5E1',
+    flex: 1,
+  },
+  summaryValue: {
     fontSize: 14,
     color: '#FFFFFF',
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'right',
   },
   input: {
-    minHeight: 52,
+    minHeight: 56,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
     paddingHorizontal: 14,
     fontSize: 15,
-    color: M3LoginColors.textPrimary,
-    backgroundColor: M3LoginColors.surface,
+    color: '#111827',
+    backgroundColor: '#F8FAFC',
   },
   multilineInput: {
-    minHeight: 96,
-    paddingTop: 12,
-    paddingBottom: 12,
+    minHeight: 110,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
+  dualInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dualInputItem: {
+    flex: 1,
   },
   toggleRow: {
     flexDirection: 'row',
     gap: 10,
+    marginTop: 4,
   },
   optionChip: {
     flex: 1,
-    minHeight: 48,
-    borderRadius: 999,
+    minHeight: 50,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   optionChipActive: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
   },
   optionChipText: {
     fontSize: 14,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: '#68768A',
   },
   optionChipTextActive: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   pickerButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
-    borderRadius: 10,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: M3LoginColors.primaryContainer,
+    paddingVertical: 14,
+    backgroundColor: '#F8FAFC',
   },
   datetimeContainer: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 12,
   },
+  pickerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFC548',
+    marginBottom: 12,
+  },
   pickerButtonLabel: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: '#68768A',
     marginBottom: 4,
   },
   pickerButtonValue: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#111827',
   },
   helperText: {
-    marginTop: 8,
-    color: M3LoginColors.textSecondary,
+    marginTop: 12,
+    color: '#68768A',
     fontSize: 13,
     lineHeight: 18,
   },
-  switchRow: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 10,
-  },
-  switchLabel: {
-    flex: 1,
-    fontSize: 15,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '500',
-  },
-  switchChip: {
-    minWidth: 74,
-    minHeight: 38,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-  },
-  switchChipActive: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
-  },
-  switchChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  switchChipTextActive: {
-    color: '#FFFFFF',
+    marginBottom: 10,
   },
   photoCounter: {
-    marginBottom: 8,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   actionsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 14,
   },
   flexButton: {
     flex: 1,
   },
-  secondaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
+  primaryButton: {
+    minHeight: 52,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: '#FFC548',
     paddingHorizontal: 14,
+    flexDirection: 'row',
+    gap: 8,
   },
-  secondaryButtonText: {
-    color: M3LoginColors.onPrimary,
+  primaryButtonText: {
+    color: '#111827',
     fontSize: 14,
     fontWeight: '700',
   },
-  photoButton: {
-    minHeight: 48,
-    borderRadius: 12,
+  outlineButton: {
+    minHeight: 52,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
+    borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
+    flexDirection: 'row',
+    gap: 8,
   },
-  photoButtonText: {
-    color: M3LoginColors.primary,
+  outlineButtonText: {
+    color: '#111827',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -908,45 +1063,115 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 14,
   },
   photoItem: {
     width: '47%',
   },
   photoPreview: {
     width: '100%',
-    height: 120,
-    borderRadius: 12,
-    backgroundColor: '#e5e7eb',
+    height: 126,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
     marginBottom: 6,
+  },
+  emptyPhotoState: {
+    marginTop: 14,
+    minHeight: 108,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    gap: 10,
+  },
+  emptyPhotoText: {
+    textAlign: 'center',
+    color: '#68768A',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  switchCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  switchLabel: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '700',
+  },
+  switchDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#68768A',
+  },
+  switchChip: {
+    minWidth: 74,
+    minHeight: 40,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  switchChipActive: {
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
+  },
+  switchChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#68768A',
+  },
+  switchChipTextActive: {
+    color: '#111827',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEF2F6',
+    marginVertical: 16,
   },
   removePhotoButton: {
     alignSelf: 'flex-start',
   },
   removePhotoText: {
-    color: '#b42318',
+    color: '#DC2626',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   errorText: {
-    color: '#b42318',
+    color: '#B42318',
     fontSize: 14,
-    fontWeight: '500',
-    marginTop: 16,
+    fontWeight: '600',
+    marginTop: 2,
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
   continueButton: {
-    marginTop: 24,
-    minHeight: 54,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+    minHeight: 58,
+    borderRadius: 20,
+    backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 8,
   },
   continueDisabled: {
     opacity: 0.5,
   },
   continueText: {
-    color: M3LoginColors.onPrimary,
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
