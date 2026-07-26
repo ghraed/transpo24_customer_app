@@ -752,10 +752,6 @@ export default function VehicleDetailsScreen() {
     } as unknown as Href);
   }, [canContinue, form, isVehicleTransport, normalizedVin, requestForm, router, selectedPhotos, serviceId, serviceKey, validationErrors]);
 
-  const onBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
@@ -774,20 +770,6 @@ export default function VehicleDetailsScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-      <View style={styles.topBar}>
-        <Pressable style={styles.topBarButton} onPress={onBack}>
-          <IconSymbol
-            name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-            color="#111827"
-            size={24}
-          />
-        </Pressable>
-        <View style={styles.topBarTitleWrap}>
-          <Text style={styles.topBarTitle}>Vehicle Details</Text>
-        </View>
-        <View style={styles.topBarButton} />
-      </View>
-
       <View style={styles.heroBlock}>
         <Text style={styles.title}>Tell us about the vehicle</Text>
         <Text style={styles.subtitle}>

@@ -446,20 +446,6 @@ export default function MotorcycleDetailsScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-      <View style={styles.topBar}>
-        <Pressable style={styles.topBarButton} onPress={() => router.back()}>
-          <IconSymbol
-            name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-            color="#111827"
-            size={24}
-          />
-        </Pressable>
-        <View style={styles.topBarTitleWrap}>
-          <Text style={styles.topBarTitle}>Motorcycle Details</Text>
-        </View>
-        <View style={styles.topBarButton} />
-      </View>
-
       <View style={styles.heroBlock}>
         <Text style={styles.title}>Tell us about the motorcycle</Text>
         <Text style={styles.subtitle}>

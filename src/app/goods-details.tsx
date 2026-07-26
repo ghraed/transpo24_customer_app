@@ -87,6 +87,18 @@ type SearchableOption = {
   label: string;
 };
 
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
+
 function inferHeavyShipmentType(
   approximateWeightKg: number,
   numberOfPieces: number,
@@ -146,18 +158,6 @@ function SearchableDropdown(props: {
       ) : null}
     </View>
   );
-}
-
-function IconSymbol({
-  name,
-  color,
-  size = 18,
-}: {
-  name: SymbolViewProps['name'];
-  color: ColorValue;
-  size?: number;
-}) {
-  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
 function parsePendingGoodsDetails(raw: string | undefined): PendingGoodsDetailsPayload | undefined {
@@ -416,14 +416,6 @@ export default function GoodsDetailsScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.topBar}>
-            <Pressable style={styles.topBarButton} onPress={() => router.back()}>
-              <IconSymbol name="chevron.left" size={18} color="#111827" />
-            </Pressable>
-            <Text style={styles.topBarTitle}>Goods Details</Text>
-            <View style={styles.topBarSpacer} />
-          </View>
-
           <View style={styles.heroCard}>
             <View style={styles.heroIconWrap}>
               <IconSymbol name="shippingbox.fill" size={22} color="#111827" />
@@ -561,7 +553,7 @@ export default function GoodsDetailsScreen() {
               <View style={styles.datetimeContainer}>
                 <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
                   <View style={styles.pickerIconWrap}>
-                    <IconSymbol name="calendar" size={16} color="#111827" />
+                    <Text style={styles.pickerIconGlyph}>🗓</Text>
                   </View>
                   <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
                   <Text style={styles.pickerButtonValue}>
@@ -570,7 +562,7 @@ export default function GoodsDetailsScreen() {
                 </Pressable>
                 <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
                   <View style={styles.pickerIconWrap}>
-                    <IconSymbol name="clock" size={16} color="#111827" />
+                    <Text style={styles.pickerIconGlyph}>🕒</Text>
                   </View>
                   <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
                   <Text style={styles.pickerButtonValue}>
@@ -987,6 +979,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFC548',
     marginBottom: 12,
+  },
+  pickerIconGlyph: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
   },
   pickerButtonLabel: {
     fontSize: 13,

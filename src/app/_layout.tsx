@@ -163,11 +163,56 @@ function RootNavigator() {
 
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-          <Stack.Screen name="choose-service" options={{ title: t('Choose Service') }} />
-          <Stack.Screen name="vehicle-details" options={{ title: t('Vehicle Details') }} />
-          <Stack.Screen name="motorcycle-details" options={{ title: t('Motorcycle Details') }} />
-          <Stack.Screen name="goods-details" options={{ title: t('Goods Details') }} />
-          <Stack.Screen name="furniture-details" options={{ title: t('Furniture Details') }} />
+          <Stack.Screen
+            name="choose-service"
+            options={{
+              title: t('Choose Service'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="vehicle-details"
+            options={{
+              title: t('Vehicle Details'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="motorcycle-details"
+            options={{
+              title: t('Motorcycle Details'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="goods-details"
+            options={{
+              title: t('Goods Details'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="furniture-details"
+            options={{
+              title: t('Furniture Details'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
           <Stack.Screen name="vehicle-condition" options={{ title: t('Vehicle Condition') }} />
           <Stack.Screen name="pickup-location" options={{ title: t('Pickup Location') }} />
           <Stack.Screen name="dropoff-location" options={{ title: t('Dropoff Location') }} />

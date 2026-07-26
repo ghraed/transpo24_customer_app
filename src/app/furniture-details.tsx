@@ -1,5 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -8,24 +9,38 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ColorValue,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import type {
   FurnitureDetailsRouteParams,
   FurnitureTransportFormData,
   LocalPhotoAsset,
   PendingFurnitureDetailsPayload,
 } from '@/types/customer-request';
-import { M3LoginColors } from '@/constants/theme';
-import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { M3Styles } from '@/lib/m3-styles';
 
 const MAX_PHOTOS = 8;
+
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
 
 function parsePendingFurnitureDetails(
   raw: string | undefined,
@@ -123,6 +138,7 @@ export default function FurnitureDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<FurnitureDetailsRouteParams>();
   const keyboardInset = useAndroidKeyboardInset();
+  const insets = useSafeAreaInsets();
 
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
   const serviceKey = typeof params.serviceKey === 'string' ? params.serviceKey.trim() : '';
@@ -267,437 +283,435 @@ export default function FurnitureDetailsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          keyboardInset > 0 ? { paddingBottom: 30 + keyboardInset } : undefined,
-        ]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Furniture Details</Text>
-        <Text style={styles.subtitle}>
-          Add furniture photos, description, helpers, and moving date before choosing pickup location.
-        </Text>
-      </View>
-
-      <Text style={styles.sectionTitle}>Upload Photos</Text>
-      <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
-      <View style={styles.actionsRow}>
-        <Pressable
-          style={[styles.secondaryButton, styles.flexButton]}
-          onPress={() => void pickFromLibrary()}
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            {
+              paddingTop: Math.max(insets.top, 10),
+              paddingBottom: keyboardInset > 0 ? keyboardInset + 32 : 44,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.secondaryButtonText}>Add Photos</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.photoButton, styles.flexButton]}
-          onPress={() => void takePhoto()}
-        >
-          <Text style={styles.photoButtonText}>Take Photo</Text>
-        </Pressable>
-      </View>
-      <Text style={styles.helperText}>
-        Add clear furniture photos so drivers can suggest the right helpers and equipment.
-      </Text>
-      {isPickingPhoto ? <ActivityIndicator color="#1a73e8" style={styles.loader} /> : null}
-      <View style={styles.photoGrid}>
-        {selectedPhotos.map((photo, index) => (
-          <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
-            <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
-            <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
-              <Text style={styles.removePhotoText}>Remove</Text>
-            </Pressable>
+          <View style={styles.heroCard}>
+            <View style={styles.heroIconWrap}>
+              <IconSymbol name="bed.double.fill" size={22} color="#111827" />
+            </View>
+            <Text style={styles.title}>Prepare your furniture move</Text>
+            <Text style={styles.subtitle}>
+              Add photos, item details, helper needs, and moving time before choosing the pickup location.
+            </Text>
           </View>
-        ))}
-      </View>
 
-      <Text style={styles.sectionTitle}>Furniture Details</Text>
-      <Text style={styles.label}>Furniture Description</Text>
-      <TextInput
-        value={form.furnitureDescription}
-        onChangeText={(value) => {
-          setForm((prev) => ({ ...prev, furnitureDescription: value }));
-          setErrorMessage('');
-        }}
-        placeholder="Examples: sofas, refrigerator, bed, cabinets"
-        placeholderTextColor="#98a2b3"
-        style={[styles.input, styles.multilineInput]}
-        multiline
-        textAlignVertical="top"
-      />
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Furniture Photos</Text>
+              <Text style={styles.photoCounter}>
+                {selectedPhotos.length} / {MAX_PHOTOS}
+              </Text>
+            </View>
 
-      <Text style={styles.label}>Approximate Number of Items</Text>
-      <TextInput
-        value={form.approximateItemCount}
-        onChangeText={(value) => {
-          setForm((prev) => ({ ...prev, approximateItemCount: value }));
-          setErrorMessage('');
-        }}
-        placeholder="Enter item count"
-        placeholderTextColor="#98a2b3"
-        style={styles.input}
-        keyboardType="number-pad"
-      />
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={[styles.primaryButton, styles.flexButton]}
+                onPress={() => void pickFromLibrary()}
+              >
+                <IconSymbol name="photo.on.rectangle" size={16} color="#111827" />
+                <Text style={styles.primaryButtonText}>Add Photos</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.outlineButton, styles.flexButton]}
+                onPress={() => void takePhoto()}
+              >
+                <IconSymbol name="camera" size={16} color="#111827" />
+                <Text style={styles.outlineButtonText}>Take Photo</Text>
+              </Pressable>
+            </View>
 
-      <Text style={styles.sectionTitle}>Date & Time</Text>
-      <View style={styles.toggleRow}>
-        <Pressable
-          style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
-          onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
-        >
-          <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
-            Immediate pickup
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
-          onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
-        >
-          <Text style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}>
-            Schedule for later
-          </Text>
-        </Pressable>
-      </View>
-
-      {!form.isImmediate ? (
-        <View style={styles.datetimeContainer}>
-          <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
-            <Text style={styles.pickerButtonValue}>
-              {form.movingDate.toLocaleDateString()}
+            <Text style={styles.helperText}>
+              Add clear furniture photos so drivers can suggest the right helpers and equipment.
             </Text>
-          </Pressable>
-          <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
-            <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
-            <Text style={styles.pickerButtonValue}>
-              {form.movingDate.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
 
-      <Text style={styles.sectionTitle}>Helpers & Loading</Text>
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>I need helper</Text>
-        <Pressable
-          style={[styles.switchChip, form.needsHelpers && styles.switchChipActive]}
-          onPress={() =>
-            setForm((prev) => ({
-              ...prev,
-              needsHelpers: !prev.needsHelpers,
-              helpersCount: prev.needsHelpers ? '' : prev.helpersCount,
-            }))
-          }
-        >
-          <Text style={[styles.switchChipText, form.needsHelpers && styles.switchChipTextActive]}>
-            {form.needsHelpers ? 'Yes' : 'No'}
-          </Text>
-        </Pressable>
-      </View>
-      {form.needsHelpers ? (
-        <TextInput
-          value={form.helpersCount}
-          onChangeText={(value) => {
-            setForm((prev) => ({ ...prev, helpersCount: value }));
-            setErrorMessage('');
-          }}
-          placeholder="Number of helpers"
-          placeholderTextColor="#98a2b3"
-          style={styles.input}
-          keyboardType="number-pad"
-        />
-      ) : null}
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>I can help with loading</Text>
-        <Pressable
-          style={[styles.switchChip, form.customerCanHelpLoading && styles.switchChipActive]}
-          onPress={() =>
-            setForm((prev) => ({
-              ...prev,
-              customerCanHelpLoading: !prev.customerCanHelpLoading,
-            }))
-          }
-        >
-          <Text
-            style={[
-              styles.switchChipText,
-              form.customerCanHelpLoading && styles.switchChipTextActive,
-            ]}
+            {isPickingPhoto ? <ActivityIndicator color="#2563EB" style={styles.loader} /> : null}
+
+            {selectedPhotos.length > 0 ? (
+              <View style={styles.photoGrid}>
+                {selectedPhotos.map((photo, index) => (
+                  <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                    <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
+                      <Text style={styles.removePhotoText}>Remove</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyPhotoState}>
+                <IconSymbol name="photo" size={20} color="#98A2B3" />
+                <Text style={styles.emptyPhotoText}>
+                  Upload at least one photo so drivers can estimate handling and loading support.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Furniture Information</Text>
+            <Text style={styles.label}>Furniture Description</Text>
+            <TextInput
+              value={form.furnitureDescription}
+              onChangeText={(value) => {
+                setForm((prev) => ({ ...prev, furnitureDescription: value }));
+                setErrorMessage('');
+              }}
+              placeholder="Examples: sofas, refrigerator, bed, cabinets"
+              placeholderTextColor="#98A2B3"
+              style={[styles.input, styles.multilineInput]}
+              multiline
+              textAlignVertical="top"
+            />
+
+            <Text style={styles.label}>Approximate Number of Items</Text>
+            <TextInput
+              value={form.approximateItemCount}
+              onChangeText={(value) => {
+                setForm((prev) => ({ ...prev, approximateItemCount: value }));
+                setErrorMessage('');
+              }}
+              placeholder="Enter item count"
+              placeholderTextColor="#98A2B3"
+              style={styles.input}
+              keyboardType="number-pad"
+            />
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Pickup Time</Text>
+            <View style={styles.toggleRow}>
+              <Pressable
+                style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
+                onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
+              >
+                <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
+                  Immediate pickup
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
+                onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
+              >
+                <Text style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}>
+                  Schedule later
+                </Text>
+              </Pressable>
+            </View>
+
+            {!form.isImmediate ? (
+              <View style={styles.datetimeContainer}>
+                <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+                  <View style={styles.pickerIconWrap}>
+                    <Text style={styles.pickerIconGlyph}>🗓</Text>
+                  </View>
+                  <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+                  <Text style={styles.pickerButtonValue}>{form.movingDate.toLocaleDateString()}</Text>
+                </Pressable>
+                <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+                  <View style={styles.pickerIconWrap}>
+                    <Text style={styles.pickerIconGlyph}>🕒</Text>
+                  </View>
+                  <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+                  <Text style={styles.pickerButtonValue}>
+                    {form.movingDate.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={styles.helperText}>
+                We’ll start matching a driver as soon as the request is submitted.
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Helpers & Loading</Text>
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchLabel}>I need helper</Text>
+                <Text style={styles.switchDescription}>
+                  Add helpers if the furniture requires extra loading support.
+                </Text>
+              </View>
+              <Pressable
+                style={[styles.switchChip, form.needsHelpers && styles.switchChipActive]}
+                onPress={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    needsHelpers: !prev.needsHelpers,
+                    helpersCount: prev.needsHelpers ? '' : prev.helpersCount,
+                  }))
+                }
+              >
+                <Text style={[styles.switchChipText, form.needsHelpers && styles.switchChipTextActive]}>
+                  {form.needsHelpers ? 'Yes' : 'No'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {form.needsHelpers ? (
+              <TextInput
+                value={form.helpersCount}
+                onChangeText={(value) => {
+                  setForm((prev) => ({ ...prev, helpersCount: value }));
+                  setErrorMessage('');
+                }}
+                placeholder="Number of helpers"
+                placeholderTextColor="#98A2B3"
+                style={[styles.input, styles.helperInput]}
+                keyboardType="number-pad"
+              />
+            ) : null}
+
+            <View style={styles.divider} />
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.switchLabel}>I can help with loading</Text>
+                <Text style={styles.switchDescription}>
+                  Let drivers know if you can assist with carrying or loading items.
+                </Text>
+              </View>
+              <Pressable
+                style={[styles.switchChip, form.customerCanHelpLoading && styles.switchChipActive]}
+                onPress={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    customerCanHelpLoading: !prev.customerCanHelpLoading,
+                  }))
+                }
+              >
+                <Text
+                  style={[
+                    styles.switchChipText,
+                    form.customerCanHelpLoading && styles.switchChipTextActive,
+                  ]}
+                >
+                  {form.customerCanHelpLoading ? 'Yes' : 'No'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <Text style={styles.helperText}>
+              Drivers can still suggest the final helper count after reviewing the photos.
+            </Text>
+          </View>
+
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+          <Pressable
+            style={[styles.continueButton, !canContinue && styles.continueDisabled]}
+            onPress={onContinue}
+            disabled={!canContinue}
           >
-            {form.customerCanHelpLoading ? 'Yes' : 'No'}
-          </Text>
-        </Pressable>
-      </View>
-      <Text style={styles.helperText}>
-        Drivers can still suggest the final helper count after reviewing the photos.
-      </Text>
+            <Text style={styles.continueText}>Continue to Pickup Location</Text>
+          </Pressable>
 
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          {showDatePicker ? (
+            <DateTimePicker
+              value={form.movingDate}
+              mode="date"
+              minimumDate={minimumMovingDate}
+              onChange={(_, selectedDate) => {
+                setShowDatePicker(false);
+                if (!selectedDate) return;
+                const next = new Date(selectedDate);
+                next.setHours(form.movingDate.getHours(), form.movingDate.getMinutes(), 0, 0);
+                if (next.getTime() <= minimumMovingDate.getTime()) {
+                  next.setTime(minimumMovingDate.getTime());
+                }
+                setForm((prev) => ({ ...prev, movingDate: next }));
+              }}
+            />
+          ) : null}
 
-      <Pressable
-        style={[styles.continueButton, !canContinue && styles.continueDisabled]}
-        onPress={onContinue}
-        disabled={!canContinue}
-      >
-        <Text style={styles.continueText}>Continue to Pickup Location</Text>
-      </Pressable>
-
-      {showDatePicker ? (
-        <DateTimePicker
-          value={form.movingDate}
-          mode="date"
-          minimumDate={minimumMovingDate}
-          onChange={(_, selectedDate) => {
-            setShowDatePicker(false);
-            if (!selectedDate) return;
-            const next = new Date(selectedDate);
-            next.setHours(
-              form.movingDate.getHours(),
-              form.movingDate.getMinutes(),
-              0,
-              0,
-            );
-            if (next.getTime() <= minimumMovingDate.getTime()) {
-              next.setTime(minimumMovingDate.getTime());
-            }
-            setForm((prev) => ({ ...prev, movingDate: next }));
-          }}
-        />
-      ) : null}
-
-        {showTimePicker ? (
-          <DateTimePicker
-            value={form.movingDate}
-            mode="time"
-            onChange={(_, selectedDate) => {
-              setShowTimePicker(false);
-              if (!selectedDate) return;
-              const next = new Date(form.movingDate);
-              next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-              if (next.getTime() <= minimumMovingDate.getTime()) {
-                next.setTime(minimumMovingDate.getTime());
-              }
-              setForm((prev) => ({ ...prev, movingDate: next }));
-            }}
-          />
-        ) : null}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {showTimePicker ? (
+            <DateTimePicker
+              value={form.movingDate}
+              mode="time"
+              onChange={(_, selectedDate) => {
+                setShowTimePicker(false);
+                if (!selectedDate) return;
+                const next = new Date(form.movingDate);
+                next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+                if (next.getTime() <= minimumMovingDate.getTime()) {
+                  next.setTime(minimumMovingDate.getTime());
+                }
+                setForm((prev) => ({ ...prev, movingDate: next }));
+              }}
+            />
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
   container: {
-    padding: 16,
-    backgroundColor: M3LoginColors.background,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    backgroundColor: '#FAFAFA',
   },
-  header: {
-    marginBottom: 12,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 8,
-    backgroundColor: M3LoginColors.surface,
-  },
-  backButtonText: {
-    color: M3LoginColors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: M3LoginColors.textSecondary,
-    marginTop: 4,
-    lineHeight: 22,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: M3LoginColors.textPrimary,
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-    marginTop: 14,
-    marginBottom: 10,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  optionChip: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  optionChipActive: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
-  },
-  optionChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  optionChipTextActive: {
-    color: '#FFFFFF',
-  },
-  input: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: M3LoginColors.textPrimary,
-    backgroundColor: M3LoginColors.surface,
-  },
-  multilineInput: {
-    minHeight: 96,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  pickerButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: M3LoginColors.surface,
-  },
-  datetimeContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  pickerButtonLabel: {
-    fontSize: 13,
-    color: M3LoginColors.textTertiary,
-    marginBottom: 4,
-  },
-  pickerButtonValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: M3LoginColors.textPrimary,
-  },
-  helperText: {
-    marginTop: 8,
-    color: M3LoginColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  switchRow: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 10,
+    marginBottom: 20,
   },
-  switchLabel: {
-    flex: 1,
-    fontSize: 15,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '500',
-  },
-  switchChip: {
-    minWidth: 74,
-    minHeight: 38,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+  topBarButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
-  switchChipActive: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+  topBarTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
   },
-  switchChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+  topBarSpacer: {
+    width: 42,
+    height: 42,
   },
-  switchChipTextActive: {
-    color: '#FFFFFF',
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    marginBottom: 16,
+  },
+  heroIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFC548',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#68768A',
+    marginTop: 8,
+    lineHeight: 22,
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+    marginBottom: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 10,
   },
   photoCounter: {
-    marginBottom: 8,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   actionsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 8,
   },
   flexButton: {
     flex: 1,
   },
-  secondaryButton: {
-    minHeight: 48,
-    borderRadius: 10,
+  primaryButton: {
+    minHeight: 52,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFC548',
     paddingHorizontal: 14,
+    flexDirection: 'row',
+    gap: 8,
   },
-  secondaryButtonText: {
-    color: M3LoginColors.primary,
+  primaryButtonText: {
+    color: '#111827',
     fontSize: 14,
     fontWeight: '700',
   },
-  photoButton: {
-    minHeight: 48,
-    borderRadius: 10,
+  outlineButton: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
+    flexDirection: 'row',
+    gap: 8,
   },
-  photoButtonText: {
-    color: M3LoginColors.onPrimary,
+  outlineButtonText: {
+    color: '#111827',
     fontSize: 14,
     fontWeight: '700',
+  },
+  helperText: {
+    marginTop: 12,
+    color: '#68768A',
+    fontSize: 13,
+    lineHeight: 18,
   },
   loader: {
     marginVertical: 10,
@@ -706,45 +720,206 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 14,
   },
   photoItem: {
     width: '47%',
   },
   photoPreview: {
     width: '100%',
-    height: 120,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.surfaceContainer,
+    height: 126,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
     marginBottom: 6,
+  },
+  emptyPhotoState: {
+    marginTop: 14,
+    minHeight: 108,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    gap: 10,
+  },
+  emptyPhotoText: {
+    textAlign: 'center',
+    color: '#68768A',
+    fontSize: 13,
+    lineHeight: 18,
   },
   removePhotoButton: {
     alignSelf: 'flex-start',
   },
   removePhotoText: {
-    color: '#b42318',
+    color: '#DC2626',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  errorText: {
-    color: '#b42318',
+  label: {
     fontSize: 14,
-    fontWeight: '500',
-    marginTop: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    marginTop: 14,
   },
-  continueButton: {
-    marginTop: 24,
-    minHeight: 54,
-    borderRadius: 12,
-    backgroundColor: '#1a73e8',
+  input: {
+    minHeight: 56,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#111827',
+    backgroundColor: '#F8FAFC',
+  },
+  multilineInput: {
+    minHeight: 110,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
+  helperInput: {
+    marginTop: 14,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  optionChip: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  optionChipActive: {
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
+  },
+  optionChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#68768A',
+  },
+  optionChipTextActive: {
+    color: '#111827',
+  },
+  datetimeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  pickerButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#F8FAFC',
+  },
+  pickerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFC548',
+    marginBottom: 12,
+  },
+  pickerIconGlyph: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  pickerButtonLabel: {
+    fontSize: 13,
+    color: '#68768A',
+    marginBottom: 4,
+  },
+  pickerButtonValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  switchCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  switchLabel: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '700',
+  },
+  switchDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#68768A',
+  },
+  switchChip: {
+    minWidth: 74,
+    minHeight: 40,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  switchChipActive: {
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
+  },
+  switchChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#68768A',
+  },
+  switchChipTextActive: {
+    color: '#111827',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEF2F6',
+    marginVertical: 16,
+  },
+  errorText: {
+    color: '#B42318',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 2,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  continueButton: {
+    minHeight: 58,
+    borderRadius: 20,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   continueDisabled: {
     opacity: 0.5,
   },
   continueText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

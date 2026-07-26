@@ -182,10 +182,6 @@ export default function ChooseServiceScreen() {
     });
   }, [router, selectedService]);
 
-  const onBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.centerContainer}>
@@ -232,20 +228,6 @@ export default function ChooseServiceScreen() {
           },
         ]}
       >
-        <View style={styles.topBar}>
-          <Pressable style={styles.topBarButton} onPress={onBack}>
-            <IconSymbol
-              name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-              color="#111827"
-              size={24}
-            />
-          </Pressable>
-          <View style={styles.topBarTitleWrap}>
-            <Text style={styles.topBarTitle}>{t('Choose Service')}</Text>
-          </View>
-          <View style={styles.topBarButton} />
-        </View>
-
         <View style={styles.heroBlock}>
           <Text style={styles.heroTitle}>{t('What do you need to transport?')}</Text>
           <Text style={styles.heroSubtitle}>
@@ -338,28 +320,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     gap: 18,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  topBarButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topBarTitleWrap: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  topBarTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
   },
   heroBlock: {
     gap: 8,
