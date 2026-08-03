@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -7,11 +8,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ColorValue,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   isNativeMapRuntimeAvailable,
@@ -29,8 +35,6 @@ import {
   uploadRequestPhotos,
 } from '@/lib/api';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { M3LoginColors } from '@/constants/theme';
-import { M3Styles } from '@/lib/m3-styles';
 import {
   reverseGeocodeCoordinates,
   resolvePlaceFromQuery,
@@ -169,10 +173,23 @@ function serializeItemDetails(payload: UpdateScheduleAndItemDetailsPayload): str
   });
 }
 
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
+
 export default function DropoffLocationScreen() {
   const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const params = useLocalSearchParams<DropoffLocationRouteParams>();
+  const insets = useSafeAreaInsets();
 
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
@@ -231,7 +248,7 @@ export default function DropoffLocationScreen() {
   );
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [locationMessage, setLocationMessage] = useState<string>('');
-  const [isLocationServicesDisabled, setIsLocationServicesDisabled] = useState<boolean>(false);
+  const [, setIsLocationServicesDisabled] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [searchMessage, setSearchMessage] = useState<string>('');
@@ -814,17 +831,30 @@ export default function DropoffLocationScreen() {
     routeDistanceKm !== null ? formatDistance(routeDistanceKm * 1000) : '';
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[
-        styles.container,
-        keyboardInset > 0 ? { paddingBottom: 18 + keyboardInset } : undefined,
-      ]}
-    >
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </Pressable>
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top, 18),
+            paddingBottom: Math.max(insets.bottom + 24, 36) + keyboardInset,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View style={styles.heroBadge}>
+            <IconSymbol name={{ ios: 'map.fill', android: 'place', web: 'place' }} color="#111827" size={20} />
+          </View>
+          <Text style={styles.heroLabel}>Dropoff</Text>
+        </View>
         <Text style={styles.title}>Dropoff Location</Text>
         <Text style={styles.subtitle}>Where should the driver deliver your item?</Text>
       </View>
@@ -871,9 +901,12 @@ export default function DropoffLocationScreen() {
           disabled={isLoadingLocation}
         >
           {isLoadingLocation ? (
-            <ActivityIndicator size="small" color={M3LoginColors.onPrimary} />
+            <ActivityIndicator size="small" color="#111827" />
           ) : (
-            <Text style={styles.locationButtonText}>Use Current Location</Text>
+            <>
+              <IconSymbol name={{ ios: 'location.fill', android: 'my_location', web: 'my_location' }} color="#111827" size={16} />
+              <Text style={styles.locationButtonText}>Use Current Location</Text>
+            </>
           )}
         </Pressable>
         {isSearchingPlaces ? (
@@ -976,84 +1009,108 @@ export default function DropoffLocationScreen() {
       </View>
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+      </ScrollView>
 
-      <Pressable
-        style={[
-          styles.continueButton,
-          !canContinue && styles.continueButtonDisabled,
-          keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
-        ]}
-        onPress={() => void onContinue()}
-        disabled={!canContinue}
-      >
-        {isSaving ? (
-          <ActivityIndicator size="small" color={M3LoginColors.onPrimary} />
-        ) : (
-          <Text style={styles.continueText}>Continue</Text>
-        )}
-      </Pressable>
+      <View style={styles.footerBar}>
+        <Pressable
+          style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
+          onPress={() => void onContinue()}
+          disabled={!canContinue}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#111827" />
+          ) : (
+            <Text style={styles.continueText}>Continue</Text>
+          )}
+        </Pressable>
+      </View>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
   container: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 18,
+    backgroundColor: '#FAFAFA',
   },
-  header: {
-    marginBottom: 10,
+  content: {
+    paddingHorizontal: 20,
+    gap: 12,
   },
-  backButton: {
-    alignSelf: 'flex-start',
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 8,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  backButtonText: {
-    color: M3LoginColors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  heroBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroLabel: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontWeight: '800',
+    color: '#111827',
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 8,
     fontSize: 15,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
+    lineHeight: 22,
   },
   searchContainer: {
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 10,
+    borderColor: '#E5E8EF',
+    borderRadius: 24,
+    padding: 16,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   searchInput: {
-    height: 44,
+    minHeight: 56,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    paddingHorizontal: 14,
     fontSize: 15,
-    color: M3LoginColors.textPrimary,
-    backgroundColor: M3LoginColors.surface,
+    color: '#111827',
+    backgroundColor: '#F8FAFC',
   },
   searchHint: {
     marginTop: 6,
-    fontSize: 12,
-    color: M3LoginColors.textTertiary,
+    fontSize: 13,
+    color: '#68768A',
+    lineHeight: 18,
   },
   searchSpinner: {
     marginTop: 8,
@@ -1062,49 +1119,51 @@ const styles = StyleSheet.create({
   suggestionsList: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
   },
   suggestionItem: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: M3LoginColors.outlineVariant,
+    borderTopColor: '#EEF2F6',
   },
   suggestionText: {
     fontSize: 14,
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
   },
   locationButton: {
     marginTop: 10,
-    height: 42,
-    borderRadius: 10,
+    minHeight: 52,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   locationButtonDisabled: {
     opacity: 0.7,
   },
   locationButtonText: {
-    color: M3LoginColors.onPrimary,
+    color: '#111827',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   mapContainer: {
-    flex: 1,
-    borderRadius: 14,
+    minHeight: 320,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E8EF',
+    backgroundColor: '#FFFFFF',
   },
   map: {
-    flex: 1,
+    minHeight: 320,
   },
   mapFallback: {
     flex: 1,
@@ -1116,14 +1175,14 @@ const styles = StyleSheet.create({
   },
   mapFallbackTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: '800',
+    color: '#111827',
     textAlign: 'center',
   },
   mapFallbackText: {
     fontSize: 14,
     lineHeight: 20,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
     textAlign: 'center',
   },
   mapOverlay: {
@@ -1139,7 +1198,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   mapOverlayText: {
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -1149,66 +1208,75 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bottomCard: {
-    marginTop: 10,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.surface,
-    padding: 12,
+    borderColor: '#E5E8EF',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   bottomTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontWeight: '800',
+    color: '#111827',
   },
   bottomDetails: {
     marginTop: 4,
     fontSize: 13,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
   },
   pickupSummaryContainer: {
     marginTop: 10,
     borderTopWidth: 1,
-    borderTopColor: M3LoginColors.outline,
+    borderTopColor: '#EEF2F6',
     paddingTop: 8,
   },
   distanceSummaryContainer: {
     marginTop: 10,
     borderTopWidth: 1,
-    borderTopColor: M3LoginColors.outline,
+    borderTopColor: '#EEF2F6',
     paddingTop: 8,
   },
   distanceLabel: {
     fontSize: 12,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '700',
   },
   distanceValue: {
     marginTop: 2,
     fontSize: 14,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '700',
+    color: '#111827',
+    fontWeight: '800',
   },
   pickupLabel: {
     fontSize: 12,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '700',
   },
   pickupDetails: {
     marginTop: 2,
     fontSize: 13,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
   },
   errorText: {
     marginTop: 10,
-    color: M3LoginColors.error,
+    color: '#B42318',
     fontSize: 13,
+  },
+  footerBar: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    backgroundColor: '#FAFAFA',
   },
   continueButton: {
     marginTop: 12,
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1216,8 +1284,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   continueText: {
-    color: M3LoginColors.onPrimary,
+    color: '#111827',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

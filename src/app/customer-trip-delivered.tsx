@@ -13,7 +13,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getApiBaseUrl } from '@/config/backend';
-import { M3LoginColors } from '@/constants/theme';
+import {
+  clientTheme,
+  TrackingHero,
+  TrackingInfoPill,
+  TrackingMetaRow,
+  TrackingProgress,
+  TrackingScreenCard,
+  TrackingScrollable,
+} from '@/components/tracking-ui';
 import { getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
 
@@ -47,12 +55,11 @@ export default function CustomerTripDeliveredScreen() {
 
   const [tracking, setTracking] = useState<RequestTracking | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(tripId !== 'N/A');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [expandedPhotoUrl, setExpandedPhotoUrl] = useState('');
 
   useEffect(() => {
     if (tripId === 'N/A') {
-      setIsLoading(false);
       return;
     }
 
@@ -71,9 +78,7 @@ export default function CustomerTripDeliveredScreen() {
   }, [tripId]);
 
   const onRateDriver = useCallback((): void => {
-    router.push(
-      (`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href,
-    );
+    router.push((`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href);
   }, [router, tripId]);
 
   const deliveredAt = tracking?.deliveredAt ?? deliveredAtParam;
@@ -81,32 +86,45 @@ export default function CustomerTripDeliveredScreen() {
   const ratingAvailable = tracking?.ratingAvailable ?? false;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Delivered</Text>
-          <Text style={styles.subtitle}>Your delivery has been completed.</Text>
-          <Text style={styles.meta}>Trip ID: {tripId}</Text>
-          <Text style={styles.meta}>
-            Delivered at: {deliveredAt ? new Date(deliveredAt).toLocaleString() : 'N/A'}
-          </Text>
-          {deliveryNotes ? <Text style={styles.meta}>Notes: {deliveryNotes}</Text> : null}
-          {tracking?.nearDeliveryNotifiedAt ? (
-            <Text style={styles.meta}>
-              Near-delivery alert sent: {new Date(tracking.nearDeliveryNotifiedAt).toLocaleString()}
-            </Text>
-          ) : null}
-        </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TrackingScrollable>
+        <TrackingHero
+          eyebrow={`Order #${tripId}`}
+          title="Delivery completed"
+          description="Your request has been delivered. Delivery proof and final details are shown below."
+        />
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Delivery Proof Photos</Text>
+        <TrackingProgress currentStage={5} />
+
+        <TrackingScreenCard>
+          <TrackingInfoPill label="Delivered" tone="success" />
+          <TrackingMetaRow label="Trip ID" value={tripId} />
+          <TrackingMetaRow
+            label="Delivered at"
+            value={deliveredAt ? new Date(deliveredAt).toLocaleString() : 'N/A'}
+          />
+          {deliveryNotes ? <TrackingMetaRow label="Delivery notes" value={deliveryNotes} /> : null}
+          {tracking?.nearDeliveryNotifiedAt ? (
+            <TrackingMetaRow
+              label="Near-delivery alert"
+              value={new Date(tracking.nearDeliveryNotifiedAt).toLocaleString()}
+            />
+          ) : null}
+        </TrackingScreenCard>
+
+        <TrackingScreenCard>
+          <Text style={styles.sectionTitle}>Delivery proof</Text>
           {isLoading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color="#2563EB" />
-              <Text style={styles.meta}>Loading delivery proof…</Text>
+              <ActivityIndicator size="small" color={clientTheme.accentStrong} />
+              <Text style={styles.bodyText}>Loading delivery proof...</Text>
             </View>
           ) : proofPhotos.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.photoRow}
+            >
               {proofPhotos.map((photo) => (
                 <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
                   <Image
@@ -126,36 +144,44 @@ export default function CustomerTripDeliveredScreen() {
               />
             </Pressable>
           ) : (
-            <Text style={styles.meta}>Delivery proof photos will appear here when available.</Text>
+            <Text style={styles.bodyText}>Delivery proof photos will appear here when available.</Text>
           )}
-        </View>
+        </TrackingScreenCard>
 
         {ratingAvailable ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Rating Pending</Text>
-            <Text style={styles.meta}>Final delivery is confirmed. You can now rate the driver.</Text>
-            <Pressable style={styles.button} onPress={onRateDriver}>
-              <Text style={styles.buttonText}>Rate driver</Text>
+          <TrackingScreenCard>
+            <Text style={styles.sectionTitle}>Next step</Text>
+            <Text style={styles.bodyText}>
+              Final delivery is confirmed. You can now rate the driver.
+            </Text>
+            <Pressable style={styles.primaryButton} onPress={onRateDriver}>
+              <Text style={styles.primaryButtonText}>Rate driver</Text>
             </Pressable>
-          </View>
+          </TrackingScreenCard>
         ) : null}
 
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
         <Pressable
           style={styles.secondaryButton}
-          onPress={() =>
-            router.replace(`/request-status?requestId=${encodeURIComponent(tripId)}`)
-          }
+          onPress={() => router.replace(`/request-status?requestId=${encodeURIComponent(tripId)}`)}
         >
           <Text style={styles.secondaryButtonText}>Back to request status</Text>
         </Pressable>
-        <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
+
+        <Modal
+          visible={Boolean(expandedPhotoUrl)}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setExpandedPhotoUrl('')}
+        >
           <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
-            {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
+            {expandedPhotoUrl ? (
+              <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" />
+            ) : null}
           </Pressable>
         </Modal>
-      </ScrollView>
+      </TrackingScrollable>
     </SafeAreaView>
   );
 }
@@ -163,59 +189,74 @@ export default function CustomerTripDeliveredScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
-  },
-  content: {
-    padding: 20,
-    gap: 12,
-  },
-  card: {
-    backgroundColor: M3LoginColors.surface,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  subtitle: {
-    color: M3LoginColors.textSecondary,
+    backgroundColor: clientTheme.background,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
+    fontSize: 18,
+    fontWeight: '800',
   },
-  meta: {
-    color: M3LoginColors.textSecondary,
+  bodyText: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  photoRow: {
     gap: 10,
   },
+  photoRow: {
+    gap: 12,
+  },
   photo: {
-    width: 140,
-    height: 140,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.outlineVariant,
+    width: 156,
+    height: 156,
+    borderRadius: 20,
+    backgroundColor: '#E5E8EF',
   },
   photoFallback: {
     width: '100%',
-    height: 220,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.outlineVariant,
+    height: 240,
+    borderRadius: 20,
+    backgroundColor: '#E5E8EF',
+  },
+  primaryButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: clientTheme.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  primaryButtonText: {
+    color: clientTheme.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  secondaryButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: clientTheme.surface,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  secondaryButtonText: {
+    color: clientTheme.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    textAlign: 'center',
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(28, 27, 31, 0.92)',
+    backgroundColor: 'rgba(17, 24, 39, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -223,34 +264,5 @@ const styles = StyleSheet.create({
   expandedPhoto: {
     width: '100%',
     height: '100%',
-  },
-  button: {
-    marginTop: 4,
-    minHeight: 46,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: M3LoginColors.onPrimary,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    minHeight: 46,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: M3LoginColors.textPrimary,
-    fontWeight: '600',
-  },
-  errorText: {
-    color: M3LoginColors.error,
-    textAlign: 'center',
   },
 });

@@ -3,13 +3,23 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChatEntryButton } from '@/components/chat-entry-button';
 import {
   isNativeMapRuntimeAvailable,
   NativeMapView,
   NativeMarker,
 } from '@/components/native-maps';
-import { ChatEntryButton } from '@/components/chat-entry-button';
-import { M3LoginColors } from '@/constants/theme';
+import {
+  clientTheme,
+  TrackingHero,
+  TrackingInfoPill,
+  TrackingMapModal,
+  TrackingMapShell,
+  TrackingMetaRow,
+  TrackingProgress,
+  TrackingScreenCard,
+  TrackingScrollable,
+} from '@/components/tracking-ui';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -23,7 +33,11 @@ import {
   onTripStatusUpdated,
 } from '@/services/socketService';
 import type { AdditionalCharge } from '@/types/customer-request';
-import type { AddressedLocation, GeoLocation, ItemPickedUpPayload } from '@/types/trip.types';
+import type {
+  AddressedLocation,
+  GeoLocation,
+  ItemPickedUpPayload,
+} from '@/types/trip.types';
 import {
   isValidGeoLocation,
   isValidTripId,
@@ -55,9 +69,12 @@ export default function WaitingForPickupScreen() {
   const tripId = typeof params.tripId === 'string' ? params.tripId.trim() : '';
   const [driverLocation, setDriverLocation] = useState<GeoLocation | null>(null);
   const [pickupInfo, setPickupInfo] = useState<ItemPickedUpPayload | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [isWaiting, setIsWaiting] = useState<boolean>(true);
-  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isWaiting, setIsWaiting] = useState(true);
+  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(
+    null,
+  );
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   const pickupLocation = useMemo<AddressedLocation | null>(() => {
     const latitude = parseNumber(params.pickupLatitude);
@@ -116,57 +133,9 @@ export default function WaitingForPickupScreen() {
       return;
     }
 
-    const unsubDriverLocation = onDriverLocationUpdated((payload) => {
-      const validated = validateDriverLocationUpdatedPayload(payload);
-      if (!validated || validated.tripId !== tripId) return;
-      setDriverLocation({ latitude: validated.latitude, longitude: validated.longitude });
-    });
-
-    const unsubItemPickedUp = onItemPickedUp((payload) => {
-      const validated = validateItemPickedUpPayload(payload);
-      if (!validated) {
-        console.warn('Ignoring invalid itemPickedUp payload', payload);
-        return;
-      }
-
-      if (validated.tripId !== tripId) {
-        return;
-      }
-
-      setPickupInfo(validated);
-      setIsWaiting(false);
-
-      router.replace((
-        '/customer-delivery-tracking?tripId=' +
-        encodeURIComponent(tripId) +
-        '&pickupLatitude=' +
-        encodeURIComponent(String(pickupLocation.latitude)) +
-        '&pickupLongitude=' +
-        encodeURIComponent(String(pickupLocation.longitude)) +
-        '&pickupAddress=' +
-        encodeURIComponent(pickupLocation.address ?? '') +
-        '&dropoffLatitude=' +
-        encodeURIComponent(String(dropoffLocation.latitude)) +
-        '&dropoffLongitude=' +
-        encodeURIComponent(String(dropoffLocation.longitude)) +
-        '&dropoffAddress=' +
-        encodeURIComponent(dropoffLocation.address ?? '')
-      ) as Href);
-    });
-
-    const unsubTripStatus = onTripStatusUpdated((payload) => {
-      const validated = validateTripStatusUpdatedPayload(payload);
-      if (!validated) {
-        console.warn('Ignoring invalid tripStatusUpdated payload', payload);
-        return;
-      }
-
-      if (validated.tripId !== tripId) {
-        return;
-      }
-
-      if (validated.status === 'ITEM_PICKED_UP') {
-        router.replace((
+    const openDeliveryTracking = () => {
+      router.replace(
+        (
           '/customer-delivery-tracking?tripId=' +
           encodeURIComponent(tripId) +
           '&pickupLatitude=' +
@@ -181,7 +150,31 @@ export default function WaitingForPickupScreen() {
           encodeURIComponent(String(dropoffLocation.longitude)) +
           '&dropoffAddress=' +
           encodeURIComponent(dropoffLocation.address ?? '')
-        ) as Href);
+        ) as Href,
+      );
+    };
+
+    const unsubDriverLocation = onDriverLocationUpdated((payload) => {
+      const validated = validateDriverLocationUpdatedPayload(payload);
+      if (!validated || validated.tripId !== tripId) return;
+      setDriverLocation({ latitude: validated.latitude, longitude: validated.longitude });
+    });
+
+    const unsubItemPickedUp = onItemPickedUp((payload) => {
+      const validated = validateItemPickedUpPayload(payload);
+      if (!validated || validated.tripId !== tripId) return;
+
+      setPickupInfo(validated);
+      setIsWaiting(false);
+      openDeliveryTracking();
+    });
+
+    const unsubTripStatus = onTripStatusUpdated((payload) => {
+      const validated = validateTripStatusUpdatedPayload(payload);
+      if (!validated || validated.tripId !== tripId) return;
+
+      if (validated.status === 'ITEM_PICKED_UP') {
+        openDeliveryTracking();
       }
     });
 
@@ -211,133 +204,243 @@ export default function WaitingForPickupScreen() {
 
   if (!isRouteValid || !pickupLocation || !dropoffLocation) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Invalid waiting-for-pickup route params.</Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackText}>Invalid waiting-for-pickup route parameters.</Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
 
   if (!isNativeMapRuntimeAvailable || !NativeMapView || !NativeMarker) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Pickup tracking map is available on iOS and Android only.</Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackText}>
+            Pickup tracking map is available on iOS and Android only.
+          </Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
 
+  const renderMap = (heightStyle?: object) => (
+    <NativeMapView
+      style={[styles.map, heightStyle]}
+      initialRegion={{
+        latitude: pickupLocation.latitude,
+        longitude: pickupLocation.longitude,
+        latitudeDelta: 0.03,
+        longitudeDelta: 0.03,
+      }}
+    >
+      <NativeMarker coordinate={pickupLocation} title="Pickup" />
+      <NativeMarker coordinate={dropoffLocation} title="Dropoff" pinColor="#FF5E57" />
+      {driverLocation ? <NativeMarker coordinate={driverLocation} title="Driver" pinColor="#3B82F6" /> : null}
+    </NativeMapView>
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
-      <NativeMapView
-        style={styles.map}
-        initialRegion={{
-          latitude: pickupLocation.latitude,
-          longitude: pickupLocation.longitude,
-          latitudeDelta: 0.03,
-          longitudeDelta: 0.03,
-        }}
-      >
-        <NativeMarker coordinate={pickupLocation} title="Pickup" />
-        <NativeMarker coordinate={dropoffLocation} title="Dropoff" pinColor="#DC2626" />
-        {driverLocation ? <NativeMarker coordinate={driverLocation} title="Driver" pinColor="#2563EB" /> : null}
-      </NativeMapView>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TrackingScrollable>
+        <TrackingHero
+          eyebrow={`Order #${tripId || 'N/A'}`}
+          title="Waiting at pickup"
+          description="The driver has arrived. This screen stays active until the pickup is confirmed."
+        />
 
-      <View style={styles.bottomCard}>
-        <Text style={styles.title}>Pickup Stage</Text>
-        <Text style={styles.statusText}>Driver arrived at pickup location</Text>
-        {latestAdditionalCharge ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Additional Charge Added</Text>
-            <Text style={styles.helperText}>
-              {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} • {latestAdditionalCharge.reason}
-            </Text>
-          </View>
-        ) : null}
-        <Text style={styles.helperText}>Waiting for driver to confirm item pickup</Text>
-        {isWaiting ? (
-          <View style={styles.row}>
-            <ActivityIndicator size="small" color="#2563EB" />
-            <Text style={styles.helperText}>Listening for pickup confirmation...</Text>
-          </View>
-        ) : null}
+        <TrackingProgress currentStage={2} />
 
-        {pickupInfo ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Pickup Confirmed</Text>
-            <Text style={styles.helperText}>Picked up at: {new Date(pickupInfo.pickedUpAt).toLocaleString()}</Text>
-            {pickupInfo.pickupNotes ? <Text style={styles.helperText}>Notes: {pickupInfo.pickupNotes}</Text> : null}
-            <Text style={styles.helperText}>
-              Proof photos received: {pickupInfo.pickupProofPhotos.length}
-            </Text>
-          </View>
-        ) : null}
-        <ChatEntryButton transportRequestId={tripId} />
-
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() =>
-            router.replace((
-              '/customer-delivery-tracking?tripId=' +
-              encodeURIComponent(tripId) +
-              '&pickupLatitude=' +
-              encodeURIComponent(String(pickupLocation.latitude)) +
-              '&pickupLongitude=' +
-              encodeURIComponent(String(pickupLocation.longitude)) +
-              '&pickupAddress=' +
-              encodeURIComponent(pickupLocation.address ?? '') +
-              '&dropoffLatitude=' +
-              encodeURIComponent(String(dropoffLocation.latitude)) +
-              '&dropoffLongitude=' +
-              encodeURIComponent(String(dropoffLocation.longitude)) +
-              '&dropoffAddress=' +
-              encodeURIComponent(dropoffLocation.address ?? '')
-            ) as Href)
-          }
+        <TrackingMapShell
+          title="Pickup map"
+          subtitle="Current driver, pickup, and destination markers."
+          onExpand={() => setIsMapExpanded(true)}
         >
-          <Text style={styles.secondaryButtonText}>Open Delivery Tracking</Text>
-        </Pressable>
-      </View>
+          {renderMap()}
+        </TrackingMapShell>
+
+        <TrackingScreenCard>
+          <TrackingInfoPill label={isWaiting ? 'Waiting for confirmation' : 'Pickup confirmed'} tone="accent" />
+          <Text style={styles.cardTitle}>Pickup stage</Text>
+          <Text style={styles.cardBody}>
+            The driver confirms item pickup from their app. Once that happens, this flow moves to
+            the delivery tracking screen.
+          </Text>
+          <TrackingMetaRow
+            label="Pickup address"
+            value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
+          />
+          <TrackingMetaRow
+            label="Dropoff address"
+            value={
+              dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
+            }
+          />
+          {latestAdditionalCharge ? (
+            <View style={styles.noticeCard}>
+              <Text style={styles.noticeTitle}>Additional charge added</Text>
+              <Text style={styles.noticeText}>
+                {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} for{' '}
+                {latestAdditionalCharge.reason}
+              </Text>
+            </View>
+          ) : null}
+          {isWaiting ? (
+            <View style={styles.inlineRow}>
+              <ActivityIndicator size="small" color={clientTheme.accentStrong} />
+              <Text style={styles.helperText}>Listening for pickup confirmation...</Text>
+            </View>
+          ) : null}
+          {pickupInfo ? (
+            <View style={styles.confirmedCard}>
+              <Text style={styles.confirmedTitle}>Pickup confirmed</Text>
+              <Text style={styles.helperText}>
+                Picked up at {new Date(pickupInfo.pickedUpAt).toLocaleString()}
+              </Text>
+              {pickupInfo.pickupNotes ? (
+                <Text style={styles.helperText}>Notes: {pickupInfo.pickupNotes}</Text>
+              ) : null}
+              <Text style={styles.helperText}>
+                Proof photos received: {pickupInfo.pickupProofPhotos.length}
+              </Text>
+            </View>
+          ) : null}
+          <ChatEntryButton transportRequestId={tripId} />
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() =>
+              router.replace(
+                (
+                  '/customer-delivery-tracking?tripId=' +
+                  encodeURIComponent(tripId) +
+                  '&pickupLatitude=' +
+                  encodeURIComponent(String(pickupLocation.latitude)) +
+                  '&pickupLongitude=' +
+                  encodeURIComponent(String(pickupLocation.longitude)) +
+                  '&pickupAddress=' +
+                  encodeURIComponent(pickupLocation.address ?? '') +
+                  '&dropoffLatitude=' +
+                  encodeURIComponent(String(dropoffLocation.latitude)) +
+                  '&dropoffLongitude=' +
+                  encodeURIComponent(String(dropoffLocation.longitude)) +
+                  '&dropoffAddress=' +
+                  encodeURIComponent(dropoffLocation.address ?? '')
+                ) as Href,
+              )
+            }
+          >
+            <Text style={styles.secondaryButtonText}>Open delivery tracking</Text>
+          </Pressable>
+        </TrackingScreenCard>
+      </TrackingScrollable>
+
+      <TrackingMapModal
+        visible={isMapExpanded}
+        title="Pickup map"
+        onClose={() => setIsMapExpanded(false)}
+      >
+        {renderMap(styles.expandedMap)}
+      </TrackingMapModal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: M3LoginColors.background },
-  map: { flex: 1 },
-  bottomCard: {
-    backgroundColor: M3LoginColors.surface,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    padding: 16,
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
   },
-  title: { fontSize: 20, fontWeight: '700', color: M3LoginColors.textPrimary },
-  statusText: { color: M3LoginColors.textPrimary, fontWeight: '600' },
-  helperText: { color: M3LoginColors.textSecondary },
-  infoText: { color: '#FFFFFF', fontWeight: '600' },
-  errorText: { color: M3LoginColors.error },
-  centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoCard: {
-    backgroundColor: M3LoginColors.primaryContainer,
-    borderColor: M3LoginColors.outline,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
+  fallbackScreen: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
+    justifyContent: 'center',
+    padding: 20,
   },
-  infoTitle: { color: '#FFFFFF', fontWeight: '700' },
+  fallbackTitle: {
+    color: clientTheme.text,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  fallbackText: {
+    color: clientTheme.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  map: {
+    flex: 1,
+  },
+  expandedMap: {
+    width: '100%',
+    height: '100%',
+  },
+  cardTitle: {
+    color: clientTheme.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  cardBody: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  helperText: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  noticeCard: {
+    borderRadius: 18,
+    backgroundColor: clientTheme.accentSoft,
+    padding: 14,
+    gap: 6,
+  },
+  noticeTitle: {
+    color: clientTheme.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  noticeText: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  confirmedCard: {
+    borderRadius: 18,
+    backgroundColor: '#F6F7FB',
+    padding: 14,
+    gap: 6,
+  },
+  confirmedTitle: {
+    color: clientTheme.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    lineHeight: 20,
+  },
   secondaryButton: {
-    minHeight: 44,
-    borderRadius: 10,
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: clientTheme.surfaceMuted,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
+    borderColor: clientTheme.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    paddingHorizontal: 18,
   },
-  secondaryButtonText: { color: M3LoginColors.textPrimary, fontWeight: '600' },
+  secondaryButtonText: {
+    color: clientTheme.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
 });

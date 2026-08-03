@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { M3LoginColors } from '@/constants/theme';
+import { clientTheme } from '@/components/tracking-ui';
 import { getCustomerHome } from '@/lib/api';
 import { formatDateOnly } from '@/localization/format';
 import { useAppLanguage } from '@/localization/provider';
@@ -95,8 +95,8 @@ function getServiceTheme(serviceKey: string): ServiceTileTheme {
       };
     default:
       return {
-        backgroundColor: M3LoginColors.primary,
-        overlayColor: M3LoginColors.outlineVariant,
+        backgroundColor: clientTheme.accentStrong,
+        overlayColor: clientTheme.accent,
       };
   }
 }
@@ -271,7 +271,7 @@ function ActiveOrderCard({
       <View style={styles.activeOrderRow}>
         <View style={styles.activeOrderIdentity}>
           <View style={styles.activeOrderIcon}>
-            {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={20} /> : null}
+            {icon ? <IconSymbol name={icon} color={clientTheme.accentStrong} size={20} /> : null}
           </View>
           <View style={styles.activeOrderTextBlock}>
             <Text style={styles.activeOrderTitle}>
@@ -302,7 +302,7 @@ function EmptyActiveOrder({ onPress, t }: { onPress: () => void; t: (key: string
         <View style={styles.emptyOrderIcon}>
           <IconSymbol
             name={{ ios: 'shippingbox.fill', android: 'inventory_2', web: 'inventory_2' }}
-            color={M3LoginColors.primary}
+            color={clientTheme.accentStrong}
             size={20}
           />
         </View>
@@ -335,7 +335,7 @@ function RecentActivityRow({
   return (
     <Pressable style={styles.recentRow} onPress={onPress}>
       <View style={styles.recentIcon}>
-        {icon ? <IconSymbol name={icon} color={M3LoginColors.primary} size={18} /> : null}
+        {icon ? <IconSymbol name={icon} color={clientTheme.accentStrong} size={18} /> : null}
       </View>
       <View style={styles.recentContent}>
         <Text style={styles.recentTitle}>
@@ -448,7 +448,7 @@ export default function HomeTabScreen() {
   if (isLoading && !data) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color={M3LoginColors.primary} />
+        <ActivityIndicator size="large" color={clientTheme.accentStrong} />
         <Text style={styles.supportingText}>{t('Loading home...')}</Text>
       </SafeAreaView>
     );
@@ -460,7 +460,7 @@ export default function HomeTabScreen() {
         <View style={styles.errorIconCircle}>
           <IconSymbol
             name={{ ios: 'exclamationmark.triangle.fill', android: 'error', web: 'error' }}
-            color={M3LoginColors.primary}
+            color={clientTheme.accentStrong}
             size={30}
           />
         </View>
@@ -479,7 +479,7 @@ export default function HomeTabScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <StatusBar barStyle="dark-content" backgroundColor={clientTheme.background} />
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -497,7 +497,7 @@ export default function HomeTabScreen() {
           <View style={styles.locationWrap}>
             <IconSymbol
               name={{ ios: 'mappin.circle.fill', android: 'location_on', web: 'location_on' }}
-              color={M3LoginColors.secondary}
+              color={clientTheme.accentStrong}
               size={18}
             />
             <Text style={styles.locationText} numberOfLines={1}>
@@ -508,7 +508,7 @@ export default function HomeTabScreen() {
           <Pressable style={styles.notificationButton} onPress={onNotifications}>
             <IconSymbol
               name={{ ios: 'bell', android: 'notifications_none', web: 'notifications_none' }}
-              color={M3LoginColors.textPrimary}
+              color={clientTheme.text}
               size={22}
             />
             {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
@@ -598,13 +598,13 @@ export default function HomeTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: clientTheme.background,
   },
   centeredContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: clientTheme.background,
     padding: 24,
     gap: 12,
   },
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '500',
-    color: '#68768A',
+    color: clientTheme.textMuted,
   },
   notificationButton: {
     width: 42,
@@ -653,12 +653,12 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 28,
     fontWeight: '800',
-    color: '#111827',
+    color: clientTheme.text,
   },
   heroSubtitle: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#68768A',
+    color: clientTheme.textMuted,
   },
   servicesScroller: {
     paddingRight: 20,
@@ -706,19 +706,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: clientTheme.text,
   },
   seeAllText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#136AF3',
+    color: clientTheme.accentStrong,
   },
   activeOrderCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: clientTheme.surface,
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: clientTheme.border,
     shadowColor: '#111827',
     shadowOpacity: 0.06,
     shadowRadius: 16,
@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFD35A',
+    backgroundColor: clientTheme.accentSoft,
   },
   activeOrderTextBlock: {
     flex: 1,
@@ -753,12 +753,12 @@ const styles = StyleSheet.create({
   activeOrderTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: clientTheme.text,
   },
   activeOrderRoute: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#627287',
+    color: clientTheme.textMuted,
   },
   statusBadge: {
     maxWidth: 92,
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
   },
   activeOrderDivider: {
     height: 1,
-    backgroundColor: '#E9EDF3',
+    backgroundColor: clientTheme.border,
   },
   activeOrderMeta: {
     flexDirection: 'row',
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
   },
   activeOrderMetaText: {
     fontSize: 13,
-    color: '#66758A',
+    color: clientTheme.textMuted,
   },
   emptyOrderHeader: {
     flexDirection: 'row',
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F5F8',
+    backgroundColor: clientTheme.surfaceMuted,
   },
   emptyOrderTextBlock: {
     flex: 1,
@@ -811,18 +811,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: '#111827',
+    backgroundColor: clientTheme.accent,
   },
   inlineActionButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: clientTheme.text,
   },
   recentList: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: clientTheme.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: clientTheme.border,
     overflow: 'hidden',
   },
   recentRow: {
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F5F8',
+    backgroundColor: clientTheme.surfaceMuted,
   },
   recentContent: {
     flex: 1,
@@ -847,11 +847,11 @@ const styles = StyleSheet.create({
   recentTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: clientTheme.text,
   },
   recentSubtitle: {
     fontSize: 14,
-    color: '#627287',
+    color: clientTheme.textMuted,
   },
   recentMeta: {
     alignItems: 'flex-end',
@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
   },
   recentDate: {
     fontSize: 13,
-    color: '#111827',
+    color: clientTheme.text,
     fontWeight: '700',
   },
   recentStatus: {
@@ -868,18 +868,18 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: 1,
-    backgroundColor: '#E9EDF3',
+    backgroundColor: clientTheme.border,
     marginLeft: 66,
   },
   emptyRecentCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: clientTheme.surface,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: clientTheme.border,
   },
   primaryButton: {
-    backgroundColor: '#111827',
+    backgroundColor: clientTheme.accent,
     borderRadius: 14,
     minHeight: 48,
     alignItems: 'center',
@@ -887,27 +887,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: clientTheme.text,
     fontWeight: '700',
     fontSize: 15,
   },
   supportingText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#627287',
+    color: clientTheme.textMuted,
     textAlign: 'center',
   },
   errorIconCircle: {
     width: 64,
     height: 64,
     borderRadius: 22,
-    backgroundColor: '#FFF3D6',
+    backgroundColor: clientTheme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: clientTheme.text,
   },
 });

@@ -1,17 +1,3 @@
-import Constants from 'expo-constants';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
 import {
   CardField,
   confirmPayment,
@@ -19,8 +5,24 @@ import {
   isPlatformPaySupported,
   PlatformPay,
 } from '@stripe/stripe-react-native';
+import Constants from 'expo-constants';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  type ColorValue,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { M3LoginColors } from '@/constants/theme';
 import {
   cancelPaymentHold,
   confirmDriverOffer,
@@ -40,6 +42,7 @@ type PaymentOption = {
   method: PaymentMethod;
   title: string;
   description: string;
+  icon: SymbolViewProps['name'];
 };
 
 const PAYMENT_OPTIONS: PaymentOption[] = [
@@ -47,32 +50,48 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
     method: 'CREDIT_CARD',
     title: 'Credit Card',
     description: 'Pay the agreed amount now with your credit card.',
+    icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
   },
   {
     method: 'DEBIT_CARD',
     title: 'Debit Card',
     description: 'Pay the agreed amount now with your debit card.',
+    icon: { ios: 'creditcard', android: 'payments', web: 'payments' },
   },
   {
     method: 'APPLE_PAY',
     title: 'Apple Pay',
     description: 'Pay now with Apple Pay in a development or production build.',
+    icon: { ios: 'apple.logo', android: 'smartphone', web: 'smartphone' },
   },
   {
     method: 'GOOGLE_PAY',
     title: 'Google Pay',
     description: 'Pay now with Google Pay in a development or production build.',
+    icon: { ios: 'globe', android: 'android', web: 'android' },
   },
   {
     method: 'APP_WALLET',
     title: 'App Wallet',
     description: 'Pay now using your available in-app wallet balance.',
+    icon: { ios: 'wallet.bifold.fill', android: 'account_balance_wallet', web: 'account_balance_wallet' },
   },
 ];
 
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
+
 function parseJson<T>(raw: string | undefined): T | null {
   if (!raw) return null;
-
   try {
     return JSON.parse(raw) as T;
   } catch {
@@ -89,7 +108,6 @@ function formatDate(value: string | null | undefined): string {
 
 function formatMoney(amount: number, currency: string | null | undefined): string {
   const code = currency?.trim() || 'USD';
-
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
@@ -120,24 +138,17 @@ function getPaymentMethodLabel(method: PaymentMethod): string {
 
 function toStripeErrorMessage(message: string): string {
   const normalized = message.toLowerCase();
-
   if (normalized.includes('canceled') || normalized.includes('cancelled')) {
     return 'Payment confirmation was cancelled. You can try again.';
   }
-
   if (normalized.includes('invalid api key provided')) {
     return 'Stripe is not configured correctly. Set a real EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY in the client app and a matching STRIPE_SECRET_KEY in the backend.';
   }
-
   return message;
 }
 
 function isSuccessfulPaymentStatus(status: PaymentStatus): boolean {
-  return (
-    status === 'PAYMENT_HELD' ||
-    status === 'PAYMENT_CAPTURE_PENDING' ||
-    status === 'PAYMENT_CAPTURED'
-  );
+  return status === 'PAYMENT_HELD' || status === 'PAYMENT_CAPTURE_PENDING' || status === 'PAYMENT_CAPTURED';
 }
 
 function isPendingPaymentStatus(status: PaymentStatus): boolean {
@@ -158,6 +169,7 @@ function isFinalizedRequestStatus(status: RequestStatusResponse['status']): bool
 export default function RequestPaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const offerId = typeof params.offerId === 'string' ? params.offerId.trim() : '';
   const requestData = useMemo(
@@ -178,33 +190,28 @@ export default function RequestPaymentScreen() {
       : '';
   const merchantCountryCode =
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() || 'US';
-  const merchantIdentifier =
-    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() || '';
-  // `appOwnership === 'expo'` is the Expo Go-specific signal. `executionEnvironment`
-  // also reports `storeClient` for dev clients, which would wrongly disable wallet flows.
+  const merchantIdentifier = process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() || '';
   const isExpoGo = Constants.appOwnership === 'expo';
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CREDIT_CARD');
-  const [cardComplete, setCardComplete] = useState<boolean>(false);
-  const [applePaySupported, setApplePaySupported] = useState<boolean>(false);
-  const [googlePaySupported, setGooglePaySupported] = useState<boolean>(false);
-  const [supportCheckComplete, setSupportCheckComplete] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [cardComplete, setCardComplete] = useState(false);
+  const [applePaySupported, setApplePaySupported] = useState(false);
+  const [googlePaySupported, setGooglePaySupported] = useState(false);
+  const [supportCheckComplete, setSupportCheckComplete] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentResult, setPaymentResult] = useState<PaymentSummary | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [showPaymentNotice, setShowPaymentNotice] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showPaymentNotice, setShowPaymentNotice] = useState(false);
 
   const amount = offerData ? offerData.proposedPrice ?? offerData.price : 0;
   const currency = offerData?.currency ?? 'USD';
+
   useEffect(() => {
     let active = true;
-
     void (async () => {
       try {
         const appleSupported =
-          Platform.OS === 'ios' && !isExpoGo
-            ? await isPlatformPaySupported()
-            : false;
+          Platform.OS === 'ios' && !isExpoGo ? await isPlatformPaySupported() : false;
         const googleSupported =
           Platform.OS === 'android' && !isExpoGo
             ? await isPlatformPaySupported({
@@ -216,9 +223,7 @@ export default function RequestPaymentScreen() {
         setApplePaySupported(appleSupported);
         setGooglePaySupported(googleSupported);
       } finally {
-        if (active) {
-          setSupportCheckComplete(true);
-        }
+        if (active) setSupportCheckComplete(true);
       }
     })();
 
@@ -227,51 +232,45 @@ export default function RequestPaymentScreen() {
     };
   }, [isExpoGo]);
 
-  const selectedOption = PAYMENT_OPTIONS.find((option) => option.method === selectedMethod) ?? PAYMENT_OPTIONS[0];
+  const selectedOption =
+    PAYMENT_OPTIONS.find((option) => option.method === selectedMethod) ?? PAYMENT_OPTIONS[0];
   const needsStripe = selectedMethod !== 'APP_WALLET';
   const needsCardField = selectedMethod === 'CREDIT_CARD' || selectedMethod === 'DEBIT_CARD';
   const methodDisabledReason = useMemo(() => {
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
       return 'Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.';
     }
-
     if (selectedMethod === 'APPLE_PAY' && Platform.OS !== 'ios') {
       return 'Apple Pay is only available on iOS.';
     }
-
     if (selectedMethod === 'GOOGLE_PAY' && Platform.OS !== 'android') {
       return 'Google Pay is only available on Android.';
     }
-
     if (selectedMethod === 'APPLE_PAY' && !merchantIdentifier) {
       return 'Apple Pay is not configured. Set EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER to your real Apple merchant identifier and rebuild the iOS app.';
     }
-
     if (needsStripe && !publishableKey) {
       return 'Stripe is not configured. Set EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to a real pk_test_ or pk_live_ key.';
     }
-
     if (!requestData || !offerData || !requestId || !offerId) {
       return 'Missing payment context. Please go back and choose the offer again.';
     }
-
     if (needsCardField && !cardComplete) {
       return 'Complete your card details to continue.';
     }
-
     return '';
   }, [
+    cardComplete,
     isExpoGo,
+    merchantIdentifier,
     needsCardField,
     needsStripe,
-    merchantIdentifier,
     offerData,
     offerId,
     publishableKey,
     requestData,
     requestId,
     selectedMethod,
-    cardComplete,
   ]);
 
   const submitLabel = useMemo(() => {
@@ -284,9 +283,7 @@ export default function RequestPaymentScreen() {
   const navigateToNextStep = (nextRequestId: string): void => {
     router.replace({
       pathname: '/request-status',
-      params: {
-        requestId: nextRequestId,
-      },
+      params: { requestId: nextRequestId },
     });
   };
 
@@ -296,7 +293,6 @@ export default function RequestPaymentScreen() {
       if (!isFinalizedRequestStatus(currentRequest.status)) {
         return false;
       }
-
       navigateToNextStep(currentRequest.id);
       return true;
     } catch {
@@ -339,10 +335,7 @@ export default function RequestPaymentScreen() {
         },
       });
 
-      if (result.error) {
-        throw new Error(toStripeErrorMessage(result.error.message));
-      }
-
+      if (result.error) throw new Error(toStripeErrorMessage(result.error.message));
       return;
     }
 
@@ -356,10 +349,7 @@ export default function RequestPaymentScreen() {
         },
       });
 
-      if (result.error) {
-        throw new Error(toStripeErrorMessage(result.error.message));
-      }
-
+      if (result.error) throw new Error(toStripeErrorMessage(result.error.message));
       return;
     }
 
@@ -367,16 +357,12 @@ export default function RequestPaymentScreen() {
       paymentMethodType: 'Card',
     });
 
-    if (result.error) {
-      throw new Error(toStripeErrorMessage(result.error.message));
-    }
+    if (result.error) throw new Error(toStripeErrorMessage(result.error.message));
   };
 
   const onSubmit = async (): Promise<void> => {
     if (isSubmitting || methodDisabledReason) {
-      if (methodDisabledReason) {
-        setErrorMessage(methodDisabledReason);
-      }
+      if (methodDisabledReason) setErrorMessage(methodDisabledReason);
       return;
     }
 
@@ -408,26 +394,17 @@ export default function RequestPaymentScreen() {
           message.includes('payment attempt is already in progress') ||
           message.includes('internal server error');
 
-        if (!canRecoverFromExistingState) {
-          throw error;
-        }
-
-        if (await recoverFinalizedRequestState()) {
-          return;
-        }
+        if (!canRecoverFromExistingState) throw error;
+        if (await recoverFinalizedRequestState()) return;
 
         const existingPayment = await recoverExistingPaymentState();
-        if (!existingPayment) {
-          throw error;
-        }
+        if (!existingPayment) throw error;
 
         createdPayment = existingPayment;
         setPaymentResult(existingPayment);
       }
 
-      if (!createdPayment) {
-        throw new Error('Missing payment information.');
-      }
+      if (!createdPayment) throw new Error('Missing payment information.');
 
       if (selectedMethod !== 'APP_WALLET' && isPendingPaymentStatus(createdPayment.status)) {
         await confirmStripeBackedPayment(createdPayment);
@@ -452,30 +429,23 @@ export default function RequestPaymentScreen() {
 
       navigateToNextStep(finalizedRequest.id);
     } catch (error) {
-      if (await recoverFinalizedRequestState()) {
-        return;
-      }
+      if (await recoverFinalizedRequestState()) return;
 
       if (createdPayment && isSuccessfulPaymentStatus(latestPayment?.status ?? createdPayment.status)) {
         navigateToNextStep(requestId);
         return;
       }
 
-      if (
-        createdPayment &&
-        !isSuccessfulPaymentStatus(latestPayment?.status ?? createdPayment.status)
-      ) {
+      if (createdPayment && !isSuccessfulPaymentStatus(latestPayment?.status ?? createdPayment.status)) {
         try {
           const releasedPayment = await cancelPaymentHold(requestId);
           setPaymentResult(releasedPayment);
         } catch {
-          // Keep the original error visible; the customer can still refresh request status if release fails.
+          // Preserve original error.
         }
       }
 
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to complete payment.',
-      );
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to complete payment.');
     } finally {
       setIsSubmitting(false);
     }
@@ -483,21 +453,15 @@ export default function RequestPaymentScreen() {
 
   const openPaymentNotice = (): void => {
     if (isSubmitting || methodDisabledReason) {
-      if (methodDisabledReason) {
-        setErrorMessage(methodDisabledReason);
-      }
+      if (methodDisabledReason) setErrorMessage(methodDisabledReason);
       return;
     }
-
     setErrorMessage('');
     setShowPaymentNotice(true);
   };
 
   const closePaymentNotice = (): void => {
-    if (isSubmitting) {
-      return;
-    }
-
+    if (isSubmitting) return;
     setShowPaymentNotice(false);
   };
 
@@ -508,43 +472,75 @@ export default function RequestPaymentScreen() {
 
   if (!requestData || !offerData || !requestId || !offerId) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>
-          Missing payment context. Please go back and choose the driver again.
-        </Text>
-        <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
-          <Text style={styles.secondaryButtonText}>Go Back</Text>
-        </Pressable>
+      <SafeAreaView style={styles.screen} edges={['left', 'right']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+        <View style={styles.centeredContainer}>
+          <Text style={styles.errorText}>
+            Missing payment context. Please go back and choose the driver again.
+          </Text>
+          <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
+            <Text style={styles.secondaryButtonText}>Go Back</Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Pay Now</Text>
-          <Text style={styles.subtitle}>
+    <SafeAreaView style={styles.screen} edges={['left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top, 18),
+            paddingBottom: Math.max(insets.bottom + 32, 42),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroBadge}>
+              <IconSymbol
+                name={{ ios: 'creditcard.fill', android: 'payments', web: 'payments' }}
+                color="#111827"
+                size={20}
+              />
+            </View>
+            <Text style={styles.heroLabel}>Payment</Text>
+          </View>
+          <Text style={styles.heroTitle}>Pay Now</Text>
+          <Text style={styles.heroSubtitle}>
             The agreed amount will be collected now when you confirm the driver. If you cancel before pickup, 85% is refunded automatically and 15% is kept as the cancellation fee.
           </Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Payment Summary</Text>
-          <Text style={styles.label}>Selected driver</Text>
-          <Text style={styles.value}>{offerData.driverName || 'Driver'}</Text>
-          <Text style={styles.label}>Agreed amount</Text>
-          <Text style={styles.value}>{formatMoney(amount, currency)}</Text>
-          <Text style={styles.label}>Pickup</Text>
-          <Text style={styles.value}>{requestData.pickupLocation.address || 'N/A'}</Text>
-          <Text style={styles.label}>Estimated pickup</Text>
-          <Text style={styles.value}>{formatDate(offerData.estimatedPickupAt)}</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Selected driver</Text>
+            <Text style={styles.summaryValue}>{offerData.driverName || 'Driver'}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Agreed amount</Text>
+            <Text style={styles.summaryValue}>{formatMoney(amount, currency)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Pickup</Text>
+            <Text style={styles.summaryValue}>{requestData.pickupLocation.address || 'N/A'}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Estimated pickup</Text>
+            <Text style={styles.summaryValue}>{formatDate(offerData.estimatedPickupAt)}</Text>
+          </View>
           <Text style={styles.helperText}>
             This payment is collected now and held in the platform until the trip outcome is resolved.
           </Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Choose Payment Method</Text>
           {PAYMENT_OPTIONS.map((option) => {
             const isSelected = option.method === selectedMethod;
@@ -557,72 +553,73 @@ export default function RequestPaymentScreen() {
             return (
               <Pressable
                 key={option.method}
-                style={[styles.methodCard, isSelected ? styles.methodCardSelected : undefined]}
+                style={[styles.methodCard, isSelected && styles.methodCardSelected]}
                 onPress={() => setSelectedMethod(option.method)}
               >
-                <Text
-                  style={[styles.methodTitle, isSelected ? styles.methodTitleSelected : undefined]}
-                >
-                  {option.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.methodDescription,
-                    isSelected ? styles.methodDescriptionSelected : undefined,
-                  ]}
-                >
-                  {option.description}
-                </Text>
-                {isUnavailableInExpoGo ? (
-                  <Text
-                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
-                  >
-                    Development build required. Native wallets do not work in Expo Go.
-                  </Text>
-                ) : null}
-                {isUnavailableOnPlatform ? (
-                  <Text
-                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
-                  >
-                    This payment method is not available on this platform.
-                  </Text>
-                ) : null}
-                {option.method === 'APPLE_PAY' && supportCheckComplete && Platform.OS === 'ios' && !isExpoGo && !applePaySupported ? (
-                  <Text
-                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
-                  >
-                    Apple Pay is currently unavailable on this device.
-                  </Text>
-                ) : null}
-                {option.method === 'GOOGLE_PAY' && supportCheckComplete && Platform.OS === 'android' && !isExpoGo && !googlePaySupported ? (
-                  <Text
-                    style={[styles.methodHint, isSelected ? styles.methodHintSelected : undefined]}
-                  >
-                    Google Pay is currently unavailable on this device.
-                  </Text>
-                ) : null}
+                <View style={styles.methodLeading}>
+                  <View style={styles.methodIconWrap}>
+                    <IconSymbol name={option.icon} color="#111827" size={18} />
+                  </View>
+                  <View style={styles.methodCopy}>
+                    <Text style={styles.methodTitle}>{option.title}</Text>
+                    <Text style={styles.methodDescription}>{option.description}</Text>
+                    {isUnavailableInExpoGo ? (
+                      <Text style={styles.methodHint}>
+                        Development build required. Native wallets do not work in Expo Go.
+                      </Text>
+                    ) : null}
+                    {isUnavailableOnPlatform ? (
+                      <Text style={styles.methodHint}>
+                        This payment method is not available on this platform.
+                      </Text>
+                    ) : null}
+                    {option.method === 'APPLE_PAY' &&
+                    supportCheckComplete &&
+                    Platform.OS === 'ios' &&
+                    !isExpoGo &&
+                    !applePaySupported ? (
+                      <Text style={styles.methodHint}>
+                        Apple Pay is currently unavailable on this device.
+                      </Text>
+                    ) : null}
+                    {option.method === 'GOOGLE_PAY' &&
+                    supportCheckComplete &&
+                    Platform.OS === 'android' &&
+                    !isExpoGo &&
+                    !googlePaySupported ? (
+                      <Text style={styles.methodHint}>
+                        Google Pay is currently unavailable on this device.
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+                <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+                  {isSelected ? <View style={styles.radioInner} /> : null}
+                </View>
               </Pressable>
             );
           })}
         </View>
 
         {needsCardField ? (
-          <View style={styles.card}>
+          <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Card Details</Text>
-            <CardField
-              postalCodeEnabled={false}
-              placeholders={{ number: '4242 4242 4242 4242' }}
-              cardStyle={{
-                backgroundColor: '#FFFFFF',
-                textColor: '#0F172A',
-                borderColor: '#CBD5E1',
-                borderWidth: 1,
-                borderRadius: 12,
-                placeholderColor: '#94A3B8',
-              }}
-              style={styles.cardField}
-              onCardChange={(details) => setCardComplete(Boolean(details.complete))}
-            />
+            <View style={styles.cardFieldWrap}>
+              <CardField
+                postalCodeEnabled={false}
+                placeholders={{ number: '4242 4242 4242 4242' }}
+                cardStyle={{
+                  backgroundColor: '#F8FAFC',
+                  textColor: '#111827',
+                  borderColor: '#E5E7EB',
+                  borderWidth: 1,
+                  borderRadius: 18,
+                  placeholderColor: '#98A2B3',
+                }}
+                style={styles.cardField}
+                onCardChange={(details) => setCardComplete(Boolean(details.complete))}
+              />
+            </View>
             <Text style={styles.helperText}>
               {selectedMethod === 'CREDIT_CARD'
                 ? 'Your credit card will be charged now when you confirm the payment.'
@@ -632,16 +629,18 @@ export default function RequestPaymentScreen() {
         ) : null}
 
         {!supportCheckComplete && (selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') ? (
-          <View style={styles.inlineRow}>
-            <ActivityIndicator size="small" color="#2563EB" />
+          <View style={styles.inlineInfo}>
+            <ActivityIndicator size="small" color="#111827" />
             <Text style={styles.helperText}>Checking device payment support…</Text>
           </View>
         ) : null}
 
-        <View style={styles.card}>
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Review</Text>
-          <Text style={styles.label}>Chosen method</Text>
-          <Text style={styles.value}>{getPaymentMethodLabel(selectedOption.method)}</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Chosen method</Text>
+            <Text style={styles.summaryValue}>{getPaymentMethodLabel(selectedOption.method)}</Text>
+          </View>
           {selectedMethod === 'APPLE_PAY' ? (
             <Text style={styles.helperText}>
               {merchantIdentifier
@@ -656,15 +655,19 @@ export default function RequestPaymentScreen() {
           ) : null}
           {paymentResult ? (
             <>
-              <Text style={styles.label}>Payment status</Text>
-              <Text style={styles.value}>{paymentResult.status}</Text>
-              <Text style={styles.label}>Collected amount</Text>
-              <Text style={styles.value}>
-                {formatMoney(
-                  paymentResult.capturedAmount > 0 ? paymentResult.capturedAmount : paymentResult.amount,
-                  paymentResult.currency,
-                )}
-              </Text>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Payment status</Text>
+                <Text style={styles.summaryValue}>{paymentResult.status}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Collected amount</Text>
+                <Text style={styles.summaryValue}>
+                  {formatMoney(
+                    paymentResult.capturedAmount > 0 ? paymentResult.capturedAmount : paymentResult.amount,
+                    paymentResult.currency,
+                  )}
+                </Text>
+              </View>
             </>
           ) : null}
         </View>
@@ -688,12 +691,7 @@ export default function RequestPaymentScreen() {
         </Pressable>
       </ScrollView>
 
-      <Modal
-        visible={showPaymentNotice}
-        transparent
-        animationType="fade"
-        onRequestClose={closePaymentNotice}
-      >
+      <Modal visible={showPaymentNotice} transparent animationType="fade" onRequestClose={closePaymentNotice}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalBadge}>
@@ -740,9 +738,12 @@ export default function RequestPaymentScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: '#FAFAFA',
+  },
+  scrollView: {
+    flex: 1,
   },
   centeredContainer: {
     flex: 1,
@@ -750,230 +751,311 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 12,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: '#FAFAFA',
   },
   content: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 32,
+    paddingHorizontal: 20,
+    gap: 16,
   },
-  card: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 14,
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    padding: 16,
-    gap: 6,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
   },
-  subtitle: {
-    color: M3LoginColors.textSecondary,
+  heroBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroLabel: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  heroSubtitle: {
+    marginTop: 8,
+    color: '#68768A',
     fontSize: 14,
     lineHeight: 20,
   },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 10,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF2F6',
+  },
+  summaryLabel: {
+    flex: 1,
+    fontSize: 13,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-    marginBottom: 4,
+    color: '#68768A',
   },
-  label: {
-    marginTop: 8,
-    color: M3LoginColors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  value: {
-    color: M3LoginColors.textPrimary,
-    fontSize: 15,
+  summaryValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
   },
   helperText: {
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
     fontSize: 13,
     lineHeight: 18,
+    marginTop: 10,
   },
   methodCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'center',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 8,
-    gap: 4,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    marginTop: 12,
   },
   methodCardSelected: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
+    backgroundColor: '#FFF7E1',
+  },
+  methodLeading: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  methodIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  methodCopy: {
+    flex: 1,
+    gap: 4,
   },
   methodTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  methodTitleSelected: {
-    color: '#FFFFFF',
+    fontWeight: '800',
+    color: '#111827',
   },
   methodDescription: {
-    color: M3LoginColors.textSecondary,
     fontSize: 13,
-  },
-  methodDescriptionSelected: {
-    color: '#FFFFFF',
+    lineHeight: 18,
+    color: '#68768A',
   },
   methodHint: {
-    color: M3LoginColors.textSecondary,
     fontSize: 12,
+    fontWeight: '700',
+    color: '#B45309',
   },
-  methodHintSelected: {
-    color: '#FFFFFF',
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOuterSelected: {
+    borderColor: '#D89A1A',
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#D89A1A',
+  },
+  cardFieldWrap: {
+    borderRadius: 18,
+    overflow: 'hidden',
   },
   cardField: {
     width: '100%',
-    height: 50,
-    marginTop: 8,
+    height: 56,
+  },
+  inlineInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 4,
+  },
+  primaryButton: {
+    minHeight: 56,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    color: '#111827',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  secondaryButton: {
+    minHeight: 56,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+  secondaryButtonText: {
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  errorText: {
+    color: '#B42318',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.42)',
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-    backgroundColor: 'rgba(15, 23, 42, 0.52)',
+    padding: 24,
   },
   modalCard: {
-    backgroundColor: '#F8FAFC',
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#D8E2F0',
     padding: 20,
-    gap: 14,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
   },
   modalBadge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#DBEAFE',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
+    backgroundColor: '#FFF3D6',
+    marginBottom: 12,
   },
   modalBadgeText: {
-    color: '#1D4ED8',
+    color: '#D89A1A',
     fontSize: 12,
-    fontWeight: '700',
-  },
-  modalTitle: {
-    color: '#0F172A',
-    fontSize: 22,
     fontWeight: '800',
   },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
+  },
   modalBody: {
-    color: '#334155',
-    fontSize: 15,
-    lineHeight: 22,
+    marginTop: 10,
+    color: '#68768A',
+    fontSize: 14,
+    lineHeight: 20,
   },
   noticePanel: {
+    marginTop: 16,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F8FAFC',
     padding: 14,
     gap: 8,
   },
   noticePanelTitle: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
   },
   noticePanelText: {
-    color: '#334155',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#68768A',
   },
   modalFootnote: {
-    color: '#64748B',
+    marginTop: 14,
+    color: '#68768A',
     fontSize: 13,
     lineHeight: 18,
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
+    gap: 12,
+    marginTop: 20,
   },
   modalSecondaryButton: {
     flex: 1,
-    minHeight: 48,
-    borderRadius: 14,
+    minHeight: 50,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
   },
   modalSecondaryButtonText: {
-    color: '#334155',
-    fontSize: 14,
+    color: '#111827',
     fontWeight: '700',
+    fontSize: 14,
   },
   modalPrimaryButton: {
-    flex: 1.25,
-    minHeight: 48,
-    borderRadius: 14,
-    backgroundColor: '#2563EB',
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    backgroundColor: '#FFC548',
   },
   modalPrimaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#111827',
     fontWeight: '800',
-  },
-  inlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 4,
-  },
-  primaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  secondaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: M3LoginColors.onPrimary,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  secondaryButtonText: {
-    color: M3LoginColors.textPrimary,
-    fontWeight: '600',
     fontSize: 14,
-  },
-  errorText: {
-    color: M3LoginColors.error,
-    fontSize: 14,
-    textAlign: 'center',
   },
 });

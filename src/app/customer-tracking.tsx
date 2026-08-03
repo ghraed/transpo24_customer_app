@@ -9,6 +9,17 @@ import {
   NativeMapViewDirections,
   NativeMarker,
 } from '@/components/native-maps';
+import {
+  clientTheme,
+  TrackingHero,
+  TrackingInfoPill,
+  TrackingMapModal,
+  TrackingMapShell,
+  TrackingMetaRow,
+  TrackingProgress,
+  TrackingScreenCard,
+  TrackingScrollable,
+} from '@/components/tracking-ui';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -22,7 +33,12 @@ import {
   onTripStatusUpdated,
 } from '@/services/socketService';
 import type { AdditionalCharge } from '@/types/customer-request';
-import type { AddressedLocation, DriverLocationUpdatedPayload, GeoLocation, TripStatus } from '@/types/trip.types';
+import type {
+  AddressedLocation,
+  DriverLocationUpdatedPayload,
+  GeoLocation,
+  TripStatus,
+} from '@/types/trip.types';
 import {
   calculateDistanceMeters,
   isValidGeoLocation,
@@ -68,11 +84,14 @@ export default function CustomerTrackingScreen() {
       : process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY?.trim()) ||
     '';
   const [driverLocation, setDriverLocation] = useState<GeoLocation | null>(null);
-  const [statusText, setStatusText] = useState<string>('Driver is going to pickup location');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [routeError, setRouteError] = useState<string>('');
+  const [statusText, setStatusText] = useState('Driver is going to pickup location');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [routeError, setRouteError] = useState('');
   const [routeStage, setRouteStage] = useState<'pickup' | 'dropoff'>('pickup');
-  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
+  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(
+    null,
+  );
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   const pickupLocation = useMemo<AddressedLocation | null>(() => {
     const latitude = parseNumber(params.pickupLatitude);
@@ -137,35 +156,9 @@ export default function CustomerTrackingScreen() {
       setDriverLocation(next);
     });
 
-    const unsubArrived = onDriverArrivedPickupConfirmed((payload) => {
-      const validated = validateDriverArrivedPickupConfirmedPayload(payload);
-      if (!validated || validated.tripId !== validTripId) return;
-      setStatusText('Driver arrived at pickup location');
-      router.replace((
-        '/waiting-for-pickup?tripId=' +
-        encodeURIComponent(validTripId) +
-        '&pickupLatitude=' +
-        encodeURIComponent(String(pickupLocation.latitude)) +
-        '&pickupLongitude=' +
-        encodeURIComponent(String(pickupLocation.longitude)) +
-        '&pickupAddress=' +
-        encodeURIComponent(pickupLocation.address ?? '') +
-        '&dropoffLatitude=' +
-        encodeURIComponent(String(dropoffLocation.latitude)) +
-        '&dropoffLongitude=' +
-        encodeURIComponent(String(dropoffLocation.longitude)) +
-        '&dropoffAddress=' +
-        encodeURIComponent(dropoffLocation.address ?? '')
-      ) as Href);
-    });
-
-    const unsubStatus = onTripStatusUpdated((payload) => {
-      const validatedStatusPayload = validateTripStatusUpdatedPayload(payload);
-      if (!validatedStatusPayload || validatedStatusPayload.tripId !== validTripId) return;
-      const status = validatedStatusPayload.status as TripStatus;
-      if (status === 'DRIVER_ARRIVED_PICKUP') {
-        setStatusText('Driver arrived at pickup location');
-        router.replace((
+    const goToWaitingForPickup = () => {
+      router.replace(
+        (
           '/waiting-for-pickup?tripId=' +
           encodeURIComponent(validTripId) +
           '&pickupLatitude=' +
@@ -180,14 +173,28 @@ export default function CustomerTrackingScreen() {
           encodeURIComponent(String(dropoffLocation.longitude)) +
           '&dropoffAddress=' +
           encodeURIComponent(dropoffLocation.address ?? '')
-        ) as Href);
+        ) as Href,
+      );
+    };
+
+    const unsubArrived = onDriverArrivedPickupConfirmed((payload) => {
+      const validated = validateDriverArrivedPickupConfirmedPayload(payload);
+      if (!validated || validated.tripId !== validTripId) return;
+      setStatusText('Driver arrived at pickup location');
+      goToWaitingForPickup();
+    });
+
+    const unsubStatus = onTripStatusUpdated((payload) => {
+      const validatedStatusPayload = validateTripStatusUpdatedPayload(payload);
+      if (!validatedStatusPayload || validatedStatusPayload.tripId !== validTripId) return;
+      const status = validatedStatusPayload.status as TripStatus;
+      if (status === 'DRIVER_ARRIVED_PICKUP') {
+        setStatusText('Driver arrived at pickup location');
+        goToWaitingForPickup();
       } else if (status === 'DRIVER_GOING_TO_PICKUP') {
         setStatusText('Driver is going to pickup location');
         setRouteStage('pickup');
-      } else if (
-        status === 'ITEM_PICKED_UP' ||
-        status === 'DRIVER_GOING_TO_DROPOFF'
-      ) {
+      } else if (status === 'ITEM_PICKED_UP' || status === 'DRIVER_GOING_TO_DROPOFF') {
         setRouteStage('dropoff');
       } else if (status === 'DELIVERED' || status === 'COMPLETED') {
         router.replace(buildDeliveredRoute(validTripId, validatedStatusPayload.updatedAt));
@@ -220,11 +227,13 @@ export default function CustomerTrackingScreen() {
 
   if (!mapsApiKey) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>
-          Google Maps API key is missing. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY or platform key
-          (EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY / EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY).
-        </Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Map configuration missing</Text>
+          <Text style={styles.fallbackText}>
+            Set the Google Maps API key to display live tracking.
+          </Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
@@ -236,8 +245,11 @@ export default function CustomerTrackingScreen() {
     !isValidGeoLocation(dropoffLocation)
   ) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Invalid tracking parameters.</Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackText}>Invalid tracking parameters.</Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
@@ -249,88 +261,125 @@ export default function CustomerTrackingScreen() {
     !NativeMapViewDirections
   ) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Trip tracking map is available on iOS and Android only.</Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackText}>
+            Trip tracking map is available on iOS and Android only.
+          </Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <NativeMapView
-        style={styles.map}
-        initialRegion={{
-          latitude: pickupLocation.latitude,
-          longitude: pickupLocation.longitude,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        }}
-      >
-        <NativeMarker coordinate={pickupLocation} title="Pickup" anchor={{ x: 0.5, y: 0.5 }}>
-          <View style={styles.pickupMarker}>
-            <Text style={styles.pickupMarkerText}>P</Text>
-          </View>
-        </NativeMarker>
-        <NativeMarker coordinate={dropoffLocation} title="Destination" anchor={{ x: 0.5, y: 0.5 }}>
-          <View style={styles.destinationXMarker}>
-            <Text style={styles.destinationXText}>X</Text>
-          </View>
-        </NativeMarker>
-        {driverLocation ? (
-          <>
-            <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
-              <Text style={styles.driverMarkerIcon}>🚗</Text>
-            </NativeMarker>
-            <NativeMapViewDirections
-              origin={driverLocation}
-              destination={routeStage === 'pickup' ? pickupLocation : dropoffLocation}
-              apikey={mapsApiKey}
-              mode="DRIVING"
-              strokeWidth={4}
-              strokeColor="#0EA5E9"
-              onError={(message: string) => {
-                setRouteError(`Route error: ${message}`);
-              }}
-            />
-          </>
-        ) : null}
-      </NativeMapView>
+  const renderMap = (heightStyle?: object) => (
+    <NativeMapView
+      style={[styles.map, heightStyle]}
+      initialRegion={{
+        latitude: pickupLocation.latitude,
+        longitude: pickupLocation.longitude,
+        latitudeDelta: 0.04,
+        longitudeDelta: 0.04,
+      }}
+    >
+      <NativeMarker coordinate={pickupLocation} title="Pickup" />
+      <NativeMarker coordinate={dropoffLocation} title="Destination" anchor={{ x: 0.5, y: 0.5 }}>
+        <View style={styles.destinationXMarker}>
+          <Text style={styles.destinationXText}>X</Text>
+        </View>
+      </NativeMarker>
+      {driverLocation ? (
+        <>
+          <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
+            <Text style={styles.driverMarkerIcon}>🚗</Text>
+          </NativeMarker>
+          <NativeMapViewDirections
+            origin={driverLocation}
+            destination={routeStage === 'pickup' ? pickupLocation : dropoffLocation}
+            apikey={mapsApiKey}
+            mode="DRIVING"
+            strokeWidth={4}
+            strokeColor="#FFC548"
+            onError={(message: string) => {
+              setRouteError(`Route error: ${message}`);
+            }}
+          />
+        </>
+      ) : null}
+    </NativeMapView>
+  );
 
-      <View style={styles.bottomCard}>
-        <Text style={styles.title}>Trip Tracking</Text>
-        <Text style={styles.statusText}>{statusText}</Text>
-        {latestAdditionalCharge ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Additional Charge Added</Text>
-            <Text style={styles.helperText}>
-              {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} • {latestAdditionalCharge.reason}
-            </Text>
-          </View>
-        ) : null}
-        {!driverLocation ? (
-          <View style={styles.row}>
-            <ActivityIndicator size="small" color="#2563EB" />
-            <Text style={styles.helperText}>Waiting for driver location updates...</Text>
-          </View>
-        ) : null}
-        {driverLocation ? (
-          <Text style={styles.helperText}>
-            Driver: {driverLocation.latitude.toFixed(6)}, {driverLocation.longitude.toFixed(6)} | Target:{' '}
-            {(routeStage === 'pickup' ? pickupLocation.latitude : dropoffLocation.latitude).toFixed(6)},{' '}
-            {(routeStage === 'pickup' ? pickupLocation.longitude : dropoffLocation.longitude).toFixed(6)} |
-            Distance:{' '}
-            {(
-              calculateDistanceMeters(
-                driverLocation,
-                routeStage === 'pickup' ? pickupLocation : dropoffLocation,
-              ) / 1000
-            ).toFixed(2)}{' '}
-            km
+  const activeTarget = routeStage === 'pickup' ? pickupLocation : dropoffLocation;
+  const distanceText = driverLocation
+    ? `${(calculateDistanceMeters(driverLocation, activeTarget) / 1000).toFixed(2)} km`
+    : 'Waiting for driver location';
+
+  return (
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TrackingScrollable>
+        <TrackingHero
+          eyebrow={`Order #${tripId || 'N/A'}`}
+          title="Driver on the way"
+          description="Live location updates appear here as the driver heads to the pickup point."
+        />
+
+        <TrackingProgress currentStage={2} />
+
+        <TrackingMapShell
+          title="Live map"
+          subtitle="Tracking the driver route to your pickup address."
+          onExpand={() => setIsMapExpanded(true)}
+        >
+          {renderMap()}
+        </TrackingMapShell>
+
+        <TrackingScreenCard>
+          <TrackingInfoPill
+            label={driverLocation ? 'Live tracking active' : 'Waiting for updates'}
+            tone={driverLocation ? 'success' : 'accent'}
+          />
+          <Text style={styles.cardTitle}>{statusText}</Text>
+          <Text style={styles.cardBody}>
+            The app will move automatically to the next step once the driver arrives at pickup.
           </Text>
-        ) : null}
-        {routeError ? <Text style={styles.errorText}>{routeError}</Text> : null}
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-      </View>
+          <TrackingMetaRow
+            label="Pickup address"
+            value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
+          />
+          <TrackingMetaRow
+            label="Dropoff address"
+            value={
+              dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
+            }
+          />
+          <TrackingMetaRow label="Current distance" value={distanceText} />
+          {!driverLocation ? (
+            <View style={styles.inlineRow}>
+              <ActivityIndicator size="small" color={clientTheme.accentStrong} />
+              <Text style={styles.helperText}>Waiting for driver location updates...</Text>
+            </View>
+          ) : null}
+          {latestAdditionalCharge ? (
+            <View style={styles.noticeCard}>
+              <Text style={styles.noticeTitle}>Additional charge added</Text>
+              <Text style={styles.noticeText}>
+                {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} for{' '}
+                {latestAdditionalCharge.reason}
+              </Text>
+            </View>
+          ) : null}
+          {routeError ? <Text style={styles.errorText}>{routeError}</Text> : null}
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        </TrackingScreenCard>
+      </TrackingScrollable>
+
+      <TrackingMapModal
+        visible={isMapExpanded}
+        title="Driver tracking map"
+        onClose={() => setIsMapExpanded(false)}
+      >
+        {renderMap(styles.expandedMap)}
+      </TrackingMapModal>
     </SafeAreaView>
   );
 }
@@ -338,106 +387,88 @@ export default function CustomerTrackingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: clientTheme.background,
+  },
+  fallbackScreen: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  fallbackTitle: {
+    color: clientTheme.text,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  fallbackText: {
+    color: clientTheme.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
   },
   map: {
     flex: 1,
   },
-  bottomCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 8,
+  expandedMap: {
+    width: '100%',
+    height: '100%',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
+  cardTitle: {
+    color: clientTheme.text,
+    fontSize: 22,
+    fontWeight: '800',
   },
-  statusText: {
-    color: '#1E293B',
-    fontWeight: '600',
+  cardBody: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   helperText: {
-    color: '#475569',
+    color: clientTheme.textMuted,
+    fontSize: 14,
   },
-  infoText: {
-    color: '#1D4ED8',
-    fontWeight: '600',
+  noticeCard: {
+    borderRadius: 18,
+    backgroundColor: clientTheme.accentSoft,
+    padding: 14,
+    gap: 6,
+  },
+  noticeTitle: {
+    color: clientTheme.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  noticeText: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
   },
   errorText: {
-    color: '#B91C1C',
-  },
-  centeredContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  infoCard: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
-  },
-  infoTitle: {
-    color: '#1E3A8A',
-    fontWeight: '700',
-  },
-  pickupMarker: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#16A34A',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  pickupMarkerText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 15,
+    color: '#DC2626',
+    fontSize: 14,
+    lineHeight: 20,
   },
   driverMarkerIcon: {
-    fontSize: 20,
-    lineHeight: 22,
+    fontSize: 28,
   },
   destinationXMarker: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#DC2626',
     borderWidth: 2,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
   },
   destinationXText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
-    lineHeight: 16,
+    lineHeight: 18,
   },
 });

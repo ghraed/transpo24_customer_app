@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { M3LoginColors } from '@/constants/theme';
+import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import {
   getChatRoomByTransportRequestId,
@@ -641,15 +641,15 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: clientTheme.background,
   },
   keyboardContainer: {
     flex: 1,
   },
   headerCard: {
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: clientTheme.surface,
     borderBottomWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    borderColor: clientTheme.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 6,
@@ -657,16 +657,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   subtitle: {
     fontSize: 13,
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
   },
   statusPill: {
     alignSelf: 'flex-start',
-    backgroundColor: M3LoginColors.primaryContainer,
-    color: '#FFFFFF',
+    backgroundColor: clientTheme.accentSoft,
+    color: clientTheme.accentStrong,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
   },
   socketText: {
     fontSize: 12,
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
   },
   centeredContainer: {
     flex: 1,
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mutedText: {
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -692,13 +692,13 @@ const styles = StyleSheet.create({
     minHeight: 42,
     minWidth: 120,
     borderRadius: 10,
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: clientTheme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   retryButtonText: {
-    color: M3LoginColors.onPrimary,
+    color: clientTheme.text,
     fontWeight: '700',
   },
   messagesContent: {
@@ -727,60 +727,60 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   clientBubble: {
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: clientTheme.accent,
     borderBottomRightRadius: 4,
   },
   driverBubble: {
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: clientTheme.surface,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
+    borderColor: clientTheme.border,
     borderBottomLeftRadius: 4,
   },
   messageText: {
     fontSize: 15,
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   clientMessageText: {
-    color: M3LoginColors.onPrimary,
+    color: clientTheme.text,
   },
   translationHint: {
     fontSize: 12,
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
   },
   clientTranslationHint: {
-    color: M3LoginColors.primaryContainer,
+    color: clientTheme.textMuted,
   },
   translationBlock: {
     borderTopWidth: 1,
-    borderTopColor: M3LoginColors.outlineVariant,
+    borderTopColor: clientTheme.border,
     marginTop: 2,
     paddingTop: 6,
     gap: 4,
   },
   clientTranslationBlock: {
-    borderTopColor: M3LoginColors.primaryContainer,
+    borderTopColor: 'rgba(17, 24, 39, 0.12)',
   },
   translationLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
   },
   clientTranslationLabel: {
-    color: M3LoginColors.primaryContainer,
+    color: clientTheme.textMuted,
   },
   translationText: {
     fontSize: 14,
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   clientTranslationText: {
-    color: M3LoginColors.onPrimary,
+    color: clientTheme.text,
   },
   messageTime: {
     fontSize: 11,
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
   },
   clientMessageTime: {
-    color: M3LoginColors.primaryContainer,
+    color: 'rgba(17, 24, 39, 0.68)',
   },
   emptyState: {
     alignItems: 'center',
@@ -789,12 +789,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   inputPanel: {
     borderTopWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: clientTheme.border,
+    backgroundColor: clientTheme.surface,
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: CHAT_INPUT_BOTTOM_PADDING,
@@ -811,16 +811,16 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: clientTheme.border,
+    backgroundColor: clientTheme.surfaceMuted,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   sendButton: {
     minHeight: 44,
     borderRadius: 10,
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: clientTheme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -829,16 +829,16 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonText: {
-    color: M3LoginColors.onPrimary,
+    color: clientTheme.text,
     fontWeight: '700',
     fontSize: 14,
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: clientTheme.danger,
     textAlign: 'center',
   },
   closedText: {
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
     fontSize: 13,
     textAlign: 'center',
   },

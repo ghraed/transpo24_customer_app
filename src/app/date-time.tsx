@@ -1,5 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -8,21 +9,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Switch,
   Text,
   TextInput,
   View,
+  type ColorValue,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   updateScheduleAndItemDetails,
   uploadRequestPhotos,
 } from '@/lib/api';
-import { M3LoginColors } from '@/constants/theme';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { M3Styles } from '@/lib/m3-styles';
 import type {
   DateTimeRouteParams,
   ItemCondition,
@@ -120,10 +123,25 @@ function mapPickerAssetToLocalPhoto(asset: ImagePicker.ImagePickerAsset): LocalP
   };
 }
 
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
+
 export default function DateTimeScreen() {
   const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const params = useLocalSearchParams<DateTimeRouteParams>();
+  const insets = useSafeAreaInsets();
+  const [defaultScheduledPickupAt] = useState<Date>(() => new Date(Date.now() + 60 * 60 * 1000));
+  const [currentValidationTime] = useState<number>(() => Date.now());
 
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
@@ -145,7 +163,7 @@ export default function DateTimeScreen() {
 
   const [form, setForm] = useState<ScheduleAndItemDetailsForm>({
     isImmediate: false,
-    scheduledPickupAt: new Date(Date.now() + 60 * 60 * 1000),
+    scheduledPickupAt: defaultScheduledPickupAt,
     itemTitle: '',
     itemDescription: '',
     itemType: defaultItemTypeFromServiceKey(serviceKey),
@@ -178,7 +196,6 @@ export default function DateTimeScreen() {
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
-    const now = Date.now();
     const currentYear = new Date().getFullYear();
 
     if (!requestId) {
@@ -200,7 +217,7 @@ export default function DateTimeScreen() {
     if (!form.isImmediate) {
       if (!form.scheduledPickupAt) {
         errors.push('Please select pickup date and time.');
-      } else if (form.scheduledPickupAt.getTime() <= now) {
+      } else if (form.scheduledPickupAt.getTime() <= currentValidationTime) {
         errors.push('Scheduled pickup must be in the future.');
       }
     }
@@ -248,7 +265,7 @@ export default function DateTimeScreen() {
     });
 
     return errors;
-  }, [form, parsedVehicleConditionDetails?.vehicleCondition, requestId, selectedPhotos, serviceId, serviceKey]);
+  }, [currentValidationTime, form, parsedVehicleConditionDetails?.vehicleCondition, requestId, selectedPhotos, serviceId, serviceKey]);
 
   const isBusy = isSavingDetails || isUploadingPhotos;
   const canContinue = validationErrors.length === 0 && !isBusy;
@@ -458,21 +475,30 @@ export default function DateTimeScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          keyboardInset > 0 ? { paddingBottom: 18 + keyboardInset } : undefined,
-        ]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </Pressable>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingTop: Math.max(insets.top, 18),
+              paddingBottom: Math.max(insets.bottom + 32, 42) + keyboardInset,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroBadge}>
+              <IconSymbol name={{ ios: 'calendar', android: 'event', web: 'event' }} color="#111827" size={20} />
+            </View>
+            <Text style={styles.heroLabel}>Request Details</Text>
+          </View>
           <Text style={styles.title}>Date, Item Details & Photos</Text>
           <Text style={styles.subtitle}>
             Tell us when, what, and show us what you want to transport.
@@ -503,12 +529,18 @@ export default function DateTimeScreen() {
           {!form.isImmediate ? (
             <View style={styles.datetimeContainer}>
               <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+                <View style={styles.pickerIconWrap}>
+                  <Text style={styles.pickerIconGlyph}>🗓</Text>
+                </View>
                 <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
                 <Text style={styles.pickerButtonValue}>
                   {form.scheduledPickupAt ? form.scheduledPickupAt.toLocaleDateString() : 'Select date'}
                 </Text>
               </Pressable>
               <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+                <View style={styles.pickerIconWrap}>
+                  <Text style={styles.pickerIconGlyph}>🕒</Text>
+                </View>
                 <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
                 <Text style={styles.pickerButtonValue}>
                   {form.scheduledPickupAt
@@ -640,6 +672,8 @@ export default function DateTimeScreen() {
             <Text style={styles.switchLabel}>Requires loading help</Text>
             <Switch
               value={form.requiresLoadingHelp}
+              trackColor={{ false: '#E5E7EB', true: '#FFD86F' }}
+              thumbColor={form.requiresLoadingHelp ? '#FFC548' : '#FFFFFF'}
               onValueChange={(value) => {
                 updateForm('requiresLoadingHelp', value);
                 if (!value) updateForm('loadingWorkersCount', '');
@@ -677,9 +711,11 @@ export default function DateTimeScreen() {
 
           <View style={styles.row}>
             <Pressable style={[styles.actionButton, styles.halfInput]} onPress={() => void pickFromLibrary()}>
+              <IconSymbol name={{ ios: 'photo.on.rectangle', android: 'photo_library', web: 'photo_library' }} color="#111827" size={16} />
               <Text style={styles.actionButtonText}>Add Photos</Text>
             </Pressable>
             <Pressable style={[styles.actionButtonSecondary, styles.halfInput]} onPress={() => void takePhoto()}>
+              <IconSymbol name={{ ios: 'camera', android: 'photo_camera', web: 'photo_camera' }} color="#111827" size={16} />
               <Text style={styles.actionButtonSecondaryText}>Take Photo</Text>
             </Pressable>
           </View>
@@ -711,21 +747,9 @@ export default function DateTimeScreen() {
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </ScrollView>
 
-      <Pressable
-        style={[
-          styles.continueButton,
-          !canContinue && styles.continueButtonDisabled,
-          keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
-        ]}
-        disabled={!canContinue}
-        onPress={() => void onContinue()}
-      >
-        {isBusy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.continueText}>Continue</Text>}
-      </Pressable>
-
       {showDatePicker ? (
         <DateTimePicker
-          value={form.scheduledPickupAt ?? new Date(Date.now() + 60 * 60 * 1000)}
+          value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="date"
           minimumDate={new Date()}
           onChange={(_, selectedDate) => {
@@ -741,7 +765,7 @@ export default function DateTimeScreen() {
 
       {showTimePicker ? (
         <DateTimePicker
-          value={form.scheduledPickupAt ?? new Date(Date.now() + 60 * 60 * 1000)}
+          value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="time"
           onChange={(_, selectedDate) => {
             setShowTimePicker(false);
@@ -753,129 +777,174 @@ export default function DateTimeScreen() {
           }}
         />
       ) : null}
+
+      <View style={styles.footerBar}>
+        <Pressable
+          style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
+          disabled={!canContinue}
+          onPress={() => void onContinue()}
+        >
+          {isBusy ? <ActivityIndicator color="#111827" /> : <Text style={styles.continueText}>Continue</Text>}
+        </Pressable>
+      </View>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
   container: {
     flex: 1,
-    backgroundColor: M3LoginColors.background,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 18,
+    backgroundColor: '#FAFAFA',
   },
   content: {
-    paddingBottom: 18,
+    paddingHorizontal: 20,
     gap: 12,
   },
-  header: {
-    marginBottom: 4,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 8,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  backButtonText: {
-    color: M3LoginColors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  heroBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroLabel: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontWeight: '800',
+    color: '#111827',
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 8,
     fontSize: 15,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
+    lineHeight: 22,
   },
   section: {
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 12,
-    padding: 12,
+    borderColor: '#E5E8EF',
+    borderRadius: 24,
+    padding: 18,
     gap: 10,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
   },
   toggleRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   optionChip: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
   },
   optionChipActive: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: '#FFC548',
+    backgroundColor: '#FFC548',
   },
   optionChipText: {
-    color: M3LoginColors.textPrimary,
+    color: '#68768A',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   optionChipTextActive: {
-    color: M3LoginColors.primary,
+    color: '#111827',
   },
   datetimeContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   pickerButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    backgroundColor: M3LoginColors.primaryContainer,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#F8FAFC',
+  },
+  pickerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFC548',
+    marginBottom: 12,
+  },
+  pickerIconGlyph: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
   },
   pickerButtonLabel: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: '#68768A',
   },
   pickerButtonValue: {
-    marginTop: 2,
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    marginTop: 4,
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '700',
   },
   input: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.surface,
-    height: 46,
-    paddingHorizontal: 12,
-    color: M3LoginColors.textPrimary,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    minHeight: 56,
+    paddingHorizontal: 14,
+    color: '#111827',
     fontSize: 14,
   },
   textarea: {
-    minHeight: 88,
-    height: 88,
+    minHeight: 96,
+    height: 96,
     textAlignVertical: 'top',
-    paddingTop: 10,
+    paddingTop: 14,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
   halfInput: {
     flex: 1,
@@ -885,8 +954,8 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: M3LoginColors.textPrimary,
+    fontWeight: '700',
+    color: '#111827',
   },
   optionsWrap: {
     flexDirection: 'row',
@@ -900,40 +969,47 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 14,
-    color: M3LoginColors.textPrimary,
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '700',
   },
   helperText: {
-    fontSize: 12,
-    color: M3LoginColors.textTertiary,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#68768A',
   },
   photoCounter: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: M3LoginColors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#68768A',
   },
   actionButton: {
-    backgroundColor: M3LoginColors.primary,
-    borderRadius: 10,
-    paddingVertical: 11,
+    backgroundColor: '#FFC548',
+    borderRadius: 18,
+    paddingVertical: 14,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   actionButtonSecondary: {
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: M3LoginColors.primary,
-    borderRadius: 10,
-    paddingVertical: 11,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
+    paddingVertical: 14,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   actionButtonText: {
-    color: M3LoginColors.surface,
-    fontWeight: '700',
+    color: '#111827',
+    fontWeight: '800',
     fontSize: 14,
   },
   actionButtonSecondaryText: {
-    color: M3LoginColors.primary,
-    fontWeight: '700',
+    color: '#111827',
+    fontWeight: '800',
     fontSize: 14,
   },
   photoGrid: {
@@ -948,48 +1024,52 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 10,
-    backgroundColor: M3LoginColors.outlineVariant,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
   },
   removePhotoButton: {
     marginTop: 6,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: M3LoginColors.error,
-    borderRadius: 8,
+    borderColor: '#DC2626',
+    borderRadius: 10,
     paddingVertical: 4,
   },
   removePhotoText: {
     fontSize: 12,
-    color: M3LoginColors.error,
-    fontWeight: '600',
+    color: '#DC2626',
+    fontWeight: '700',
   },
   validationCard: {
     borderWidth: 1,
-    borderColor: '#fecdca',
-    backgroundColor: '#fef3f2',
-    borderRadius: 10,
-    padding: 10,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 18,
+    padding: 14,
     gap: 4,
   },
   validationText: {
-    color: M3LoginColors.error,
-    fontSize: 12,
+    color: '#B42318',
+    fontSize: 13,
   },
   progressText: {
     fontSize: 13,
-    color: M3LoginColors.primary,
-    fontWeight: '600',
+    color: '#D89A1A',
+    fontWeight: '700',
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: '#B42318',
     fontSize: 13,
   },
+  footerBar: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    backgroundColor: '#FAFAFA',
+  },
   continueButton: {
-    marginTop: 8,
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -997,8 +1077,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   continueText: {
-    color: M3LoginColors.surface,
+    color: '#111827',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

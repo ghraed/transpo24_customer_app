@@ -5,15 +5,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { getApiBaseUrl } from '@/config/backend';
-import { M3LoginColors } from '@/constants/theme';
+import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 
 interface ForgotPasswordRequest {
@@ -81,10 +84,7 @@ export default function ForgotPasswordScreen() {
 
       const raw = await response.text();
       setSuccessMessage(
-        getResponseMessage(
-          raw,
-          t('If this email exists, a reset link has been sent.'),
-        ),
+        getResponseMessage(raw, t('If this email exists, a reset link has been sent.')),
       );
     } catch {
       setError(t('Network error. Please try again.'));
@@ -94,152 +94,179 @@ export default function ForgotPasswordScreen() {
   }, [apiBaseUrl, email, t]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View
-        style={[
-          styles.container,
-          keyboardInset > 0 ? styles.containerKeyboardOpen : undefined,
-          keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
-        ]}
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor={clientTheme.background} />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <View style={styles.backgroundAccent} />
-
-      <View style={styles.card}>
-        <Text style={styles.title}>{t('Reset Password')}</Text>
-        <Text style={styles.subtitle}>
-          {t('Enter your email to receive a password reset link.')}
-        </Text>
-
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t('Email')}
-            placeholderTextColor={M3LoginColors.textTertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
-
-        {!!error && <Text style={styles.errorText}>{error}</Text>}
-        {!!successMessage && <Text style={styles.successText}>{successMessage}</Text>}
-
-        <Pressable
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={onResetPress}
-          disabled={isLoading}
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : null,
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {isLoading ? (
-            <ActivityIndicator color={M3LoginColors.onPrimary} />
-          ) : (
-            <Text style={styles.buttonText}>{t('Send Reset Link')}</Text>
-          )}
-        </Pressable>
+          <View style={styles.heroCard}>
+            <Text style={styles.heroEyebrow}>{t('Password Reset')}</Text>
+            <Text style={styles.heroTitle}>{t('Reset your password')}</Text>
+            <Text style={styles.heroDescription}>
+              {t('Enter your account email and we will send the reset instructions.')}
+            </Text>
+          </View>
 
-        <Link href="/" style={styles.linkText}>
-          {t('Back to Sign in')}
-        </Link>
-      </View>
-      </View>
-    </KeyboardAvoidingView>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>{t('Recovery email')}</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>{t('Email')}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t('Email')}
+                placeholderTextColor="#8A94A6"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+            {!!successMessage && <Text style={styles.successText}>{successMessage}</Text>}
+
+            <Pressable
+              style={[styles.primaryButton, isLoading ? styles.buttonDisabled : null]}
+              onPress={onResetPress}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={clientTheme.text} />
+              ) : (
+                <Text style={styles.primaryButtonText}>{t('Send reset link')}</Text>
+              )}
+            </Pressable>
+          </View>
+
+          <View style={styles.card}>
+            <Link href="/" style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>{t('Back to sign in')}</Text>
+            </Link>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: M3LoginColors.background,
-    overflow: 'hidden',
+  content: {
+    padding: 20,
+    paddingBottom: 32,
+    gap: 16,
   },
-  containerKeyboardOpen: {
-    justifyContent: 'flex-start',
-    paddingTop: 24,
+  heroCard: {
+    borderRadius: 28,
+    backgroundColor: clientTheme.surface,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+    padding: 22,
   },
-  backgroundAccent: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: '100%',
-    height: '35%',
-    backgroundColor: M3LoginColors.primaryContainer,
-    opacity: 0.06,
+  heroEyebrow: {
+    color: clientTheme.accentStrong,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  heroTitle: {
+    color: clientTheme.text,
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  heroDescription: {
+    color: clientTheme.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
   },
   card: {
-    backgroundColor: M3LoginColors.surface,
-    borderRadius: 28,
-    padding: 24,
+    borderRadius: 24,
+    backgroundColor: clientTheme.surface,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
+    borderColor: clientTheme.border,
+    padding: 20,
+    gap: 14,
   },
-  title: {
-    fontSize: 28,
+  sectionTitle: {
+    color: clientTheme.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputLabel: {
+    color: clientTheme.text,
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 8,
-    color: M3LoginColors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: M3LoginColors.textSecondary,
-    marginBottom: 24,
-  },
-  inputWrapper: {
-    borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 16,
-    marginBottom: 12,
-    backgroundColor: M3LoginColors.surfaceContainer,
   },
   input: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+    backgroundColor: clientTheme.surfaceMuted,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
+    fontSize: 15,
   },
-  button: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: M3LoginColors.primary,
+  primaryButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: clientTheme.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 4,
+  },
+  primaryButtonText: {
+    color: clientTheme.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  secondaryButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: clientTheme.surfaceMuted,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: clientTheme.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  successText: {
+    color: '#15803D',
+    fontSize: 14,
+    lineHeight: 20,
   },
   buttonDisabled: {
     opacity: 0.7,
-  },
-  buttonText: {
-    color: M3LoginColors.onPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  linkText: {
-    marginTop: 16,
-    color: M3LoginColors.primary,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  errorText: {
-    color: M3LoginColors.error,
-    marginBottom: 8,
-    fontSize: 14,
-  },
-  successText: {
-    color: '#188038',
-    marginBottom: 8,
-    fontSize: 14,
   },
 });

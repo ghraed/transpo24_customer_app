@@ -9,6 +9,17 @@ import {
   NativeMapViewDirections,
   NativeMarker,
 } from '@/components/native-maps';
+import {
+  clientTheme,
+  TrackingHero,
+  TrackingInfoPill,
+  TrackingMapModal,
+  TrackingMapShell,
+  TrackingMetaRow,
+  TrackingProgress,
+  TrackingScreenCard,
+  TrackingScrollable,
+} from '@/components/tracking-ui';
 import { getAccessToken } from '@/lib/auth-token';
 import {
   connectSocket,
@@ -103,10 +114,14 @@ export default function CustomerDeliveryTrackingScreen() {
   }, [params.dropoffAddress, params.dropoffLatitude, params.dropoffLongitude]);
 
   const [driverLocation, setDriverLocation] = useState<GeoLocation | null>(null);
-  const [statusText, setStatusText] = useState<string>('Driver is going to dropoff location');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [nearDeliveryBanner, setNearDeliveryBanner] = useState<string>('');
-  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(null);
+  const [statusText, setStatusText] = useState('Driver is going to dropoff location');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [nearDeliveryBanner, setNearDeliveryBanner] = useState('');
+  const [latestAdditionalCharge, setLatestAdditionalCharge] = useState<AdditionalCharge | null>(
+    null,
+  );
+  const [routeError, setRouteError] = useState('');
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   const isRouteValid =
     isValidTripId(tripId) &&
@@ -141,32 +156,21 @@ export default function CustomerDeliveryTrackingScreen() {
 
     const unsubStarted = onDriverStartedDelivery((payload) => {
       const validated = validateDriverStartedDeliveryPayload(payload);
-      if (!validated) {
-        console.warn('Ignoring invalid driverStartedDelivery payload', payload);
-        return;
-      }
-      if (validated.tripId !== tripId) return;
+      if (!validated || validated.tripId !== tripId) return;
       setStatusText('Driver is going to dropoff location');
     });
 
     const unsubLocation = onDriverLocationUpdated((payload) => {
       const validated = validateDriverLocationUpdatedPayload(payload);
-      if (!validated) {
-        console.warn('Ignoring invalid driverLocationUpdated payload', payload);
-        return;
-      }
-      if (validated.tripId !== tripId) return;
+      if (!validated || validated.tripId !== tripId) return;
       setDriverLocation({ latitude: validated.latitude, longitude: validated.longitude });
       setStatusText('Your item is on the way');
+      setRouteError('');
     });
 
     const unsubDelivered = onItemDelivered((payload) => {
       const validated = validateItemDeliveredPayload(payload);
-      if (!validated) {
-        console.warn('Ignoring invalid itemDelivered payload', payload);
-        return;
-      }
-      if (validated.tripId !== tripId) return;
+      if (!validated || validated.tripId !== tripId) return;
       setStatusText('Item delivered');
       if (validated.ratingAvailable) {
         router.replace((`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href);
@@ -191,11 +195,7 @@ export default function CustomerDeliveryTrackingScreen() {
 
     const unsubStatus = onTripStatusUpdated((payload) => {
       const validated = validateTripStatusUpdatedPayload(payload);
-      if (!validated) {
-        console.warn('Ignoring invalid tripStatusUpdated payload', payload);
-        return;
-      }
-      if (validated.tripId !== tripId) return;
+      if (!validated || validated.tripId !== tripId) return;
 
       if (validated.status === 'DRIVER_GOING_TO_DROPOFF') {
         setStatusText('Driver is going to dropoff location');
@@ -233,19 +233,24 @@ export default function CustomerDeliveryTrackingScreen() {
 
   if (!mapsApiKey) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>
-          Google Maps API key is missing. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY or platform key
-          (EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY / EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY).
-        </Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Map configuration missing</Text>
+          <Text style={styles.fallbackText}>
+            Set the Google Maps API key to display delivery tracking.
+          </Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
 
   if (!isRouteValid || !pickupLocation || !dropoffLocation) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Invalid delivery tracking route params.</Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackText}>Invalid delivery tracking route parameters.</Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
@@ -257,98 +262,231 @@ export default function CustomerDeliveryTrackingScreen() {
     !NativeMapViewDirections
   ) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Delivery tracking map is available on iOS and Android only.</Text>
+      <SafeAreaView style={styles.fallbackScreen}>
+        <TrackingScreenCard>
+          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackText}>
+            Delivery tracking map is available on iOS and Android only.
+          </Text>
+        </TrackingScreenCard>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <NativeMapView
-        style={styles.map}
-        initialRegion={{
-          latitude: dropoffLocation.latitude,
-          longitude: dropoffLocation.longitude,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        }}
-      >
-        <NativeMarker coordinate={pickupLocation} title="Pickup" />
-        <NativeMarker coordinate={dropoffLocation} title="Dropoff" pinColor="#DC2626" />
-        {driverLocation ? (
-          <>
-            <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
-              <Text style={styles.driverMarkerIcon}>🚗</Text>
-            </NativeMarker>
-            <NativeMapViewDirections
-              origin={driverLocation}
-              destination={dropoffLocation}
-              apikey={mapsApiKey}
-              mode="DRIVING"
-              strokeWidth={4}
-              strokeColor="#0EA5E9"
-            />
-          </>
-        ) : null}
-      </NativeMapView>
+  const renderMap = (heightStyle?: object) => (
+    <NativeMapView
+      style={[styles.map, heightStyle]}
+      initialRegion={{
+        latitude: dropoffLocation.latitude,
+        longitude: dropoffLocation.longitude,
+        latitudeDelta: 0.04,
+        longitudeDelta: 0.04,
+      }}
+    >
+      <NativeMarker coordinate={pickupLocation} title="Pickup" />
+      <NativeMarker coordinate={dropoffLocation} title="Dropoff" anchor={{ x: 0.5, y: 0.5 }}>
+        <View style={styles.destinationXMarker}>
+          <Text style={styles.destinationXText}>X</Text>
+        </View>
+      </NativeMarker>
+      {driverLocation ? (
+        <>
+          <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
+            <Text style={styles.driverMarkerIcon}>🚗</Text>
+          </NativeMarker>
+          <NativeMapViewDirections
+            origin={driverLocation}
+            destination={dropoffLocation}
+            apikey={mapsApiKey}
+            mode="DRIVING"
+            strokeWidth={4}
+            strokeColor="#FFC548"
+            onError={(message: string) => {
+              setRouteError(`Route error: ${message}`);
+            }}
+          />
+        </>
+      ) : null}
+    </NativeMapView>
+  );
 
-      <View style={styles.bottomCard}>
-        <Text style={styles.title}>Delivery Tracking</Text>
-        <Text style={styles.statusText}>{statusText}</Text>
-        {nearDeliveryBanner ? <Text style={styles.infoText}>{nearDeliveryBanner}</Text> : null}
-        {latestAdditionalCharge ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Additional Charge Added</Text>
-            <Text style={styles.helperText}>
-              {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} • {latestAdditionalCharge.reason}
-            </Text>
-          </View>
-        ) : null}
-        {!driverLocation ? (
-          <View style={styles.row}>
-            <ActivityIndicator size="small" color="#2563EB" />
-            <Text style={styles.helperText}>Waiting for driver location...</Text>
-          </View>
-        ) : (
-          <Text style={styles.helperText}>
-            Driver distance to dropoff:{' '}
-            {(calculateDistanceMeters(driverLocation, dropoffLocation) / 1000).toFixed(2)} km
+  const distanceText = driverLocation
+    ? `${(calculateDistanceMeters(driverLocation, dropoffLocation) / 1000).toFixed(2)} km`
+    : 'Waiting for driver location';
+
+  return (
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <TrackingScrollable>
+        <TrackingHero
+          eyebrow={`Order #${tripId || 'N/A'}`}
+          title="Delivery in progress"
+          description="The delivery map updates live while the driver heads to the dropoff address."
+        />
+
+        <TrackingProgress currentStage={4} />
+
+        <TrackingMapShell
+          title="Delivery map"
+          subtitle="Live route from driver location to your destination."
+          onExpand={() => setIsMapExpanded(true)}
+        >
+          {renderMap()}
+        </TrackingMapShell>
+
+        <TrackingScreenCard>
+          <TrackingInfoPill
+            label={driverLocation ? 'Live delivery active' : 'Waiting for route updates'}
+            tone={driverLocation ? 'success' : 'accent'}
+          />
+          <Text style={styles.cardTitle}>{statusText}</Text>
+          <Text style={styles.cardBody}>
+            You will be notified as the driver approaches the delivery location.
           </Text>
-        )}
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-      </View>
+          {nearDeliveryBanner ? (
+            <View style={styles.successCard}>
+              <Text style={styles.successTitle}>Delivery approaching</Text>
+              <Text style={styles.successText}>{nearDeliveryBanner}</Text>
+            </View>
+          ) : null}
+          <TrackingMetaRow
+            label="Dropoff address"
+            value={
+              dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
+            }
+          />
+          <TrackingMetaRow label="Distance to dropoff" value={distanceText} />
+          {!driverLocation ? (
+            <View style={styles.inlineRow}>
+              <ActivityIndicator size="small" color={clientTheme.accentStrong} />
+              <Text style={styles.helperText}>Waiting for driver location...</Text>
+            </View>
+          ) : null}
+          {latestAdditionalCharge ? (
+            <View style={styles.noticeCard}>
+              <Text style={styles.noticeTitle}>Additional charge added</Text>
+              <Text style={styles.noticeText}>
+                {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} for{' '}
+                {latestAdditionalCharge.reason}
+              </Text>
+            </View>
+          ) : null}
+          {routeError ? <Text style={styles.errorText}>{routeError}</Text> : null}
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        </TrackingScreenCard>
+      </TrackingScrollable>
+
+      <TrackingMapModal
+        visible={isMapExpanded}
+        title="Delivery map"
+        onClose={() => setIsMapExpanded(false)}
+      >
+        {renderMap(styles.expandedMap)}
+      </TrackingMapModal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  map: { flex: 1 },
-  bottomCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
   },
-  title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
-  statusText: { color: '#1E293B', fontWeight: '600' },
-  helperText: { color: '#475569' },
-  infoText: { color: '#1D4ED8', fontWeight: '600' },
-  errorText: { color: '#B91C1C' },
-  driverMarkerIcon: { fontSize: 28 },
-  centeredContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoCard: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
+  fallbackScreen: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
+    justifyContent: 'center',
+    padding: 20,
   },
-  infoTitle: { color: '#1E3A8A', fontWeight: '700' },
+  fallbackTitle: {
+    color: clientTheme.text,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  fallbackText: {
+    color: clientTheme.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  map: {
+    flex: 1,
+  },
+  expandedMap: {
+    width: '100%',
+    height: '100%',
+  },
+  cardTitle: {
+    color: clientTheme.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  cardBody: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  helperText: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+  },
+  successCard: {
+    borderRadius: 18,
+    backgroundColor: '#DCFCE7',
+    padding: 14,
+    gap: 6,
+  },
+  successTitle: {
+    color: '#166534',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  successText: {
+    color: '#166534',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  noticeCard: {
+    borderRadius: 18,
+    backgroundColor: clientTheme.accentSoft,
+    padding: 14,
+    gap: 6,
+  },
+  noticeTitle: {
+    color: clientTheme.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  noticeText: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  driverMarkerIcon: {
+    fontSize: 28,
+  },
+  destinationXMarker: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DC2626',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  destinationXText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
 });

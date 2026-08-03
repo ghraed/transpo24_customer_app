@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,15 +9,16 @@ import {
   Pressable,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ColorValue,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { M3LoginColors } from '@/constants/theme';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { M3Styles } from '@/lib/m3-styles';
 import {
   createFurnitureTransportRequest,
   createGoodsTransportRequest,
@@ -271,11 +273,24 @@ function buildFurnitureSchedule(
   };
 }
 
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
+
 export default function SubmitRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<SubmitRequestRouteParams>();
   const scrollViewRef = useRef<ScrollView | null>(null);
   const keyboardInset = useAndroidKeyboardInset();
+  const insets = useSafeAreaInsets();
 
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
@@ -803,7 +818,8 @@ export default function SubmitRequestScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.screen} edges={['left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -812,14 +828,21 @@ export default function SubmitRequestScreen() {
           ref={scrollViewRef}
           contentContainerStyle={[
             styles.content,
-            keyboardInset > 0 ? { paddingBottom: 32 + keyboardInset } : undefined,
+            {
+              paddingTop: Math.max(insets.top, 18),
+              paddingBottom: Math.max(insets.bottom + 32, 42) + keyboardInset,
+            },
           ]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </Pressable>
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroBadge}>
+              <IconSymbol name={{ ios: 'paperplane.fill', android: 'send', web: 'send' }} color="#111827" size={20} />
+            </View>
+            <Text style={styles.heroLabel}>Final Review</Text>
+          </View>
           <Text style={styles.title}>Submit Request</Text>
           <Text style={styles.subtitle}>
             Review your transport request before sending it to drivers.
@@ -1128,7 +1151,7 @@ export default function SubmitRequestScreen() {
             disabled={!canSubmit}
             onPress={() => void onSubmit()}
           >
-            {isSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.submitText}>Submit Request</Text>}
+            {isSubmitting ? <ActivityIndicator color="#111827" /> : <Text style={styles.submitText}>Submit Request</Text>}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1137,54 +1160,71 @@ export default function SubmitRequestScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
-  container: {
-    flex: 1,
-    backgroundColor: M3LoginColors.background,
-  },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 32,
+    paddingHorizontal: 20,
     gap: 12,
   },
-  header: {
-    marginBottom: 4,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 8,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  backButtonText: {
-    color: M3LoginColors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  heroBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroLabel: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontWeight: '800',
+    color: '#111827',
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 8,
     fontSize: 15,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
+    lineHeight: 22,
   },
   section: {
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    borderRadius: 12,
-    padding: 12,
+    borderColor: '#E5E8EF',
+    borderRadius: 24,
+    padding: 18,
     gap: 6,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1192,72 +1232,75 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
   },
   editText: {
-    color: M3LoginColors.primary,
-    fontWeight: '700',
+    color: '#D89A1A',
+    fontWeight: '800',
     fontSize: 13,
   },
   value: {
     fontSize: 14,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
+    lineHeight: 20,
   },
   photosRow: {
-    gap: 8,
+    gap: 10,
   },
   photoThumb: {
-    width: 88,
-    height: 88,
-    borderRadius: 8,
-    backgroundColor: M3LoginColors.outlineVariant,
+    width: 92,
+    height: 92,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
   },
   noteInput: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 10,
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
     minHeight: 84,
-    backgroundColor: M3LoginColors.surface,
-    paddingHorizontal: 12,
-    paddingTop: 10,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 14,
+    paddingTop: 14,
     textAlignVertical: 'top',
-    color: M3LoginColors.textPrimary,
+    color: '#111827',
     fontSize: 14,
   },
   helperText: {
     fontSize: 13,
-    color: M3LoginColors.textSecondary,
+    color: '#68768A',
+    lineHeight: 18,
   },
   errorCard: {
     borderWidth: 1,
-    borderColor: M3LoginColors.error,
-    backgroundColor: M3LoginColors.errorContainer,
-    borderRadius: 10,
-    padding: 10,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 18,
+    padding: 14,
     gap: 4,
   },
   errorText: {
-    color: M3LoginColors.error,
-    fontSize: 12,
+    color: '#B42318',
+    fontSize: 13,
+    lineHeight: 18,
   },
   progressText: {
-    color: M3LoginColors.primary,
-    fontWeight: '600',
+    color: '#D89A1A',
+    fontWeight: '700',
     fontSize: 13,
   },
   successText: {
-    color: M3LoginColors.primary,
-    fontWeight: '600',
+    color: '#1E9E4A',
+    fontWeight: '700',
     fontSize: 13,
   },
   submitButton: {
     marginTop: 8,
     marginBottom: 8,
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1265,8 +1308,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   submitText: {
-    color: M3LoginColors.onPrimary,
+    color: '#111827',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

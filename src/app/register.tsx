@@ -2,6 +2,7 @@ import { Link, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,10 +11,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { getApiBaseUrl } from '@/config/backend';
-import { M3LoginColors } from '@/constants/theme';
+import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 
 interface RegisterRequest {
@@ -113,82 +115,95 @@ export default function RegisterScreen() {
   }, [apiBaseUrl, email, name, password, router, t]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View
-        style={[
-          styles.container,
-          keyboardInset > 0 ? styles.containerKeyboardOpen : undefined,
-          keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
-        ]}
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <View style={styles.backgroundAccent} />
-
-      <View style={styles.card}>
-        <Text style={styles.title}>{t('Create Account')}</Text>
-        <Text style={styles.subtitle}>{t('Join Transpo24 to start making requests')}</Text>
-
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t('Full name')}
-            placeholderTextColor={M3LoginColors.textTertiary}
-            autoCapitalize="words"
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
-
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t('Email')}
-            placeholderTextColor={M3LoginColors.textTertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
-
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t('Password')}
-            placeholderTextColor={M3LoginColors.textTertiary}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
-
-        {!!error && <Text style={styles.errorText}>{error}</Text>}
-
-        <Pressable
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={onRegisterPress}
-          disabled={isLoading}
+        <View
+          style={[
+            styles.container,
+            keyboardInset > 0 ? styles.containerKeyboardOpen : undefined,
+            keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
+          ]}
         >
-          {isLoading ? (
-            <ActivityIndicator color={M3LoginColors.onPrimary} />
-          ) : (
-            <Text style={styles.buttonText}>{t('Create Account')}</Text>
-          )}
-        </Pressable>
+          <View style={styles.backgroundAccent} />
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('@/assets/images/run_and_Transpo24.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
 
-        <Link href="/" style={styles.linkText}>
-          {t('Already have an account? Sign in')}
-        </Link>
-      </View>
-      </View>
-    </KeyboardAvoidingView>
+          <View style={styles.card}>
+            <Text style={styles.title}>{t('Create Account')}</Text>
+            <Text style={styles.subtitle}>{t('Join Transpo24 to start making requests')}</Text>
+
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder={t('Full name')}
+                placeholderTextColor="#8A94A6"
+                autoCapitalize="words"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder={t('Email')}
+                placeholderTextColor="#8A94A6"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder={t('Password')}
+                placeholderTextColor="#8A94A6"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+            </View>
+
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+            <Pressable
+              style={[styles.button, isLoading ? styles.buttonDisabled : null]}
+              onPress={onRegisterPress}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={clientTheme.text} />
+              ) : (
+                <Text style={styles.buttonText}>{t('Create Account')}</Text>
+              )}
+            </Pressable>
+
+            <Link href="/" style={styles.linkText}>
+              {t('Already have an account? Sign in')}
+            </Link>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
@@ -196,7 +211,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: clientTheme.background,
     overflow: 'hidden',
   },
   containerKeyboardOpen: {
@@ -209,16 +224,28 @@ const styles = StyleSheet.create({
     right: 0,
     width: '100%',
     height: '35%',
-    backgroundColor: M3LoginColors.primaryContainer,
-    opacity: 0.06,
+    backgroundColor: clientTheme.accent,
+    opacity: 0.08,
+  },
+  logoWrapper: {
+    alignItems: 'center',
+    marginBottom: 12,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    backgroundColor: clientTheme.background,
+  },
+  logo: {
+    width: 400,
+    height: 200,
   },
   card: {
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: clientTheme.surface,
     borderRadius: 28,
     padding: 24,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    shadowColor: '#000000',
+    borderColor: clientTheme.border,
+    shadowColor: '#111827',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
     shadowRadius: 24,
@@ -228,30 +255,30 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   subtitle: {
     fontSize: 15,
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
     marginBottom: 24,
   },
   inputWrapper: {
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
+    borderColor: clientTheme.border,
     borderRadius: 16,
     marginBottom: 12,
-    backgroundColor: M3LoginColors.surfaceContainer,
+    backgroundColor: clientTheme.surfaceMuted,
   },
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   button: {
     height: 52,
     borderRadius: 16,
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: clientTheme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
@@ -260,18 +287,18 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: M3LoginColors.onPrimary,
+    color: clientTheme.text,
     fontSize: 16,
     fontWeight: '600',
   },
   linkText: {
     marginTop: 16,
-    color: M3LoginColors.primary,
+    color: clientTheme.accentStrong,
     textAlign: 'center',
     fontWeight: '600',
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: '#DC2626',
     marginBottom: 8,
     fontSize: 14,
   },

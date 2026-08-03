@@ -157,9 +157,36 @@ function RootNavigator() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
         <Stack>
-          <Stack.Screen name="index" options={{ title: t('Login') }} />
-          <Stack.Screen name="register" options={{ title: t('Create Account') }} />
-          <Stack.Screen name="forgot-password" options={{ title: t('Reset Password') }} />
+          <Stack.Screen
+            name="index"
+            options={{
+              title: t('Login'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="register"
+            options={{
+              title: t('Create Account'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="forgot-password"
+            options={{
+              title: t('Reset Password'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
 
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
@@ -224,14 +251,56 @@ function RootNavigator() {
           <Stack.Screen name="wallet" options={{ title: t('Wallet') }} />
           <Stack.Screen name="wallet-top-up" options={{ title: t('Add Money') }} />
           <Stack.Screen name="chat" options={{ title: t('Chat with Driver') }} />
-          <Stack.Screen name="customer-tracking" options={{ title: t('Customer Tracking') }} />
-          <Stack.Screen name="waiting-for-pickup" options={{ title: t('Waiting for Pickup') }} />
+          <Stack.Screen
+            name="customer-tracking"
+            options={{
+              title: t('Customer Tracking'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="waiting-for-pickup"
+            options={{
+              title: t('Waiting for Pickup'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
           <Stack.Screen
             name="customer-delivery-tracking"
-            options={{ title: t('Delivery Tracking') }}
+            options={{
+              title: t('Delivery Tracking'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
           />
-          <Stack.Screen name="customer-trip-delivered" options={{ title: t('Trip Delivered') }} />
-          <Stack.Screen name="customer-rate-driver" options={{ title: t('Rate Driver') }} />
+          <Stack.Screen
+            name="customer-trip-delivered"
+            options={{
+              title: t('Trip Delivered'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="customer-rate-driver"
+            options={{
+              title: t('Rate Driver'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
 
           <Stack.Screen name="home" options={{ title: t('Home') }} />
           <Stack.Screen name="explore" options={{ title: t('Explore') }} />

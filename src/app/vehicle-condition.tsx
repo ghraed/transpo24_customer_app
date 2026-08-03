@@ -10,9 +10,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { M3LoginColors } from '@/constants/theme';
+import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { M3Styles } from '@/lib/m3-styles';
 import type { VehicleConditionFormValues, VehicleConditionOption } from '@/types/vehicle-condition';
 
 type RouteParams = {
@@ -169,31 +168,31 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: M3LoginColors.background,
+    backgroundColor: clientTheme.background,
     gap: 12,
   },
   backButton: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: clientTheme.border,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: clientTheme.surface,
   },
   backButtonText: {
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
     fontWeight: '600',
     fontSize: 13,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   subtitle: {
     fontSize: 15,
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
   },
   cardList: {
     gap: 10,
@@ -202,34 +201,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: clientTheme.surface,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 14,
+    borderColor: clientTheme.border,
+    borderRadius: 20,
     padding: 14,
   },
   optionCardSelected: {
-    borderColor: M3LoginColors.primary,
-    backgroundColor: M3LoginColors.primary,
+    borderColor: clientTheme.accent,
+    backgroundColor: clientTheme.accentSoft,
   },
   radio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: M3LoginColors.outline,
+    borderColor: clientTheme.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
   radioSelected: {
-    borderColor: M3LoginColors.primary,
+    borderColor: clientTheme.accentStrong,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: M3LoginColors.primary,
+    backgroundColor: clientTheme.accentStrong,
   },
   optionContent: {
     flex: 1,
@@ -238,53 +237,53 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   optionLabelSelected: {
-    color: '#FFFFFF',
+    color: clientTheme.text,
   },
   optionDescription: {
     fontSize: 14,
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
   },
   optionDescriptionSelected: {
-    color: '#FFFFFF',
+    color: clientTheme.textMuted,
   },
   notesLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   notesInput: {
     minHeight: 110,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: clientTheme.border,
+    borderRadius: 16,
+    backgroundColor: clientTheme.surfaceMuted,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
   },
   notesCount: {
     alignSelf: 'flex-end',
     fontSize: 12,
-    color: M3LoginColors.textTertiary,
+    color: clientTheme.textMuted,
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: clientTheme.danger,
     fontSize: 13,
     fontWeight: '600',
   },
   continueButton: {
     marginTop: 8,
     height: 52,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+    borderRadius: 16,
+    backgroundColor: clientTheme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   continueText: {
-    color: M3LoginColors.onPrimary,
+    color: clientTheme.text,
     fontSize: 16,
     fontWeight: '700',
   },

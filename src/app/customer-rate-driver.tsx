@@ -13,7 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { M3LoginColors } from '@/constants/theme';
+import {
+  clientTheme,
+  TrackingHero,
+  TrackingInfoPill,
+  TrackingMetaRow,
+  TrackingProgress,
+  TrackingScreenCard,
+} from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { createDriverRating, getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
@@ -35,13 +42,15 @@ function getStarFill(rating: number, starNumber: number): number {
   return 0;
 }
 
-type StarButtonProps = {
+function StarButton({
+  fill,
+  starNumber,
+  onSelect,
+}: {
   fill: number;
   starNumber: number;
   onSelect: (value: number) => void;
-};
-
-function StarButton({ fill, starNumber, onSelect }: StarButtonProps) {
+}) {
   return (
     <View style={styles.starTouchZone}>
       <View style={styles.starShell}>
@@ -75,16 +84,14 @@ export default function CustomerRateDriverScreen() {
   const tripId = typeof params.tripId === 'string' ? params.tripId.trim() : '';
 
   const [tracking, setTracking] = useState<RequestTracking | null>(null);
-  const [selectedRating, setSelectedRating] = useState<number>(5);
+  const [selectedRating, setSelectedRating] = useState(5);
   const [comment, setComment] = useState('');
-  const [isLoading, setIsLoading] = useState<boolean>(Boolean(tripId));
+  const [isLoading, setIsLoading] = useState(Boolean(tripId));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (!tripId) {
-      setErrorMessage('Missing trip id.');
-      setIsLoading(false);
       return;
     }
 
@@ -102,6 +109,7 @@ export default function CustomerRateDriverScreen() {
 
   const trimmedComment = useMemo(() => comment.trim(), [comment]);
   const commentLength = comment.length;
+  const resolvedErrorMessage = !tripId ? 'Missing trip id.' : errorMessage;
   const canSubmit =
     Boolean(tripId) &&
     !isLoading &&
@@ -112,9 +120,7 @@ export default function CustomerRateDriverScreen() {
     commentLength <= MAX_COMMENT_LENGTH;
 
   const handleSubmit = useCallback(async (): Promise<void> => {
-    if (!canSubmit) {
-      return;
-    }
+    if (!canSubmit) return;
 
     setIsSubmitting(true);
     setErrorMessage('');
@@ -136,15 +142,8 @@ export default function CustomerRateDriverScreen() {
     }
   }, [canSubmit, router, selectedRating, trimmedComment, tripId]);
 
-  const handleBack = useCallback((): void => {
-    router.replace({
-      pathname: '/request-status',
-      params: { requestId: tripId },
-    });
-  }, [router, tripId]);
-
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -152,99 +151,115 @@ export default function CustomerRateDriverScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            keyboardInset > 0 ? { paddingBottom: 20 + keyboardInset } : undefined,
+            keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : null,
           ]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-        <View style={styles.card}>
-          <Text style={styles.title}>Rate Driver</Text>
-          <Text style={styles.subtitle}>
-            Choose a star rating, including half-star steps, and add a note if you want.
-          </Text>
-          <Text style={styles.meta}>Trip ID: {tripId || 'N/A'}</Text>
-          {tracking?.driverName ? <Text style={styles.meta}>Driver: {tracking.driverName}</Text> : null}
-        </View>
-
-        <View style={styles.card}>
-          {isLoading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={M3LoginColors.primary} />
-              <Text style={styles.meta}>Loading trip rating details…</Text>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.sectionTitle}>Your Rating</Text>
-              <Text style={styles.ratingValue}>{formatRating(selectedRating)} / 5</Text>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((starNumber) => (
-                  <StarButton
-                    key={starNumber}
-                    starNumber={starNumber}
-                    fill={getStarFill(selectedRating, starNumber)}
-                    onSelect={setSelectedRating}
-                  />
-                ))}
-              </View>
-              <View style={styles.quickPickRow}>
-                {STAR_VALUES.map((value) => (
-                  <Pressable
-                    key={value}
-                    style={[
-                      styles.quickPickChip,
-                      selectedRating === value ? styles.quickPickChipActive : null,
-                    ]}
-                    onPress={() => setSelectedRating(value)}
-                  >
-                    <Text
-                      style={[
-                        styles.quickPickText,
-                        selectedRating === value ? styles.quickPickTextActive : null,
-                      ]}
-                    >
-                      {formatRating(value)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              {tracking?.ratingAvailable === false ? (
-                <Text style={styles.infoText}>
-                  Rating is no longer available for this trip. It may already have been submitted.
-                </Text>
-              ) : null}
-            </>
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Feedback or Note</Text>
-          <TextInput
-            value={comment}
-            onChangeText={setComment}
-            placeholder="Add feedback about the driver, optional"
-            placeholderTextColor={M3LoginColors.textSecondary}
-            style={styles.input}
-            multiline
-            textAlignVertical="top"
-            maxLength={MAX_COMMENT_LENGTH}
+          <TrackingHero
+            eyebrow={`Order #${tripId || 'N/A'}`}
+            title="Rate your driver"
+            description="Share a quick rating and optional feedback about the completed delivery."
           />
-          <Text style={styles.counterText}>{commentLength}/{MAX_COMMENT_LENGTH}</Text>
-        </View>
 
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          <TrackingProgress currentStage={5} />
 
-        <Pressable
-          style={[styles.primaryButton, !canSubmit ? styles.primaryButtonDisabled : null]}
-          onPress={() => void handleSubmit()}
-          disabled={!canSubmit}
-        >
-          <Text style={styles.primaryButtonText}>
-            {isSubmitting ? 'Submitting...' : 'Submit rating'}
-          </Text>
-        </Pressable>
+          <TrackingScreenCard>
+            <TrackingInfoPill label="Delivery completed" tone="success" />
+            <TrackingMetaRow label="Trip ID" value={tripId || 'N/A'} />
+            {tracking?.driverName ? <TrackingMetaRow label="Driver" value={tracking.driverName} /> : null}
+          </TrackingScreenCard>
 
-        <Pressable style={styles.secondaryButton} onPress={handleBack}>
-          <Text style={styles.secondaryButtonText}>Back to request status</Text>
-        </Pressable>
+          <TrackingScreenCard>
+            {isLoading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={clientTheme.accentStrong} />
+                <Text style={styles.bodyText}>Loading trip rating details...</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>Your rating</Text>
+                <Text style={styles.ratingValue}>{formatRating(selectedRating)} / 5</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((starNumber) => (
+                    <StarButton
+                      key={starNumber}
+                      starNumber={starNumber}
+                      fill={getStarFill(selectedRating, starNumber)}
+                      onSelect={setSelectedRating}
+                    />
+                  ))}
+                </View>
+                <View style={styles.quickPickRow}>
+                  {STAR_VALUES.map((value) => (
+                    <Pressable
+                      key={value}
+                      style={[
+                        styles.quickPickChip,
+                        selectedRating === value ? styles.quickPickChipActive : null,
+                      ]}
+                      onPress={() => setSelectedRating(value)}
+                    >
+                      <Text
+                        style={[
+                          styles.quickPickText,
+                          selectedRating === value ? styles.quickPickTextActive : null,
+                        ]}
+                      >
+                        {formatRating(value)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {tracking?.ratingAvailable === false ? (
+                  <Text style={styles.bodyText}>
+                    Rating is no longer available for this trip. It may already have been submitted.
+                  </Text>
+                ) : null}
+              </>
+            )}
+          </TrackingScreenCard>
+
+          <TrackingScreenCard>
+            <Text style={styles.sectionTitle}>Feedback</Text>
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              placeholder="Add feedback about the driver, optional"
+              placeholderTextColor="#8A94A6"
+              style={styles.input}
+              multiline
+              textAlignVertical="top"
+              maxLength={MAX_COMMENT_LENGTH}
+            />
+            <Text style={styles.counterText}>
+              {commentLength}/{MAX_COMMENT_LENGTH}
+            </Text>
+          </TrackingScreenCard>
+
+          {resolvedErrorMessage ? <Text style={styles.errorText}>{resolvedErrorMessage}</Text> : null}
+
+          <Pressable
+            style={[styles.primaryButton, !canSubmit ? styles.primaryButtonDisabled : null]}
+            onPress={() => void handleSubmit()}
+            disabled={!canSubmit}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isSubmitting ? 'Submitting...' : 'Submit rating'}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() =>
+              router.replace({
+                pathname: '/request-status',
+                params: { requestId: tripId },
+              })
+            }
+          >
+            <Text style={styles.secondaryButtonText}>Back to request status</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -252,46 +267,32 @@ export default function CustomerRateDriverScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
-  container: {
-    flex: 1,
-    backgroundColor: M3LoginColors.background,
-  },
   content: {
     padding: 20,
-    gap: 12,
-  },
-  card: {
-    backgroundColor: M3LoginColors.surface,
-    borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    borderRadius: 12,
-    padding: 16,
-    gap: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
-  },
-  subtitle: {
-    color: M3LoginColors.textSecondary,
-    lineHeight: 20,
-  },
-  meta: {
-    color: M3LoginColors.textSecondary,
+    paddingBottom: 32,
+    gap: 16,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: M3LoginColors.textPrimary,
+    color: clientTheme.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  bodyText: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
   },
   ratingValue: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '800',
-    color: '#D97706',
+    color: clientTheme.accentStrong,
     textAlign: 'center',
   },
   starsRow: {
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   starFilled: {
     fontSize: 30,
     lineHeight: 34,
-    color: '#F59E0B',
+    color: clientTheme.accentStrong,
     width: 34,
     textAlign: 'center',
   },
@@ -352,54 +353,50 @@ const styles = StyleSheet.create({
   },
   quickPickChip: {
     minWidth: 54,
-    minHeight: 34,
-    borderRadius: 17,
+    minHeight: 36,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
+    borderColor: clientTheme.border,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
-    backgroundColor: M3LoginColors.surface,
+    backgroundColor: clientTheme.surfaceMuted,
   },
   quickPickChipActive: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: clientTheme.accentSoft,
+    borderColor: clientTheme.accent,
   },
   quickPickText: {
-    color: M3LoginColors.textSecondary,
-    fontWeight: '600',
+    color: clientTheme.textMuted,
+    fontWeight: '700',
   },
   quickPickTextActive: {
-    color: '#B45309',
+    color: clientTheme.text,
   },
   input: {
-    minHeight: 120,
-    borderRadius: 12,
+    minHeight: 130,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.outlineVariant,
-    backgroundColor: M3LoginColors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: M3LoginColors.textPrimary,
+    borderColor: clientTheme.border,
+    backgroundColor: clientTheme.surfaceMuted,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: clientTheme.text,
   },
   counterText: {
     textAlign: 'right',
-    color: M3LoginColors.textSecondary,
+    color: clientTheme.textMuted,
     fontSize: 12,
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  infoText: {
-    color: M3LoginColors.textSecondary,
-    lineHeight: 20,
+    gap: 10,
   },
   primaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: M3LoginColors.primary,
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: clientTheme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -407,25 +404,25 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   primaryButtonText: {
-    color: M3LoginColors.onPrimary,
-    fontWeight: '700',
+    color: clientTheme.text,
+    fontWeight: '800',
     fontSize: 16,
   },
   secondaryButton: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: 54,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: M3LoginColors.outline,
-    backgroundColor: M3LoginColors.surface,
+    borderColor: clientTheme.border,
+    backgroundColor: clientTheme.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    color: M3LoginColors.textPrimary,
-    fontWeight: '600',
+    color: clientTheme.text,
+    fontWeight: '700',
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: '#DC2626',
     textAlign: 'center',
   },
 });

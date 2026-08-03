@@ -1,21 +1,23 @@
-import Constants from 'expo-constants';
 import { CardField, confirmPayment, confirmPlatformPayPayment, isPlatformPaySupported, PlatformPay } from '@stripe/stripe-react-native';
+import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ColorValue,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { M3LoginColors } from '@/constants/theme';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { createWalletTopUp, getWalletTopUpStatus } from '@/lib/api';
 import type { CustomerWalletTopUpResponse, PaymentMethod } from '@/types/customer-request';
@@ -24,6 +26,7 @@ type PaymentOption = {
   method: PaymentMethod;
   title: string;
   description: string;
+  icon: SymbolViewProps['name'];
 };
 
 const PAYMENT_OPTIONS: PaymentOption[] = [
@@ -31,23 +34,39 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
     method: 'CREDIT_CARD',
     title: 'Credit Card',
     description: 'Add money using a card entered securely with Stripe.',
+    icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
   },
   {
     method: 'DEBIT_CARD',
     title: 'Debit Card',
     description: 'Add money using a debit card entered securely with Stripe.',
+    icon: { ios: 'creditcard', android: 'payments', web: 'payments' },
   },
   {
     method: 'APPLE_PAY',
     title: 'Apple Pay',
     description: 'Use Apple Pay in a development build or production build.',
+    icon: { ios: 'apple.logo', android: 'smartphone', web: 'smartphone' },
   },
   {
     method: 'GOOGLE_PAY',
     title: 'Google Pay',
     description: 'Use Google Pay in a development build or production build.',
+    icon: { ios: 'globe', android: 'android', web: 'android' },
   },
 ];
+
+function IconSymbol({
+  name,
+  color,
+  size = 18,
+}: {
+  name: SymbolViewProps['name'];
+  color: ColorValue;
+  size?: number;
+}) {
+  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+}
 
 function formatMoney(amount: number, currency: string): string {
   try {
@@ -83,6 +102,7 @@ export default function WalletTopUpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const keyboardInset = useAndroidKeyboardInset();
+  const insets = useSafeAreaInsets();
   const requestedCurrency =
     typeof params.currency === 'string' && params.currency.trim()
       ? params.currency.trim().toUpperCase()
@@ -284,112 +304,143 @@ export default function WalletTopUpScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.screen} edges={['left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={[
             styles.content,
-            keyboardInset > 0 ? { paddingBottom: 16 + keyboardInset } : undefined,
+            {
+              paddingTop: Math.max(insets.top, 18),
+              paddingBottom: Math.max(insets.bottom + 32, 42) + keyboardInset,
+            },
           ]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-        <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>Add Money</Text>
-          <Text style={styles.heroSubtitle}>
-            Funds are added to your app wallet after Stripe confirms the payment.
-          </Text>
-          <Text style={styles.currencyText}>Wallet currency: {defaultCurrency}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Amount</Text>
-          <TextInput
-            value={amountValue}
-            onChangeText={setAmountValue}
-            keyboardType="decimal-pad"
-            placeholder="25.00"
-            placeholderTextColor="#94A3B8"
-            style={styles.input}
-          />
-          <Text style={styles.hint}>
-            {amount > 0 ? `You will add ${formatMoney(amount, defaultCurrency)}.` : 'Enter the amount to top up.'}
-          </Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Payment method</Text>
-          {PAYMENT_OPTIONS.map((option) => {
-            const isSelected = option.method === selectedMethod;
-            const isUnsupported =
-              (option.method === 'APPLE_PAY' && (!supportCheckComplete || !applePaySupported)) ||
-              (option.method === 'GOOGLE_PAY' && (!supportCheckComplete || !googlePaySupported));
-
-            return (
-              <Pressable
-                key={option.method}
-                style={[styles.optionCard, isSelected && styles.optionCardSelected]}
-                onPress={() => setSelectedMethod(option.method)}
-              >
-                <View style={styles.optionTextBlock}>
-                  <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
-                    {option.title}
-                  </Text>
-                  <Text style={[styles.optionDescription, isSelected && styles.optionTitleSelected]}>
-                    {option.description}
-                  </Text>
-                  {isUnsupported ? (
-                    <Text style={[styles.optionHint, isSelected && styles.optionTitleSelected]}>
-                      Not available on this device/build.
-                    </Text>
-                  ) : null}
-                </View>
-                <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
-                  {isSelected ? <View style={styles.radioInner} /> : null}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {needsCardField ? (
-          <View style={styles.section}>
-            <Text style={styles.label}>Card details</Text>
-            <CardField
-              postalCodeEnabled={false}
-              placeholders={{ number: '4242 4242 4242 4242' }}
-              cardStyle={{
-                backgroundColor: '#FFFFFF',
-                textColor: '#0F172A',
-                placeholderColor: '#94A3B8',
-                borderColor: '#CBD5E1',
-              }}
-              style={styles.cardField}
-              onCardChange={(details) => setCardComplete(Boolean(details.complete))}
-            />
+          <View style={styles.heroCard}>
+            <View style={styles.heroHeader}>
+              <View style={styles.heroBadge}>
+                <IconSymbol
+                  name={{ ios: 'plus', android: 'add', web: 'add' }}
+                  color="#111827"
+                  size={20}
+                />
+              </View>
+              <Text style={styles.heroLabel}>Wallet Top-Up</Text>
+            </View>
+            <Text style={styles.heroTitle}>Add Money</Text>
+            <Text style={styles.heroSubtitle}>
+              Funds are added to your app wallet after Stripe confirms the payment.
+            </Text>
+            <View style={styles.currencyRow}>
+              <View style={styles.currencyIconWrap}>
+                <IconSymbol
+                  name={{ ios: 'creditcard', android: 'payments', web: 'payments' }}
+                  color="#111827"
+                  size={16}
+                />
+              </View>
+              <Text style={styles.currencyText}>Wallet currency: {defaultCurrency}</Text>
+            </View>
           </View>
-        ) : null}
 
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-        {methodDisabledReason ? <Text style={styles.hint}>{methodDisabledReason}</Text> : null}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Amount</Text>
+            <TextInput
+              value={amountValue}
+              onChangeText={setAmountValue}
+              keyboardType="decimal-pad"
+              placeholder="25.00"
+              placeholderTextColor="#98A2B3"
+              style={styles.input}
+            />
+            <Text style={styles.hint}>
+              {amount > 0 ? `You will add ${formatMoney(amount, defaultCurrency)}.` : 'Enter the amount to top up.'}
+            </Text>
+          </View>
 
-        <Pressable
-          style={[styles.primaryButton, (Boolean(methodDisabledReason) || isSubmitting) && styles.disabledButton]}
-          disabled={Boolean(methodDisabledReason) || isSubmitting}
-          onPress={() => void onSubmit()}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Confirm Top-Up</Text>
-          )}
-        </Pressable>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Payment method</Text>
+            {PAYMENT_OPTIONS.map((option) => {
+              const isSelected = option.method === selectedMethod;
+              const isUnsupported =
+                (option.method === 'APPLE_PAY' && (!supportCheckComplete || !applePaySupported)) ||
+                (option.method === 'GOOGLE_PAY' && (!supportCheckComplete || !googlePaySupported));
 
-        <Text style={styles.footerText}>
-          Saved cards are not used automatically for wallet top-ups in this version.
-        </Text>
+              return (
+                <Pressable
+                  key={option.method}
+                  style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+                  onPress={() => setSelectedMethod(option.method)}
+                >
+                  <View style={styles.optionLeading}>
+                    <View style={styles.optionIconWrap}>
+                      <IconSymbol name={option.icon} color="#111827" size={18} />
+                    </View>
+                    <View style={styles.optionTextBlock}>
+                      <Text style={styles.optionTitle}>{option.title}</Text>
+                      <Text style={styles.optionDescription}>{option.description}</Text>
+                      {isUnsupported ? (
+                        <Text style={styles.optionHint}>Not available on this device/build.</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                  <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+                    {isSelected ? <View style={styles.radioInner} /> : null}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {needsCardField ? (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Card details</Text>
+              <View style={styles.cardFieldWrap}>
+                <CardField
+                  postalCodeEnabled={false}
+                  placeholders={{ number: '4242 4242 4242 4242' }}
+                  cardStyle={{
+                    backgroundColor: '#F8FAFC',
+                    textColor: '#111827',
+                    placeholderColor: '#98A2B3',
+                    borderColor: '#E5E7EB',
+                    borderWidth: 1,
+                    borderRadius: 18,
+                  }}
+                  style={styles.cardField}
+                  onCardChange={(details) => setCardComplete(Boolean(details.complete))}
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          {methodDisabledReason ? <Text style={styles.hint}>{methodDisabledReason}</Text> : null}
+
+          <Pressable
+            style={[
+              styles.primaryButton,
+              (Boolean(methodDisabledReason) || isSubmitting) && styles.disabledButton,
+            ]}
+            disabled={Boolean(methodDisabledReason) || isSubmitting}
+            onPress={() => void onSubmit()}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#111827" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Confirm Top-Up</Text>
+            )}
+          </Pressable>
+
+          <Text style={styles.footerText}>
+            Saved cards are not used automatically for wallet top-ups in this version.
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -397,99 +448,164 @@ export default function WalletTopUpScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
-  container: {
+  scrollView: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 20,
     gap: 16,
   },
   heroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 18,
-    gap: 8,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  heroBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroLabel: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#111827',
   },
   heroSubtitle: {
-    color: '#64748B',
+    color: '#68768A',
     fontSize: 14,
     lineHeight: 20,
+    marginTop: 6,
+  },
+  currencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 14,
+  },
+  currencyIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFF7E1',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   currencyText: {
-    color: '#1D4ED8',
+    color: '#68768A',
     fontWeight: '700',
     fontSize: 13,
   },
-  section: {
-    gap: 10,
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  label: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 10,
   },
   input: {
-    minHeight: 52,
-    borderRadius: 12,
+    minHeight: 56,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: 14,
-    color: '#0F172A',
+    color: '#111827',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   hint: {
-    color: '#64748B',
+    color: '#68768A',
     fontSize: 13,
     lineHeight: 18,
+    marginTop: 10,
   },
   optionCard: {
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E5E7EB',
     padding: 14,
+    marginTop: 12,
   },
   optionCardSelected: {
-    borderColor: '#1D4ED8',
-    backgroundColor: '#EFF6FF',
+    borderColor: '#FFC548',
+    backgroundColor: '#FFF7E1',
+  },
+  optionLeading: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  optionIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionTextBlock: {
     flex: 1,
     gap: 4,
   },
   optionTitle: {
-    color: '#0F172A',
+    color: '#111827',
     fontSize: 15,
-    fontWeight: '700',
-  },
-  optionTitleSelected: {
-    color: '#0F172A',
+    fontWeight: '800',
   },
   optionDescription: {
-    color: '#64748B',
+    color: '#68768A',
     fontSize: 13,
     lineHeight: 18,
   },
   optionHint: {
     color: '#B45309',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   radioOuter: {
     width: 22,
@@ -501,39 +617,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioOuterSelected: {
-    borderColor: '#1D4ED8',
+    borderColor: '#D89A1A',
   },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: '#D89A1A',
+  },
+  cardFieldWrap: {
+    borderRadius: 18,
+    overflow: 'hidden',
   },
   cardField: {
     width: '100%',
-    height: 52,
+    height: 56,
   },
   primaryButton: {
-    minHeight: 50,
-    borderRadius: 12,
-    backgroundColor: '#1D4ED8',
+    minHeight: 56,
+    borderRadius: 20,
+    backgroundColor: '#FFC548',
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: '#111827',
+    fontWeight: '800',
     fontSize: 15,
   },
   disabledButton: {
     opacity: 0.6,
   },
   errorText: {
-    color: M3LoginColors.error,
+    color: '#B42318',
     fontSize: 14,
+    lineHeight: 20,
   },
   footerText: {
-    color: '#64748B',
+    color: '#68768A',
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
