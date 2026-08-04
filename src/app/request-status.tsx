@@ -28,6 +28,7 @@ import {
   NativeMapView,
   NativeMapViewDirections,
   NativeMarker,
+  PROVIDER_GOOGLE,
   type Region,
 } from '@/components/native-maps';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
@@ -1279,7 +1280,11 @@ export default function RequestStatusScreen() {
 
       return (
         <View style={[styles.mapFrame, mapHeightStyle]}>
-          <NativeMapView style={styles.mapFill} initialRegion={region}>
+          <NativeMapView
+            style={styles.mapFill}
+            initialRegion={region}
+            provider={PROVIDER_GOOGLE}
+          >
             {pickupCoordinate ? (
               <NativeMarker coordinate={pickupCoordinate} title="Pickup" anchor={{ x: 0.5, y: 0.5 }}>
                 <View style={styles.pickupMarker}>
@@ -1329,8 +1334,13 @@ export default function RequestStatusScreen() {
                 destination={destinationCoordinate}
                 apikey={mapsApiKey}
                 mode="DRIVING"
+                precision="high"
+                resetOnChange={false}
                 strokeWidth={expanded ? 6 : 5}
                 strokeColor="#F5C11A"
+                onError={(message: string) => {
+                  console.warn('Live tracking directions failed.', message);
+                }}
               />
             ) : null}
           </NativeMapView>
@@ -2640,19 +2650,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: '#111827',
+    backgroundColor: '#FFF8E6',
     borderWidth: 1,
-    borderColor: '#111827',
+    borderColor: '#FFC548',
   },
   selectedOfferLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#D89A1A',
     textTransform: 'uppercase',
   },
   selectedOfferValue: {
     marginTop: 4,
-    color: '#FFFFFF',
+    color: '#111827',
     fontWeight: '600',
   },
   offerCardAccepted: {

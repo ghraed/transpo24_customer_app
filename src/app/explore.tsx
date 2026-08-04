@@ -3,6 +3,7 @@ import { SymbolView } from 'expo-symbols';
 import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { clientTheme } from '@/components/tracking-ui';
 import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -34,12 +35,12 @@ export default function TabTwoScreen() {
 
   return (
     <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
+      style={[styles.scrollView, { backgroundColor: clientTheme.background }]}
       contentInset={insets}
       contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
       <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
+        <ThemedView style={styles.titleCard}>
+          <ThemedText type="subtitle" style={styles.titleText}>Explore</ThemedText>
           <ThemedText style={styles.centerText} themeColor="textSecondary">
             This starter app includes example{'\n'}code to help you get started.
           </ThemedText>
@@ -143,6 +144,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.six,
   },
+  titleCard: {
+    gap: Spacing.three,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.six,
+    backgroundColor: clientTheme.surface,
+    borderColor: clientTheme.border,
+    borderWidth: 1,
+    borderRadius: 24,
+    marginHorizontal: Spacing.four,
+    marginTop: Spacing.four,
+  },
+  titleText: {
+    color: clientTheme.text,
+  },
   centerText: {
     textAlign: 'center',
   },
@@ -162,6 +178,7 @@ const styles = StyleSheet.create({
     gap: Spacing.five,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
+    paddingBottom: Spacing.five,
   },
   collapsibleContent: {
     alignItems: 'center',

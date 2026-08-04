@@ -1,6 +1,7 @@
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { clientTheme } from '@/components/tracking-ui';
 
 export default function NewRequestTabScreen() {
   const { t } = useTranslation();
@@ -16,15 +17,15 @@ export default function NewRequestTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC', padding: 16 },
+  container: { flex: 1, backgroundColor: clientTheme.background, padding: 20 },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: clientTheme.surface,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 6,
+    borderColor: clientTheme.border,
+    padding: 20,
+    gap: 8,
   },
-  title: { fontSize: 24, fontWeight: '700', color: '#0F172A' },
-  subtitle: { fontSize: 14, color: '#64748B' },
+  title: { fontSize: 24, fontWeight: '800', color: clientTheme.text },
+  subtitle: { fontSize: 14, color: clientTheme.textMuted, lineHeight: 20 },
 });

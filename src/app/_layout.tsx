@@ -5,6 +5,7 @@ import { ActivityIndicator, View, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { clientTheme } from '@/components/tracking-ui';
 import { getAccessToken, hydrateAccessToken } from '@/lib/auth-token';
 import { LocalizationProvider, useAppLanguage } from '@/localization/provider';
 import {
@@ -142,7 +143,7 @@ function RootNavigator() {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color="#1D4ED8" />
+            <ActivityIndicator color={clientTheme.accentStrong} />
           </View>
         </ThemeProvider>
       </StripeProvider>
@@ -236,7 +237,16 @@ function RootNavigator() {
               headerShadowVisible: false,
             }}
           />
-          <Stack.Screen name="vehicle-condition" options={{ title: t('Vehicle Condition') }} />
+          <Stack.Screen
+            name="vehicle-condition"
+            options={{
+              title: t('Vehicle Condition'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
           <Stack.Screen name="pickup-location" options={{ title: t('Pickup Location') }} />
           <Stack.Screen name="dropoff-location" options={{ title: t('Dropoff Location') }} />
           <Stack.Screen name="date-time" options={{ title: t('Date & Item Details') }} />
@@ -246,7 +256,16 @@ function RootNavigator() {
           <Stack.Screen name="payment-method" options={{ title: t('Payment Method') }} />
           <Stack.Screen name="wallet" options={{ title: t('Wallet') }} />
           <Stack.Screen name="wallet-top-up" options={{ title: t('Add Money') }} />
-          <Stack.Screen name="chat" options={{ title: t('Chat with Driver') }} />
+          <Stack.Screen
+            name="chat"
+            options={{
+              title: t('Chat with Driver'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
           <Stack.Screen
             name="customer-tracking"
             options={{
@@ -298,8 +317,36 @@ function RootNavigator() {
             }}
           />
 
-          <Stack.Screen name="home" options={{ title: t('Home') }} />
-          <Stack.Screen name="explore" options={{ title: t('Explore') }} />
+          <Stack.Screen
+            name="home"
+            options={{
+              title: t('Home'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="explore"
+            options={{
+              title: t('Explore'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="simple"
+            options={{
+              title: 'Simple Page',
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
         </Stack>
       </ThemeProvider>
     </StripeProvider>

@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import type { VehicleConditionFormValues, VehicleConditionOption } from '@/types/vehicle-condition';
@@ -82,117 +83,143 @@ export default function VehicleConditionScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          keyboardInset > 0 ? { paddingBottom: 32 + keyboardInset } : undefined,
-        ]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backButtonText}>← Back</Text>
-      </Pressable>
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            keyboardInset > 0 ? { paddingBottom: 32 + keyboardInset } : undefined,
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.heroCard}>
+            <Text style={styles.eyebrow}>Vehicle transport</Text>
+            <Text style={styles.title}>Vehicle condition</Text>
+            <Text style={styles.subtitle}>
+              Tell drivers the vehicle condition so they can prepare the right equipment.
+            </Text>
+          </View>
 
-      <Text style={styles.title}>Vehicle Condition</Text>
-      <Text style={styles.subtitle}>
-        Tell drivers the vehicle condition so they can prepare the right equipment.
-      </Text>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Select condition</Text>
+            <View style={styles.cardList}>
+              {VEHICLE_CONDITION_OPTIONS.map((option) => {
+                const isSelected = form.condition === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+                    onPress={() => {
+                      setForm((prev) => ({ ...prev, condition: option.value }));
+                      setErrorMessage('');
+                    }}
+                  >
+                    <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                      {isSelected ? <View style={styles.radioDot} /> : null}
+                    </View>
+                    <View style={styles.optionContent}>
+                      <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
+                        {option.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.optionDescription,
+                          isSelected && styles.optionDescriptionSelected,
+                        ]}
+                      >
+                        {option.description}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
 
-      <View style={styles.cardList}>
-        {VEHICLE_CONDITION_OPTIONS.map((option) => {
-          const isSelected = form.condition === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              style={[styles.optionCard, isSelected && styles.optionCardSelected]}
-              onPress={() => {
-                setForm((prev) => ({ ...prev, condition: option.value }));
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Additional notes</Text>
+            <TextInput
+              value={form.notes}
+              onChangeText={(value) => {
+                setForm((prev) => ({ ...prev, notes: value }));
                 setErrorMessage('');
               }}
-            >
-              <View style={[styles.radio, isSelected && styles.radioSelected]}>
-                {isSelected ? <View style={styles.radioDot} /> : null}
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
-                  {option.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.optionDescription,
-                    isSelected && styles.optionDescriptionSelected,
-                  ]}
-                >
-                  {option.description}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+              placeholder="Add any notes or extra details about the vehicle condition"
+              placeholderTextColor="#98A2B3"
+              style={styles.notesInput}
+              multiline
+              textAlignVertical="top"
+              maxLength={MAX_NOTES_LENGTH}
+            />
+            <Text style={styles.notesCount}>{trimmedNotes.length}/{MAX_NOTES_LENGTH}</Text>
+          </View>
 
-      <Text style={styles.notesLabel}>Additional notes</Text>
-      <TextInput
-        value={form.notes}
-        onChangeText={(value) => {
-          setForm((prev) => ({ ...prev, notes: value }));
-          setErrorMessage('');
-        }}
-        placeholder="Add any notes or extra details about the vehicle condition"
-        placeholderTextColor="#98a2b3"
-        style={styles.notesInput}
-        multiline
-        textAlignVertical="top"
-        maxLength={MAX_NOTES_LENGTH}
-      />
-      <Text style={styles.notesCount}>{trimmedNotes.length}/{MAX_NOTES_LENGTH}</Text>
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-
-        <Pressable style={styles.continueButton} onPress={onContinue}>
-          <Text style={styles.continueText}>Continue to Pickup Location</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Pressable style={styles.continueButton} onPress={onContinue}>
+            <Text style={styles.continueText}>Continue to pickup location</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: clientTheme.background,
+  },
   keyboardAvoidingView: {
     flex: 1,
   },
   container: {
-    padding: 16,
+    padding: 20,
     paddingBottom: 32,
     backgroundColor: clientTheme.background,
-    gap: 12,
+    gap: 16,
   },
-  backButton: {
-    alignSelf: 'flex-start',
+  heroCard: {
+    backgroundColor: clientTheme.surface,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: clientTheme.border,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: clientTheme.surface,
+    padding: 20,
+    gap: 8,
   },
-  backButtonText: {
-    color: clientTheme.textMuted,
-    fontWeight: '600',
-    fontSize: 13,
+  eyebrow: {
+    color: clientTheme.accentStrong,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: clientTheme.text,
   },
   subtitle: {
     fontSize: 15,
     color: clientTheme.textMuted,
+    lineHeight: 22,
+  },
+  sectionCard: {
+    backgroundColor: clientTheme.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+    padding: 18,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: clientTheme.text,
   },
   cardList: {
     gap: 10,
@@ -271,13 +298,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: clientTheme.danger,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
+    textAlign: 'center',
   },
   continueButton: {
-    marginTop: 8,
     height: 52,
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: clientTheme.accent,
     alignItems: 'center',
     justifyContent: 'center',
