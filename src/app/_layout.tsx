@@ -160,11 +160,7 @@ function RootNavigator() {
           <Stack.Screen
             name="index"
             options={{
-              title: t('Login'),
-              headerStyle: { backgroundColor: '#FAFAFA' },
-              headerTintColor: '#111827',
-              headerTitleStyle: { color: '#111827' },
-              headerShadowVisible: false,
+              headerShown: false,
             }}
           />
           <Stack.Screen

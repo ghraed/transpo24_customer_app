@@ -143,7 +143,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: clientTheme.background,
+    backgroundColor: '#FFFFFF',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: clientTheme.background,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   containerKeyboardOpen: {
@@ -165,8 +165,8 @@ const styles = StyleSheet.create({
     right: 0,
     width: '100%',
     height: '35%',
-    backgroundColor: clientTheme.accent,
-    opacity: 0.08,
+    backgroundColor: '#FFFFFF',
+    opacity: 1,
   },
   logoWrapper: {
     alignItems: 'center',
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    backgroundColor: clientTheme.background,
+    backgroundColor: '#FFFFFF',
   },
   logo: {
     width: 400,

@@ -4,6 +4,7 @@ import {
   AccessibilityInfo,
   Animated,
   Pressable,
+  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -70,7 +71,12 @@ export function LoginIntroGate({ children }: LoginIntroGateProps) {
   }, [showIntro]);
 
   if (!showIntro) {
-    return <>{children}</>;
+    return (
+      <>
+        <StatusBar backgroundColor="#FAFAFA" barStyle="dark-content" translucent={false} />
+        {children}
+      </>
+    );
   }
 
   return (
@@ -78,6 +84,11 @@ export function LoginIntroGate({ children }: LoginIntroGateProps) {
       {children}
 
       <Animated.View style={[styles.container, { opacity }]}>
+        <StatusBar
+          translucent={false}
+          backgroundColor="#000000"
+          barStyle="light-content"
+        />
         <Image
           source={require('@/assets/images/into1_65sec.gif')}
           style={styles.image}
