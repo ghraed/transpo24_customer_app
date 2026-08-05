@@ -26,6 +26,7 @@
     "expo-system-ui": "~56.0.5",
     "expo-web-browser": "~56.0.5",
     "i18next": "^26.3.6",
+    "libphonenumber-js": "^1.13.10",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-i18next": "^17.0.9",
@@ -41,10 +42,12 @@
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "eas-cli": "^20.5.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~56.0.4",
+    "jest-expo": "~56.0.5",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -55,7 +58,11 @@
     "android:usb": "node ./scripts/run-android.js --port=8081 --clear",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "preset": "jest-expo"
   },
   "private": true
 }

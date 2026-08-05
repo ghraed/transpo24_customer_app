@@ -1,5 +1,9 @@
 import { createBackendReachabilityError, getApiBaseUrl } from '@/config/backend';
-import { getAccessToken } from './auth-token';
+import {
+  authenticatedFetch,
+  getAccessToken,
+  type CustomerSessionResponse,
+} from './auth-token';
 import type { RegisterPushTokenPayload } from '@/notifications/types';
 import type {
   ChatMessage,
@@ -90,7 +94,7 @@ function toNetworkError(endpoint: string, error: unknown): Error {
 
 async function fetchWithNetworkError(endpoint: string, init: RequestInit): Promise<Response> {
   try {
-    return await fetch(endpoint, init);
+    return await authenticatedFetch(endpoint, init);
   } catch (error) {
     throw toNetworkError(endpoint, error);
   }
@@ -252,7 +256,7 @@ function isValidCancelTripPaymentResponse(
 export async function registerPushToken(
   payload: RegisterPushTokenPayload,
 ): Promise<{ success: true }> {
-  const response = await fetch(`${getApiBaseUrl()}/push-tokens`, {
+  const response = await authenticatedFetch(`${getApiBaseUrl()}/push-tokens`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -266,6 +270,48 @@ export async function registerPushToken(
     response,
     'Failed to parse push token registration response.',
   );
+}
+
+export async function sendPhoneVerificationCode(phoneNumber: string): Promise<void> {
+  const endpoint = `${getApiBaseUrl()}/auth/phone/send-code`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phoneNumber }),
+  });
+  if (!response.ok) {
+    throw await parseError(response, 'Unable to send a verification code.');
+  }
+}
+
+export async function verifyPhoneVerificationCode(
+  phoneNumber: string,
+  code: string,
+): Promise<CustomerSessionResponse> {
+  const endpoint = `${getApiBaseUrl()}/auth/phone/verify-code`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phoneNumber, code }),
+  });
+  if (!response.ok) {
+    throw await parseError(response, 'Unable to verify the code.');
+  }
+  return parseJsonBody<CustomerSessionResponse>(
+    response,
+    'Failed to parse the verification response.',
+  );
+}
+
+export async function completeCustomerProfile(name: string): Promise<{ name: string }> {
+  const endpoint = `${getApiBaseUrl()}/auth/phone/complete-profile`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw await parseError(response, 'Unable to complete your profile.');
+  return parseJsonBody<{ success: true; name: string }>(response, 'Invalid profile response.');
 }
 
 function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerRequest {
@@ -371,7 +417,7 @@ export async function createCustomerRequest(
 export async function createMotorcycleTransportRequest(
   payload: CreateMotorcycleTransportRequestPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/motorcycle-transport`, {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/motorcycle-transport`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -391,7 +437,7 @@ export async function createMotorcycleTransportRequest(
 export async function createGoodsTransportRequest(
   payload: CreateGoodsTransportRequestPayload,
 ): Promise<CustomerRequest> {
-  const response = await fetch(`${getApiBaseUrl()}/customer/requests/goods-transport`, {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/goods-transport`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),

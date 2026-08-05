@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { clearAccessToken } from '@/lib/auth-token';
+import { logoutCustomerSession } from '@/lib/auth-token';
 import { getCustomerHome } from '@/lib/api';
 import {
   LANGUAGE_CONFIGS,
@@ -82,8 +82,9 @@ export default function ProfileTabScreen() {
     return () => clearTimeout(timeoutId);
   }, [loadProfile]);
 
-  const onLogout = (): void => {
-    void clearAccessToken();
+  const onLogout = async (): Promise<void> => {
+    await logoutCustomerSession();
+    router.dismissAll();
     router.replace('/');
   };
 
@@ -288,7 +289,7 @@ export default function ProfileTabScreen() {
           {pushStatus ? <Text style={styles.statusText}>{pushStatus}</Text> : null}
         </View>
 
-        <Pressable style={styles.logoutButton} onPress={onLogout}>
+          <Pressable style={styles.logoutButton} onPress={() => void onLogout()}>
           <Text style={styles.logoutButtonText}>{t('Logout')}</Text>
         </Pressable>
       </ScrollView>

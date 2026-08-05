@@ -1,12 +1,12 @@
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, View, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { clientTheme } from '@/components/tracking-ui';
-import { getAccessToken, hydrateAccessToken } from '@/lib/auth-token';
+import { hydrateAuthSession, useAuthSession } from '@/lib/auth-token';
 import { LocalizationProvider, useAppLanguage } from '@/localization/provider';
 import {
   initializeNotifications,
@@ -103,7 +103,8 @@ function RootNavigator() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
   const { ready: localizationReady } = useAppLanguage();
-  const [authReady, setAuthReady] = useState(false);
+  const authSession = useAuthSession();
+  const authReady = authSession.status !== 'initializing';
   const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
   const publishableKey =
     rawPublishableKey &&
@@ -115,9 +116,7 @@ function RootNavigator() {
   useNotificationNavigation();
 
   useEffect(() => {
-    void hydrateAccessToken().finally(() => {
-      setAuthReady(true);
-    });
+    void hydrateAuthSession();
   }, []);
 
   useEffect(() => {
@@ -125,14 +124,14 @@ function RootNavigator() {
   }, []);
 
   useEffect(() => {
-    if (!authReady || !getAccessToken()) {
+    if (!authReady || authSession.status !== 'authenticated') {
       return;
     }
 
     void registerCustomerPushNotifications().catch((error) => {
       console.warn('Customer push registration failed during app bootstrap.', error);
     });
-  }, [authReady]);
+  }, [authReady, authSession.status]);
 
   if (!authReady || !localizationReady) {
     return (
@@ -174,6 +173,8 @@ function RootNavigator() {
               headerShadowVisible: false,
             }}
           />
+          <Stack.Screen name="verify-phone" options={{ headerShown: false }} />
+          <Stack.Screen name="complete-profile" options={{ headerShown: false }} />
           <Stack.Screen
             name="forgot-password"
             options={{

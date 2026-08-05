@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, Text, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getAccessToken } from '@/lib/auth-token';
+import { useAuthSession } from '@/lib/auth-token';
 
 function TabBarIcon({
   name,
@@ -58,9 +58,9 @@ export default function CustomerTabsLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const token = getAccessToken();
+  const authSession = useAuthSession();
 
-  if (!token) {
+  if (authSession.status !== 'authenticated') {
     return <Redirect href="/" />;
   }
 

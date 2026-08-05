@@ -897,7 +897,7 @@ export interface RequestPaymentRouteParams {
 export interface CustomerHomeProfile {
   id: string;
   fullName: string | null;
-  email: string;
+  email: string | null;
   phone: string | null;
   avatarUrl: string | null;
 }

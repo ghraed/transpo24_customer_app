@@ -10,6 +10,14 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
+Customer login uses a phone number and a six-digit SMS code. Twilio credentials belong only in the NestJS backend; do not add them to this Expo project's environment. Access tokens, rotating refresh tokens, and the cached authenticated user are stored with Expo SecureStore. Run the client checks with:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm test
+```
+
 2. Start the app
 
    ```bash
