@@ -8,6 +8,8 @@
   "Done": "Done",
   "Enter a valid phone number.": "Enter a valid phone number.",
   "Send verification code": "Send verification code",
+  "Continue as {{phone}}": "Continue as {{phone}}",
+  "Unable to continue. Please request a verification code.": "Unable to continue. Please request a verification code.",
   "Unable to send a verification code.": "Unable to send a verification code.",
   "By continuing, you agree to our Terms and Privacy Policy.": "By continuing, you agree to our Terms and Privacy Policy.",
   "Enter verification code": "Enter verification code",

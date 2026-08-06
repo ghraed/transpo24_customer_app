@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
 const mockStorage = new Map<string, string>();
 
 jest.mock('expo-secure-store', () => ({
@@ -46,6 +48,7 @@ describe('customer session persistence', () => {
     await auth.setCustomerSession(session);
     expect(mockStorage.get('transpo24.customer.accessToken')).toBe(session.accessToken);
     expect(mockStorage.get('transpo24.customer.refreshToken')).toBe(session.refreshToken);
+    expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(session));
     expect(auth.getAuthSessionSnapshot().status).toBe('authenticated');
   });
 
@@ -103,5 +106,20 @@ describe('customer session persistence', () => {
     expect(auth.getAuthSessionSnapshot().status).toBe('unauthenticated');
     expect(mockStorage.size).toBe(0);
   });
+
+  it('keeps a verified session available when switching accounts on this device', async () => {
+    const auth = loadAuth();
+    await auth.setCustomerSession(session);
+    await auth.switchCustomerAccountOnDevice();
+    expect(auth.getAuthSessionSnapshot().status).toBe('unauthenticated');
+    expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(session));
+  });
+
+  it('restores a trusted session by refreshing its stored credential', async () => {
+    mockStorage.set('transpo24.customer.trustedSession', JSON.stringify({ ...session, refreshToken: 'trusted-refresh' }));
+    jest.mocked(globalThis.fetch).mockResolvedValue(response(200, session));
+    const auth = loadAuth();
+    await expect(auth.restoreTrustedCustomerSession()).resolves.toBe(true);
+    expect(auth.getAuthSessionSnapshot().status).toBe('authenticated');
+  });
 });
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';

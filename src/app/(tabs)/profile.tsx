@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { logoutCustomerSession } from '@/lib/auth-token';
+import { switchCustomerAccountOnDevice } from '@/lib/auth-token';
 import { getCustomerHome } from '@/lib/api';
 import {
   LANGUAGE_CONFIGS,
@@ -83,8 +83,7 @@ export default function ProfileTabScreen() {
   }, [loadProfile]);
 
   const onLogout = async (): Promise<void> => {
-    await logoutCustomerSession();
-    router.dismissAll();
+    await switchCustomerAccountOnDevice();
     router.replace('/');
   };
 

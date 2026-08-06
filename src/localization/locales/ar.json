@@ -8,6 +8,8 @@
   "Done": "تم",
   "Enter a valid phone number.": "أدخل رقم هاتف صالحاً.",
   "Send verification code": "إرسال رمز التحقق",
+  "Continue as {{phone}}": "المتابعة باسم {{phone}}",
+  "Unable to continue. Please request a verification code.": "تعذر المتابعة. يرجى طلب رمز تحقق.",
   "Unable to send a verification code.": "تعذر إرسال رمز التحقق.",
   "By continuing, you agree to our Terms and Privacy Policy.": "بالمتابعة، أنت توافق على الشروط وسياسة الخصوصية.",
   "Enter verification code": "أدخل رمز التحقق",

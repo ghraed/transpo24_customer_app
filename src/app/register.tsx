@@ -1,5 +1,5 @@
-import { Redirect } from 'expo-router';
+import { PhoneAuthScreen } from '@/components/phone-auth-screen';
 
-export default function LegacyCustomerRegistrationRedirect() {
-  return <Redirect href="/" />;
+export default function CustomerRegistrationScreen() {
+  return <PhoneAuthScreen mode="register" />;
 }

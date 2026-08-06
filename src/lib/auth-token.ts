@@ -6,6 +6,7 @@ import { getApiBaseUrl } from '@/config/backend';
 const ACCESS_TOKEN_STORAGE_KEY = 'transpo24.customer.accessToken';
 const REFRESH_TOKEN_STORAGE_KEY = 'transpo24.customer.refreshToken';
 const USER_STORAGE_KEY = 'transpo24.customer.user';
+const TRUSTED_SESSION_STORAGE_KEY = 'transpo24.customer.trustedSession';
 
 export type CustomerAuthUser = {
   id: string;
@@ -120,11 +121,34 @@ export async function setCustomerSession(data: CustomerSessionResponse): Promise
     SecureStore.setItemAsync(ACCESS_TOKEN_STORAGE_KEY, data.accessToken),
     SecureStore.setItemAsync(REFRESH_TOKEN_STORAGE_KEY, data.refreshToken),
     SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(data.user)),
+    SecureStore.setItemAsync(TRUSTED_SESSION_STORAGE_KEY, JSON.stringify(data)),
   ]);
   emit({
     status: data.profileCompleted ? 'authenticated' : 'needsProfileCompletion',
     user: data.user,
   });
+}
+
+export async function getTrustedCustomer(): Promise<CustomerAuthUser | null> {
+  try {
+    const storedSession = await readTrustedSession();
+    return storedSession?.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function restoreTrustedCustomerSession(): Promise<boolean> {
+  const storedSession = await readTrustedSession();
+  if (!storedSession) return false;
+
+  refreshToken = storedSession.refreshToken;
+  const refreshedToken = await refreshAccessToken();
+
+  if (refreshedToken) return true;
+
+  await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
+  return false;
 }
 
 export async function clearAccessToken(): Promise<void> {
@@ -160,7 +184,10 @@ export async function refreshAccessToken(): Promise<string | null> {
       await setCustomerSession(session);
       return session.accessToken;
     } catch {
-      await clearSession();
+      await Promise.all([
+        clearSession(),
+        SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY),
+      ]);
       return null;
     } finally {
       refreshPromise = null;
@@ -194,7 +221,13 @@ export async function logoutCustomerSession(): Promise<void> {
     }
   } finally {
     await clearSession();
+    await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
   }
+}
+
+// Account switching keeps this device's verified session available for Continue.
+export async function switchCustomerAccountOnDevice(): Promise<void> {
+  await clearSession();
 }
 
 export async function markProfileCompleted(name: string): Promise<void> {
@@ -221,5 +254,28 @@ function isJwtExpired(token: string): boolean {
     return typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now();
   } catch {
     return true;
+  }
+}
+
+async function readTrustedSession(): Promise<CustomerSessionResponse | null> {
+  const rawSession = await SecureStore.getItemAsync(TRUSTED_SESSION_STORAGE_KEY);
+  if (!rawSession) return null;
+
+  try {
+    const session = JSON.parse(rawSession) as Partial<CustomerSessionResponse>;
+    if (
+      typeof session.accessToken !== 'string' ||
+      typeof session.refreshToken !== 'string' ||
+      !session.user ||
+      typeof session.user.id !== 'string' ||
+      typeof session.user.phoneNumber !== 'string' ||
+      typeof session.profileCompleted !== 'boolean'
+    ) {
+      throw new Error('Invalid trusted session');
+    }
+    return session as CustomerSessionResponse;
+  } catch {
+    await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
+    return null;
   }
 }

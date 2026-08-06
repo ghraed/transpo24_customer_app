@@ -37,6 +37,8 @@
   "Sign in": "Se connecter",
   "New customer?": "Nouveau client ?",
   "Create an account": "Créer un compte",
+  "Continue as {{phone}}": "Continuer en tant que {{phone}}",
+  "Unable to continue. Please request a verification code.": "Impossible de continuer. Demandez un code de vérification.",
   "Email and password are required.": "L'e-mail et le mot de passe sont requis.",
   "Invalid server response. Please try again.": "Réponse serveur invalide. Veuillez réessayer.",
   "Network error. Please try again.": "Erreur réseau. Veuillez réessayer.",
