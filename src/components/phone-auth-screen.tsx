@@ -1,6 +1,6 @@
 import { Redirect, useRouter } from 'expo-router';
 import type { CountryCode } from 'libphonenumber-js';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -116,32 +116,32 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
 
   return (
     <LoginIntroGate>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View
-            style={[styles.container, keyboardInset > 0 && { paddingBottom: keyboardInset + 20 }]}
+            style={[
+              styles.container,
+              keyboardInset > 0 && styles.containerKeyboardOpen,
+              keyboardInset > 0 && { paddingBottom: keyboardInset + 20 },
+            ]}
           >
-            <Image
-              source={require('@/assets/images/run_and_Transpo24.png')}
-              style={styles.logo}
-              resizeMode="contain"
-              accessibilityLabel="Transpo24"
-            />
+            <View style={[styles.brandHeader, keyboardInset > 0 && styles.brandHeaderCompact]}>
+              <Image
+                source={require('@/assets/images/run_and_Transpo24.png')}
+                style={[styles.logo, keyboardInset > 0 && styles.logoCompact]}
+                resizeMode="contain"
+                accessibilityLabel="Transpo24"
+              />
+            </View>
             <View style={styles.card}>
-              <View style={styles.smsBadge}>
-                <Text style={styles.smsText}>SMS</Text>
-              </View>
-              <Text style={[styles.title, isRTL && styles.rtl]}>
-                {mode === 'login'
-                  ? t('Continue with your phone number')
-                  : t('Join Transpo24 to start making requests')}
-              </Text>
-              <Text style={[styles.subtitle, isRTL && styles.rtl]}>
-                {t('We will send a six-digit verification code by SMS.')}
-              </Text>
+              {mode === 'login' ? (
+                <Text style={[styles.title, isRTL && styles.rtl]}>
+                  {t('Continue with your phone number')}
+                </Text>
+              ) : null}
               <Text style={[styles.label, isRTL && styles.rtl]}>{t('Phone number')}</Text>
               <View style={[styles.phoneField, isRTL && styles.phoneFieldRtl]}>
                 <CountryPicker value={country} onChange={handleCountryChange} />
@@ -222,10 +222,34 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-  container: { flex: 1, justifyContent: 'center', padding: 22, backgroundColor: '#FFFFFF' },
-  logo: { position: 'absolute', top: 2, alignSelf: 'center', width: 330, height: 160 },
+  container: {
+    flex: 1,
+    paddingHorizontal: 22,
+    paddingTop: 12,
+    paddingBottom: 22,
+    backgroundColor: '#FFFFFF',
+  },
+  containerKeyboardOpen: {
+    paddingTop: 0,
+  },
+  brandHeader: {
+    height: 224,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandHeaderCompact: {
+    height: 108,
+  },
+  logo: {
+    width: 540,
+    maxWidth: '100%',
+    height: 294,
+  },
+  logoCompact: {
+    width: 230,
+    height: 96,
+  },
   card: {
-    marginTop: 85,
     borderRadius: 28,
     padding: 24,
     backgroundColor: clientTheme.surface,
@@ -237,18 +261,7 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 10 },
   },
-  smsBadge: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2563EB',
-    marginBottom: 16,
-  },
-  smsText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
-  title: { fontSize: 27, lineHeight: 34, fontWeight: '800', color: clientTheme.text },
-  subtitle: { marginTop: 8, marginBottom: 22, fontSize: 15, lineHeight: 22, color: clientTheme.textMuted },
+  title: { fontSize: 18, lineHeight: 34, fontWeight: '800', color: clientTheme.text, marginBottom: 22 },
   label: { marginBottom: 8, fontSize: 13, color: clientTheme.text, fontWeight: '700' },
   phoneField: {
     minHeight: 58,
