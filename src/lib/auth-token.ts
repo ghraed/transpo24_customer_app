@@ -13,6 +13,7 @@ export type CustomerAuthUser = {
   name: string;
   email: string;
   phoneNumber: string;
+  countryCode: string | null;
   role: 'CUSTOMER';
 };
 
@@ -230,12 +231,44 @@ export async function switchCustomerAccountOnDevice(): Promise<void> {
   await clearSession();
 }
 
-export async function markProfileCompleted(name: string): Promise<void> {
+export async function markProfileCompleted(name: string, countryCode: string): Promise<void> {
   if (currentUser) {
-    currentUser = { ...currentUser, name };
+    currentUser = { ...currentUser, name, countryCode };
     await SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(currentUser));
   }
   emit({ status: 'authenticated', user: currentUser });
+}
+
+export async function updateCustomerSessionProfile(input: {
+  name: string;
+  countryCode: string;
+}): Promise<void> {
+  if (!currentUser) {
+    return;
+  }
+
+  currentUser = { ...currentUser, name: input.name, countryCode: input.countryCode };
+
+  const trustedSession = await readTrustedSession();
+  const nextTrustedSession = trustedSession
+    ? {
+        ...trustedSession,
+        user: {
+          ...trustedSession.user,
+          name: input.name,
+          countryCode: input.countryCode,
+        },
+      }
+    : null;
+
+  await Promise.all([
+    SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(currentUser)),
+    nextTrustedSession
+      ? SecureStore.setItemAsync(TRUSTED_SESSION_STORAGE_KEY, JSON.stringify(nextTrustedSession))
+      : Promise.resolve(),
+  ]);
+
+  emit({ status: snapshot.status, user: currentUser });
 }
 
 function withCurrentToken(init: RequestInit): RequestInit {

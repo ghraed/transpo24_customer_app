@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { switchCustomerAccountOnDevice } from '@/lib/auth-token';
 import { getCustomerHome } from '@/lib/api';
+import { getCountryLabel } from '@/lib/country-currency';
 import {
   LANGUAGE_CONFIGS,
   SUPPORTED_LANGUAGES,
@@ -152,6 +153,9 @@ export default function ProfileTabScreen() {
             <Text style={styles.heroTitle}>{profile?.fullName || t('Customer')}</Text>
             <Text style={styles.heroMeta}>{profile?.email || t('No email')}</Text>
             <Text style={styles.heroMeta}>{profile?.phone || t('No phone number')}</Text>
+            {profile?.countryCode ? (
+              <Text style={styles.heroMeta}>{getCountryLabel(profile.countryCode)}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -239,7 +243,7 @@ export default function ProfileTabScreen() {
             <Text style={styles.sectionTitle}>{t('Account')}</Text>
           </View>
 
-          <Pressable style={styles.actionRow}>
+          <Pressable style={styles.actionRow} onPress={() => router.push('/edit-profile')}>
             <View style={styles.actionIconWrap}>
               <IconSymbol
                 name={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }}

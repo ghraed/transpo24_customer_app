@@ -19,7 +19,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
+import { currencyForCountryCode } from '@/lib/country-currency';
 import { createWalletTopUp, getWalletTopUpStatus } from '@/lib/api';
+import { useAuthSession } from '@/lib/auth-token';
 import type { CustomerWalletTopUpResponse, PaymentMethod } from '@/types/customer-request';
 
 type PaymentOption = {
@@ -101,6 +103,7 @@ function isTerminalStatus(status: CustomerWalletTopUpResponse['topUp']['status']
 export default function WalletTopUpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const auth = useAuthSession();
   const keyboardInset = useAndroidKeyboardInset();
   const insets = useSafeAreaInsets();
   const requestedCurrency =
@@ -109,8 +112,9 @@ export default function WalletTopUpScreen() {
       : '';
   const defaultCurrency =
     requestedCurrency ||
+    currencyForCountryCode(auth.user?.countryCode) ||
     process.env.EXPO_PUBLIC_DEFAULT_WALLET_CURRENCY?.trim().toUpperCase() ||
-    'CHF';
+    'USD';
   const amountValueInitial = typeof params.amount === 'string' ? params.amount : '';
   const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
   const publishableKey =

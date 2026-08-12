@@ -144,7 +144,11 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
               ) : null}
               <Text style={[styles.label, isRTL && styles.rtl]}>{t('Phone number')}</Text>
               <View style={[styles.phoneField, isRTL && styles.phoneFieldRtl]}>
-                <CountryPicker value={country} onChange={handleCountryChange} />
+                <CountryPicker
+                  value={country}
+                  onChange={handleCountryChange}
+                  displayMode="callingCode"
+                />
                 <TextInput
                   accessibilityLabel={t('Phone number')}
                   style={[styles.phoneInput, isRTL && styles.rtlInput]}

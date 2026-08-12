@@ -303,15 +303,40 @@ export async function verifyPhoneVerificationCode(
   );
 }
 
-export async function completeCustomerProfile(name: string): Promise<{ name: string }> {
+export async function completeCustomerProfile(
+  name: string,
+  countryCode: string,
+): Promise<{ name: string; countryCode: string }> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/complete-profile`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, countryCode }),
   });
   if (!response.ok) throw await parseError(response, 'Unable to complete your profile.');
-  return parseJsonBody<{ success: true; name: string }>(response, 'Invalid profile response.');
+  return parseJsonBody<{ success: true; name: string; countryCode: string }>(
+    response,
+    'Invalid profile response.',
+  );
+}
+
+export async function updateCustomerProfile(
+  name: string,
+  countryCode: string,
+): Promise<{ name: string; countryCode: string }> {
+  const endpoint = `${getApiBaseUrl()}/auth/phone/update-profile`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name, countryCode }),
+  });
+  if (!response.ok) {
+    throw await parseError(response, 'Unable to update your profile.');
+  }
+  return parseJsonBody<{ success: true; name: string; countryCode: string }>(
+    response,
+    'Invalid profile response.',
+  );
 }
 
 function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerRequest {

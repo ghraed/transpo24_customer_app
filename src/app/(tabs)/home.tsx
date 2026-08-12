@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   ColorValue,
+  Image,
+  type ImageSourcePropType,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -27,6 +29,13 @@ const serviceIcons: Record<string, SymbolViewProps['name']> = {
   MOTORCYCLE_TRANSPORT: { ios: 'bicycle', android: 'two_wheeler', web: 'two_wheeler' },
   GOODS_TRANSPORT: { ios: 'shippingbox.fill', android: 'inventory_2', web: 'inventory_2' },
   FURNITURE_TRANSPORT: { ios: 'sofa.fill', android: 'chair', web: 'chair' },
+};
+
+const serviceIconImages: Record<string, ImageSourcePropType> = {
+  VEHICLE_TRANSPORT: require('@/assets/images/car-tow-icon.png'),
+  MOTORCYCLE_TRANSPORT: require('@/assets/images/bicycle-motorcycle-icon.png'),
+  GOODS_TRANSPORT: require('@/assets/images/goods-boxes-icon.png'),
+  FURNITURE_TRANSPORT: require('@/assets/images/furniture-delivery-icon.png'),
 };
 
 type ServiceTileTheme = {
@@ -59,13 +68,13 @@ function getServiceSubtitle(
 ): string {
   switch (serviceKey) {
     case 'VEHICLE_TRANSPORT':
-      return t('Cars, SUVs, Trucks');
+      return t('Vehicles');
     case 'MOTORCYCLE_TRANSPORT':
       return t('Bikes, Scooters');
     case 'GOODS_TRANSPORT':
-      return t('Packages, Cargo');
+      return t('Goods');
     case 'FURNITURE_TRANSPORT':
-      return t('Home, Office items');
+      return t('Furinture');
     default:
       return t('Transport anything');
   }
@@ -138,8 +147,8 @@ function buildLocationLabel(
 ): string {
   return compactAddress(
     data.activeRequest?.pickupAddress ??
-      data.recentRequests[0]?.pickupAddress ??
-      data.recentRequests[0]?.dropoffAddress,
+    data.recentRequests[0]?.pickupAddress ??
+    data.recentRequests[0]?.dropoffAddress,
     t('Ready to book'),
   );
 }
@@ -223,17 +232,23 @@ function StatusBadge({
 
 function ServiceTile({
   serviceKey,
-  label,
   subtitle,
   onPress,
 }: {
   serviceKey: string;
-  label: string;
   subtitle: string;
   onPress: () => void;
 }) {
   const theme = getServiceTheme(serviceKey);
-  const icon = serviceIcons[serviceKey];
+  const icon = serviceIconImages[serviceKey];
+  const iconStyle =
+    serviceKey === 'GOODS_TRANSPORT'
+      ? [styles.serviceIconImage, styles.serviceIconGoodsImage]
+      : serviceKey === 'VEHICLE_TRANSPORT'
+        ? [styles.serviceIconImage, styles.serviceIconVehicleImage]
+        : serviceKey === 'MOTORCYCLE_TRANSPORT'
+          ? [styles.serviceIconImage, styles.serviceIconMotorcycleImage]
+          : [styles.serviceIconImage, styles.serviceIconFurnitureImage];
 
   return (
     <Pressable
@@ -245,9 +260,8 @@ function ServiceTile({
         style={[styles.serviceGlow, { backgroundColor: theme.overlayColor, bottom: -34, left: -26, opacity: 0.4 }]}
       />
       <View style={styles.serviceIconWrap}>
-        {icon ? <IconSymbol name={icon} color="#FFFFFF" size={24} /> : null}
+        {icon ? <Image source={icon} style={iconStyle} resizeMode="contain" /> : null}
       </View>
-      <Text style={styles.serviceTileTitle}>{label}</Text>
       <Text style={styles.serviceTileSubtitle}>{subtitle}</Text>
     </Pressable>
   );
@@ -531,7 +545,6 @@ export default function HomeTabScreen() {
             <ServiceTile
               key={service.key}
               serviceKey={service.key}
-              label={service.label}
               subtitle={service.subtitle}
               onPress={() => onChooseServiceByKey(service.key)}
             />
@@ -681,13 +694,29 @@ const styles = StyleSheet.create({
   },
   serviceIconWrap: {
     marginBottom: 18,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
-  serviceTileTitle: {
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 6,
+  serviceIconImage: {
+    width: 78,
+    height: 56,
+  },
+  serviceIconVehicleImage: {
+    width: 98,
+    height: 50,
+  },
+  serviceIconMotorcycleImage: {
+    width: 100,
+    height: 50,
+  },
+  serviceIconGoodsImage: {
+    width: 74,
+    height: 58,
+  },
+  serviceIconFurnitureImage: {
+    width: 82,
+    height: 56,
   },
   serviceTileSubtitle: {
     fontSize: 13,

@@ -172,6 +172,16 @@ function RootNavigator() {
           <Stack.Screen name="verify-phone" options={{ headerShown: false }} />
           <Stack.Screen name="complete-profile" options={{ headerShown: false }} />
           <Stack.Screen
+            name="edit-profile"
+            options={{
+              title: t('Edit Profile'),
+              headerStyle: { backgroundColor: '#FAFAFA' },
+              headerTintColor: '#111827',
+              headerTitleStyle: { color: '#111827' },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
             name="forgot-password"
             options={{
               title: t('Reset Password'),

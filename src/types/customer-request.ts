@@ -899,6 +899,7 @@ export interface CustomerHomeProfile {
   fullName: string | null;
   email: string | null;
   phone: string | null;
+  countryCode: string | null;
   avatarUrl: string | null;
 }
 
