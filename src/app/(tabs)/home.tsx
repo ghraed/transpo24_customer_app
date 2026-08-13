@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   ColorValue,
-  Image,
+  ImageBackground,
   type ImageSourcePropType,
   Pressable,
   RefreshControl,
@@ -31,11 +31,11 @@ const serviceIcons: Record<string, SymbolViewProps['name']> = {
   FURNITURE_TRANSPORT: { ios: 'sofa.fill', android: 'chair', web: 'chair' },
 };
 
-const serviceIconImages: Record<string, ImageSourcePropType> = {
-  VEHICLE_TRANSPORT: require('@/assets/images/car-tow-icon.png'),
-  MOTORCYCLE_TRANSPORT: require('@/assets/images/bicycle-motorcycle-icon.png'),
-  GOODS_TRANSPORT: require('@/assets/images/goods-boxes-icon.png'),
-  FURNITURE_TRANSPORT: require('@/assets/images/furniture-delivery-icon.png'),
+const serviceTileImages: Record<string, ImageSourcePropType> = {
+  VEHICLE_TRANSPORT: require('@/assets/images/services/vehicle.jpg'),
+  MOTORCYCLE_TRANSPORT: require('@/assets/images/services/motorcycle.jpg'),
+  GOODS_TRANSPORT: require('@/assets/images/services/goods.jpg'),
+  FURNITURE_TRANSPORT: require('@/assets/images/services/furniture.jpg'),
 };
 
 type ServiceTileTheme = {
@@ -59,24 +59,6 @@ function getServiceLabel(
       return t('Furniture');
     default:
       return fallback || t('Service');
-  }
-}
-
-function getServiceSubtitle(
-  serviceKey: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  switch (serviceKey) {
-    case 'VEHICLE_TRANSPORT':
-      return t('Vehicles');
-    case 'MOTORCYCLE_TRANSPORT':
-      return t('Bikes, Scooters');
-    case 'GOODS_TRANSPORT':
-      return t('Goods');
-    case 'FURNITURE_TRANSPORT':
-      return t('Furinture');
-    default:
-      return t('Transport anything');
   }
 }
 
@@ -232,37 +214,34 @@ function StatusBadge({
 
 function ServiceTile({
   serviceKey,
-  subtitle,
+  label,
   onPress,
 }: {
   serviceKey: string;
-  subtitle: string;
+  label: string;
   onPress: () => void;
 }) {
   const theme = getServiceTheme(serviceKey);
-  const icon = serviceIconImages[serviceKey];
-  const iconStyle =
-    serviceKey === 'GOODS_TRANSPORT'
-      ? [styles.serviceIconImage, styles.serviceIconGoodsImage]
-      : serviceKey === 'VEHICLE_TRANSPORT'
-        ? [styles.serviceIconImage, styles.serviceIconVehicleImage]
-        : serviceKey === 'MOTORCYCLE_TRANSPORT'
-          ? [styles.serviceIconImage, styles.serviceIconMotorcycleImage]
-          : [styles.serviceIconImage, styles.serviceIconFurnitureImage];
+  const image = serviceTileImages[serviceKey];
 
   return (
-    <Pressable
-      style={[styles.serviceTile, { backgroundColor: theme.backgroundColor }]}
-      onPress={onPress}
-    >
-      <View style={[styles.serviceGlow, { backgroundColor: theme.overlayColor, top: -22, right: 10 }]} />
-      <View
-        style={[styles.serviceGlow, { backgroundColor: theme.overlayColor, bottom: -34, left: -26, opacity: 0.4 }]}
-      />
-      <View style={styles.serviceIconWrap}>
-        {icon ? <Image source={icon} style={iconStyle} resizeMode="contain" /> : null}
+    <Pressable style={styles.serviceTileButton} onPress={onPress}>
+      <View style={[styles.serviceTile, { backgroundColor: theme.backgroundColor }]}>
+        {image ? (
+          <ImageBackground source={image} style={styles.serviceTileImage} resizeMode="cover" />
+        ) : (
+          <>
+            <View style={[styles.serviceGlow, { backgroundColor: theme.overlayColor, top: -22, right: 10 }]} />
+            <View
+              style={[
+                styles.serviceGlow,
+                { backgroundColor: theme.overlayColor, bottom: -34, left: -26, opacity: 0.4 },
+              ]}
+            />
+          </>
+        )}
       </View>
-      <Text style={styles.serviceTileSubtitle}>{subtitle}</Text>
+      <Text style={styles.serviceTileTitle} numberOfLines={1}>{label}</Text>
     </Pressable>
   );
 }
@@ -438,22 +417,18 @@ export default function HomeTabScreen() {
       {
         key: 'VEHICLE_TRANSPORT',
         label: getServiceLabel('VEHICLE_TRANSPORT', null, t),
-        subtitle: getServiceSubtitle('VEHICLE_TRANSPORT', t),
       },
       {
         key: 'MOTORCYCLE_TRANSPORT',
         label: getServiceLabel('MOTORCYCLE_TRANSPORT', null, t),
-        subtitle: getServiceSubtitle('MOTORCYCLE_TRANSPORT', t),
       },
       {
         key: 'GOODS_TRANSPORT',
         label: getServiceLabel('GOODS_TRANSPORT', null, t),
-        subtitle: getServiceSubtitle('GOODS_TRANSPORT', t),
       },
       {
         key: 'FURNITURE_TRANSPORT',
         label: getServiceLabel('FURNITURE_TRANSPORT', null, t),
-        subtitle: getServiceSubtitle('FURNITURE_TRANSPORT', t),
       },
     ],
     [t],
@@ -545,7 +520,7 @@ export default function HomeTabScreen() {
             <ServiceTile
               key={service.key}
               serviceKey={service.key}
-              subtitle={service.subtitle}
+              label={service.label}
               onPress={() => onChooseServiceByKey(service.key)}
             />
           ))}
@@ -677,11 +652,13 @@ const styles = StyleSheet.create({
     paddingRight: 20,
     gap: 12,
   },
+  serviceTileButton: {
+    width: 156,
+    gap: 8,
+  },
   serviceTile: {
-    width: 140,
-    minHeight: 120,
+    height: 132,
     borderRadius: 22,
-    padding: 16,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
@@ -692,36 +669,19 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     opacity: 0.55,
   },
-  serviceIconWrap: {
-    marginBottom: 18,
-    height: 56,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+  serviceTileImage: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
-  serviceIconImage: {
-    width: 78,
-    height: 56,
-  },
-  serviceIconVehicleImage: {
-    width: 98,
-    height: 50,
-  },
-  serviceIconMotorcycleImage: {
-    width: 100,
-    height: 50,
-  },
-  serviceIconGoodsImage: {
-    width: 74,
-    height: 58,
-  },
-  serviceIconFurnitureImage: {
-    width: 82,
-    height: 56,
-  },
-  serviceTileSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: 'rgba(255,255,255,0.86)',
+  serviceTileTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '800',
+    color: clientTheme.text,
+    textAlign: 'center',
   },
   section: {
     gap: 14,
