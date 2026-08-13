@@ -401,6 +401,22 @@ export default function HomeTabScreen() {
 
   const onChooseServiceByKey = useCallback(
     (serviceKey: string): void => {
+      const detailRoutes: Record<
+        string,
+        '/vehicle-details' | '/motorcycle-details' | '/goods-details' | '/furniture-details'
+      > = {
+        VEHICLE_TRANSPORT: '/vehicle-details',
+        MOTORCYCLE_TRANSPORT: '/motorcycle-details',
+        GOODS_TRANSPORT: '/goods-details',
+        FURNITURE_TRANSPORT: '/furniture-details',
+      };
+      const detailRoute = detailRoutes[serviceKey];
+
+      if (detailRoute) {
+        router.push({ pathname: detailRoute, params: { serviceKey } });
+        return;
+      }
+
       router.push({ pathname: '/choose-service', params: { preselectedServiceKey: serviceKey } });
     },
     [router],
