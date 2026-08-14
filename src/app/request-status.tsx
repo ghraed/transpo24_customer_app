@@ -1316,13 +1316,7 @@ export default function RequestStatusScreen() {
                 title="Driver"
                 anchor={{ x: 0.5, y: 0.5 }}
               >
-                <View style={styles.driverMarker}>
-                  <IconSymbol
-                    name={{ ios: 'car.fill', android: 'directions_car', web: 'directions_car' }}
-                    color="#111827"
-                    size={18}
-                  />
-                </View>
+                <Text style={styles.driverMarkerIcon}>🚗</Text>
               </NativeMarker>
             ) : null}
             {latestDriverLocation && destinationCoordinate && NativeMapViewDirections ? (
@@ -2458,13 +2452,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  driverMarker: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#F9C30B',
-    alignItems: 'center',
-    justifyContent: 'center',
+  driverMarkerIcon: {
+    fontSize: 28,
   },
   driverCard: {
     backgroundColor: '#FFFFFF',

@@ -238,7 +238,11 @@ export default function WaitingForPickupScreen() {
     >
       <NativeMarker coordinate={pickupLocation} title="Pickup" />
       <NativeMarker coordinate={dropoffLocation} title="Dropoff" pinColor="#FF5E57" />
-      {driverLocation ? <NativeMarker coordinate={driverLocation} title="Driver" pinColor="#3B82F6" /> : null}
+      {driverLocation ? (
+        <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
+          <Text style={styles.driverMarkerIcon}>🚗</Text>
+        </NativeMarker>
+      ) : null}
     </NativeMapView>
   );
 
@@ -371,6 +375,9 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  driverMarkerIcon: {
+    fontSize: 28,
   },
   expandedMap: {
     width: '100%',
