@@ -12,7 +12,6 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -20,9 +19,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getApiBaseUrl } from '@/config/backend';
 import {
   isNativeMapRuntimeAvailable,
   NativeMapView,
@@ -31,20 +29,21 @@ import {
   PROVIDER_GOOGLE,
   type Region,
 } from '@/components/native-maps';
+import { getApiBaseUrl } from '@/config/backend';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { useTransportRequestChatRoom } from '@/hooks/use-transport-request-chat-room';
-import { isHistoryRequestStatus } from '@/lib/request-status';
 import {
   approveAdditionalCharge,
   cancelCollectedTrip,
   deleteCustomerRequest,
-  getDefaultPaymentMethod,
-  getRequestAdditionalCharges,
   getCustomerRequestOffers,
   getCustomerRequestStatus,
+  getDefaultPaymentMethod,
+  getRequestAdditionalCharges,
   getRequestTracking,
 } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth-token';
+import { isHistoryRequestStatus } from '@/lib/request-status';
 import { DEFAULT_LANGUAGE } from '@/localization/languages';
 import { useAppLanguage } from '@/localization/provider';
 import {
@@ -71,18 +70,18 @@ import type {
   CustomerRequestStatus,
   DriverLocation,
   ProofPhoto,
+  RequestStatusResponse,
   RequestTracking,
   RequestTrackingStatus,
-  RequestStatusResponse,
   SavedPaymentMethodSummary,
 } from '@/types/customer-request';
+import { validateItemDeliveredPayload } from '@/utils/deliveryValidation';
 import {
   validateDriverLocationUpdatedPayload,
   validateDriverNearDeliveryPayload,
   validateItemPickedUpPayload,
   validateTripStatusUpdatedPayload,
 } from '@/utils/pickupValidation';
-import { validateItemDeliveredPayload } from '@/utils/deliveryValidation';
 
 interface OrderProgressStep {
   id: number;
@@ -474,7 +473,6 @@ export default function RequestStatusScreen() {
   const params = useLocalSearchParams();
   const { t } = useTranslation();
   const { language } = useAppLanguage();
-  const insets = useSafeAreaInsets();
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const refreshTs = typeof params.refreshTs === 'string' ? params.refreshTs : '';
   const accessToken = useMemo(() => getAccessToken(), []);
@@ -993,13 +991,6 @@ export default function RequestStatusScreen() {
     );
   }, [chatRoom, router]);
 
-  const onContactSupport = useCallback((): void => {
-    Alert.alert(
-      'Support',
-      'Support contact is not configured in this app yet. Use the driver chat when available or try again later.',
-    );
-  }, []);
-
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
       const actionType = event.data.action.type;
@@ -1254,28 +1245,28 @@ export default function RequestStatusScreen() {
       const nextTrackingDestination = trackingDestination;
       const destinationCoordinate =
         nextTrackingDestination &&
-        nextTrackingDestination.latitude !== null &&
-        nextTrackingDestination.longitude !== null
+          nextTrackingDestination.latitude !== null &&
+          nextTrackingDestination.longitude !== null
           ? {
-              latitude: nextTrackingDestination.latitude,
-              longitude: nextTrackingDestination.longitude,
-            }
+            latitude: nextTrackingDestination.latitude,
+            longitude: nextTrackingDestination.longitude,
+          }
           : null;
       const pickupCoordinate =
         requestData.pickupLocation.latitude !== null &&
-        requestData.pickupLocation.longitude !== null
+          requestData.pickupLocation.longitude !== null
           ? {
-              latitude: requestData.pickupLocation.latitude,
-              longitude: requestData.pickupLocation.longitude,
-            }
+            latitude: requestData.pickupLocation.latitude,
+            longitude: requestData.pickupLocation.longitude,
+          }
           : null;
       const dropoffCoordinate =
         requestData.dropoffLocation.latitude !== null &&
-        requestData.dropoffLocation.longitude !== null
+          requestData.dropoffLocation.longitude !== null
           ? {
-              latitude: requestData.dropoffLocation.latitude,
-              longitude: requestData.dropoffLocation.longitude,
-            }
+            latitude: requestData.dropoffLocation.latitude,
+            longitude: requestData.dropoffLocation.longitude,
+          }
           : null;
 
       return (
@@ -1348,10 +1339,10 @@ export default function RequestStatusScreen() {
                 expanded
                   ? { ios: 'xmark', android: 'close', web: 'close' }
                   : {
-                      ios: 'arrow.up.left.and.arrow.down.right',
-                      android: 'open_in_full',
-                      web: 'open_in_full',
-                    }
+                    ios: 'arrow.up.left.and.arrow.down.right',
+                    android: 'open_in_full',
+                    web: 'open_in_full',
+                  }
               }
               color="#111827"
               size={18}
@@ -1410,7 +1401,7 @@ export default function RequestStatusScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -1419,7 +1410,6 @@ export default function RequestStatusScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingTop: Math.max(10, insets.top + 4) },
             keyboardInset > 0 ? { paddingBottom: 24 + keyboardInset } : undefined,
           ]}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadStatus(true)} />}
@@ -1640,523 +1630,520 @@ export default function RequestStatusScreen() {
           </View>
 
           <View style={styles.card}>
-          <Text style={styles.cardTitle}>Driver Offers</Text>
-          {offers.length === 0 ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator size="small" color="#2563EB" />
-              <Text style={styles.rowValue}>Waiting for offers…</Text>
-            </View>
-          ) : (
-            <Text style={styles.rowValue}>{helperText}</Text>
-          )}
+            <Text style={styles.cardTitle}>Driver Offers</Text>
+            {offers.length === 0 ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="small" color="#2563EB" />
+                <Text style={styles.rowValue}>Waiting for offers…</Text>
+              </View>
+            ) : (
+              <Text style={styles.rowValue}>{helperText}</Text>
+            )}
 
-          {selectedOffer ? (
-            <View style={styles.selectedOfferBanner}>
-              <Text style={styles.selectedOfferLabel}>Selected offer</Text>
-              <Text style={styles.selectedOfferValue}>
-                {selectedOffer.driverName || 'Driver'} •{' '}
-                {formatMoney(selectedOffer.proposedPrice ?? selectedOffer.price, selectedOffer.currency)}
-              </Text>
-            </View>
-          ) : null}
+            {selectedOffer ? (
+              <View style={styles.selectedOfferBanner}>
+                <Text style={styles.selectedOfferLabel}>Selected offer</Text>
+                <Text style={styles.selectedOfferValue}>
+                  {selectedOffer.driverName || 'Driver'} •{' '}
+                  {formatMoney(selectedOffer.proposedPrice ?? selectedOffer.price, selectedOffer.currency)}
+                </Text>
+              </View>
+            ) : null}
 
-          {acceptedOffer ? (
-            <View style={styles.offerCardAccepted}>
-              <Text style={[styles.offerCardTitle, styles.offerTextOnDark]}>Accepted Offer</Text>
-              <Text style={[styles.offerPrimaryValue, styles.offerTextOnDark]}>
-                {acceptedOffer.driverName || 'Driver'} •{' '}
-                {formatMoney(acceptedOffer.proposedPrice ?? acceptedOffer.price, acceptedOffer.currency)}
-              </Text>
-              <Text style={[styles.rowValue, styles.offerSubtextOnDark]}>
-                Accepted at: {formatDate(acceptedOffer.acceptedAt)}
-              </Text>
-            </View>
-          ) : null}
+            {acceptedOffer ? (
+              <View style={styles.offerCardAccepted}>
+                <Text style={[styles.offerCardTitle, styles.offerTextOnDark]}>Accepted Offer</Text>
+                <Text style={[styles.offerPrimaryValue, styles.offerTextOnDark]}>
+                  {acceptedOffer.driverName || 'Driver'} •{' '}
+                  {formatMoney(acceptedOffer.proposedPrice ?? acceptedOffer.price, acceptedOffer.currency)}
+                </Text>
+                <Text style={[styles.rowValue, styles.offerSubtextOnDark]}>
+                  Accepted at: {formatDate(acceptedOffer.acceptedAt)}
+                </Text>
+              </View>
+            ) : null}
 
-          {offers.map((offer) => {
-            const offerKey = offer.offerId || offer.id;
-            const isPending = (offer.offerStatus ?? offer.status) === 'PENDING';
-            const isSelected = effectiveSelectedOfferId === offerKey;
-            const isOpening = isOpeningPaymentOfferId === offerKey;
+            {offers.map((offer) => {
+              const offerKey = offer.offerId || offer.id;
+              const isPending = (offer.offerStatus ?? offer.status) === 'PENDING';
+              const isSelected = effectiveSelectedOfferId === offerKey;
+              const isOpening = isOpeningPaymentOfferId === offerKey;
 
-            return (
-              <Pressable
-                key={offerKey}
-                style={[styles.offerCard, isSelected ? styles.offerCardSelected : undefined]}
-                disabled={!isPending}
-                onPress={() => setSelectedOfferId(offerKey)}
-              >
-                <View style={styles.offerTopRow}>
-                  {offer.driverVehiclePhoto ? (
+              return (
+                <Pressable
+                  key={offerKey}
+                  style={[styles.offerCard, isSelected ? styles.offerCardSelected : undefined]}
+                  disabled={!isPending}
+                  onPress={() => setSelectedOfferId(offerKey)}
+                >
+                  <View style={styles.offerTopRow}>
+                    {offer.driverVehiclePhoto ? (
+                      <Image
+                        source={{ uri: resolveAssetUrl(offer.driverVehiclePhoto) }}
+                        style={styles.offerVehiclePhoto}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.offerVehiclePhotoPlaceholder}>
+                        <Text style={styles.offerVehiclePhotoPlaceholderText}>No Photo</Text>
+                      </View>
+                    )}
+                    <View style={styles.offerTopText}>
+                      <Text style={[styles.offerCardTitle, isSelected ? styles.offerTextOnDark : undefined]}>
+                        {offer.driverName || 'Driver'}
+                      </Text>
+                      <Text
+                        style={[styles.offerRatingText, isSelected ? styles.offerSubtextOnDark : undefined]}
+                      >
+                        {getRatingText(offer.driverRating)}
+                      </Text>
+                      <Text
+                        style={[styles.offerStatusText, isSelected ? styles.offerSubtextOnDark : undefined]}
+                      >
+                        Status: {offer.offerStatus || offer.status}
+                      </Text>
+                    </View>
+                    <View style={styles.offerPriceBlock}>
+                      <Text
+                        style={[styles.offerPriceValue, isSelected ? styles.offerTextOnDark : undefined]}
+                      >
+                        {formatMoney(offer.proposedPrice ?? offer.price, offer.currency)}
+                      </Text>
+                      <Text
+                        style={[styles.offerArrivalText, isSelected ? styles.offerSubtextOnDark : undefined]}
+                      >
+                        ETA {offer.estimatedArrivalTime ? formatDate(offer.estimatedArrivalTime) : 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
+                    Estimated delivery:{' '}
+                    {offer.estimatedDeliveryAt ? formatDate(offer.estimatedDeliveryAt) : 'N/A'}
+                  </Text>
+                  {offer.message ? (
+                    <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
+                      Message: {offer.message}
+                    </Text>
+                  ) : null}
+
+                  {isPending ? (
+                    <Pressable
+                      style={[
+                        styles.primaryButton,
+                        (!canChooseOffer || Boolean(isOpeningPaymentOfferId)) && styles.disabledButton,
+                      ]}
+                      disabled={!canChooseOffer || Boolean(isOpeningPaymentOfferId)}
+                      onPress={() => {
+                        setSelectedOfferId(offerKey);
+                        if (isSelected) {
+                          openPaymentScreen();
+                        }
+                      }}
+                    >
+                      <Text style={styles.primaryButtonText}>
+                        {isOpening ? 'Opening next step…' : isSelected ? 'Continue' : 'Select Driver'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+
+            {offers.length > 0 && pendingOffers.length === 0 && !acceptedOffer ? (
+              <Text style={styles.rowValue}>All offers are no longer pending.</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Pickup Proof Photos</Text>
+            {trackingData?.pickupProofPhotos?.length ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+                {trackingData.pickupProofPhotos.map((photo) => (
+                  <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
                     <Image
-                      source={{ uri: resolveAssetUrl(offer.driverVehiclePhoto) }}
-                      style={styles.offerVehiclePhoto}
+                      source={{ uri: resolveAssetUrl(photo.url) }}
+                      style={styles.photoLarge}
                       resizeMode="cover"
                     />
-                  ) : (
-                    <View style={styles.offerVehiclePhotoPlaceholder}>
-                      <Text style={styles.offerVehiclePhotoPlaceholderText}>No Photo</Text>
-                    </View>
-                  )}
-                  <View style={styles.offerTopText}>
-                    <Text style={[styles.offerCardTitle, isSelected ? styles.offerTextOnDark : undefined]}>
-                      {offer.driverName || 'Driver'}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.rowValue}>Pickup proof photos will appear after pickup is completed.</Text>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Delivery Proof Photos</Text>
+            {trackingData?.deliveryProofPhotos?.length ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+                {trackingData.deliveryProofPhotos.map((photo) => (
+                  <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
+                    <Image
+                      source={{ uri: resolveAssetUrl(photo.url) }}
+                      style={styles.photoLarge}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.rowValue}>Delivery proof photos will appear after final delivery.</Text>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Additional Charges</Text>
+            <Text style={styles.rowValue}>
+              {t('extra_expense.saved_card_notice')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+            </Text>
+            {additionalCharges.length === 0 ? (
+              <Text style={styles.rowValue}>No additional charges yet.</Text>
+            ) : (
+              additionalCharges.map((charge) => (
+                <View key={charge.id} style={styles.additionalChargeCard}>
+                  <Text style={styles.offerPrimaryValue}>
+                    {formatMoney(charge.totalChargeAmount, charge.currency)}
+                  </Text>
+                  <Text style={styles.rowValue}>
+                    {t('extra_expense.expense_amount_label')}: {formatMoney(charge.amount, charge.currency)}
+                  </Text>
+                  <Text style={styles.rowValue}>
+                    {t('extra_expense.app_fee_label')}: {formatMoney(charge.appFeeAmount, charge.currency)}
+                  </Text>
+                  <Text style={styles.rowValue}>Reason: {charge.reason}</Text>
+                  {charge.equipmentType ? (
+                    <Text style={styles.rowValue}>Equipment: {charge.equipmentType}</Text>
+                  ) : null}
+                  <Text style={styles.rowValue}>Status: {charge.status}</Text>
+                  <Text style={styles.rowValue}>Added: {formatDate(charge.createdAt)}</Text>
+                  <Text style={styles.rowValue}>
+                    {t('extra_expense.payment_option_label')}: {getAdditionalChargePaymentMethodLabel(charge, t)}
+                  </Text>
+                  {charge.payment.savedPaymentMethod ? (
+                    <Text style={styles.rowValue}>
+                      {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(charge.payment.savedPaymentMethod)}
                     </Text>
-                    <Text
-                      style={[styles.offerRatingText, isSelected ? styles.offerSubtextOnDark : undefined]}
+                  ) : null}
+                  {charge.payment.failureReason ? (
+                    <Text style={styles.errorText}>{charge.payment.failureReason}</Text>
+                  ) : null}
+                  {charge.invoiceUrl ? (
+                    <Text style={styles.rowValue}>Invoice: {resolveAssetUrl(charge.invoiceUrl)}</Text>
+                  ) : null}
+                  {(charge.status === 'PENDING' || charge.status === 'FAILED') ? (
+                    <Pressable
+                      style={[styles.rateActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                      disabled={isApprovingAdditionalCharge}
+                      onPress={() => openAdditionalChargeFlow(charge)}
                     >
-                      {getRatingText(offer.driverRating)}
+                      <Text style={styles.rateActionButtonText}>
+                        {charge.status === 'FAILED'
+                          ? t('extra_expense.retry_button')
+                          : t('extra_expense.approve_button')}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Photos</Text>
+            {requestData.photos.length === 0 ? (
+              <Text style={styles.rowValue}>No photos added.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+                {requestData.photos.map((photo) => (
+                  <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
+                    <Image
+                      source={{ uri: resolveAssetUrl(photo.url) }}
+                      style={styles.photo}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          {ratingAvailable ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Rate Service</Text>
+              <Text style={styles.rowValue}>
+                Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.
+              </Text>
+              <Pressable style={styles.primaryButton} onPress={onRateDriver}>
+                <Text style={styles.primaryButtonText}>Rate driver</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+          <View style={styles.actionStack}>
+            <Pressable style={styles.statusActionButton} onPress={() => void loadStatus(false)}>
+              <Text style={styles.statusActionButtonText}>
+                {isRefreshing ? 'Refreshing…' : 'Request Status'}
+              </Text>
+            </Pressable>
+            {ratingAvailable ? (
+              <Pressable style={styles.rateActionButton} onPress={onRateDriver}>
+                <Text style={styles.rateActionButtonText}>Rate Driver</Text>
+              </Pressable>
+            ) : null}
+            {canCancelCurrentTrip ? (
+              <Pressable onPress={onCancelTrip}>
+                <Text style={styles.cancelActionText}>{isCancellingTrip ? 'Cancelling…' : 'Cancel Order'}</Text>
+              </Pressable>
+            ) : canDeleteCurrentRequest ? (
+              <Pressable
+                onPress={() => {
+                  Alert.alert('Delete request?', 'This will permanently delete the request.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: () => {
+                        void (async () => {
+                          try {
+                            await deleteCustomerRequest(requestData.id);
+                            router.replace('/(tabs)/home' as Href);
+                          } catch (error) {
+                            setErrorMessage(
+                              error instanceof Error ? error.message : 'Failed to delete request.',
+                            );
+                          }
+                        })();
+                      },
+                    },
+                  ]);
+                }}
+              >
+                <Text style={styles.cancelActionText}>Delete Request</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <Modal visible={isMapExpanded} animationType="slide" onRequestClose={() => setIsMapExpanded(false)}>
+            <SafeAreaView style={styles.mapExpandedScreen}>
+              <View style={styles.expandedMapHeader}>
+                <Pressable style={styles.topBarButton} onPress={() => setIsMapExpanded(false)}>
+                  <IconSymbol
+                    name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
+                    color="#111827"
+                    size={24}
+                  />
+                </Pressable>
+                <Text style={styles.expandedMapTitle}>Live Map</Text>
+                <View style={styles.topBarButton} />
+              </View>
+              {renderTrackingMap(true)}
+            </SafeAreaView>
+          </Modal>
+          <Modal
+            visible={isCancelTripModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={closeCancelTripModal}
+          >
+            <View style={styles.dialogBackdrop}>
+              <View
+                style={[
+                  styles.dialogCard,
+                  keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
+                ]}
+              >
+                <Text style={styles.cardTitle}>Cancel trip?</Text>
+                <Text style={styles.rowValue}>
+                  {requestData.cancellation.refundPreview
+                    ? `If you cancel now, ${formatMoney(
+                      requestData.cancellation.refundPreview.refundedAmount,
+                      requestData.cancellation.refundPreview.currency,
+                    )} will be refunded automatically and ${formatMoney(
+                      requestData.cancellation.refundPreview.retainedAmount,
+                      requestData.cancellation.refundPreview.currency,
+                    )} will be kept as the cancellation fee.`
+                    : 'If you cancel before pickup, 85% will be refunded automatically and 15% will be kept as the cancellation fee.'}
+                </Text>
+                <View style={styles.dialogActions}>
+                  <Pressable
+                    style={[styles.secondaryOutlineButton, isCancellingTrip && styles.disabledButton]}
+                    disabled={isCancellingTrip}
+                    onPress={closeCancelTripModal}
+                  >
+                    <Text style={styles.secondaryOutlineButtonText}>Keep trip</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.deleteButton, isCancellingTrip && styles.disabledButton]}
+                    disabled={isCancellingTrip}
+                    onPress={() => void confirmCancelTrip()}
+                  >
+                    <Text style={styles.deleteButtonText}>
+                      {isCancellingTrip ? 'Cancelling…' : 'Cancel trip'}
                     </Text>
-                    <Text
-                      style={[styles.offerStatusText, isSelected ? styles.offerSubtextOnDark : undefined]}
-                    >
-                      Status: {offer.offerStatus || offer.status}
-                    </Text>
-                  </View>
-                  <View style={styles.offerPriceBlock}>
-                    <Text
-                      style={[styles.offerPriceValue, isSelected ? styles.offerTextOnDark : undefined]}
-                    >
-                      {formatMoney(offer.proposedPrice ?? offer.price, offer.currency)}
-                    </Text>
-                    <Text
-                      style={[styles.offerArrivalText, isSelected ? styles.offerSubtextOnDark : undefined]}
-                    >
-                      ETA {offer.estimatedArrivalTime ? formatDate(offer.estimatedArrivalTime) : 'N/A'}
-                    </Text>
-                  </View>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+          <Modal
+            visible={Boolean(activeAdditionalCharge)}
+            transparent
+            animationType="fade"
+            onRequestClose={closeAdditionalChargeModal}
+          >
+            <View style={styles.dialogBackdrop}>
+              <View
+                style={[
+                  styles.chargeDialogCard,
+                  keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
+                ]}
+              >
+                <View style={styles.chargeDialogHeader}>
+                  <Text style={styles.cardTitle}>{t('extra_expense.confirm_title')}</Text>
+                  <Text style={styles.chargeDialogAmount}>
+                    {activeAdditionalCharge
+                      ? formatMoney(activeAdditionalCharge.totalChargeAmount, activeAdditionalCharge.currency)
+                      : ''}
+                  </Text>
                 </View>
 
-                <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
-                  Estimated delivery:{' '}
-                  {offer.estimatedDeliveryAt ? formatDate(offer.estimatedDeliveryAt) : 'N/A'}
-                </Text>
-                {offer.message ? (
-                  <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
-                    Message: {offer.message}
-                  </Text>
+                {activeAdditionalCharge ? (
+                  <View style={styles.chargeSummaryCard}>
+                    <Text style={styles.chargeSummaryReason}>{activeAdditionalCharge.reason}</Text>
+                    <View style={styles.chargeSummaryRow}>
+                      <Text style={styles.detailLabel}>{t('extra_expense.expense_amount_label')}</Text>
+                      <Text style={styles.chargeSummaryValue}>
+                        {formatMoney(activeAdditionalCharge.amount, activeAdditionalCharge.currency)}
+                      </Text>
+                    </View>
+                    <View style={styles.chargeSummaryRow}>
+                      <Text style={styles.detailLabel}>{t('extra_expense.app_fee_label')}</Text>
+                      <Text style={styles.chargeSummaryValue}>
+                        {formatMoney(activeAdditionalCharge.appFeeAmount, activeAdditionalCharge.currency)}
+                      </Text>
+                    </View>
+                  </View>
                 ) : null}
 
-                {isPending ? (
+                <Text style={styles.supportingText}>
+                  {additionalChargePaymentOption === 'SAVED_CARD'
+                    ? t('extra_expense.saved_card_notice')
+                    : t('extra_expense.cash_on_delivery_notice')}
+                </Text>
+                <Text style={styles.supportingText}>
+                  {t('extra_expense.confirm_prompt', {
+                    keyword: confirmationKeyword,
+                  })}
+                </Text>
+                <View style={styles.paymentOptionList}>
                   <Pressable
                     style={[
-                      styles.primaryButton,
-                      (!canChooseOffer || Boolean(isOpeningPaymentOfferId)) && styles.disabledButton,
+                      styles.paymentOptionCard,
+                      additionalChargePaymentOption === 'SAVED_CARD' && styles.paymentOptionCardSelected,
+                      !defaultPaymentMethod && styles.paymentOptionCardDisabled,
                     ]}
-                    disabled={!canChooseOffer || Boolean(isOpeningPaymentOfferId)}
-                    onPress={() => {
-                      setSelectedOfferId(offerKey);
-                      if (isSelected) {
-                        openPaymentScreen();
-                      }
-                    }}
+                    disabled={!defaultPaymentMethod || isApprovingAdditionalCharge}
+                    onPress={() => setAdditionalChargePaymentOption('SAVED_CARD')}
                   >
-                    <Text style={styles.primaryButtonText}>
-                      {isOpening ? 'Opening next step…' : isSelected ? 'Continue' : 'Select Driver'}
+                    <Text style={styles.paymentOptionTitle}>{t('extra_expense.saved_card_option')}</Text>
+                    <Text style={styles.paymentOptionDescription}>
+                      {defaultPaymentMethod
+                        ? formatSavedPaymentMethod(defaultPaymentMethod)
+                        : t('extra_expense.no_saved_card_message')}
                     </Text>
                   </Pressable>
-                ) : null}
-              </Pressable>
-            );
-          })}
-
-          {offers.length > 0 && pendingOffers.length === 0 && !acceptedOffer ? (
-            <Text style={styles.rowValue}>All offers are no longer pending.</Text>
-          ) : null}
-          </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pickup Proof Photos</Text>
-          {trackingData?.pickupProofPhotos?.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
-              {trackingData.pickupProofPhotos.map((photo) => (
-                <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
-                  <Image
-                    source={{ uri: resolveAssetUrl(photo.url) }}
-                    style={styles.photoLarge}
-                    resizeMode="cover"
-                  />
-                </Pressable>
-              ))}
-            </ScrollView>
-          ) : (
-            <Text style={styles.rowValue}>Pickup proof photos will appear after pickup is completed.</Text>
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Delivery Proof Photos</Text>
-          {trackingData?.deliveryProofPhotos?.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
-              {trackingData.deliveryProofPhotos.map((photo) => (
-                <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
-                  <Image
-                    source={{ uri: resolveAssetUrl(photo.url) }}
-                    style={styles.photoLarge}
-                    resizeMode="cover"
-                  />
-                </Pressable>
-              ))}
-            </ScrollView>
-          ) : (
-            <Text style={styles.rowValue}>Delivery proof photos will appear after final delivery.</Text>
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Additional Charges</Text>
-          <Text style={styles.rowValue}>
-            {t('extra_expense.saved_card_notice')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
-          </Text>
-          {additionalCharges.length === 0 ? (
-            <Text style={styles.rowValue}>No additional charges yet.</Text>
-          ) : (
-            additionalCharges.map((charge) => (
-              <View key={charge.id} style={styles.additionalChargeCard}>
-                <Text style={styles.offerPrimaryValue}>
-                  {formatMoney(charge.totalChargeAmount, charge.currency)}
-                </Text>
-                <Text style={styles.rowValue}>
-                  {t('extra_expense.expense_amount_label')}: {formatMoney(charge.amount, charge.currency)}
-                </Text>
-                <Text style={styles.rowValue}>
-                  {t('extra_expense.app_fee_label')}: {formatMoney(charge.appFeeAmount, charge.currency)}
-                </Text>
-                <Text style={styles.rowValue}>Reason: {charge.reason}</Text>
-                {charge.equipmentType ? (
-                  <Text style={styles.rowValue}>Equipment: {charge.equipmentType}</Text>
-                ) : null}
-                <Text style={styles.rowValue}>Status: {charge.status}</Text>
-                <Text style={styles.rowValue}>Added: {formatDate(charge.createdAt)}</Text>
-                <Text style={styles.rowValue}>
-                  {t('extra_expense.payment_option_label')}: {getAdditionalChargePaymentMethodLabel(charge, t)}
-                </Text>
-                {charge.payment.savedPaymentMethod ? (
-                  <Text style={styles.rowValue}>
-                    {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(charge.payment.savedPaymentMethod)}
-                  </Text>
-                ) : null}
-                {charge.payment.failureReason ? (
-                  <Text style={styles.errorText}>{charge.payment.failureReason}</Text>
-                ) : null}
-                {charge.invoiceUrl ? (
-                  <Text style={styles.rowValue}>Invoice: {resolveAssetUrl(charge.invoiceUrl)}</Text>
-                ) : null}
-                {(charge.status === 'PENDING' || charge.status === 'FAILED') ? (
                   <Pressable
-                    style={[styles.rateActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                    style={[
+                      styles.paymentOptionCard,
+                      additionalChargePaymentOption === 'CASH_ON_DELIVERY' && styles.paymentOptionCardSelected,
+                      isApprovingAdditionalCharge && styles.paymentOptionCardDisabled,
+                    ]}
                     disabled={isApprovingAdditionalCharge}
-                    onPress={() => openAdditionalChargeFlow(charge)}
+                    onPress={() => setAdditionalChargePaymentOption('CASH_ON_DELIVERY')}
                   >
-                    <Text style={styles.rateActionButtonText}>
-                      {charge.status === 'FAILED'
-                        ? t('extra_expense.retry_button')
-                        : t('extra_expense.approve_button')}
+                    <Text style={styles.paymentOptionTitle}>
+                      {t('extra_expense.cash_on_delivery_option')}
+                    </Text>
+                    <Text style={styles.paymentOptionDescription}>
+                      {t('extra_expense.cash_on_delivery_notice')}
                     </Text>
                   </Pressable>
-                ) : null}
-              </View>
-            ))
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Photos</Text>
-          {requestData.photos.length === 0 ? (
-            <Text style={styles.rowValue}>No photos added.</Text>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
-              {requestData.photos.map((photo) => (
-                <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
-                  <Image
-                    source={{ uri: resolveAssetUrl(photo.url) }}
-                    style={styles.photo}
-                    resizeMode="cover"
-                  />
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        {ratingAvailable ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Rate Service</Text>
-            <Text style={styles.rowValue}>
-              Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.
-            </Text>
-            <Pressable style={styles.primaryButton} onPress={onRateDriver}>
-              <Text style={styles.primaryButtonText}>Rate driver</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-
-        <View style={styles.actionStack}>
-          <Pressable style={styles.statusActionButton} onPress={() => void loadStatus(false)}>
-            <Text style={styles.statusActionButtonText}>
-              {isRefreshing ? 'Refreshing…' : 'Request Status'}
-            </Text>
-          </Pressable>
-          {ratingAvailable ? (
-            <Pressable style={styles.rateActionButton} onPress={onRateDriver}>
-              <Text style={styles.rateActionButtonText}>Rate Driver</Text>
-            </Pressable>
-          ) : null}
-          <Pressable style={styles.supportActionButton} onPress={onContactSupport}>
-            <Text style={styles.supportActionButtonText}>Contact Support</Text>
-          </Pressable>
-          {canCancelCurrentTrip ? (
-            <Pressable onPress={onCancelTrip}>
-              <Text style={styles.cancelActionText}>{isCancellingTrip ? 'Cancelling…' : 'Cancel Order'}</Text>
-            </Pressable>
-          ) : canDeleteCurrentRequest ? (
-            <Pressable
-              onPress={() => {
-                Alert.alert('Delete request?', 'This will permanently delete the request.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => {
-                      void (async () => {
-                        try {
-                          await deleteCustomerRequest(requestData.id);
-                          router.replace('/(tabs)/home' as Href);
-                        } catch (error) {
-                          setErrorMessage(
-                            error instanceof Error ? error.message : 'Failed to delete request.',
-                          );
-                        }
-                      })();
-                    },
-                  },
-                ]);
-              }}
-            >
-              <Text style={styles.cancelActionText}>Delete Request</Text>
-            </Pressable>
-          ) : null}
-        </View>
-        <Modal visible={isMapExpanded} animationType="slide" onRequestClose={() => setIsMapExpanded(false)}>
-          <SafeAreaView style={styles.mapExpandedScreen}>
-            <View style={styles.expandedMapHeader}>
-              <Pressable style={styles.topBarButton} onPress={() => setIsMapExpanded(false)}>
-                <IconSymbol
-                  name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-                  color="#111827"
-                  size={24}
-                />
-              </Pressable>
-              <Text style={styles.expandedMapTitle}>Live Map</Text>
-              <View style={styles.topBarButton} />
-            </View>
-            {renderTrackingMap(true)}
-          </SafeAreaView>
-        </Modal>
-        <Modal
-          visible={isCancelTripModalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={closeCancelTripModal}
-        >
-          <View style={styles.dialogBackdrop}>
-            <View
-              style={[
-                styles.dialogCard,
-                keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
-              ]}
-            >
-              <Text style={styles.cardTitle}>Cancel trip?</Text>
-              <Text style={styles.rowValue}>
-                {requestData.cancellation.refundPreview
-                  ? `If you cancel now, ${formatMoney(
-                    requestData.cancellation.refundPreview.refundedAmount,
-                    requestData.cancellation.refundPreview.currency,
-                  )} will be refunded automatically and ${formatMoney(
-                    requestData.cancellation.refundPreview.retainedAmount,
-                    requestData.cancellation.refundPreview.currency,
-                  )} will be kept as the cancellation fee.`
-                  : 'If you cancel before pickup, 85% will be refunded automatically and 15% will be kept as the cancellation fee.'}
-              </Text>
-              <View style={styles.dialogActions}>
-                <Pressable
-                  style={[styles.secondaryOutlineButton, isCancellingTrip && styles.disabledButton]}
-                  disabled={isCancellingTrip}
-                  onPress={closeCancelTripModal}
-                >
-                  <Text style={styles.secondaryOutlineButtonText}>Keep trip</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.deleteButton, isCancellingTrip && styles.disabledButton]}
-                  disabled={isCancellingTrip}
-                  onPress={() => void confirmCancelTrip()}
-                >
-                  <Text style={styles.deleteButtonText}>
-                    {isCancellingTrip ? 'Cancelling…' : 'Cancel trip'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
-        <Modal
-          visible={Boolean(activeAdditionalCharge)}
-          transparent
-          animationType="fade"
-          onRequestClose={closeAdditionalChargeModal}
-        >
-          <View style={styles.dialogBackdrop}>
-            <View
-              style={[
-                styles.chargeDialogCard,
-                keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
-              ]}
-            >
-              <View style={styles.chargeDialogHeader}>
-                <Text style={styles.cardTitle}>{t('extra_expense.confirm_title')}</Text>
-                <Text style={styles.chargeDialogAmount}>
-                  {activeAdditionalCharge
-                    ? formatMoney(activeAdditionalCharge.totalChargeAmount, activeAdditionalCharge.currency)
-                    : ''}
-                </Text>
-              </View>
-
-              {activeAdditionalCharge ? (
-                <View style={styles.chargeSummaryCard}>
-                  <Text style={styles.chargeSummaryReason}>{activeAdditionalCharge.reason}</Text>
-                  <View style={styles.chargeSummaryRow}>
-                    <Text style={styles.detailLabel}>{t('extra_expense.expense_amount_label')}</Text>
-                    <Text style={styles.chargeSummaryValue}>
-                      {formatMoney(activeAdditionalCharge.amount, activeAdditionalCharge.currency)}
-                    </Text>
-                  </View>
-                  <View style={styles.chargeSummaryRow}>
-                    <Text style={styles.detailLabel}>{t('extra_expense.app_fee_label')}</Text>
-                    <Text style={styles.chargeSummaryValue}>
-                      {formatMoney(activeAdditionalCharge.appFeeAmount, activeAdditionalCharge.currency)}
-                    </Text>
-                  </View>
                 </View>
-              ) : null}
-
-              <Text style={styles.supportingText}>
-                {additionalChargePaymentOption === 'SAVED_CARD'
-                  ? t('extra_expense.saved_card_notice')
-                  : t('extra_expense.cash_on_delivery_notice')}
-              </Text>
-              <Text style={styles.supportingText}>
-                {t('extra_expense.confirm_prompt', {
-                  keyword: confirmationKeyword,
-                })}
-              </Text>
-              <View style={styles.paymentOptionList}>
-                <Pressable
-                  style={[
-                    styles.paymentOptionCard,
-                    additionalChargePaymentOption === 'SAVED_CARD' && styles.paymentOptionCardSelected,
-                    !defaultPaymentMethod && styles.paymentOptionCardDisabled,
-                  ]}
-                  disabled={!defaultPaymentMethod || isApprovingAdditionalCharge}
-                  onPress={() => setAdditionalChargePaymentOption('SAVED_CARD')}
-                >
-                  <Text style={styles.paymentOptionTitle}>{t('extra_expense.saved_card_option')}</Text>
-                  <Text style={styles.paymentOptionDescription}>
-                    {defaultPaymentMethod
-                      ? formatSavedPaymentMethod(defaultPaymentMethod)
-                      : t('extra_expense.no_saved_card_message')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.paymentOptionCard,
-                    additionalChargePaymentOption === 'CASH_ON_DELIVERY' && styles.paymentOptionCardSelected,
-                    isApprovingAdditionalCharge && styles.paymentOptionCardDisabled,
-                  ]}
-                  disabled={isApprovingAdditionalCharge}
-                  onPress={() => setAdditionalChargePaymentOption('CASH_ON_DELIVERY')}
-                >
-                  <Text style={styles.paymentOptionTitle}>
-                    {t('extra_expense.cash_on_delivery_option')}
-                  </Text>
-                  <Text style={styles.paymentOptionDescription}>
-                    {t('extra_expense.cash_on_delivery_notice')}
-                  </Text>
-                </Pressable>
-              </View>
-              <Text style={styles.rowLabel}>
-                {t('extra_expense.confirm_input_label')}
-              </Text>
-              <Text style={styles.supportingText}>
-                {t('extra_expense.confirm_input_helper', {
-                  keyword: confirmationKeyword,
-                })}
-              </Text>
-              <TextInput
-                value={additionalChargeConfirmationText}
-                onChangeText={setAdditionalChargeConfirmationText}
-                placeholder={confirmationKeyword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.confirmationInput}
-              />
-
-              <View style={styles.selectedPaymentCard}>
-                <Text style={styles.detailLabel}>{t('extra_expense.payment_option_label')}</Text>
-                <Text style={styles.detailValue}>
-                  {additionalChargePaymentOption === 'SAVED_CARD'
-                    ? t('extra_expense.saved_card_option')
-                    : t('extra_expense.cash_on_delivery_option')}
+                <Text style={styles.rowLabel}>
+                  {t('extra_expense.confirm_input_label')}
                 </Text>
-                {additionalChargePaymentOption === 'SAVED_CARD' ? (
-                  <Text style={styles.mutedCaption}>
-                    {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
-                  </Text>
-                ) : null}
-              </View>
-
-              <Pressable
-                style={[styles.supportActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
-                disabled={isApprovingAdditionalCharge}
-                onPress={() =>
-                  router.push((`/payment-method?requestId=${encodeURIComponent(requestId)}`) as Href)
-                }
-              >
-                <Text style={styles.supportActionButtonText}>
-                  {defaultPaymentMethod
-                    ? t('extra_expense.change_card_button')
-                    : t('extra_expense.add_payment_method_button')}
+                <Text style={styles.supportingText}>
+                  {t('extra_expense.confirm_input_helper', {
+                    keyword: confirmationKeyword,
+                  })}
                 </Text>
-              </Pressable>
-              <View style={styles.dialogActions}>
+                <TextInput
+                  value={additionalChargeConfirmationText}
+                  onChangeText={setAdditionalChargeConfirmationText}
+                  placeholder={confirmationKeyword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.confirmationInput}
+                />
+
+                <View style={styles.selectedPaymentCard}>
+                  <Text style={styles.detailLabel}>{t('extra_expense.payment_option_label')}</Text>
+                  <Text style={styles.detailValue}>
+                    {additionalChargePaymentOption === 'SAVED_CARD'
+                      ? t('extra_expense.saved_card_option')
+                      : t('extra_expense.cash_on_delivery_option')}
+                  </Text>
+                  {additionalChargePaymentOption === 'SAVED_CARD' ? (
+                    <Text style={styles.mutedCaption}>
+                      {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
+                    </Text>
+                  ) : null}
+                </View>
+
                 <Pressable
                   style={[styles.supportActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
                   disabled={isApprovingAdditionalCharge}
-                  onPress={closeAdditionalChargeModal}
+                  onPress={() =>
+                    router.push((`/payment-method?requestId=${encodeURIComponent(requestId)}`) as Href)
+                  }
                 >
-                  <Text style={styles.supportActionButtonText}>{t('extra_expense.cancel_button')}</Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.rateActionButton,
-                    (!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge) &&
-                    styles.disabledButton,
-                  ]}
-                  disabled={!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge}
-                  onPress={() => void onApproveAdditionalCharge()}
-                >
-                  <Text style={styles.rateActionButtonText}>
-                    {isApprovingAdditionalCharge
-                      ? t('extra_expense.processing_button')
-                      : t('extra_expense.confirm_button')}
+                  <Text style={styles.supportActionButtonText}>
+                    {defaultPaymentMethod
+                      ? t('extra_expense.change_card_button')
+                      : t('extra_expense.add_payment_method_button')}
                   </Text>
                 </Pressable>
+                <View style={styles.dialogActions}>
+                  <Pressable
+                    style={[styles.supportActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
+                    disabled={isApprovingAdditionalCharge}
+                    onPress={closeAdditionalChargeModal}
+                  >
+                    <Text style={styles.supportActionButtonText}>{t('extra_expense.cancel_button')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.rateActionButton,
+                      (!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge) &&
+                      styles.disabledButton,
+                    ]}
+                    disabled={!isAdditionalChargeConfirmationValid || isApprovingAdditionalCharge}
+                    onPress={() => void onApproveAdditionalCharge()}
+                  >
+                    <Text style={styles.rateActionButtonText}>
+                      {isApprovingAdditionalCharge
+                        ? t('extra_expense.processing_button')
+                        : t('extra_expense.confirm_button')}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
           <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
             <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
               {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
