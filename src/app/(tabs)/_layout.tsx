@@ -1,10 +1,11 @@
 import { Redirect, Tabs, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, Text, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getCustomerHome } from '@/lib/api';
 import { useAuthSession } from '@/lib/auth-token';
 
 function TabBarIcon({
@@ -38,9 +39,11 @@ function TabLabel({
 function NotificationTabIcon({
   color,
   focused,
+  hasUnreadAlerts,
 }: {
   color: string;
   focused: boolean;
+  hasUnreadAlerts: boolean;
 }) {
   return (
     <View style={styles.iconWrap}>
@@ -49,7 +52,7 @@ function NotificationTabIcon({
         color={color}
         size={22}
       />
-      {!focused ? <View style={styles.notificationDot} /> : null}
+      {!focused && hasUnreadAlerts ? <View style={styles.notificationDot} /> : null}
     </View>
   );
 }
@@ -59,6 +62,32 @@ export default function CustomerTabsLayout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const authSession = useAuthSession();
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
+
+  useEffect(() => {
+    if (authSession.status !== 'authenticated') {
+      setUnreadAlertsCount(0);
+      return;
+    }
+
+    let isMounted = true;
+
+    getCustomerHome()
+      .then((home) => {
+        if (isMounted) {
+          setUnreadAlertsCount(home.notifications?.unreadCount ?? 0);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setUnreadAlertsCount(0);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession.status]);
 
   if (authSession.status !== 'authenticated') {
     return <Redirect href="/" />;
@@ -127,7 +156,11 @@ export default function CustomerTabsLayout() {
         options={{
           title: t('Alerts'),
           tabBarIcon: ({ color, focused }) => (
-            <NotificationTabIcon color={String(color)} focused={focused} />
+            <NotificationTabIcon
+              color={String(color)}
+              focused={focused}
+              hasUnreadAlerts={unreadAlertsCount > 0}
+            />
           ),
         }}
       />

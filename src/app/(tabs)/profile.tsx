@@ -1,7 +1,7 @@
-import { useRouter } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useRouter } from "expo-router";
+import { SymbolView, type SymbolViewProps } from "expo-symbols";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Modal,
@@ -12,31 +12,41 @@ import {
   Text,
   View,
   type ColorValue,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-import { switchCustomerAccountOnDevice } from '@/lib/auth-token';
-import { getCustomerHome } from '@/lib/api';
-import { getCountryLabel } from '@/lib/country-currency';
+import { switchCustomerAccountOnDevice } from "@/lib/auth-token";
+import { getCustomerHome } from "@/lib/api";
+import { getCountryLabel } from "@/lib/country-currency";
 import {
   LANGUAGE_CONFIGS,
   SUPPORTED_LANGUAGES,
   type AppLanguage,
-} from '@/localization/languages';
-import { useAppLanguage } from '@/localization/provider';
-import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
-import type { CustomerHomeProfile } from '@/types/customer-request';
+} from "@/localization/languages";
+import { useAppLanguage } from "@/localization/provider";
+import { registerCustomerPushNotifications } from "@/notifications/registerPushNotifications";
+import type { CustomerHomeProfile } from "@/types/customer-request";
 
 function IconSymbol({
   name,
   color,
   size = 18,
 }: {
-  name: SymbolViewProps['name'];
+  name: SymbolViewProps["name"];
   color: ColorValue;
   size?: number;
 }) {
-  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+  return (
+    <SymbolView
+      name={name}
+      tintColor={color}
+      size={size}
+      resizeMode="scaleAspectFit"
+    />
+  );
 }
 
 export default function ProfileTabScreen() {
@@ -45,25 +55,31 @@ export default function ProfileTabScreen() {
   const { language, isChangingLanguage, setLanguage } = useAppLanguage();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<CustomerHomeProfile | null>(null);
-  const [pushStatus, setPushStatus] = useState('');
+  const [pushStatus, setPushStatus] = useState("");
   const [isRegisteringPush, setIsRegisteringPush] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const [pendingLanguage, setPendingLanguage] = useState<AppLanguage | null>(null);
+  const [pendingLanguage, setPendingLanguage] = useState<AppLanguage | null>(
+    null,
+  );
 
   const selectedLanguage = LANGUAGE_CONFIGS[language];
-  const pendingLanguageConfig = pendingLanguage ? LANGUAGE_CONFIGS[pendingLanguage] : null;
+  const pendingLanguageConfig = pendingLanguage
+    ? LANGUAGE_CONFIGS[pendingLanguage]
+    : null;
 
   const profileInitials = useMemo(() => {
     const name = profile?.fullName?.trim();
     if (!name) {
-      return 'CU';
+      return "CU";
     }
 
     const parts = name.split(/\s+/).filter(Boolean);
-    return parts
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-      .join('') || 'CU';
+    return (
+      parts
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("") || "CU"
+    );
   }, [profile?.fullName]);
 
   const loadProfile = useCallback(async (): Promise<void> => {
@@ -85,7 +101,7 @@ export default function ProfileTabScreen() {
 
   const onLogout = async (): Promise<void> => {
     await switchCustomerAccountOnDevice();
-    router.replace('/');
+    router.replace("/");
   };
 
   const onRegisterPush = useCallback(async (): Promise<void> => {
@@ -94,14 +110,18 @@ export default function ProfileTabScreen() {
     }
 
     setIsRegisteringPush(true);
-    setPushStatus('');
+    setPushStatus("");
 
     try {
       const token = await registerCustomerPushNotifications();
-      setPushStatus(t('Push registered: {{token}}...', { token: token.slice(0, 24) }));
+      setPushStatus(
+        t("Push registered: {{token}}...", { token: token.slice(0, 24) }),
+      );
     } catch (error) {
       setPushStatus(
-        error instanceof Error ? error.message : t('Failed to register push notifications.'),
+        error instanceof Error
+          ? error.message
+          : t("Failed to register push notifications."),
       );
     } finally {
       setIsRegisteringPush(false);
@@ -114,7 +134,11 @@ export default function ProfileTabScreen() {
   };
 
   const confirmLanguageChange = async (): Promise<void> => {
-    if (!pendingLanguage || pendingLanguage === language || isChangingLanguage) {
+    if (
+      !pendingLanguage ||
+      pendingLanguage === language ||
+      isChangingLanguage
+    ) {
       setPendingLanguage(null);
       return;
     }
@@ -132,7 +156,7 @@ export default function ProfileTabScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <ScrollView
         style={styles.scrollView}
@@ -150,11 +174,17 @@ export default function ProfileTabScreen() {
             <Text style={styles.avatarText}>{profileInitials}</Text>
           </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.heroTitle}>{profile?.fullName || t('Customer')}</Text>
-            <Text style={styles.heroMeta}>{profile?.email || t('No email')}</Text>
-            <Text style={styles.heroMeta}>{profile?.phone || t('No phone number')}</Text>
+            <Text style={styles.heroTitle}>
+              {profile?.fullName || t("Customer")}
+            </Text>
+            {/*<Text style={styles.heroMeta}>{profile?.email || t('No email')}</Text>*/}
+            <Text style={styles.heroMeta}>
+              {profile?.phone || t("No phone number")}
+            </Text>
             {profile?.countryCode ? (
-              <Text style={styles.heroMeta}>{getCountryLabel(profile.countryCode)}</Text>
+              <Text style={styles.heroMeta}>
+                {getCountryLabel(profile.countryCode)}
+              </Text>
             ) : null}
           </View>
         </View>
@@ -163,15 +193,15 @@ export default function ProfileTabScreen() {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderIcon}>
               <IconSymbol
-                name={{ ios: 'globe', android: 'language', web: 'language' }}
+                name={{ ios: "globe", android: "language", web: "language" }}
                 color="#111827"
                 size={18}
               />
             </View>
-            <Text style={styles.sectionTitle}>{t('Language')}</Text>
+            <Text style={styles.sectionTitle}>{t("Language")}</Text>
           </View>
           <Text style={styles.sectionSubtitle}>
-            {t('Choose the app language before confirming the switch.')}
+            {t("Choose the app language before confirming the switch.")}
           </Text>
 
           <Pressable
@@ -182,21 +212,31 @@ export default function ProfileTabScreen() {
             <View style={styles.dropdownContent}>
               <View style={styles.dropdownLeadingIcon}>
                 <IconSymbol
-                  name={{ ios: 'globe', android: 'language', web: 'language' }}
+                  name={{ ios: "globe", android: "language", web: "language" }}
                   color="#111827"
                   size={18}
                 />
               </View>
-              <Text style={styles.dropdownLabel}>{t('Current language')}</Text>
-              <Text style={styles.dropdownValue}>{selectedLanguage.nativeLabel}</Text>
+              <Text style={styles.dropdownLabel}>{t("Current language")}</Text>
+              <Text style={styles.dropdownValue}>
+                {selectedLanguage.nativeLabel}
+              </Text>
               <Text style={styles.dropdownMeta}>{selectedLanguage.label}</Text>
             </View>
             <View style={styles.dropdownIconWrap}>
               <IconSymbol
                 name={
                   isLanguageOpen
-                    ? { ios: 'chevron.up', android: 'keyboard_arrow_up', web: 'keyboard_arrow_up' }
-                    : { ios: 'chevron.down', android: 'keyboard_arrow_down', web: 'keyboard_arrow_down' }
+                    ? {
+                        ios: "chevron.up",
+                        android: "keyboard_arrow_up",
+                        web: "keyboard_arrow_up",
+                      }
+                    : {
+                        ios: "chevron.down",
+                        android: "keyboard_arrow_down",
+                        web: "keyboard_arrow_down",
+                      }
                 }
                 color="#111827"
                 size={16}
@@ -213,16 +253,26 @@ export default function ProfileTabScreen() {
                 return (
                   <Pressable
                     key={code}
-                    style={[styles.languageOption, isSelected && styles.languageOptionSelected]}
+                    style={[
+                      styles.languageOption,
+                      isSelected && styles.languageOptionSelected,
+                    ]}
                     onPress={() => requestLanguageChange(code)}
                     disabled={isChangingLanguage}
                   >
                     <View style={styles.languageInfo}>
-                      <Text style={styles.languageName}>{config.nativeLabel}</Text>
+                      <Text style={styles.languageName}>
+                        {config.nativeLabel}
+                      </Text>
                       <Text style={styles.languageMeta}>{config.label}</Text>
                     </View>
-                    <Text style={[styles.languageCode, isSelected && styles.languageCodeSelected]}>
-                      {isSelected ? t('Current') : code.toUpperCase()}
+                    <Text
+                      style={[
+                        styles.languageCode,
+                        isSelected && styles.languageCodeSelected,
+                      ]}
+                    >
+                      {isSelected ? t("Current") : code.toUpperCase()}
                     </Text>
                   </Pressable>
                 );
@@ -235,89 +285,137 @@ export default function ProfileTabScreen() {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderIcon}>
               <IconSymbol
-                name={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }}
+                name={{
+                  ios: "person.crop.circle",
+                  android: "account_circle",
+                  web: "account_circle",
+                }}
                 color="#111827"
                 size={18}
               />
             </View>
-            <Text style={styles.sectionTitle}>{t('Account')}</Text>
+            <Text style={styles.sectionTitle}>{t("Account")}</Text>
           </View>
 
-          <Pressable style={styles.actionRow} onPress={() => router.push('/edit-profile')}>
+          <Pressable
+            style={styles.actionRow}
+            onPress={() => router.push("/edit-profile")}
+          >
             <View style={styles.actionIconWrap}>
               <IconSymbol
-                name={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }}
+                name={{
+                  ios: "person.crop.circle",
+                  android: "account_circle",
+                  web: "account_circle",
+                }}
                 color="#111827"
                 size={18}
               />
             </View>
-            <Text style={styles.actionText}>{t('Edit Profile')}</Text>
+            <Text style={styles.actionText}>{t("Edit Profile")}</Text>
           </Pressable>
 
           <Pressable style={styles.actionRow}>
             <View style={styles.actionIconWrap}>
               <IconSymbol
-                name={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
+                name={{
+                  ios: "gearshape",
+                  android: "settings",
+                  web: "settings",
+                }}
                 color="#111827"
                 size={18}
               />
             </View>
-            <Text style={styles.actionText}>{t('Settings')}</Text>
+            <Text style={styles.actionText}>{t("Settings")}</Text>
           </Pressable>
 
-          <Pressable style={styles.actionRow} onPress={() => router.push('/wallet')}>
+          <Pressable
+            style={styles.actionRow}
+            onPress={() => router.push("/wallet")}
+          >
             <View style={styles.actionIconWrap}>
               <IconSymbol
-                name={{ ios: 'wallet.bifold.fill', android: 'account_balance_wallet', web: 'account_balance_wallet' }}
+                name={{
+                  ios: "wallet.bifold.fill",
+                  android: "account_balance_wallet",
+                  web: "account_balance_wallet",
+                }}
                 color="#111827"
                 size={18}
               />
             </View>
-            <Text style={styles.actionText}>{t('Wallet')}</Text>
+            <Text style={styles.actionText}>{t("Wallet")}</Text>
           </Pressable>
 
-          <Pressable style={styles.actionRow} onPress={() => void onRegisterPush()}>
+          <Pressable
+            style={styles.actionRow}
+            onPress={() => void onRegisterPush()}
+          >
             <View style={styles.actionIconWrap}>
               <IconSymbol
-                name={{ ios: 'bell.badge.fill', android: 'notifications', web: 'notifications' }}
+                name={{
+                  ios: "bell.badge.fill",
+                  android: "notifications",
+                  web: "notifications",
+                }}
                 color="#111827"
                 size={18}
               />
             </View>
             <Text style={styles.actionText}>
-              {isRegisteringPush ? t('Registering Push...') : t('Register Push Notifications')}
+              {isRegisteringPush
+                ? t("Registering Push...")
+                : t("Register Push Notifications")}
             </Text>
           </Pressable>
 
-          {pushStatus ? <Text style={styles.statusText}>{pushStatus}</Text> : null}
+          {pushStatus ? (
+            <Text style={styles.statusText}>{pushStatus}</Text>
+          ) : null}
         </View>
 
-          <Pressable style={styles.logoutButton} onPress={() => void onLogout()}>
-          <Text style={styles.logoutButtonText}>{t('Logout')}</Text>
+        <Pressable style={styles.logoutButton} onPress={() => void onLogout()}>
+          <Text style={styles.logoutButtonText}>{t("Logout")}</Text>
         </Pressable>
       </ScrollView>
 
-      <Modal visible={pendingLanguage !== null} transparent animationType="fade" onRequestClose={closeLanguageModal}>
+      <Modal
+        visible={pendingLanguage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeLanguageModal}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t('Confirm language change')}</Text>
+            <Text style={styles.modalTitle}>
+              {t("Confirm language change")}
+            </Text>
             <Text style={styles.modalBody}>
               {pendingLanguageConfig
-                ? t('Switch app language to {{language}}?', {
+                ? t("Switch app language to {{language}}?", {
                     language: pendingLanguageConfig.nativeLabel,
                   })
-                : t('Switch app language?')}
+                : t("Switch app language?")}
             </Text>
 
             <View style={styles.modalActions}>
-              <Pressable style={styles.modalSecondaryButton} onPress={closeLanguageModal} disabled={isChangingLanguage}>
-                <Text style={styles.modalSecondaryText}>{t('Cancel')}</Text>
+              <Pressable
+                style={styles.modalSecondaryButton}
+                onPress={closeLanguageModal}
+                disabled={isChangingLanguage}
+              >
+                <Text style={styles.modalSecondaryText}>{t("Cancel")}</Text>
               </Pressable>
-              <Pressable style={styles.modalPrimaryButton} onPress={() => void confirmLanguageChange()} disabled={isChangingLanguage}>
+              <Pressable
+                style={styles.modalPrimaryButton}
+                onPress={() => void confirmLanguageChange()}
+                disabled={isChangingLanguage}
+              >
                 {isChangingLanguage ? (
                   <ActivityIndicator color="#111827" />
                 ) : (
-                  <Text style={styles.modalPrimaryText}>{t('Confirm')}</Text>
+                  <Text style={styles.modalPrimaryText}>{t("Confirm")}</Text>
                 )}
               </Pressable>
             </View>
@@ -331,7 +429,7 @@ export default function ProfileTabScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   scrollView: {
     flex: 1,
@@ -342,32 +440,32 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   heroCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
-    shadowColor: '#0F172A',
+    borderColor: "#E5E8EF",
+    shadowColor: "#0F172A",
     shadowOpacity: 0.05,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   avatar: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFC548',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFC548",
   },
   avatarText: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: "800",
+    color: "#111827",
   },
   heroCopy: {
     flex: 1,
@@ -375,20 +473,20 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: "800",
+    color: "#111827",
   },
   heroMeta: {
     fontSize: 14,
-    color: '#68768A',
+    color: "#68768A",
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
-    shadowColor: '#0F172A',
+    borderColor: "#E5E8EF",
+    shadowColor: "#0F172A",
     shadowOpacity: 0.04,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -396,26 +494,26 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: "800",
+    color: "#111827",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   sectionHeaderIcon: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#FFC548',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FFC548",
+    alignItems: "center",
+    justifyContent: "center",
   },
   sectionSubtitle: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#68768A',
+    color: "#68768A",
     marginTop: 6,
     marginBottom: 14,
   },
@@ -423,13 +521,13 @@ const styles = StyleSheet.create({
     minHeight: 62,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F8FAFC',
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 14,
   },
   dropdownContent: {
@@ -437,39 +535,39 @@ const styles = StyleSheet.create({
     paddingLeft: 44,
   },
   dropdownLeadingIcon: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 2,
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#FFC548',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FFC548",
+    alignItems: "center",
+    justifyContent: "center",
   },
   dropdownLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#98A2B3',
+    fontWeight: "700",
+    color: "#98A2B3",
     marginBottom: 4,
   },
   dropdownValue: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: "800",
+    color: "#111827",
   },
   dropdownMeta: {
     fontSize: 13,
-    color: '#68768A',
+    color: "#68768A",
     marginTop: 2,
   },
   dropdownIconWrap: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#FFC548',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FFC548",
+    alignItems: "center",
+    justifyContent: "center",
   },
   dropdownPanel: {
     marginTop: 12,
@@ -479,49 +577,49 @@ const styles = StyleSheet.create({
     minHeight: 58,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   languageOptionSelected: {
-    backgroundColor: '#FFF7E1',
-    borderColor: '#FFC548',
+    backgroundColor: "#FFF7E1",
+    borderColor: "#FFC548",
   },
   languageInfo: {
     flex: 1,
   },
   languageName: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: "700",
+    color: "#111827",
   },
   languageMeta: {
     fontSize: 12,
-    color: '#68768A',
+    color: "#68768A",
     marginTop: 2,
   },
   languageCode: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#98A2B3',
+    fontWeight: "800",
+    color: "#98A2B3",
   },
   languageCodeSelected: {
-    color: '#D89A1A',
+    color: "#D89A1A",
   },
   actionRow: {
     minHeight: 56,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginTop: 12,
   },
@@ -529,63 +627,63 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFC548',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FFC548",
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionText: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: "700",
+    color: "#111827",
   },
   statusText: {
     marginTop: 12,
-    color: '#68768A',
+    color: "#68768A",
     fontSize: 13,
     lineHeight: 18,
   },
   logoutButton: {
     minHeight: 58,
     borderRadius: 20,
-    backgroundColor: '#111827',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#111827",
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoutButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.42)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(15, 23, 42, 0.42)",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 24,
   },
   modalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 360,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: "#E5E8EF",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: "800",
+    color: "#111827",
   },
   modalBody: {
     marginTop: 10,
     fontSize: 14,
     lineHeight: 20,
-    color: '#68768A',
+    color: "#68768A",
   },
   modalActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 20,
   },
@@ -594,29 +692,29 @@ const styles = StyleSheet.create({
     minHeight: 50,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
   },
   modalSecondaryText: {
-    color: '#111827',
+    color: "#111827",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   modalPrimaryButton: {
     flex: 1,
     minHeight: 50,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#FFC548',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFC548',
+    borderColor: "#FFC548",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFC548",
   },
   modalPrimaryText: {
-    color: '#111827',
+    color: "#111827",
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 });
