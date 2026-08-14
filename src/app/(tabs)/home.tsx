@@ -19,13 +19,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { clientTheme } from "@/components/tracking-ui";
-import { getCustomerHome } from "@/lib/api";
+import { getCustomerHome, getServices } from "@/lib/api";
 import { formatDateOnly } from "@/localization/format";
 import { useAppLanguage } from "@/localization/provider";
 import type {
   CustomerHomeRequestSummary,
   CustomerHomeResponse,
 } from "@/types/customer-request";
+import type { Service } from "@/types/service";
 
 const serviceIcons: Record<string, SymbolViewProps["name"]> = {
   VEHICLE_TRANSPORT: {
@@ -429,6 +430,7 @@ export default function HomeTabScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [servicesByKey, setServicesByKey] = useState<Record<string, Service>>({});
 
   const loadHome = useCallback(
     async (isRefresh: boolean): Promise<void> => {
@@ -441,8 +443,14 @@ export default function HomeTabScreen() {
       setErrorMessage("");
 
       try {
-        const response = await getCustomerHome();
+        const [response, services] = await Promise.all([
+          getCustomerHome(),
+          getServices().catch(() => []),
+        ]);
         setData(response);
+        setServicesByKey(
+          Object.fromEntries(services.map((service) => [service.key, service])),
+        );
       } catch (error) {
         const message =
           error instanceof Error
@@ -477,7 +485,13 @@ export default function HomeTabScreen() {
   }, [router]);
 
   const onChooseServiceByKey = useCallback(
-    (serviceKey: string): void => {
+    async (serviceKey: string): Promise<void> => {
+      const service = servicesByKey[serviceKey];
+      if (!service) {
+        setErrorMessage(t("Unable to load services"));
+        return;
+      }
+
       const detailRoutes: Record<
         string,
         | "/vehicle-details"
@@ -492,17 +506,17 @@ export default function HomeTabScreen() {
       };
       const detailRoute = detailRoutes[serviceKey];
 
-      if (detailRoute) {
-        router.push({ pathname: detailRoute, params: { serviceKey } });
+      if (!detailRoute) {
+        setErrorMessage(t("Unable to load services"));
         return;
       }
 
       router.push({
-        pathname: "/choose-service",
-        params: { preselectedServiceKey: serviceKey },
+        pathname: detailRoute,
+        params: { serviceId: service.id, serviceKey },
       });
     },
-    [router],
+    [router, servicesByKey, t],
   );
 
   const onNotifications = useCallback((): void => {
@@ -646,7 +660,7 @@ export default function HomeTabScreen() {
               key={service.key}
               serviceKey={service.key}
               label={service.label}
-              onPress={() => onChooseServiceByKey(service.key)}
+              onPress={() => void onChooseServiceByKey(service.key)}
             />
           ))}
         </ScrollView>
