@@ -22,6 +22,7 @@ const session = {
     name: 'Customer',
     email: 'internal@example.com',
     phoneNumber: '+96170123456',
+    countryCode: 'LB',
     role: 'CUSTOMER' as const,
   },
   isNewUser: false,

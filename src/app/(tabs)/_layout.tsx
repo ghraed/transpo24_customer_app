@@ -66,7 +66,6 @@ export default function CustomerTabsLayout() {
 
   useEffect(() => {
     if (authSession.status !== 'authenticated') {
-      setUnreadAlertsCount(0);
       return;
     }
 

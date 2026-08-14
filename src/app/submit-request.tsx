@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -16,7 +15,7 @@ import {
   View,
   type ColorValue,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import {
@@ -40,7 +39,6 @@ import type {
   PendingFurnitureDetailsPayload,
   PendingGoodsDetailsPayload,
   PendingMotorcycleDetailsPayload,
-  SubmitRequestRouteParams,
   UpdateScheduleAndItemDetailsPayload,
   UploadedRequestPhoto,
 } from '@/types/customer-request';
@@ -287,7 +285,7 @@ function IconSymbol({
 
 export default function SubmitRequestScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<SubmitRequestRouteParams>();
+  const params = useLocalSearchParams();
   const scrollViewRef = useRef<ScrollView | null>(null);
   const keyboardInset = useAndroidKeyboardInset();
   const insets = useSafeAreaInsets();
@@ -677,11 +675,6 @@ export default function SubmitRequestScreen() {
           heavyShipmentType:
             pendingGoodsDetails.approximateWeightKg >= 50
               ? pendingGoodsDetails.heavyShipmentType
-              : undefined,
-          isImmediate: pendingGoodsDetails.isImmediate ?? true,
-          scheduledPickupAt:
-            pendingGoodsDetails.isImmediate === false
-              ? pendingGoodsDetails.scheduledPickupAt
               : undefined,
           pickupLocation: {
             latitude: pickupLocation.coordinates.latitude,

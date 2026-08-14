@@ -45,6 +45,19 @@
           }
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Transpo24 to use your location to choose pickup and delivery addresses."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow Transpo24 to use your camera to photograph the items you need transported.",
+          "photosPermission": "Allow Transpo24 to access photos you choose for your transport request."
+        }
+      ],
       "expo-notifications",
       "expo-font",
       "expo-image",

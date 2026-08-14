@@ -1,7 +1,7 @@
-import { useRouter } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useRouter } from "expo-router";
+import { SymbolView, type SymbolViewProps } from "expo-symbols";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   ColorValue,
@@ -15,27 +15,42 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { clientTheme } from '@/components/tracking-ui';
-import { getCustomerHome } from '@/lib/api';
-import { formatDateOnly } from '@/localization/format';
-import { useAppLanguage } from '@/localization/provider';
-import type { CustomerHomeRequestSummary, CustomerHomeResponse } from '@/types/customer-request';
+import { clientTheme } from "@/components/tracking-ui";
+import { getCustomerHome } from "@/lib/api";
+import { formatDateOnly } from "@/localization/format";
+import { useAppLanguage } from "@/localization/provider";
+import type {
+  CustomerHomeRequestSummary,
+  CustomerHomeResponse,
+} from "@/types/customer-request";
 
-const serviceIcons: Record<string, SymbolViewProps['name']> = {
-  VEHICLE_TRANSPORT: { ios: 'car.fill', android: 'directions_car', web: 'directions_car' },
-  MOTORCYCLE_TRANSPORT: { ios: 'bicycle', android: 'two_wheeler', web: 'two_wheeler' },
-  GOODS_TRANSPORT: { ios: 'shippingbox.fill', android: 'inventory_2', web: 'inventory_2' },
-  FURNITURE_TRANSPORT: { ios: 'sofa.fill', android: 'chair', web: 'chair' },
+const serviceIcons: Record<string, SymbolViewProps["name"]> = {
+  VEHICLE_TRANSPORT: {
+    ios: "car.fill",
+    android: "directions_car",
+    web: "directions_car",
+  },
+  MOTORCYCLE_TRANSPORT: {
+    ios: "bicycle",
+    android: "two_wheeler",
+    web: "two_wheeler",
+  },
+  GOODS_TRANSPORT: {
+    ios: "shippingbox.fill",
+    android: "inventory_2",
+    web: "inventory_2",
+  },
+  FURNITURE_TRANSPORT: { ios: "sofa.fill", android: "chair", web: "chair" },
 };
 
 const serviceTileImages: Record<string, ImageSourcePropType> = {
-  VEHICLE_TRANSPORT: require('@/assets/images/services/vehicle.jpg'),
-  MOTORCYCLE_TRANSPORT: require('@/assets/images/services/motorcycle.jpg'),
-  GOODS_TRANSPORT: require('@/assets/images/services/goods.jpg'),
-  FURNITURE_TRANSPORT: require('@/assets/images/services/furniture.jpg'),
+  VEHICLE_TRANSPORT: require("@/assets/images/services/vehicle.jpg"),
+  MOTORCYCLE_TRANSPORT: require("@/assets/images/services/motorcycle.jpg"),
+  GOODS_TRANSPORT: require("@/assets/images/services/goods.jpg"),
+  FURNITURE_TRANSPORT: require("@/assets/images/services/furniture.jpg"),
 };
 
 type ServiceTileTheme = {
@@ -49,40 +64,40 @@ function getServiceLabel(
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
   switch (serviceKey) {
-    case 'VEHICLE_TRANSPORT':
-      return t('Vehicle');
-    case 'MOTORCYCLE_TRANSPORT':
-      return t('Motorcycle');
-    case 'GOODS_TRANSPORT':
-      return t('Goods');
-    case 'FURNITURE_TRANSPORT':
-      return t('Furniture');
+    case "VEHICLE_TRANSPORT":
+      return t("Vehicle");
+    case "MOTORCYCLE_TRANSPORT":
+      return t("Motorcycle");
+    case "GOODS_TRANSPORT":
+      return t("Goods");
+    case "FURNITURE_TRANSPORT":
+      return t("Furniture");
     default:
-      return fallback || t('Service');
+      return fallback || t("Service");
   }
 }
 
 function getServiceTheme(serviceKey: string): ServiceTileTheme {
   switch (serviceKey) {
-    case 'VEHICLE_TRANSPORT':
+    case "VEHICLE_TRANSPORT":
       return {
-        backgroundColor: '#F4BD3C',
-        overlayColor: '#FFD86F',
+        backgroundColor: "#F4BD3C",
+        overlayColor: "#FFD86F",
       };
-    case 'MOTORCYCLE_TRANSPORT':
+    case "MOTORCYCLE_TRANSPORT":
       return {
-        backgroundColor: '#0F69D8',
-        overlayColor: '#3C8EF3',
+        backgroundColor: "#0F69D8",
+        overlayColor: "#3C8EF3",
       };
-    case 'GOODS_TRANSPORT':
+    case "GOODS_TRANSPORT":
       return {
-        backgroundColor: '#11B85E',
-        overlayColor: '#46D889',
+        backgroundColor: "#11B85E",
+        overlayColor: "#46D889",
       };
-    case 'FURNITURE_TRANSPORT':
+    case "FURNITURE_TRANSPORT":
       return {
-        backgroundColor: '#F08948',
-        overlayColor: '#FFB17E',
+        backgroundColor: "#F08948",
+        overlayColor: "#FFB17E",
       };
     default:
       return {
@@ -92,27 +107,32 @@ function getServiceTheme(serviceKey: string): ServiceTileTheme {
   }
 }
 
-function getGreeting(t: (key: string, options?: Record<string, unknown>) => string): string {
+function getGreeting(
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
   const hour = new Date().getHours();
 
   if (hour < 12) {
-    return t('Good morning!');
+    return t("Good morning!");
   }
 
   if (hour < 18) {
-    return t('Good afternoon!');
+    return t("Good afternoon!");
   }
 
-  return t('Good evening!');
+  return t("Good evening!");
 }
 
-function compactAddress(address: string | null | undefined, fallback: string): string {
+function compactAddress(
+  address: string | null | undefined,
+  fallback: string,
+): string {
   if (!address?.trim()) {
     return fallback;
   }
 
   const parts = address
-    .split(',')
+    .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
 
@@ -129,9 +149,9 @@ function buildLocationLabel(
 ): string {
   return compactAddress(
     data.activeRequest?.pickupAddress ??
-    data.recentRequests[0]?.pickupAddress ??
-    data.recentRequests[0]?.dropoffAddress,
-    t('Ready to book'),
+      data.recentRequests[0]?.pickupAddress ??
+      data.recentRequests[0]?.dropoffAddress,
+    t("Ready to book"),
   );
 }
 
@@ -139,12 +159,13 @@ function getRequestDateLabel(
   request: CustomerHomeRequestSummary,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
-  const value = request.submittedAt ?? request.createdAt ?? request.scheduledPickupAt;
-  return value ? formatDateOnly(value) : t('Date pending');
+  const value =
+    request.submittedAt ?? request.createdAt ?? request.scheduledPickupAt;
+  return value ? formatDateOnly(value) : t("Date pending");
 }
 
 function getRequestReference(requestId: string): string {
-  const compactId = requestId.replace(/-/g, '').slice(0, 8).toUpperCase();
+  const compactId = requestId.replace(/-/g, "").slice(0, 8).toUpperCase();
   return `ID ${compactId || requestId}`;
 }
 
@@ -153,31 +174,31 @@ function getRouteLabel(
   directionArrow: string,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
-  const pickup = compactAddress(request.pickupAddress, t('Pickup'));
-  const dropoff = compactAddress(request.dropoffAddress, t('Dropoff'));
+  const pickup = compactAddress(request.pickupAddress, t("Pickup"));
+  const dropoff = compactAddress(request.dropoffAddress, t("Dropoff"));
   return `${pickup} ${directionArrow} ${dropoff}`;
 }
 
-function getStatusTone(status: CustomerHomeRequestSummary['status']): {
+function getStatusTone(status: CustomerHomeRequestSummary["status"]): {
   backgroundColor: string;
   textColor: string;
 } {
   switch (status) {
-    case 'DELIVERED':
-    case 'COMPLETED':
+    case "DELIVERED":
+    case "COMPLETED":
       return {
-        backgroundColor: '#E9F9EE',
-        textColor: '#1E9E4A',
+        backgroundColor: "#E9F9EE",
+        textColor: "#1E9E4A",
       };
-    case 'CANCELLED':
+    case "CANCELLED":
       return {
-        backgroundColor: '#FDE8E7',
-        textColor: '#C0392B',
+        backgroundColor: "#FDE8E7",
+        textColor: "#C0392B",
       };
     default:
       return {
-        backgroundColor: '#FFF3D6',
-        textColor: '#D89A1A',
+        backgroundColor: "#FFF3D6",
+        textColor: "#D89A1A",
       };
   }
 }
@@ -187,25 +208,37 @@ function IconSymbol({
   color,
   size = 20,
 }: {
-  name: SymbolViewProps['name'];
+  name: SymbolViewProps["name"];
   color: ColorValue;
   size?: number;
 }) {
-  return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
+  return (
+    <SymbolView
+      name={name}
+      tintColor={color}
+      size={size}
+      resizeMode="scaleAspectFit"
+    />
+  );
 }
 
 function StatusBadge({
   status,
   label,
 }: {
-  status: CustomerHomeRequestSummary['status'];
+  status: CustomerHomeRequestSummary["status"];
   label: string;
 }) {
   const tone = getStatusTone(status);
 
   return (
-    <View style={[styles.statusBadge, { backgroundColor: tone.backgroundColor }]}>
-      <Text style={[styles.statusBadgeText, { color: tone.textColor }]} numberOfLines={2}>
+    <View
+      style={[styles.statusBadge, { backgroundColor: tone.backgroundColor }]}
+    >
+      <Text
+        style={[styles.statusBadgeText, { color: tone.textColor }]}
+        numberOfLines={2}
+      >
         {label}
       </Text>
     </View>
@@ -226,22 +259,40 @@ function ServiceTile({
 
   return (
     <Pressable style={styles.serviceTileButton} onPress={onPress}>
-      <View style={[styles.serviceTile, { backgroundColor: theme.backgroundColor }]}>
+      <View
+        style={[styles.serviceTile, { backgroundColor: theme.backgroundColor }]}
+      >
         {image ? (
-          <ImageBackground source={image} style={styles.serviceTileImage} resizeMode="cover" />
+          <ImageBackground
+            source={image}
+            style={styles.serviceTileImage}
+            resizeMode="cover"
+          />
         ) : (
           <>
-            <View style={[styles.serviceGlow, { backgroundColor: theme.overlayColor, top: -22, right: 10 }]} />
             <View
               style={[
                 styles.serviceGlow,
-                { backgroundColor: theme.overlayColor, bottom: -34, left: -26, opacity: 0.4 },
+                { backgroundColor: theme.overlayColor, top: -22, right: 10 },
+              ]}
+            />
+            <View
+              style={[
+                styles.serviceGlow,
+                {
+                  backgroundColor: theme.overlayColor,
+                  bottom: -34,
+                  left: -26,
+                  opacity: 0.4,
+                },
               ]}
             />
           </>
         )}
       </View>
-      <Text style={styles.serviceTileTitle} numberOfLines={1}>{label}</Text>
+      <Text style={styles.serviceTileTitle} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -257,14 +308,20 @@ function ActiveOrderCard({
   onPress: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const icon = serviceIcons[request.serviceKey ?? ''];
+  const icon = serviceIcons[request.serviceKey ?? ""];
 
   return (
     <Pressable style={styles.activeOrderCard} onPress={onPress}>
       <View style={styles.activeOrderRow}>
         <View style={styles.activeOrderIdentity}>
           <View style={styles.activeOrderIcon}>
-            {icon ? <IconSymbol name={icon} color={clientTheme.accentStrong} size={20} /> : null}
+            {icon ? (
+              <IconSymbol
+                name={icon}
+                color={clientTheme.accentStrong}
+                size={20}
+              />
+            ) : null}
           </View>
           <View style={styles.activeOrderTextBlock}>
             <Text style={styles.activeOrderTitle}>
@@ -281,32 +338,45 @@ function ActiveOrderCard({
       <View style={styles.activeOrderDivider} />
 
       <View style={styles.activeOrderMeta}>
-        <Text style={styles.activeOrderMetaText}>{getRequestReference(request.id)}</Text>
-        <Text style={styles.activeOrderMetaText}>{getRequestDateLabel(request, t)}</Text>
+        <Text style={styles.activeOrderMetaText}>
+          {getRequestReference(request.id)}
+        </Text>
+        <Text style={styles.activeOrderMetaText}>
+          {getRequestDateLabel(request, t)}
+        </Text>
       </View>
     </Pressable>
   );
 }
 
-function EmptyActiveOrder({ onPress, t }: { onPress: () => void; t: (key: string) => string }) {
+function EmptyActiveOrder({
+  onPress,
+  t,
+}: {
+  onPress: () => void;
+  t: (key: string) => string;
+}) {
   return (
     <View style={styles.activeOrderCard}>
       <View style={styles.emptyOrderHeader}>
         <View style={styles.emptyOrderIcon}>
           <IconSymbol
-            name={{ ios: 'shippingbox.fill', android: 'inventory_2', web: 'inventory_2' }}
+            name={{
+              ios: "shippingbox.fill",
+              android: "inventory_2",
+              web: "inventory_2",
+            }}
             color={clientTheme.accentStrong}
             size={20}
           />
         </View>
         <View style={styles.emptyOrderTextBlock}>
-          <Text style={styles.activeOrderTitle}>{t('No active order')}</Text>
-          <Text style={styles.activeOrderRoute}>{t('Create a new request to start transporting.')}</Text>
+          <Text style={styles.activeOrderTitle}>{t("No active order")}</Text>
+          <Text style={styles.activeOrderRoute}>
+            {t("Create a new request to start transporting.")}
+          </Text>
         </View>
       </View>
-      <Pressable style={styles.inlineActionButton} onPress={onPress}>
-        <Text style={styles.inlineActionButtonText}>{t('New request')}</Text>
-      </Pressable>
     </View>
   );
 }
@@ -322,13 +392,15 @@ function RecentActivityRow({
   onPress: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const icon = serviceIcons[request.serviceKey ?? ''];
+  const icon = serviceIcons[request.serviceKey ?? ""];
   const tone = getStatusTone(request.status);
 
   return (
     <Pressable style={styles.recentRow} onPress={onPress}>
       <View style={styles.recentIcon}>
-        {icon ? <IconSymbol name={icon} color={clientTheme.accentStrong} size={18} /> : null}
+        {icon ? (
+          <IconSymbol name={icon} color={clientTheme.accentStrong} size={18} />
+        ) : null}
       </View>
       <View style={styles.recentContent}>
         <Text style={styles.recentTitle}>
@@ -340,7 +412,9 @@ function RecentActivityRow({
       </View>
       <View style={styles.recentMeta}>
         <Text style={styles.recentDate}>{getRequestDateLabel(request, t)}</Text>
-        <Text style={[styles.recentStatus, { color: tone.textColor }]}>{request.statusLabel}</Text>
+        <Text style={[styles.recentStatus, { color: tone.textColor }]}>
+          {request.statusLabel}
+        </Text>
       </View>
     </Pressable>
   );
@@ -354,7 +428,7 @@ export default function HomeTabScreen() {
   const [data, setData] = useState<CustomerHomeResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
 
   const loadHome = useCallback(
     async (isRefresh: boolean): Promise<void> => {
@@ -364,13 +438,16 @@ export default function HomeTabScreen() {
         setIsLoading(true);
       }
 
-      setErrorMessage('');
+      setErrorMessage("");
 
       try {
         const response = await getCustomerHome();
         setData(response);
       } catch (error) {
-        const message = error instanceof Error ? error.message : t('Unable to load home data.');
+        const message =
+          error instanceof Error
+            ? error.message
+            : t("Unable to load home data.");
         setErrorMessage(message);
       } finally {
         setIsLoading(false);
@@ -390,25 +467,28 @@ export default function HomeTabScreen() {
 
   const onViewStatus = useCallback(
     (requestId: string): void => {
-      router.push({ pathname: '/request-status', params: { requestId } });
+      router.push({ pathname: "/request-status", params: { requestId } });
     },
     [router],
   );
 
   const onNewRequest = useCallback((): void => {
-    router.push('/choose-service');
+    router.push("/choose-service");
   }, [router]);
 
   const onChooseServiceByKey = useCallback(
     (serviceKey: string): void => {
       const detailRoutes: Record<
         string,
-        '/vehicle-details' | '/motorcycle-details' | '/goods-details' | '/furniture-details'
+        | "/vehicle-details"
+        | "/motorcycle-details"
+        | "/goods-details"
+        | "/furniture-details"
       > = {
-        VEHICLE_TRANSPORT: '/vehicle-details',
-        MOTORCYCLE_TRANSPORT: '/motorcycle-details',
-        GOODS_TRANSPORT: '/goods-details',
-        FURNITURE_TRANSPORT: '/furniture-details',
+        VEHICLE_TRANSPORT: "/vehicle-details",
+        MOTORCYCLE_TRANSPORT: "/motorcycle-details",
+        GOODS_TRANSPORT: "/goods-details",
+        FURNITURE_TRANSPORT: "/furniture-details",
       };
       const detailRoute = detailRoutes[serviceKey];
 
@@ -417,34 +497,37 @@ export default function HomeTabScreen() {
         return;
       }
 
-      router.push({ pathname: '/choose-service', params: { preselectedServiceKey: serviceKey } });
+      router.push({
+        pathname: "/choose-service",
+        params: { preselectedServiceKey: serviceKey },
+      });
     },
     [router],
   );
 
   const onNotifications = useCallback((): void => {
-    router.push('/notifications');
+    router.push("/notifications");
   }, [router]);
 
-  const directionArrow = isRTL ? '←' : '→';
+  const directionArrow = isRTL ? "←" : "→";
 
   const quickServices = useMemo(
     () => [
       {
-        key: 'VEHICLE_TRANSPORT',
-        label: getServiceLabel('VEHICLE_TRANSPORT', null, t),
+        key: "VEHICLE_TRANSPORT",
+        label: getServiceLabel("VEHICLE_TRANSPORT", null, t),
       },
       {
-        key: 'MOTORCYCLE_TRANSPORT',
-        label: getServiceLabel('MOTORCYCLE_TRANSPORT', null, t),
+        key: "MOTORCYCLE_TRANSPORT",
+        label: getServiceLabel("MOTORCYCLE_TRANSPORT", null, t),
       },
       {
-        key: 'GOODS_TRANSPORT',
-        label: getServiceLabel('GOODS_TRANSPORT', null, t),
+        key: "GOODS_TRANSPORT",
+        label: getServiceLabel("GOODS_TRANSPORT", null, t),
       },
       {
-        key: 'FURNITURE_TRANSPORT',
-        label: getServiceLabel('FURNITURE_TRANSPORT', null, t),
+        key: "FURNITURE_TRANSPORT",
+        label: getServiceLabel("FURNITURE_TRANSPORT", null, t),
       },
     ],
     [t],
@@ -454,7 +537,7 @@ export default function HomeTabScreen() {
     return (
       <SafeAreaView style={styles.centeredContainer}>
         <ActivityIndicator size="large" color={clientTheme.accentStrong} />
-        <Text style={styles.supportingText}>{t('Loading home...')}</Text>
+        <Text style={styles.supportingText}>{t("Loading home...")}</Text>
       </SafeAreaView>
     );
   }
@@ -464,15 +547,22 @@ export default function HomeTabScreen() {
       <SafeAreaView style={styles.centeredContainer}>
         <View style={styles.errorIconCircle}>
           <IconSymbol
-            name={{ ios: 'exclamationmark.triangle.fill', android: 'error', web: 'error' }}
+            name={{
+              ios: "exclamationmark.triangle.fill",
+              android: "error",
+              web: "error",
+            }}
             color={clientTheme.accentStrong}
             size={30}
           />
         </View>
-        <Text style={styles.errorTitle}>{t('Unable to load home data.')}</Text>
+        <Text style={styles.errorTitle}>{t("Unable to load home data.")}</Text>
         <Text style={styles.supportingText}>{errorMessage}</Text>
-        <Pressable style={styles.primaryButton} onPress={() => void loadHome(false)}>
-          <Text style={styles.primaryButtonText}>{t('Retry')}</Text>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => void loadHome(false)}
+        >
+          <Text style={styles.primaryButtonText}>{t("Retry")}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -484,7 +574,10 @@ export default function HomeTabScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={clientTheme.background} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={clientTheme.background}
+      />
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -494,14 +587,21 @@ export default function HomeTabScreen() {
           },
         ]}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={() => void loadHome(true)} />
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void loadHome(true)}
+          />
         }
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
           <View style={styles.locationWrap}>
             <IconSymbol
-              name={{ ios: 'mappin.circle.fill', android: 'location_on', web: 'location_on' }}
+              name={{
+                ios: "mappin.circle.fill",
+                android: "location_on",
+                web: "location_on",
+              }}
               color={clientTheme.accentStrong}
               size={18}
             />
@@ -510,9 +610,16 @@ export default function HomeTabScreen() {
             </Text>
           </View>
 
-          <Pressable style={styles.notificationButton} onPress={onNotifications}>
+          <Pressable
+            style={styles.notificationButton}
+            onPress={onNotifications}
+          >
             <IconSymbol
-              name={{ ios: 'bell', android: 'notifications_none', web: 'notifications_none' }}
+              name={{
+                ios: "bell",
+                android: "notifications_none",
+                web: "notifications_none",
+              }}
               color={clientTheme.text}
               size={22}
             />
@@ -522,9 +629,11 @@ export default function HomeTabScreen() {
 
         <View style={styles.heroBlock}>
           <Text style={styles.heroTitle}>
-            {getGreeting(t)} <Text>{'\uD83D\uDC4B'}</Text>
+            {getGreeting(t)} <Text>{"\uD83D\uDC4B"}</Text>
           </Text>
-          <Text style={styles.heroSubtitle}>{t('What do you need to transport?')}</Text>
+          <Text style={styles.heroSubtitle}>
+            {t("What do you need to transport?")}
+          </Text>
         </View>
 
         <ScrollView
@@ -544,9 +653,9 @@ export default function HomeTabScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('Active Order')}</Text>
-            <Pressable onPress={() => router.push('/requests')}>
-              <Text style={styles.seeAllText}>{t('See All')}</Text>
+            <Text style={styles.sectionTitle}>{t("Active Order")}</Text>
+            <Pressable onPress={() => router.push("/requests")}>
+              <Text style={styles.seeAllText}>{t("See All")}</Text>
             </Pressable>
           </View>
 
@@ -564,10 +673,10 @@ export default function HomeTabScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('Recent Activity')}</Text>
+            <Text style={styles.sectionTitle}>{t("Recent Activity")}</Text>
             {data.recentRequests.length > 0 ? (
-              <Pressable onPress={() => router.push('/requests')}>
-                <Text style={styles.seeAllText}>{t('See All')}</Text>
+              <Pressable onPress={() => router.push("/requests")}>
+                <Text style={styles.seeAllText}>{t("See All")}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -575,7 +684,7 @@ export default function HomeTabScreen() {
           {data.recentRequests.length === 0 ? (
             <View style={styles.emptyRecentCard}>
               <Text style={styles.supportingText}>
-                {t('Your recent transport requests will appear here.')}
+                {t("Your recent transport requests will appear here.")}
               </Text>
             </View>
           ) : (
@@ -588,7 +697,9 @@ export default function HomeTabScreen() {
                     onPress={() => onViewStatus(request.id)}
                     t={t}
                   />
-                  {index < data.recentRequests.length - 1 ? <View style={styles.rowDivider} /> : null}
+                  {index < data.recentRequests.length - 1 ? (
+                    <View style={styles.rowDivider} />
+                  ) : null}
                 </View>
               ))}
             </View>
@@ -606,8 +717,8 @@ const styles = StyleSheet.create({
   },
   centeredContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: clientTheme.background,
     padding: 24,
     gap: 12,
@@ -617,38 +728,38 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   locationWrap: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   locationText: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: "500",
     color: clientTheme.textMuted,
   },
   notificationButton: {
     width: 42,
     height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
   notificationDot: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 7,
     width: 9,
     height: 9,
     borderRadius: 999,
-    backgroundColor: '#FF5A5F',
+    backgroundColor: "#FF5A5F",
   },
   heroBlock: {
     gap: 8,
@@ -656,7 +767,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 19,
     lineHeight: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: clientTheme.text,
   },
   heroSubtitle: {
@@ -675,18 +786,18 @@ const styles = StyleSheet.create({
   serviceTile: {
     height: 132,
     borderRadius: 22,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
+    justifyContent: "flex-end",
+    overflow: "hidden",
   },
   serviceGlow: {
-    position: 'absolute',
+    position: "absolute",
     width: 88,
     height: 88,
     borderRadius: 999,
     opacity: 0.55,
   },
   serviceTileImage: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     right: 0,
     bottom: 0,
@@ -695,27 +806,27 @@ const styles = StyleSheet.create({
   serviceTileTitle: {
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: '800',
+    fontWeight: "800",
     color: clientTheme.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   section: {
     gap: 14,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: "800",
     color: clientTheme.text,
   },
   seeAllText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: clientTheme.accentStrong,
   },
   activeOrderCard: {
@@ -724,7 +835,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: clientTheme.border,
-    shadowColor: '#111827',
+    shadowColor: "#111827",
     shadowOpacity: 0.06,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
@@ -732,23 +843,23 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   activeOrderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   activeOrderIdentity: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   activeOrderIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: clientTheme.accentSoft,
   },
   activeOrderTextBlock: {
@@ -757,7 +868,7 @@ const styles = StyleSheet.create({
   },
   activeOrderTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: clientTheme.text,
   },
   activeOrderRoute: {
@@ -771,23 +882,23 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   statusBadgeText: {
     fontSize: 12,
     lineHeight: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   activeOrderDivider: {
     height: 1,
     backgroundColor: clientTheme.border,
   },
   activeOrderMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   activeOrderMetaText: {
@@ -795,16 +906,16 @@ const styles = StyleSheet.create({
     color: clientTheme.textMuted,
   },
   emptyOrderHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   emptyOrderIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: clientTheme.surfaceMuted,
   },
   emptyOrderTextBlock: {
@@ -812,7 +923,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   inlineActionButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
@@ -820,7 +931,7 @@ const styles = StyleSheet.create({
   },
   inlineActionButtonText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     color: clientTheme.text,
   },
   recentList: {
@@ -828,11 +939,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: clientTheme.border,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   recentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -841,8 +952,8 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: clientTheme.surfaceMuted,
   },
   recentContent: {
@@ -851,7 +962,7 @@ const styles = StyleSheet.create({
   },
   recentTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: clientTheme.text,
   },
   recentSubtitle: {
@@ -859,17 +970,17 @@ const styles = StyleSheet.create({
     color: clientTheme.textMuted,
   },
   recentMeta: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     gap: 4,
   },
   recentDate: {
     fontSize: 13,
     color: clientTheme.text,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   recentStatus: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   rowDivider: {
     height: 1,
@@ -887,32 +998,32 @@ const styles = StyleSheet.create({
     backgroundColor: clientTheme.accent,
     borderRadius: 14,
     minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 24,
   },
   primaryButtonText: {
     color: clientTheme.text,
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 15,
   },
   supportingText: {
     fontSize: 14,
     lineHeight: 20,
     color: clientTheme.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorIconCircle: {
     width: 64,
     height: 64,
     borderRadius: 22,
     backgroundColor: clientTheme.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: clientTheme.text,
   },
 });
