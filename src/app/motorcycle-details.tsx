@@ -617,6 +617,7 @@ export default function MotorcycleDetailsScreen() {
               {form.scheduledPickupAt.toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
+                hour12: false,
               })}
             </Text>
           </Pressable>
@@ -683,6 +684,8 @@ export default function MotorcycleDetailsScreen() {
           <DateTimePicker
             value={form.scheduledPickupAt}
             mode="time"
+            is24Hour={true}
+            locale="en_GB"
             onChange={(_, selectedDate) => {
               setShowTimePicker(false);
               if (!selectedDate) return;

@@ -707,7 +707,9 @@ export default function PickupLocationScreen() {
     ? `GPS: ${providerState.gpsAvailable ? 'on' : 'off'} • Network: ${providerState.networkAvailable ? 'on' : 'off'} • Services: ${providerState.locationServicesEnabled ? 'on' : 'off'}`
     : '';
   const locationMetaText = [
-    lastLocationTimestamp ? `Updated: ${new Date(lastLocationTimestamp).toLocaleTimeString()}` : null,
+    lastLocationTimestamp
+      ? `Updated: ${new Date(lastLocationTimestamp).toLocaleTimeString([], { hour12: false })}`
+      : null,
     isMockedLocation === true ? 'Mocked location detected' : null,
   ]
     .filter(Boolean)

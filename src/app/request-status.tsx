@@ -118,7 +118,7 @@ function formatDate(value: string | null | undefined): string {
   if (!value) return 'N/A';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+  return parsed.toLocaleString(undefined, { hour12: false });
 }
 
 function sleep(ms: number): Promise<void> {

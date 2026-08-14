@@ -431,6 +431,7 @@ export default function FurnitureDetailsScreen() {
                     {form.movingDate.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
+                      hour12: false,
                     })}
                   </Text>
                 </Pressable>
@@ -548,6 +549,8 @@ export default function FurnitureDetailsScreen() {
             <DateTimePicker
               value={form.movingDate}
               mode="time"
+              is24Hour={true}
+              locale="en_GB"
               onChange={(_, selectedDate) => {
                 setShowTimePicker(false);
                 if (!selectedDate) return;

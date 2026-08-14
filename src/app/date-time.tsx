@@ -544,7 +544,7 @@ export default function DateTimeScreen() {
                 <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
                 <Text style={styles.pickerButtonValue}>
                   {form.scheduledPickupAt
-                    ? form.scheduledPickupAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    ? form.scheduledPickupAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
                     : 'Select time'}
                 </Text>
               </Pressable>
@@ -767,6 +767,8 @@ export default function DateTimeScreen() {
         <DateTimePicker
           value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="time"
+          is24Hour={true}
+          locale="en_GB"
           onChange={(_, selectedDate) => {
             setShowTimePicker(false);
             if (!selectedDate) return;

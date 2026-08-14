@@ -101,13 +101,13 @@ export default function CustomerTripDeliveredScreen() {
           <TrackingMetaRow label="Trip ID" value={tripId} />
           <TrackingMetaRow
             label="Delivered at"
-            value={deliveredAt ? new Date(deliveredAt).toLocaleString() : 'N/A'}
+            value={deliveredAt ? new Date(deliveredAt).toLocaleString(undefined, { hour12: false }) : 'N/A'}
           />
           {deliveryNotes ? <TrackingMetaRow label="Delivery notes" value={deliveryNotes} /> : null}
           {tracking?.nearDeliveryNotifiedAt ? (
             <TrackingMetaRow
               label="Near-delivery alert"
-              value={new Date(tracking.nearDeliveryNotifiedAt).toLocaleString()}
+              value={new Date(tracking.nearDeliveryNotifiedAt).toLocaleString(undefined, { hour12: false })}
             />
           ) : null}
         </TrackingScreenCard>

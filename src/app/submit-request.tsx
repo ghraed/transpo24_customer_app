@@ -186,7 +186,7 @@ function formatSchedule(isImmediate: boolean, scheduledPickupAt?: string): strin
   if (!scheduledPickupAt) return 'Missing schedule';
   const date = new Date(scheduledPickupAt);
   if (Number.isNaN(date.getTime())) return 'Invalid schedule';
-  return date.toLocaleString();
+  return date.toLocaleString(undefined, { hour12: false });
 }
 
 function formatItemType(itemType: ItemType | undefined): string {
@@ -1023,7 +1023,7 @@ export default function SubmitRequestScreen() {
               <Text style={styles.value}>Number of helpers: {pendingFurnitureDetails.helpersCount}</Text>
             ) : null}
             <Text style={styles.value}>
-              Moving date: {new Date(pendingFurnitureDetails.movingDate).toLocaleString()}
+              Moving date: {new Date(pendingFurnitureDetails.movingDate).toLocaleString(undefined, { hour12: false })}
             </Text>
             <Text style={styles.value}>
               Can help loading: {pendingFurnitureDetails.customerCanHelpLoading ? 'Yes' : 'No'}

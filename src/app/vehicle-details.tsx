@@ -1021,6 +1021,7 @@ export default function VehicleDetailsScreen() {
                     ? requestForm.scheduledPickupAt.toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
+                        hour12: false,
                       })
                     : 'Select time'}
                 </Text>
@@ -1162,6 +1163,8 @@ export default function VehicleDetailsScreen() {
           <DateTimePicker
             value={requestForm.scheduledPickupAt}
             mode="time"
+            is24Hour={true}
+            locale="en_GB"
             onChange={(_, selectedDate) => {
               setShowTimePicker(false);
               if (!selectedDate) return;

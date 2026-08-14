@@ -28,6 +28,7 @@ export function formatDateTime(value: string | number | Date | null | undefined)
   return new Intl.DateTimeFormat(getActiveLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
+    hour12: false,
   }).format(parsed);
 }
 
@@ -58,6 +59,7 @@ export function formatTimeOnly(value: string | number | Date | null | undefined)
 
   return new Intl.DateTimeFormat(getActiveLocale(), {
     timeStyle: 'short',
+    hour12: false,
   }).format(parsed);
 }
 

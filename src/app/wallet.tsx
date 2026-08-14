@@ -44,7 +44,7 @@ function formatMoney(amount: number, currency: string | null | undefined): strin
 
 function formatDate(value: string): string {
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString(undefined, { hour12: false });
 }
 
 function getTransactionTitle(transaction: CustomerWalletTransaction): string {

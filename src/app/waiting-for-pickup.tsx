@@ -297,7 +297,7 @@ export default function WaitingForPickupScreen() {
             <View style={styles.confirmedCard}>
               <Text style={styles.confirmedTitle}>Pickup confirmed</Text>
               <Text style={styles.helperText}>
-                Picked up at {new Date(pickupInfo.pickedUpAt).toLocaleString()}
+                Picked up at {new Date(pickupInfo.pickedUpAt).toLocaleString(undefined, { hour12: false })}
               </Text>
               {pickupInfo.pickupNotes ? (
                 <Text style={styles.helperText}>Notes: {pickupInfo.pickupNotes}</Text>
