@@ -40,13 +40,13 @@ function getServiceLabel(
 ): string {
   switch (serviceKey) {
     case 'VEHICLE_TRANSPORT':
-      return t('Vehicle Transport');
+      return t('Vehicle transport');
     case 'MOTORCYCLE_TRANSPORT':
-      return t('Motorcycle Transport');
+      return t('Motorcycle transport');
     case 'GOODS_TRANSPORT':
-      return t('Goods Transport');
+      return t('Goods transport');
     case 'FURNITURE_TRANSPORT':
-      return t('Furniture Transport');
+      return t('Furniture transport');
     default:
       return fallback || t('Service');
   }
@@ -71,6 +71,16 @@ function getStatusTone(status: CustomerRequestStatus): { backgroundColor: string
     backgroundColor: '#FFF3D6',
     textColor: '#D89A1A',
   };
+}
+
+function getStatusLabel(
+  request: CustomerHomeRequestSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const key = `request_status.${request.status}`;
+  const translated = t(key);
+
+  return translated === key ? request.statusLabel : translated;
 }
 
 function compactAddress(address: string | null | undefined, fallback: string): string {
@@ -112,7 +122,7 @@ function getFooterStatusCopy(
     return t('Transport completed');
   }
 
-  return request.statusLabel;
+  return getStatusLabel(request, t);
 }
 
 function IconSymbol({
@@ -174,7 +184,7 @@ function OrderCard({
 
         <View style={[styles.statusBadge, { backgroundColor: tone.backgroundColor }]}>
           <Text style={[styles.statusBadgeText, { color: tone.textColor }]} numberOfLines={2}>
-            {request.statusLabel}
+            {getStatusLabel(request, t)}
           </Text>
         </View>
       </View>

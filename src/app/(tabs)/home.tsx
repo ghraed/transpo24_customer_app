@@ -204,6 +204,16 @@ function getStatusTone(status: CustomerHomeRequestSummary["status"]): {
   }
 }
 
+function getStatusLabel(
+  request: CustomerHomeRequestSummary,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const key = `request_status.${request.status}`;
+  const translated = t(key);
+
+  return translated === key ? request.statusLabel : translated;
+}
+
 function IconSymbol({
   name,
   color,
@@ -333,7 +343,7 @@ function ActiveOrderCard({
             </Text>
           </View>
         </View>
-        <StatusBadge status={request.status} label={request.statusLabel} />
+        <StatusBadge status={request.status} label={getStatusLabel(request, t)} />
       </View>
 
       <View style={styles.activeOrderDivider} />
@@ -414,7 +424,7 @@ function RecentActivityRow({
       <View style={styles.recentMeta}>
         <Text style={styles.recentDate}>{getRequestDateLabel(request, t)}</Text>
         <Text style={[styles.recentStatus, { color: tone.textColor }]}>
-          {request.statusLabel}
+          {getStatusLabel(request, t)}
         </Text>
       </View>
     </Pressable>
