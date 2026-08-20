@@ -267,6 +267,13 @@ export async function logoutCustomerSession(): Promise<void> {
   }
 }
 
+export async function deleteCustomerAccountSession(): Promise<void> {
+  const { deleteCustomerAccount } = await import('./api');
+  await deleteCustomerAccount();
+  await clearSession();
+  await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
+}
+
 // Account switching keeps this device's verified session available for Continue.
 export async function switchCustomerAccountOnDevice(): Promise<void> {
   await clearSession();

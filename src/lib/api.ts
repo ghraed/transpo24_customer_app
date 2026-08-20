@@ -339,6 +339,17 @@ export async function updateCustomerProfile(
   );
 }
 
+export async function deleteCustomerAccount(): Promise<void> {
+  const endpoint = `${getApiBaseUrl()}/auth/account`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw await parseError(response, 'Unable to delete your account.');
+  }
+}
+
 function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerRequest {
   const pickup = response.pickupLocation;
   const dropoff = response.dropoffLocation;

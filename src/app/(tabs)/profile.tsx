@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -18,7 +19,10 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-import { switchCustomerAccountOnDevice } from "@/lib/auth-token";
+import {
+  deleteCustomerAccountSession,
+  switchCustomerAccountOnDevice,
+} from "@/lib/auth-token";
 import { getCustomerHome } from "@/lib/api";
 import { getCountryLabel } from "@/lib/country-currency";
 import {
@@ -57,6 +61,7 @@ export default function ProfileTabScreen() {
   const [profile, setProfile] = useState<CustomerHomeProfile | null>(null);
   const [pushStatus, setPushStatus] = useState("");
   const [isRegisteringPush, setIsRegisteringPush] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [pendingLanguage, setPendingLanguage] = useState<AppLanguage | null>(
     null,
@@ -102,6 +107,33 @@ export default function ProfileTabScreen() {
   const onLogout = async (): Promise<void> => {
     await switchCustomerAccountOnDevice();
     router.replace("/");
+  };
+
+  const onDeleteAccount = (): void => {
+    if (isDeletingAccount) return;
+    Alert.alert(
+      t("Delete account?"),
+      t("This permanently deletes your account, signs you out on all devices, and cannot be undone."),
+      [
+        { text: t("Cancel"), style: "cancel" },
+        {
+          text: t("Delete account"),
+          style: "destructive",
+          onPress: () => {
+            setIsDeletingAccount(true);
+            void deleteCustomerAccountSession()
+              .then(() => router.replace("/"))
+              .catch((error) => {
+                Alert.alert(
+                  t("Unable to delete account"),
+                  error instanceof Error ? error.message : t("Please try again."),
+                );
+              })
+              .finally(() => setIsDeletingAccount(false));
+          },
+        },
+      ],
+    );
   };
 
   const onRegisterPush = useCallback(async (): Promise<void> => {
@@ -373,6 +405,16 @@ export default function ProfileTabScreen() {
           {pushStatus ? (
             <Text style={styles.statusText}>{pushStatus}</Text>
           ) : null}
+
+          <Pressable
+            style={[styles.actionRow, styles.deleteAccountRow]}
+            onPress={onDeleteAccount}
+            disabled={isDeletingAccount}
+          >
+            <Text style={styles.deleteAccountText}>
+              {isDeletingAccount ? t("Deleting account...") : t("Delete account")}
+            </Text>
+          </Pressable>
         </View>
 
         <Pressable style={styles.logoutButton} onPress={() => void onLogout()}>
@@ -636,6 +678,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#111827",
+  },
+  deleteAccountRow: {
+    justifyContent: "center",
+    borderColor: "#F5C2C7",
+    backgroundColor: "#FFF7F7",
+  },
+  deleteAccountText: {
+    color: "#C82424",
+    fontSize: 15,
+    fontWeight: "800",
   },
   statusText: {
     marginTop: 12,
