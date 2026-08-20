@@ -9,6 +9,8 @@
   "Enter a valid phone number.": "Enter a valid phone number.",
   "Send verification code": "Send verification code",
   "Continue as {{phone}}": "Continue as {{phone}}",
+  "Use a different phone number": "Use a different phone number",
+  "Your saved device is still trusted. Check your connection and try again.": "Your saved device is still trusted. Check your connection and try again.",
   "Unable to continue. Please request a verification code.": "Unable to continue. Please request a verification code.",
   "Unable to send a verification code.": "Unable to send a verification code.",
   "By continuing, you agree to our Terms and Privacy Policy.": "By continuing, you agree to our Terms and Privacy Policy.",

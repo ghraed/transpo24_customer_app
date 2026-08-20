@@ -9,6 +9,8 @@
   "Enter a valid phone number.": "أدخل رقم هاتف صالحاً.",
   "Send verification code": "إرسال رمز التحقق",
   "Continue as {{phone}}": "المتابعة باسم {{phone}}",
+  "Use a different phone number": "استخدام رقم هاتف مختلف",
+  "Your saved device is still trusted. Check your connection and try again.": "لا يزال جهازك المحفوظ موثوقًا. تحقق من الاتصال وحاول مرة أخرى.",
   "Unable to continue. Please request a verification code.": "تعذر المتابعة. يرجى طلب رمز تحقق.",
   "Unable to send a verification code.": "تعذر إرسال رمز التحقق.",
   "By continuing, you agree to our Terms and Privacy Policy.": "بالمتابعة، أنت توافق على الشروط وسياسة الخصوصية.",

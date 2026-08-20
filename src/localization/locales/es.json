@@ -38,6 +38,8 @@
   "New customer?": "¿Cliente nuevo?",
   "Create an account": "Crear una cuenta",
   "Continue as {{phone}}": "Continuar como {{phone}}",
+  "Use a different phone number": "Usar otro número de teléfono",
+  "Your saved device is still trusted. Check your connection and try again.": "Tu dispositivo guardado sigue siendo de confianza. Comprueba la conexión e inténtalo de nuevo.",
   "Unable to continue. Please request a verification code.": "No se puede continuar. Solicita un código de verificación.",
   "Email and password are required.": "Se requieren correo electrónico y contraseña.",
   "Invalid server response. Please try again.": "Respuesta del servidor no válida. Inténtalo de nuevo.",

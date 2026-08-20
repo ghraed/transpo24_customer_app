@@ -30,12 +30,23 @@ export type AuthSessionSnapshot = {
   user: CustomerAuthUser | null;
 };
 
+export type TrustedSessionRestoreResult =
+  | { status: 'restored' }
+  | { status: 'invalid' }
+  | { status: 'unavailable'; message: string };
+
+type RefreshFailure = {
+  kind: 'invalid' | 'unavailable';
+  message: string;
+};
+
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 let currentUser: CustomerAuthUser | null = null;
 let snapshot: AuthSessionSnapshot = { status: 'initializing', user: null };
 let hydratePromise: Promise<AuthSessionSnapshot> | null = null;
 let refreshPromise: Promise<string | null> | null = null;
+let lastRefreshFailure: RefreshFailure | null = null;
 const listeners = new Set<() => void>();
 
 function emit(next: AuthSessionSnapshot): void {
@@ -139,17 +150,26 @@ export async function getTrustedCustomer(): Promise<CustomerAuthUser | null> {
   }
 }
 
-export async function restoreTrustedCustomerSession(): Promise<boolean> {
-  const storedSession = await readTrustedSession();
-  if (!storedSession) return false;
+export async function restoreTrustedCustomerSession(): Promise<TrustedSessionRestoreResult> {
+  try {
+    const storedSession = await readTrustedSession();
+    if (!storedSession) return { status: 'invalid' };
 
-  refreshToken = storedSession.refreshToken;
-  const refreshedToken = await refreshAccessToken();
+    refreshToken = storedSession.refreshToken;
+    const refreshedToken = await refreshAccessToken();
 
-  if (refreshedToken) return true;
+    if (refreshedToken) return { status: 'restored' };
+    if (lastRefreshFailure?.kind === 'unavailable') {
+      return { status: 'unavailable', message: lastRefreshFailure.message };
+    }
 
-  await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
-  return false;
+    return { status: 'invalid' };
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      message: error instanceof Error ? error.message : 'Unable to read the saved session.',
+    };
+  }
 }
 
 export async function clearAccessToken(): Promise<void> {
@@ -173,22 +193,43 @@ export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
 
   refreshPromise = (async () => {
+    lastRefreshFailure = null;
     try {
       const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
-      if (!response.ok) throw new Error('Refresh failed');
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          lastRefreshFailure = {
+            kind: 'invalid',
+            message: 'The saved session is no longer valid.',
+          };
+        } else {
+          lastRefreshFailure = {
+            kind: 'unavailable',
+            message: 'The server is temporarily unavailable. Please try again.',
+          };
+        }
+        throw new Error('Refresh failed');
+      }
       const session = (await response.json()) as CustomerSessionResponse;
       if (!session.accessToken || !session.refreshToken) throw new Error('Invalid refresh response');
       await setCustomerSession(session);
       return session.accessToken;
-    } catch {
-      await Promise.all([
-        clearSession(),
-        SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY),
-      ]);
+    } catch (error) {
+      if (!lastRefreshFailure) {
+        lastRefreshFailure = {
+          kind: 'unavailable',
+          message: error instanceof Error ? error.message : 'Unable to reach the server.',
+        };
+      }
+
+      await clearSession();
+      if (lastRefreshFailure.kind === 'invalid') {
+        await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
+      }
       return null;
     } finally {
       refreshPromise = null;

@@ -95,6 +95,17 @@ describe('customer session persistence', () => {
     expect(mockStorage.size).toBe(0);
   });
 
+  it('keeps the trusted device when refresh is temporarily unavailable', async () => {
+    const auth = loadAuth();
+    await auth.setCustomerSession(session);
+    jest.mocked(globalThis.fetch).mockResolvedValue(response(503));
+
+    await auth.refreshAccessToken();
+
+    expect(auth.getAuthSessionSnapshot().status).toBe('unauthenticated');
+    expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(session));
+  });
+
   it('revokes and clears the session on explicit logout', async () => {
     const auth = loadAuth();
     await auth.setCustomerSession(session);
@@ -120,7 +131,19 @@ describe('customer session persistence', () => {
     mockStorage.set('transpo24.customer.trustedSession', JSON.stringify({ ...session, refreshToken: 'trusted-refresh' }));
     jest.mocked(globalThis.fetch).mockResolvedValue(response(200, session));
     const auth = loadAuth();
-    await expect(auth.restoreTrustedCustomerSession()).resolves.toBe(true);
+    await expect(auth.restoreTrustedCustomerSession()).resolves.toEqual({ status: 'restored' });
     expect(auth.getAuthSessionSnapshot().status).toBe('authenticated');
+  });
+
+  it('keeps the continue option after a transient trusted-session failure', async () => {
+    mockStorage.set('transpo24.customer.trustedSession', JSON.stringify(session));
+    jest.mocked(globalThis.fetch).mockRejectedValue(new Error('Network unavailable'));
+    const auth = loadAuth();
+
+    await expect(auth.restoreTrustedCustomerSession()).resolves.toEqual({
+      status: 'unavailable',
+      message: 'Network unavailable',
+    });
+    expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(session));
   });
 });

@@ -43,17 +43,29 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [trustedPhoneNumber, setTrustedPhoneNumber] = useState('');
+  const [isLoadingTrustedSession, setIsLoadingTrustedSession] = useState(mode === 'login');
+  const [isUsingDifferentPhoneNumber, setIsUsingDifferentPhoneNumber] = useState(false);
   const [isRestoringTrustedSession, setIsRestoringTrustedSession] = useState(false);
 
   const normalizedPhoneNumber = normalizePhoneNumber(localNumber, country);
-  const canContinue = mode === 'login' && Boolean(trustedPhoneNumber) && !localNumber.trim();
+  const hasTrustedCustomer = mode === 'login' && Boolean(trustedPhoneNumber);
+  const showTrustedCustomerChoice = hasTrustedCustomer && !isUsingDifferentPhoneNumber;
 
   useEffect(() => {
     if (mode !== 'login') return;
 
-    void getTrustedCustomer().then((customer) => {
-      setTrustedPhoneNumber(customer?.phoneNumber ?? '');
-    });
+    let isActive = true;
+    void getTrustedCustomer()
+      .then((customer) => {
+        if (isActive) setTrustedPhoneNumber(customer?.phoneNumber ?? '');
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingTrustedSession(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
   }, [mode]);
 
   const sendCode = useCallback(async () => {
@@ -82,17 +94,31 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   }, [isLoading, normalizedPhoneNumber, router, t]);
 
   const continueTrustedSession = useCallback(async () => {
-    if (!canContinue || isRestoringTrustedSession) return;
+    if (!hasTrustedCustomer || isRestoringTrustedSession) return;
 
     setError('');
     setIsRestoringTrustedSession(true);
-    const restored = await restoreTrustedCustomerSession();
-    if (!restored) {
+    const result = await restoreTrustedCustomerSession();
+    if (result.status === 'invalid') {
       setTrustedPhoneNumber('');
       setError(t('Unable to continue. Please request a verification code.'));
+    } else if (result.status === 'unavailable') {
+      setError(t('Your saved device is still trusted. Check your connection and try again.'));
     }
     setIsRestoringTrustedSession(false);
-  }, [canContinue, isRestoringTrustedSession, t]);
+  }, [hasTrustedCustomer, isRestoringTrustedSession, t]);
+
+  const useDifferentPhoneNumber = useCallback(() => {
+    setError('');
+    setLocalNumber('');
+    setIsUsingDifferentPhoneNumber(true);
+  }, []);
+
+  const useTrustedPhoneNumber = useCallback(() => {
+    setError('');
+    setLocalNumber('');
+    setIsUsingDifferentPhoneNumber(false);
+  }, []);
 
   const handleCountryChange = useCallback((nextCountry: CountryCode) => {
     setCountry(nextCountry);
@@ -142,61 +168,76 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                   {t('Continue with your phone number')}
                 </Text>
               ) : null}
-              <Text style={[styles.label, isRTL && styles.rtl]}>{t('Phone number')}</Text>
-              <View style={[styles.phoneField, isRTL && styles.phoneFieldRtl]}>
-                <CountryPicker
-                  value={country}
-                  onChange={handleCountryChange}
-                  displayMode="callingCode"
-                />
-                <TextInput
-                  accessibilityLabel={t('Phone number')}
-                  style={[styles.phoneInput, isRTL && styles.rtlInput]}
-                  value={localNumber}
-                  onChangeText={handleNumberChange}
-                  placeholder="70 123 456"
-                  placeholderTextColor="#8A94A6"
-                  keyboardType="phone-pad"
-                  textContentType="telephoneNumber"
-                  returnKeyType="done"
-                  onSubmitEditing={() => void sendCode()}
-                />
-              </View>
               {error ? (
                 <Text accessibilityRole="alert" style={[styles.error, isRTL && styles.rtl]}>
                   {error}
                 </Text>
               ) : null}
-              {canContinue ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Continue as {{phone}}', { phone: trustedPhoneNumber })}
-                  style={[styles.secondaryButton, isRestoringTrustedSession && styles.disabled]}
-                  disabled={isRestoringTrustedSession}
-                  onPress={() => void continueTrustedSession()}
-                >
-                  {isRestoringTrustedSession ? (
-                    <ActivityIndicator color="#9A6500" />
-                  ) : (
-                    <Text style={styles.secondaryButtonText}>
-                      {t('Continue as {{phone}}', { phone: trustedPhoneNumber })}
-                    </Text>
-                  )}
-                </Pressable>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('Send verification code')}
-                style={[styles.button, isLoading && styles.disabled]}
-                disabled={isLoading}
-                onPress={() => void sendCode()}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#111827" />
-                ) : (
-                  <Text style={styles.buttonText}>{t('Send verification code')}</Text>
-                )}
-              </Pressable>
+              {isLoadingTrustedSession ? (
+                <View style={styles.trustedSessionLoading}>
+                  <ActivityIndicator color="#9A6500" />
+                </View>
+              ) : showTrustedCustomerChoice ? (
+                <>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Continue as {{phone}}', { phone: trustedPhoneNumber })}
+                    style={[styles.secondaryButton, isRestoringTrustedSession && styles.disabled]}
+                    disabled={isRestoringTrustedSession}
+                    onPress={() => void continueTrustedSession()}
+                  >
+                    {isRestoringTrustedSession ? (
+                      <ActivityIndicator color="#9A6500" />
+                    ) : (
+                      <Text style={styles.secondaryButtonText}>
+                        {t('Continue as {{phone}}', { phone: trustedPhoneNumber })}
+                      </Text>
+                    )}
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    style={styles.secondaryButton}
+                    onPress={useDifferentPhoneNumber}
+                  >
+                    <Text style={styles.secondaryButtonText}>{t('Use a different phone number')}</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  {hasTrustedCustomer ? (
+                    <Pressable accessibilityRole="button" onPress={useTrustedPhoneNumber}>
+                      <Text style={styles.useTrustedPhoneText}>
+                        {t('Continue as {{phone}}', { phone: trustedPhoneNumber })}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  <Text style={[styles.label, isRTL && styles.rtl]}>{t('Phone number')}</Text>
+                  <View style={[styles.phoneField, isRTL && styles.phoneFieldRtl]}>
+                    <CountryPicker value={country} onChange={handleCountryChange} displayMode="callingCode" />
+                    <TextInput
+                      accessibilityLabel={t('Phone number')}
+                      style={[styles.phoneInput, isRTL && styles.rtlInput]}
+                      value={localNumber}
+                      onChangeText={handleNumberChange}
+                      placeholder="70 123 456"
+                      placeholderTextColor="#8A94A6"
+                      keyboardType="phone-pad"
+                      textContentType="telephoneNumber"
+                      returnKeyType="done"
+                      onSubmitEditing={() => void sendCode()}
+                    />
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Send verification code')}
+                    style={[styles.button, isLoading && styles.disabled]}
+                    disabled={isLoading}
+                    onPress={() => void sendCode()}
+                  >
+                    {isLoading ? <ActivityIndicator color="#111827" /> : <Text style={styles.buttonText}>{t('Send verification code')}</Text>}
+                  </Pressable>
+                </>
+              )}
               <View style={styles.footerRow}>
                 {mode === 'login' ? (
                   <>
@@ -265,6 +306,8 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 10 },
   },
+  trustedSessionLoading: { minHeight: 116, alignItems: 'center', justifyContent: 'center' },
+  useTrustedPhoneText: { color: '#9A6500', fontSize: 14, fontWeight: '800', marginBottom: 14 },
   title: { fontSize: 18, lineHeight: 34, fontWeight: '800', color: clientTheme.text, marginBottom: 22 },
   label: { marginBottom: 8, fontSize: 13, color: clientTheme.text, fontWeight: '700' },
   phoneField: {

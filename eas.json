@@ -13,6 +13,12 @@
     },
     "production": {
       "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.transpo24.com",
+        "EXPO_PUBLIC_SOCKET_URL": "https://api.transpo24.com",
+        "EXPO_PUBLIC_ANDROID_API_URL": "https://api.transpo24.com",
+        "EXPO_PUBLIC_ANDROID_SOCKET_URL": "https://api.transpo24.com"
+      },
       "autoIncrement": true
     }
   },
