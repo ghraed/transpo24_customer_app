@@ -5,6 +5,7 @@ import { ActivityIndicator, View, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { EnvironmentBanner } from '@/components/environment-banner';
 import { clientTheme } from '@/components/tracking-ui';
 import { hydrateAuthSession, useAuthSession } from '@/lib/auth-token';
 import { LocalizationProvider, useAppLanguage } from '@/localization/provider';
@@ -156,7 +157,10 @@ function RootNavigator() {
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
-        <Stack>
+        <View style={{ flex: 1 }}>
+          <EnvironmentBanner />
+          <View style={{ flex: 1 }}>
+            <Stack>
           <Stack.Screen
             name="index"
             options={{
@@ -354,7 +358,9 @@ function RootNavigator() {
               headerShadowVisible: false,
             }}
           />
-        </Stack>
+            </Stack>
+          </View>
+        </View>
       </ThemeProvider>
     </StripeProvider>
   );

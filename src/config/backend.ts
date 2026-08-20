@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 export interface BackendConnectionTarget {
@@ -27,6 +26,22 @@ const BACKEND_CONNECTION_TARGETS: readonly BackendConnectionTarget[] = [
   },
 ] as const;
 
+/**
+ * Expo Go and development-client sessions execute with __DEV__ enabled. Keep
+ * those sessions on the locally running API even though EXPO_PUBLIC_* values
+ * are bundled into the app for production builds. On Android, adb reverse
+ * makes the device's loopback address reach the development machine.
+ */
+function getDevelopmentBackendUrl(): string | undefined {
+  if (!__DEV__) {
+    return undefined;
+  }
+
+  return Platform.OS === 'android'
+    ? 'http://127.0.0.1:3001'
+    : 'http://localhost:3001';
+}
+
 function normalizeUrl(url: string): string {
   return url.trim().replace(/\/$/, '');
 }
@@ -38,7 +53,12 @@ function formatBackendConnectionTargets(): string {
 }
 
 function readBackendEnvValue(baseName: 'API_URL' | 'SOCKET_URL'): string | undefined {
-  if (__DEV__ && Platform.OS === 'android') {
+  const developmentUrl = getDevelopmentBackendUrl();
+  if (developmentUrl) {
+    return developmentUrl;
+  }
+
+  if (Platform.OS === 'android') {
     const androidOverride = process.env[`EXPO_PUBLIC_ANDROID_${baseName}`]?.trim();
     if (androidOverride) {
       return androidOverride;
@@ -46,16 +66,6 @@ function readBackendEnvValue(baseName: 'API_URL' | 'SOCKET_URL'): string | undef
   }
 
   return process.env[`EXPO_PUBLIC_${baseName}`]?.trim();
-}
-
-function getDevServerHost(): string | null {
-  const hostUri = Constants.expoConfig?.hostUri?.trim();
-  if (!hostUri) {
-    return null;
-  }
-
-  const host = hostUri.split(':')[0]?.trim();
-  return host || null;
 }
 
 export function createBackendReachabilityError(endpoint: string, envName = 'EXPO_PUBLIC_API_URL'): Error {
@@ -70,16 +80,7 @@ export function getApiBaseUrl(): string {
     return normalizeUrl(explicit);
   }
 
-  const devHost = getDevServerHost();
-  if (devHost) {
-    return `http://${devHost}:3001`;
-  }
-
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:3001';
-  }
-
-  return 'http://localhost:3001';
+  throw new Error('EXPO_PUBLIC_API_URL is missing. Please set it in your environment.');
 }
 
 export function getSocketBaseUrl(): string {
