@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import appI18n from '@/localization/i18n';
+
 import { getApiBaseUrl } from '@/config/backend';
 
 const PRODUCTION_API_URL = 'https://api.transpo24.com';
@@ -11,10 +13,13 @@ export function EnvironmentBanner() {
 
   return (
     <View
-      accessibilityLabel={`API environment: ${isProduction ? 'production' : 'local'} (${apiUrl})`}
+      accessibilityLabel={appI18n.t('API environment: {{environment}} ({{apiUrl}})', {
+        environment: isProduction ? appI18n.t('Production') : appI18n.t('Local'),
+        apiUrl,
+      })}
       style={[styles.container, isProduction ? styles.production : styles.local]}
     >
-      <Text style={styles.label}>{isProduction ? 'PRODUCTION' : 'LOCAL'}</Text>
+      <Text style={styles.label}>{(isProduction ? appI18n.t('Production') : appI18n.t('Local')).toUpperCase()}</Text>
       <Text numberOfLines={1} style={styles.url}>{apiUrl}</Text>
     </View>
   );

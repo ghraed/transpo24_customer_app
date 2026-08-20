@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import appI18n from '@/localization/i18n';
 
 const INTRO_DURATION_MS = 1650;
 const INTRO_FADE_DURATION_MS = 60;
@@ -104,7 +105,7 @@ export function LoginIntroGate({ children }: LoginIntroGateProps) {
             setShowIntro(false);
           }}
         >
-          <Text style={styles.skipButtonText}>Skip</Text>
+          <Text style={styles.skipButtonText}>{appI18n.t("Skip")}</Text>
         </Pressable>
       </Animated.View>
     </View>

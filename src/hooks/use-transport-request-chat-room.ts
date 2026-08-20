@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getChatRoomByTransportRequestId } from '@/lib/api';
 import type { ChatRoom } from '@/types/chat';
+import appI18n from '@/localization/i18n';
 
 function isMissingChatRoomError(error: unknown): boolean {
   return error instanceof Error && error.message.toLowerCase().includes('not found');
@@ -41,7 +42,7 @@ export function useTransportRequestChatRoom({
       }
 
       setRoom(null);
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to load chat room.');
+      setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to load chat room."));
       return null;
     } finally {
       setIsLoading(false);

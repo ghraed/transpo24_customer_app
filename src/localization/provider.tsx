@@ -127,7 +127,7 @@ export function useAppLanguage(): LocalizationContextValue {
   const context = useContext(LocalizationContext);
 
   if (!context) {
-    throw new Error('useAppLanguage must be used inside LocalizationProvider.');
+    throw new Error(i18n.t("useAppLanguage must be used inside LocalizationProvider."));
   }
 
   return context;

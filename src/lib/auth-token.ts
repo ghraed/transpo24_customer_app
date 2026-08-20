@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 
 import { getApiBaseUrl } from '@/config/backend';
+import appI18n from '@/localization/i18n';
 
 const ACCESS_TOKEN_STORAGE_KEY = 'transpo24.customer.accessToken';
 const REFRESH_TOKEN_STORAGE_KEY = 'transpo24.customer.refreshToken';
@@ -167,7 +168,7 @@ export async function restoreTrustedCustomerSession(): Promise<TrustedSessionRes
   } catch (error) {
     return {
       status: 'unavailable',
-      message: error instanceof Error ? error.message : 'Unable to read the saved session.',
+      message: error instanceof Error ? error.message : appI18n.t("Unable to read the saved session."),
     };
   }
 }
@@ -212,17 +213,17 @@ export async function refreshAccessToken(): Promise<string | null> {
             message: 'The server is temporarily unavailable. Please try again.',
           };
         }
-        throw new Error('Refresh failed');
+        throw new Error(appI18n.t("Refresh failed"));
       }
       const session = (await response.json()) as CustomerSessionResponse;
-      if (!session.accessToken || !session.refreshToken) throw new Error('Invalid refresh response');
+      if (!session.accessToken || !session.refreshToken) throw new Error(appI18n.t("Invalid refresh response"));
       await setCustomerSession(session);
       return session.accessToken;
     } catch (error) {
       if (!lastRefreshFailure) {
         lastRefreshFailure = {
           kind: 'unavailable',
-          message: error instanceof Error ? error.message : 'Unable to reach the server.',
+          message: error instanceof Error ? error.message : appI18n.t("Unable to reach the server."),
         };
       }
 
@@ -352,7 +353,7 @@ async function readTrustedSession(): Promise<CustomerSessionResponse | null> {
       typeof session.user.phoneNumber !== 'string' ||
       typeof session.profileCompleted !== 'boolean'
     ) {
-      throw new Error('Invalid trusted session');
+      throw new Error(appI18n.t("Invalid trusted session"));
     }
     return session as CustomerSessionResponse;
   } catch {

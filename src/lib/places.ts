@@ -1,4 +1,5 @@
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
+import appI18n from '@/localization/i18n';
 
 const PLACES_AUTOCOMPLETE_ENDPOINT =
   'https://maps.googleapis.com/maps/api/place/autocomplete/json';
@@ -63,7 +64,7 @@ export async function searchPlacesAutocomplete(
   }
 
   if (!GOOGLE_MAPS_API_KEY) {
-    throw new Error('Google Maps API key is missing.');
+    throw new Error(appI18n.t("Google Maps API key is missing."));
   }
 
   const params = new URLSearchParams({
@@ -75,7 +76,7 @@ export async function searchPlacesAutocomplete(
   const payload = (await response.json()) as PlacesAutocompleteResponse;
 
   if (!response.ok) {
-    throw new Error(payload.error_message ?? 'Places autocomplete request failed.');
+    throw new Error(payload.error_message ?? appI18n.t("Places autocomplete request failed."));
   }
 
   if (payload.status && payload.status !== 'OK' && payload.status !== 'ZERO_RESULTS') {
@@ -92,7 +93,7 @@ export async function searchPlacesAutocomplete(
 
 export async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceLocation> {
   if (!GOOGLE_MAPS_API_KEY) {
-    throw new Error('Google Maps API key is missing.');
+    throw new Error(appI18n.t("Google Maps API key is missing."));
   }
 
   const params = new URLSearchParams({
@@ -105,7 +106,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceL
   const payload = (await response.json()) as PlaceDetailsResponse;
 
   if (!response.ok) {
-    throw new Error(payload.error_message ?? 'Place details request failed.');
+    throw new Error(payload.error_message ?? appI18n.t("Place details request failed."));
   }
 
   if (payload.status && payload.status !== 'OK') {
@@ -116,7 +117,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceL
   const lng = payload.result?.geometry?.location?.lng;
 
   if (typeof lat !== 'number' || typeof lng !== 'number') {
-    throw new Error('Place details did not return coordinates.');
+    throw new Error(appI18n.t("Place details did not return coordinates."));
   }
 
   return {
@@ -142,7 +143,7 @@ export async function resolvePlaceFromQuery(input: string): Promise<ResolvedPlac
   const suggestions = await searchPlacesAutocomplete(input);
 
   if (suggestions.length === 0) {
-    throw new Error('No matching places found.');
+    throw new Error(appI18n.t("No matching places found."));
   }
 
   return resolvePlaceSuggestion(suggestions[0]);
@@ -153,7 +154,7 @@ export async function reverseGeocodeCoordinates(
   longitude: number,
 ): Promise<ResolvedPlaceLocation | null> {
   if (!GOOGLE_MAPS_API_KEY) {
-    throw new Error('Google Maps API key is missing.');
+    throw new Error(appI18n.t("Google Maps API key is missing."));
   }
 
   const params = new URLSearchParams({
@@ -165,7 +166,7 @@ export async function reverseGeocodeCoordinates(
   const payload = (await response.json()) as GeocodeResponse;
 
   if (!response.ok) {
-    throw new Error(payload.error_message ?? 'Reverse geocoding request failed.');
+    throw new Error(payload.error_message ?? appI18n.t("Reverse geocoding request failed."));
   }
 
   if (payload.status && payload.status !== 'OK' && payload.status !== 'ZERO_RESULTS') {

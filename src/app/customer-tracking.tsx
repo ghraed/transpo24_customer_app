@@ -47,6 +47,7 @@ import {
   validateTripId,
   validateTripStatusUpdatedPayload,
 } from '@/utils/locationValidation';
+import appI18n from '@/localization/i18n';
 
 function parseNumber(value: string | string[] | undefined): number | null {
   if (typeof value !== 'string') return null;
@@ -118,18 +119,18 @@ export default function CustomerTrackingScreen() {
   useEffect(() => {
     const validTripId = validateTripId(tripId);
     if (!validTripId) {
-      setTimeout(() => setErrorMessage('Invalid trip id.'), 0);
+      setTimeout(() => setErrorMessage(appI18n.t("Invalid trip id.")), 0);
       return;
     }
 
     if (!pickupLocation || !dropoffLocation) {
-      setTimeout(() => setErrorMessage('Invalid trip locations.'), 0);
+      setTimeout(() => setErrorMessage(appI18n.t("Invalid trip locations.")), 0);
       return;
     }
 
     const token = getAccessToken();
     if (!token) {
-      setTimeout(() => setErrorMessage('Missing auth token. Please login again.'), 0);
+      setTimeout(() => setErrorMessage(appI18n.t("Missing auth token. Please login again.")), 0);
       return;
     }
 
@@ -140,7 +141,7 @@ export default function CustomerTrackingScreen() {
       setTimeout(
         () =>
           setErrorMessage(
-            error instanceof Error ? error.message : 'Failed to connect realtime socket.',
+            error instanceof Error ? error.message : appI18n.t("Failed to connect realtime socket."),
           ),
         0,
       );
@@ -202,11 +203,11 @@ export default function CustomerTrackingScreen() {
     });
 
     const unsubDisconnect = onSocketDisconnect(() => {
-      setErrorMessage('Socket disconnected. Waiting to reconnect...');
+      setErrorMessage(appI18n.t("Socket disconnected. Waiting to reconnect..."));
     });
 
     const unsubSocketError = onSocketError((message) => {
-      setErrorMessage(message || 'Socket error.');
+      setErrorMessage(message || appI18n.t("Socket error."));
     });
 
     const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
@@ -229,10 +230,9 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Map configuration missing</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Map configuration missing")}</Text>
           <Text style={styles.fallbackText}>
-            Set the Google Maps API key to display live tracking.
-          </Text>
+            {appI18n.t("Set the Google Maps API key to display live tracking.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -247,8 +247,8 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
-          <Text style={styles.fallbackText}>Invalid tracking parameters.</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Tracking unavailable")}</Text>
+          <Text style={styles.fallbackText}>{appI18n.t("Invalid tracking parameters.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -263,10 +263,9 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Tracking unavailable")}</Text>
           <Text style={styles.fallbackText}>
-            Trip tracking map is available on iOS and Android only.
-          </Text>
+            {appI18n.t("Trip tracking map is available on iOS and Android only.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -282,15 +281,15 @@ export default function CustomerTrackingScreen() {
         longitudeDelta: 0.04,
       }}
     >
-      <NativeMarker coordinate={pickupLocation} title="Pickup" />
-      <NativeMarker coordinate={dropoffLocation} title="Destination" anchor={{ x: 0.5, y: 0.5 }}>
+      <NativeMarker coordinate={pickupLocation} title={appI18n.t("Pickup")} />
+      <NativeMarker coordinate={dropoffLocation} title={appI18n.t("Destination")} anchor={{ x: 0.5, y: 0.5 }}>
         <View style={styles.destinationXMarker}>
           <Text style={styles.destinationXText}>X</Text>
         </View>
       </NativeMarker>
       {driverLocation ? (
         <>
-          <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
+          <NativeMarker coordinate={driverLocation} title={appI18n.t("Driver")} anchor={{ x: 0.5, y: 0.5 }}>
             <Text style={styles.driverMarkerIcon}>🚗</Text>
           </NativeMarker>
           <NativeMapViewDirections
@@ -319,14 +318,14 @@ export default function CustomerTrackingScreen() {
       <TrackingScrollable>
         <TrackingHero
           eyebrow={`Order #${tripId || 'N/A'}`}
-          title="Driver on the way"
+          title={appI18n.t("Driver on the way")}
           description="Live location updates appear here as the driver heads to the pickup point."
         />
 
         <TrackingProgress currentStage={2} />
 
         <TrackingMapShell
-          title="Live map"
+          title={appI18n.t("Live map")}
           subtitle="Tracking the driver route to your pickup address."
           onExpand={() => setIsMapExpanded(true)}
         >
@@ -335,36 +334,38 @@ export default function CustomerTrackingScreen() {
 
         <TrackingScreenCard>
           <TrackingInfoPill
-            label={driverLocation ? 'Live tracking active' : 'Waiting for updates'}
+            label={driverLocation ? appI18n.t('Live tracking active') : appI18n.t('Waiting for updates')}
             tone={driverLocation ? 'success' : 'accent'}
           />
           <Text style={styles.cardTitle}>{statusText}</Text>
           <Text style={styles.cardBody}>
-            The app will move automatically to the next step once the driver arrives at pickup.
-          </Text>
+            {appI18n.t("The app will move automatically to the next step once the driver arrives at pickup.")}</Text>
           <TrackingMetaRow
-            label="Pickup address"
+            label={appI18n.t("Pickup address")}
             value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
           />
           <TrackingMetaRow
-            label="Dropoff address"
+            label={appI18n.t("Dropoff address")}
             value={
               dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
             }
           />
-          <TrackingMetaRow label="Current distance" value={distanceText} />
+          <TrackingMetaRow label={appI18n.t("Current distance")} value={distanceText} />
           {!driverLocation ? (
             <View style={styles.inlineRow}>
               <ActivityIndicator size="small" color={clientTheme.accentStrong} />
-              <Text style={styles.helperText}>Waiting for driver location updates...</Text>
+              <Text style={styles.helperText}>{appI18n.t("Waiting for driver location updates...")}</Text>
             </View>
           ) : null}
           {latestAdditionalCharge ? (
             <View style={styles.noticeCard}>
-              <Text style={styles.noticeTitle}>Additional charge added</Text>
+              <Text style={styles.noticeTitle}>{appI18n.t("Additional charge added")}</Text>
               <Text style={styles.noticeText}>
-                {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} for{' '}
-                {latestAdditionalCharge.reason}
+                {appI18n.t('{{amount}} {{currency}} for {{reason}}', {
+                  amount: latestAdditionalCharge.amount.toFixed(2),
+                  currency: latestAdditionalCharge.currency,
+                  reason: latestAdditionalCharge.reason,
+                })}
               </Text>
             </View>
           ) : null}
@@ -375,7 +376,7 @@ export default function CustomerTrackingScreen() {
 
       <TrackingMapModal
         visible={isMapExpanded}
-        title="Driver tracking map"
+        title={appI18n.t("Driver tracking map")}
         onClose={() => setIsMapExpanded(false)}
       >
         {renderMap(styles.expandedMap)}

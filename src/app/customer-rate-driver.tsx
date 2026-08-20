@@ -24,6 +24,7 @@ import {
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { createDriverRating, getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 type RouteParams = {
   tripId?: string;
@@ -64,13 +65,15 @@ function StarButton({
           style={styles.halfPress}
           onPress={() => onSelect(starNumber - 0.5)}
           accessibilityRole="button"
-          accessibilityLabel={`Rate ${formatRating(starNumber - 0.5)} stars`}
+          accessibilityLabel={appI18n.t('Rate {{rating}} stars', {
+            rating: formatRating(starNumber - 0.5),
+          })}
         />
         <Pressable
           style={styles.halfPress}
           onPress={() => onSelect(starNumber)}
           accessibilityRole="button"
-          accessibilityLabel={`Rate ${starNumber} stars`}
+          accessibilityLabel={appI18n.t('Rate {{rating}} stars', { rating: starNumber })}
         />
       </View>
     </View>
@@ -100,7 +103,7 @@ export default function CustomerRateDriverScreen() {
         const response = await getRequestTracking(tripId);
         setTracking(response);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : 'Failed to load trip rating details.');
+        setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to load trip rating details."));
       } finally {
         setIsLoading(false);
       }
@@ -136,7 +139,7 @@ export default function CustomerRateDriverScreen() {
         params: { requestId: tripId },
       });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit driver rating.');
+      setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to submit driver rating."));
     } finally {
       setIsSubmitting(false);
     }
@@ -158,27 +161,27 @@ export default function CustomerRateDriverScreen() {
         >
           <TrackingHero
             eyebrow={`Order #${tripId || 'N/A'}`}
-            title="Rate your driver"
+            title={appI18n.t("Rate your driver")}
             description="Share a quick rating and optional feedback about the completed delivery."
           />
 
           <TrackingProgress currentStage={5} />
 
           <TrackingScreenCard>
-            <TrackingInfoPill label="Delivery completed" tone="success" />
-            <TrackingMetaRow label="Trip ID" value={tripId || 'N/A'} />
-            {tracking?.driverName ? <TrackingMetaRow label="Driver" value={tracking.driverName} /> : null}
+            <TrackingInfoPill label={appI18n.t("Delivery completed")} tone="success" />
+            <TrackingMetaRow label={appI18n.t("Trip ID")} value={tripId || 'N/A'} />
+            {tracking?.driverName ? <TrackingMetaRow label={appI18n.t("Driver")} value={tracking.driverName} /> : null}
           </TrackingScreenCard>
 
           <TrackingScreenCard>
             {isLoading ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator size="small" color={clientTheme.accentStrong} />
-                <Text style={styles.bodyText}>Loading trip rating details...</Text>
+                <Text style={styles.bodyText}>{appI18n.t("Loading trip rating details...")}</Text>
               </View>
             ) : (
               <>
-                <Text style={styles.sectionTitle}>Your rating</Text>
+                <Text style={styles.sectionTitle}>{appI18n.t("Your rating")}</Text>
                 <Text style={styles.ratingValue}>{formatRating(selectedRating)} / 5</Text>
                 <View style={styles.starsRow}>
                   {[1, 2, 3, 4, 5].map((starNumber) => (
@@ -213,19 +216,18 @@ export default function CustomerRateDriverScreen() {
                 </View>
                 {tracking?.ratingAvailable === false ? (
                   <Text style={styles.bodyText}>
-                    Rating is no longer available for this trip. It may already have been submitted.
-                  </Text>
+                    {appI18n.t("Rating is no longer available for this trip. It may already have been submitted.")}</Text>
                 ) : null}
               </>
             )}
           </TrackingScreenCard>
 
           <TrackingScreenCard>
-            <Text style={styles.sectionTitle}>Feedback</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Feedback")}</Text>
             <TextInput
               value={comment}
               onChangeText={setComment}
-              placeholder="Add feedback about the driver, optional"
+              placeholder={appI18n.t("Add feedback about the driver, optional")}
               placeholderTextColor="#8A94A6"
               style={styles.input}
               multiline
@@ -245,7 +247,7 @@ export default function CustomerRateDriverScreen() {
             disabled={!canSubmit}
           >
             <Text style={styles.primaryButtonText}>
-              {isSubmitting ? 'Submitting...' : 'Submit rating'}
+              {isSubmitting ? appI18n.t('Submitting...') : appI18n.t('Submit rating')}
             </Text>
           </Pressable>
 
@@ -258,7 +260,7 @@ export default function CustomerRateDriverScreen() {
               })
             }
           >
-            <Text style={styles.secondaryButtonText}>Back to request status</Text>
+            <Text style={styles.secondaryButtonText}>{appI18n.t("Back to request status")}</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

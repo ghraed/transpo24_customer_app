@@ -82,6 +82,7 @@ import {
   validateItemPickedUpPayload,
   validateTripStatusUpdatedPayload,
 } from '@/utils/pickupValidation';
+import appI18n from '@/localization/i18n';
 
 interface OrderProgressStep {
   id: number;
@@ -128,7 +129,7 @@ function sleep(ms: number): Promise<void> {
 
 function getOrderReference(id: string): string {
   const compact = id.replace(/-/g, '').slice(0, 8).toUpperCase();
-  return `TRP-${compact || id}`;
+  return appI18n.t("TRP-{{value0}}", { value0: compact || id });
 }
 
 function resolveAssetUrl(url: string): string {
@@ -139,7 +140,7 @@ function resolveAssetUrl(url: string): string {
   }
 
   const baseUrl = getApiBaseUrl();
-  return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+  return appI18n.t("{{value0}}{{value1}}{{value2}}", { value0: baseUrl, value1: trimmed.startsWith('/') ? '' : '/', value2: trimmed });
 }
 
 function formatLocation(
@@ -147,7 +148,7 @@ function formatLocation(
 ): string {
   if (location.address) return location.address;
   if (location.latitude === null || location.longitude === null) return 'N/A';
-  return `Lat ${location.latitude.toFixed(6)}, Lng ${location.longitude.toFixed(6)}`;
+  return appI18n.t("Lat {{value0}}, Lng {{value1}}", { value0: location.latitude.toFixed(6), value1: location.longitude.toFixed(6) });
 }
 
 function getOrderProgressStep(
@@ -263,23 +264,23 @@ function upsertOffer(
 function getSocketStateLabel(socketState: SocketState): string {
   switch (socketState) {
     case 'connecting':
-      return 'Realtime connecting…';
+      return appI18n.t("Realtime connecting…");
     case 'connected':
-      return 'Realtime connected';
+      return appI18n.t("Realtime connected");
     case 'disconnected':
-      return 'Realtime disconnected';
+      return appI18n.t("Realtime disconnected");
     case 'error':
-      return 'Realtime connection issue';
+      return appI18n.t("Realtime connection issue");
     case 'unavailable':
-      return 'Realtime unavailable';
+      return appI18n.t("Realtime unavailable");
     default:
-      return 'Realtime idle';
+      return appI18n.t("Realtime idle");
   }
 }
 
 function getRatingText(rating: number | null): string {
-  if (rating === null) return 'No rating yet';
-  return `★ ${rating.toFixed(1)}`;
+  if (rating === null) return appI18n.t("No rating yet");
+  return appI18n.t("★ {{value0}}", { value0: rating.toFixed(1) });
 }
 
 async function waitForCancelledStatus(
@@ -329,21 +330,21 @@ function buildOffersHelperText(requestData: RequestStatusResponse, offersCount: 
     const lowestCurrency = requestData.quotesSummary.currency;
 
     if (lowestOffer !== null && lowestCurrency) {
-      return `${offersCount} offers available • Lowest ${lowestOffer} ${lowestCurrency}`;
+      return appI18n.t("{{value0}} offers available • Lowest {{value1}} {{value2}}", { value0: offersCount, value1: lowestOffer, value2: lowestCurrency });
     }
 
-    return `${offersCount} offers available`;
+    return appI18n.t("{{value0}} offers available", { value0: offersCount });
   }
 
   if (requestData.dispatchSummary?.noConnectedDriversAvailable) {
-    return 'Your request was created. We are waiting for available drivers.';
+    return appI18n.t("Your request was created. We are waiting for available drivers.");
   }
 
   if ((requestData.dispatchSummary?.eligibleDriversCount ?? 0) > 0) {
-    return `Sent to ${requestData.dispatchSummary?.eligibleDriversCount ?? 0} eligible drivers.`;
+    return appI18n.t("Sent to {{value0}} eligible drivers.", { value0: requestData.dispatchSummary?.eligibleDriversCount ?? 0 });
   }
 
-  return 'Drivers will review your request and send offers soon.';
+  return appI18n.t("Drivers will review your request and send offers soon.");
 }
 
 function formatMoney(amount: number, currency: string | null | undefined): string {
@@ -356,18 +357,18 @@ function formatMoney(amount: number, currency: string | null | undefined): strin
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${amount.toFixed(2)} ${code}`;
+    return appI18n.t("{{value0}} {{value1}}", { value0: amount.toFixed(2), value1: code });
   }
 }
 
 function formatSavedPaymentMethod(paymentMethod: SavedPaymentMethodSummary | null): string {
   if (!paymentMethod) {
-    return 'No saved card';
+    return appI18n.t("No saved card");
   }
 
   const brand = paymentMethod.brand?.toUpperCase() || 'CARD';
   const last4 = paymentMethod.last4 ?? '----';
-  return `${brand} •••• ${last4}`;
+  return appI18n.t("{{value0}} •••• {{value1}}", { value0: brand, value1: last4 });
 }
 
 function getAdditionalChargePaymentOption(charge: AdditionalCharge): 'SAVED_CARD' | 'CASH_ON_DELIVERY' | null {
@@ -417,14 +418,14 @@ function getTrackingStatusLabel(
     nearDeliveryNotifiedAt &&
     (status === 'IN_TRANSIT' || status === 'DRIVER_GOING_TO_DROPOFF')
   ) {
-    return 'Driver is near the delivery location';
+    return appI18n.t("Driver is near the delivery location");
   }
 
   if (ratingAvailable && (status === 'DELIVERED' || status === 'COMPLETED')) {
-    return 'Rating pending';
+    return appI18n.t("Rating pending");
   }
 
-  return STATUS_LABELS[status as CustomerRequestStatus] ?? status;
+  return appI18n.t(STATUS_LABELS[status as CustomerRequestStatus] ?? status);
 }
 
 function buildTrackingHref(
@@ -520,7 +521,7 @@ export default function RequestStatusScreen() {
   const loadStatus = useCallback(
     async (refresh: boolean): Promise<void> => {
       if (!requestId) {
-        setErrorMessage('Missing request id. Please go back and submit your request again.');
+        setErrorMessage(appI18n.t("Missing request id. Please go back and submit your request again."));
         setIsLoading(false);
         setIsRefreshing(false);
         return;
@@ -540,8 +541,8 @@ export default function RequestStatusScreen() {
           data = await getCustomerRequestStatus(requestId);
         } catch (error) {
           const message =
-            error instanceof Error ? error.message : 'Unknown status error.';
-          throw new Error(`Request status failed: ${message}`);
+            error instanceof Error ? error.message : appI18n.t("Unknown status error.");
+          throw new Error(appI18n.t("Request status failed: {{value0}}", { value0: message }));
         }
 
         if (data.status === 'CANCELLED') {
@@ -559,24 +560,21 @@ export default function RequestStatusScreen() {
           await Promise.all([
             getCustomerRequestOffers(requestId).catch((error: unknown) => {
               throw new Error(
-                `Request offers failed: ${error instanceof Error ? error.message : 'Unknown offers error.'
-                }`,
+                appI18n.t("Request offers failed: {{value0}}", { value0: error instanceof Error ? error.message : appI18n.t("Unknown offers error.") }),
               );
             }),
             getRequestAdditionalCharges(requestId).catch((error: unknown) => {
               throw new Error(
-                `Additional charges failed: ${error instanceof Error
+                appI18n.t("Additional charges failed: {{value0}}", { value0: error instanceof Error
                   ? error.message
-                  : 'Unknown additional charges error.'
-                }`,
+                  : appI18n.t("Unknown additional charges error.") }),
               );
             }),
             getDefaultPaymentMethod().catch((error: unknown) => {
               throw new Error(
-                `Default payment method failed: ${error instanceof Error
+                appI18n.t("Default payment method failed: {{value0}}", { value0: error instanceof Error
                   ? error.message
-                  : 'Unknown payment method error.'
-                }`,
+                  : appI18n.t("Unknown payment method error.") }),
               );
             }),
           ]);
@@ -590,10 +588,9 @@ export default function RequestStatusScreen() {
 
           if (!trackingMessage.includes('not found')) {
             throw new Error(
-              `Request tracking failed: ${trackingError instanceof Error
+              appI18n.t("Request tracking failed: {{value0}}", { value0: trackingError instanceof Error
                 ? trackingError.message
-                : 'Unknown tracking error.'
-              }`,
+                : appI18n.t("Unknown tracking error.") }),
             );
           }
         }
@@ -610,13 +607,13 @@ export default function RequestStatusScreen() {
             : '',
         );
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to load request status.';
+        const message = error instanceof Error ? error.message : appI18n.t("Failed to load request status.");
         const normalized = message.toLowerCase();
 
         if (normalized.includes('not found')) {
-          setErrorMessage('Request not found.');
+          setErrorMessage(appI18n.t("Request not found."));
         } else if (normalized.includes('forbidden') || normalized.includes('access')) {
-          setErrorMessage('You do not have access to this request.');
+          setErrorMessage(appI18n.t("You do not have access to this request."));
         } else {
           setErrorMessage(message);
         }
@@ -658,7 +655,7 @@ export default function RequestStatusScreen() {
     try {
       connectSocket(socketAccessToken);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to connect realtime socket.';
+      const message = error instanceof Error ? error.message : appI18n.t("Failed to connect realtime socket.");
       setTimeout(() => {
         setSocketState('error');
         setSocketMessage(message);
@@ -674,7 +671,7 @@ export default function RequestStatusScreen() {
       })
       .catch((error) => {
         setSocketState('error');
-        setSocketMessage(error instanceof Error ? error.message : 'Realtime connection timeout.');
+        setSocketMessage(error instanceof Error ? error.message : appI18n.t("Realtime connection timeout."));
       });
 
     const unsubOfferNew = onOfferNew((payload) => {
@@ -1084,7 +1081,7 @@ export default function RequestStatusScreen() {
       setCancelTripDebugMessage('Cancellation completed successfully.');
     } catch (error) {
       const primaryErrorMessage =
-        error instanceof Error ? error.message : 'Failed to cancel this trip.';
+        error instanceof Error ? error.message : appI18n.t("Failed to cancel this trip.");
       setCancelTripDebugMessage(
         `Primary cancellation call failed: ${primaryErrorMessage}`,
       );
@@ -1115,7 +1112,7 @@ export default function RequestStatusScreen() {
         );
       } catch (statusError) {
         setCancelTripDebugMessage(
-          `Fallback status refresh failed: ${statusError instanceof Error ? statusError.message : 'Unknown error.'
+          `Fallback status refresh failed: ${statusError instanceof Error ? statusError.message : appI18n.t("Unknown error.")
           }`,
         );
       }
@@ -1214,10 +1211,9 @@ export default function RequestStatusScreen() {
       if (!requestData || !shouldShowTrackingMap) {
         return (
           <View style={[styles.mapFallbackCard, expanded ? styles.mapFallbackCardExpanded : null]}>
-            <Text style={styles.cardTitle}>Live Map</Text>
+            <Text style={styles.cardTitle}>{appI18n.t("Live Map")}</Text>
             <Text style={styles.supportingText}>
-              Live driver tracking becomes available after a driver is assigned and location updates start.
-            </Text>
+              {appI18n.t("Live driver tracking becomes available after a driver is assigned and location updates start.")}</Text>
           </View>
         );
       }
@@ -1225,12 +1221,11 @@ export default function RequestStatusScreen() {
       if (!mapsApiKey || !isNativeMapRuntimeAvailable || !NativeMapView || !NativeMarker) {
         return (
           <View style={[styles.mapFallbackCard, expanded ? styles.mapFallbackCardExpanded : null]}>
-            <Text style={styles.cardTitle}>Live Map</Text>
+            <Text style={styles.cardTitle}>{appI18n.t("Live Map")}</Text>
             <Text style={styles.supportingText}>
-              Map preview is available on iOS and Android with Google Maps configured.
-            </Text>
+              {appI18n.t("Map preview is available on iOS and Android with Google Maps configured.")}</Text>
             <Pressable style={styles.outlineButton} onPress={openTracking}>
-              <Text style={styles.outlineButtonText}>Open tracking screen</Text>
+              <Text style={styles.outlineButtonText}>{appI18n.t("Open tracking screen")}</Text>
             </Pressable>
           </View>
         );
@@ -1277,7 +1272,7 @@ export default function RequestStatusScreen() {
             provider={PROVIDER_GOOGLE}
           >
             {pickupCoordinate ? (
-              <NativeMarker coordinate={pickupCoordinate} title="Pickup" anchor={{ x: 0.5, y: 0.5 }}>
+              <NativeMarker coordinate={pickupCoordinate} title={appI18n.t("Pickup")} anchor={{ x: 0.5, y: 0.5 }}>
                 <View style={styles.pickupMarker}>
                   <IconSymbol
                     name={{ ios: 'mappin.circle.fill', android: 'location_on', web: 'location_on' }}
@@ -1288,7 +1283,7 @@ export default function RequestStatusScreen() {
               </NativeMarker>
             ) : null}
             {dropoffCoordinate ? (
-              <NativeMarker coordinate={dropoffCoordinate} title="Dropoff" anchor={{ x: 0.5, y: 0.5 }}>
+              <NativeMarker coordinate={dropoffCoordinate} title={appI18n.t("Dropoff")} anchor={{ x: 0.5, y: 0.5 }}>
                 <View style={styles.dropoffMarker}>
                   <IconSymbol
                     name={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
@@ -1304,7 +1299,7 @@ export default function RequestStatusScreen() {
                   latitude: latestDriverLocation.latitude,
                   longitude: latestDriverLocation.longitude,
                 }}
-                title="Driver"
+                title={appI18n.t("Driver")}
                 anchor={{ x: 0.5, y: 0.5 }}
               >
                 <Text style={styles.driverMarkerIcon}>🚗</Text>
@@ -1351,7 +1346,7 @@ export default function RequestStatusScreen() {
 
           <View style={styles.mapOverlayStatus}>
             <Text style={styles.mapOverlayStatusText}>
-              {latestDriverLocation ? 'Live route' : 'Waiting for location'}
+              {latestDriverLocation ? appI18n.t('Live route') : appI18n.t('Waiting for location')}
             </Text>
           </View>
         </View>
@@ -1371,7 +1366,7 @@ export default function RequestStatusScreen() {
     return (
       <SafeAreaView style={styles.centeredContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Loading request status…</Text>
+        <Text style={styles.loadingText}>{appI18n.t("Loading request status…")}</Text>
       </SafeAreaView>
     );
   }
@@ -1379,10 +1374,10 @@ export default function RequestStatusScreen() {
   if (!requestData) {
     return (
       <SafeAreaView style={styles.centeredContainer}>
-        <Text style={styles.title}>Request Status</Text>
-        <Text style={styles.errorText}>{errorMessage || 'Unable to load request status.'}</Text>
+        <Text style={styles.title}>{appI18n.t("Request Status")}</Text>
+        <Text style={styles.errorText}>{errorMessage || appI18n.t("Unable to load request status.")}</Text>
         <Pressable style={styles.primaryButton} onPress={() => void loadStatus(false)}>
-          <Text style={styles.primaryButtonText}>Retry</Text>
+          <Text style={styles.primaryButtonText}>{appI18n.t("Retry")}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -1425,7 +1420,7 @@ export default function RequestStatusScreen() {
               />
             </Pressable>
             <View style={styles.topBarTitleWrap}>
-              <Text style={styles.topBarTitle}>Order #{requestReference}</Text>
+              <Text style={styles.topBarTitle}>{appI18n.t('Order #{{reference}}', { reference: requestReference })}</Text>
               <Text style={styles.topBarSubtitle}>
                 {requestData.service?.nameEn || requestData.service?.key || requestData.serviceId}
               </Text>
@@ -1481,7 +1476,7 @@ export default function RequestStatusScreen() {
                         requestData.status === 'CANCELLED' ? styles.progressLabelDisabled : null,
                       ]}
                     >
-                      {step.label}
+                      {appI18n.t(step.label)}
                     </Text>
                   </View>
                 );
@@ -1498,9 +1493,9 @@ export default function RequestStatusScreen() {
           ) : null}
           {requestData.status === 'CANCELLED' ? (
             <View style={styles.noticeCard}>
-              <Text style={styles.noticeTitle}>Order cancelled</Text>
+              <Text style={styles.noticeTitle}>{appI18n.t("Order cancelled")}</Text>
               <Text style={styles.supportingText}>
-                {cancellationReason || 'This request has been cancelled.'}
+                {cancellationReason || appI18n.t("This request has been cancelled.")}
               </Text>
               {cancelTripDebugMessage ? <Text style={styles.mutedCaption}>{cancelTripDebugMessage}</Text> : null}
             </View>
@@ -1519,13 +1514,13 @@ export default function RequestStatusScreen() {
                   <Text style={styles.driverAvatarText}>{getDriverInitials(driverName)}</Text>
                 </View>
                 <View style={styles.driverInfo}>
-                  <Text style={styles.driverName}>{driverName || 'Driver pending'}</Text>
+                  <Text style={styles.driverName}>{driverName || appI18n.t("Driver pending")}</Text>
                   <Text style={styles.driverMeta}>
                     {driverRating !== null ? `★ ${driverRating.toFixed(1)} • ` : ''}
-                    {requestData.driverSummary.assigned ? 'Assigned driver' : 'Waiting assignment'}
+                    {requestData.driverSummary.assigned ? appI18n.t('Assigned driver') : appI18n.t('Waiting assignment')}
                   </Text>
                   <Text style={styles.driverVehicleText}>
-                    {driverVehicleInfo || 'Vehicle details will appear here'}
+                    {driverVehicleInfo || appI18n.t("Vehicle details will appear here")}
                   </Text>
                 </View>
                 <View
@@ -1552,14 +1547,14 @@ export default function RequestStatusScreen() {
                   color="#111827"
                   size={20}
                 />
-                <Text style={styles.primaryActionButtonText}>Track Driver Live</Text>
+                <Text style={styles.primaryActionButtonText}>{appI18n.t("Track Driver Live")}</Text>
               </Pressable>
 
               {canOpenChat ? (
                 isChatRoomLoading && !chatRoom ? (
                   <View style={styles.secondaryActionButton}>
                     <ActivityIndicator size="small" color="#111827" />
-                    <Text style={styles.secondaryActionButtonText}>Checking chat…</Text>
+                    <Text style={styles.secondaryActionButtonText}>{appI18n.t("Checking chat…")}</Text>
                   </View>
                 ) : chatRoom ? (
                   <Pressable style={styles.secondaryActionButton} onPress={openChat}>
@@ -1568,7 +1563,7 @@ export default function RequestStatusScreen() {
                       color="#111827"
                       size={20}
                     />
-                    <Text style={styles.secondaryActionButtonText}>Chat with Driver</Text>
+                    <Text style={styles.secondaryActionButtonText}>{appI18n.t("Chat with Driver")}</Text>
                     {(chatRoom.unreadCount ?? 0) > 0 ? (
                       <View style={styles.inlineBadge}>
                         <Text style={styles.inlineBadgeText}>{chatRoom.unreadCount}</Text>
@@ -1582,23 +1577,23 @@ export default function RequestStatusScreen() {
 
           <View style={styles.detailsCard}>
             <View style={styles.detailsHeader}>
-              <Text style={styles.cardTitle}>Request Summary</Text>
+              <Text style={styles.cardTitle}>{appI18n.t("Request Summary")}</Text>
               <Text style={styles.inlineStatusPill}>{liveStatusLabel}</Text>
             </View>
-            <Text style={styles.detailsMetaText}>Submitted: {formatDate(requestData.submittedAt)}</Text>
+            <Text style={styles.detailsMetaText}>{appI18n.t("Submitted:")} {formatDate(requestData.submittedAt)}</Text>
             <Text style={styles.detailsMetaText}>{helperText}</Text>
             {socketMessage ? <Text style={styles.mutedCaption}>{socketMessage}</Text> : null}
             <View style={styles.detailsGrid}>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Pickup</Text>
+                <Text style={styles.detailLabel}>{appI18n.t("Pickup")}</Text>
                 <Text style={styles.detailValue}>{formatLocation(requestData.pickupLocation)}</Text>
               </View>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Dropoff</Text>
+                <Text style={styles.detailLabel}>{appI18n.t("Dropoff")}</Text>
                 <Text style={styles.detailValue}>{formatLocation(requestData.dropoffLocation)}</Text>
               </View>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Schedule</Text>
+                <Text style={styles.detailLabel}>{appI18n.t("Schedule")}</Text>
                 <Text style={styles.detailValue}>
                   {requestData.schedule.isImmediate
                     ? 'Immediate pickup'
@@ -1606,7 +1601,7 @@ export default function RequestStatusScreen() {
                 </Text>
               </View>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Item</Text>
+                <Text style={styles.detailLabel}>{appI18n.t("Item")}</Text>
                 <Text style={styles.detailValue}>
                   {requestData.itemDetails.title || 'N/A'} ({requestData.itemDetails.type || 'N/A'})
                 </Text>
@@ -1617,24 +1612,29 @@ export default function RequestStatusScreen() {
             ) : null}
             {latestDriverLocation ? (
               <Text style={styles.mutedCaption}>
-                Latest driver update: {latestDriverLocation.latitude.toFixed(5)},{' '}
-                {latestDriverLocation.longitude.toFixed(5)} • {formatDate(latestDriverLocation.recordedAt)}
+                {appI18n.t('Latest driver update: {{latitude}}, {{longitude}} • {{time}}', {
+                  latitude: latestDriverLocation.latitude.toFixed(5),
+                  longitude: latestDriverLocation.longitude.toFixed(5),
+                  time: formatDate(latestDriverLocation.recordedAt),
+                })}
               </Text>
             ) : null}
             {refundPreview && requestData.status !== 'CANCELLED' ? (
               <Text style={styles.mutedCaption}>
-                Cancel now: refund {formatMoney(refundPreview.refundedAmount, refundPreview.currency)} and keep fee{' '}
-                {formatMoney(refundPreview.retainedAmount, refundPreview.currency)}.
+                {appI18n.t('Cancel now: refund {{refund}} and keep fee {{fee}}.', {
+                  refund: formatMoney(refundPreview.refundedAmount, refundPreview.currency),
+                  fee: formatMoney(refundPreview.retainedAmount, refundPreview.currency),
+                })}
               </Text>
             ) : null}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Driver Offers</Text>
+            <Text style={styles.cardTitle}>{appI18n.t("Driver Offers")}</Text>
             {offers.length === 0 ? (
               <View style={styles.emptyState}>
                 <ActivityIndicator size="small" color="#2563EB" />
-                <Text style={styles.rowValue}>Waiting for offers…</Text>
+                <Text style={styles.rowValue}>{appI18n.t("Waiting for offers…")}</Text>
               </View>
             ) : (
               <Text style={styles.rowValue}>{helperText}</Text>
@@ -1642,7 +1642,7 @@ export default function RequestStatusScreen() {
 
             {selectedOffer ? (
               <View style={styles.selectedOfferBanner}>
-                <Text style={styles.selectedOfferLabel}>Selected offer</Text>
+                <Text style={styles.selectedOfferLabel}>{appI18n.t("Selected offer")}</Text>
                 <Text style={styles.selectedOfferValue}>
                   {selectedOffer.driverName || 'Driver'} •{' '}
                   {formatMoney(selectedOffer.proposedPrice ?? selectedOffer.price, selectedOffer.currency)}
@@ -1652,13 +1652,13 @@ export default function RequestStatusScreen() {
 
             {acceptedOffer ? (
               <View style={styles.offerCardAccepted}>
-                <Text style={[styles.offerCardTitle, styles.offerTextOnDark]}>Accepted Offer</Text>
+                <Text style={[styles.offerCardTitle, styles.offerTextOnDark]}>{appI18n.t("Accepted Offer")}</Text>
                 <Text style={[styles.offerPrimaryValue, styles.offerTextOnDark]}>
                   {acceptedOffer.driverName || 'Driver'} •{' '}
                   {formatMoney(acceptedOffer.proposedPrice ?? acceptedOffer.price, acceptedOffer.currency)}
                 </Text>
                 <Text style={[styles.rowValue, styles.offerSubtextOnDark]}>
-                  Accepted at: {formatDate(acceptedOffer.acceptedAt)}
+                  {appI18n.t("Accepted at:")} {formatDate(acceptedOffer.acceptedAt)}
                 </Text>
               </View>
             ) : null}
@@ -1685,7 +1685,7 @@ export default function RequestStatusScreen() {
                       />
                     ) : (
                       <View style={styles.offerVehiclePhotoPlaceholder}>
-                        <Text style={styles.offerVehiclePhotoPlaceholderText}>No Photo</Text>
+                        <Text style={styles.offerVehiclePhotoPlaceholderText}>{appI18n.t("No Photo")}</Text>
                       </View>
                     )}
                     <View style={styles.offerTopText}>
@@ -1700,7 +1700,7 @@ export default function RequestStatusScreen() {
                       <Text
                         style={[styles.offerStatusText, isSelected ? styles.offerSubtextOnDark : undefined]}
                       >
-                        Status: {offer.offerStatus || offer.status}
+                        {appI18n.t("Status:")} {offer.offerStatus || offer.status}
                       </Text>
                     </View>
                     <View style={styles.offerPriceBlock}>
@@ -1712,18 +1712,18 @@ export default function RequestStatusScreen() {
                       <Text
                         style={[styles.offerArrivalText, isSelected ? styles.offerSubtextOnDark : undefined]}
                       >
-                        ETA {offer.estimatedArrivalTime ? formatDate(offer.estimatedArrivalTime) : 'N/A'}
+                        {appI18n.t("ETA")} {offer.estimatedArrivalTime ? formatDate(offer.estimatedArrivalTime) : 'N/A'}
                       </Text>
                     </View>
                   </View>
 
                   <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
-                    Estimated delivery:{' '}
+                    {appI18n.t("Estimated delivery:")}{' '}
                     {offer.estimatedDeliveryAt ? formatDate(offer.estimatedDeliveryAt) : 'N/A'}
                   </Text>
                   {offer.message ? (
                     <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
-                      Message: {offer.message}
+                      {appI18n.t("Message:")} {offer.message}
                     </Text>
                   ) : null}
 
@@ -1742,7 +1742,7 @@ export default function RequestStatusScreen() {
                       }}
                     >
                       <Text style={styles.primaryButtonText}>
-                        {isOpening ? 'Opening next step…' : isSelected ? 'Continue' : 'Select Driver'}
+                        {isOpening ? appI18n.t('Opening next step…') : isSelected ? appI18n.t('Continue') : appI18n.t('Select Driver')}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -1751,12 +1751,12 @@ export default function RequestStatusScreen() {
             })}
 
             {offers.length > 0 && pendingOffers.length === 0 && !acceptedOffer ? (
-              <Text style={styles.rowValue}>All offers are no longer pending.</Text>
+              <Text style={styles.rowValue}>{appI18n.t("All offers are no longer pending.")}</Text>
             ) : null}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Pickup Proof Photos</Text>
+            <Text style={styles.cardTitle}>{appI18n.t("Pickup Proof Photos")}</Text>
             {trackingData?.pickupProofPhotos?.length ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
                 {trackingData.pickupProofPhotos.map((photo) => (
@@ -1770,12 +1770,12 @@ export default function RequestStatusScreen() {
                 ))}
               </ScrollView>
             ) : (
-              <Text style={styles.rowValue}>Pickup proof photos will appear after pickup is completed.</Text>
+              <Text style={styles.rowValue}>{appI18n.t("Pickup proof photos will appear after pickup is completed.")}</Text>
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Delivery Proof Photos</Text>
+            <Text style={styles.cardTitle}>{appI18n.t("Delivery Proof Photos")}</Text>
             {trackingData?.deliveryProofPhotos?.length ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
                 {trackingData.deliveryProofPhotos.map((photo) => (
@@ -1789,17 +1789,17 @@ export default function RequestStatusScreen() {
                 ))}
               </ScrollView>
             ) : (
-              <Text style={styles.rowValue}>Delivery proof photos will appear after final delivery.</Text>
+              <Text style={styles.rowValue}>{appI18n.t("Delivery proof photos will appear after final delivery.")}</Text>
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Additional Charges</Text>
+            <Text style={styles.cardTitle}>{appI18n.t("Additional Charges")}</Text>
             <Text style={styles.rowValue}>
               {t('extra_expense.saved_card_notice')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
             </Text>
             {additionalCharges.length === 0 ? (
-              <Text style={styles.rowValue}>No additional charges yet.</Text>
+              <Text style={styles.rowValue}>{appI18n.t("No additional charges yet.")}</Text>
             ) : (
               additionalCharges.map((charge) => (
                 <View key={charge.id} style={styles.additionalChargeCard}>
@@ -1812,12 +1812,12 @@ export default function RequestStatusScreen() {
                   <Text style={styles.rowValue}>
                     {t('extra_expense.app_fee_label')}: {formatMoney(charge.appFeeAmount, charge.currency)}
                   </Text>
-                  <Text style={styles.rowValue}>Reason: {charge.reason}</Text>
+                  <Text style={styles.rowValue}>{appI18n.t("Reason:")} {charge.reason}</Text>
                   {charge.equipmentType ? (
-                    <Text style={styles.rowValue}>Equipment: {charge.equipmentType}</Text>
+                    <Text style={styles.rowValue}>{appI18n.t("Equipment:")} {charge.equipmentType}</Text>
                   ) : null}
-                  <Text style={styles.rowValue}>Status: {charge.status}</Text>
-                  <Text style={styles.rowValue}>Added: {formatDate(charge.createdAt)}</Text>
+                  <Text style={styles.rowValue}>{appI18n.t("Status:")} {charge.status}</Text>
+                  <Text style={styles.rowValue}>{appI18n.t("Added:")} {formatDate(charge.createdAt)}</Text>
                   <Text style={styles.rowValue}>
                     {t('extra_expense.payment_option_label')}: {getAdditionalChargePaymentMethodLabel(charge, t)}
                   </Text>
@@ -1830,7 +1830,7 @@ export default function RequestStatusScreen() {
                     <Text style={styles.errorText}>{charge.payment.failureReason}</Text>
                   ) : null}
                   {charge.invoiceUrl ? (
-                    <Text style={styles.rowValue}>Invoice: {resolveAssetUrl(charge.invoiceUrl)}</Text>
+                    <Text style={styles.rowValue}>{appI18n.t("Invoice:")} {resolveAssetUrl(charge.invoiceUrl)}</Text>
                   ) : null}
                   {(charge.status === 'PENDING' || charge.status === 'FAILED') ? (
                     <Pressable
@@ -1851,9 +1851,9 @@ export default function RequestStatusScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Photos</Text>
+            <Text style={styles.cardTitle}>{appI18n.t("Photos")}</Text>
             {requestData.photos.length === 0 ? (
-              <Text style={styles.rowValue}>No photos added.</Text>
+              <Text style={styles.rowValue}>{appI18n.t("No photos added.")}</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
                 {requestData.photos.map((photo) => (
@@ -1871,12 +1871,11 @@ export default function RequestStatusScreen() {
 
           {ratingAvailable ? (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Rate Service</Text>
+              <Text style={styles.cardTitle}>{appI18n.t("Rate Service")}</Text>
               <Text style={styles.rowValue}>
-                Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.
-              </Text>
+                {appI18n.t("Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.")}</Text>
               <Pressable style={styles.primaryButton} onPress={onRateDriver}>
-                <Text style={styles.primaryButtonText}>Rate driver</Text>
+                <Text style={styles.primaryButtonText}>{appI18n.t("Rate driver")}</Text>
               </Pressable>
             </View>
           ) : null}
@@ -1887,22 +1886,22 @@ export default function RequestStatusScreen() {
           <View style={styles.actionStack}>
             <Pressable style={styles.statusActionButton} onPress={() => void loadStatus(false)}>
               <Text style={styles.statusActionButtonText}>
-                {isRefreshing ? 'Refreshing…' : 'Request Status'}
+                {isRefreshing ? appI18n.t('Refreshing…') : appI18n.t('Request Status')}
               </Text>
             </Pressable>
             {ratingAvailable ? (
               <Pressable style={styles.rateActionButton} onPress={onRateDriver}>
-                <Text style={styles.rateActionButtonText}>Rate Driver</Text>
+                <Text style={styles.rateActionButtonText}>{appI18n.t("Rate Driver")}</Text>
               </Pressable>
             ) : null}
             {canCancelCurrentTrip ? (
               <Pressable onPress={onCancelTrip}>
-                <Text style={styles.cancelActionText}>{isCancellingTrip ? 'Cancelling…' : 'Cancel Order'}</Text>
+                <Text style={styles.cancelActionText}>{isCancellingTrip ? appI18n.t('Cancelling…') : appI18n.t('Cancel Order')}</Text>
               </Pressable>
             ) : canDeleteCurrentRequest ? (
               <Pressable
                 onPress={() => {
-                  Alert.alert('Delete request?', 'This will permanently delete the request.', [
+                  Alert.alert(appI18n.t("Delete request?"), appI18n.t("This will permanently delete the request."), [
                     { text: 'Cancel', style: 'cancel' },
                     {
                       text: 'Delete',
@@ -1914,7 +1913,7 @@ export default function RequestStatusScreen() {
                             router.replace('/(tabs)/home' as Href);
                           } catch (error) {
                             setErrorMessage(
-                              error instanceof Error ? error.message : 'Failed to delete request.',
+                              error instanceof Error ? error.message : appI18n.t("Failed to delete request."),
                             );
                           }
                         })();
@@ -1923,7 +1922,7 @@ export default function RequestStatusScreen() {
                   ]);
                 }}
               >
-                <Text style={styles.cancelActionText}>Delete Request</Text>
+                <Text style={styles.cancelActionText}>{appI18n.t("Delete Request")}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1937,7 +1936,7 @@ export default function RequestStatusScreen() {
                     size={24}
                   />
                 </Pressable>
-                <Text style={styles.expandedMapTitle}>Live Map</Text>
+                <Text style={styles.expandedMapTitle}>{appI18n.t("Live Map")}</Text>
                 <View style={styles.topBarButton} />
               </View>
               {renderTrackingMap(true)}
@@ -1956,7 +1955,7 @@ export default function RequestStatusScreen() {
                   keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
                 ]}
               >
-                <Text style={styles.cardTitle}>Cancel trip?</Text>
+                <Text style={styles.cardTitle}>{appI18n.t("Cancel trip?")}</Text>
                 <Text style={styles.rowValue}>
                   {requestData.cancellation.refundPreview
                     ? `If you cancel now, ${formatMoney(
@@ -1974,7 +1973,7 @@ export default function RequestStatusScreen() {
                     disabled={isCancellingTrip}
                     onPress={closeCancelTripModal}
                   >
-                    <Text style={styles.secondaryOutlineButtonText}>Keep trip</Text>
+                    <Text style={styles.secondaryOutlineButtonText}>{appI18n.t("Keep trip")}</Text>
                   </Pressable>
                   <Pressable
                     style={[styles.deleteButton, isCancellingTrip && styles.disabledButton]}
@@ -1982,7 +1981,7 @@ export default function RequestStatusScreen() {
                     onPress={() => void confirmCancelTrip()}
                   >
                     <Text style={styles.deleteButtonText}>
-                      {isCancellingTrip ? 'Cancelling…' : 'Cancel trip'}
+                      {isCancellingTrip ? appI18n.t('Cancelling…') : appI18n.t('Cancel trip')}
                     </Text>
                   </Pressable>
                 </View>

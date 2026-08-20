@@ -23,6 +23,7 @@ import { currencyForCountryCode } from '@/lib/country-currency';
 import { createWalletTopUp, getWalletTopUpStatus } from '@/lib/api';
 import { useAuthSession } from '@/lib/auth-token';
 import type { CustomerWalletTopUpResponse, PaymentMethod } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 type PaymentOption = {
   method: PaymentMethod;
@@ -78,7 +79,7 @@ function formatMoney(amount: number, currency: string): string {
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${amount.toFixed(2)} ${currency}`;
+    return appI18n.t("{{value0}} {{value1}}", { value0: amount.toFixed(2), value1: currency });
   }
 }
 
@@ -86,11 +87,11 @@ function toStripeErrorMessage(message: string): string {
   const normalized = message.toLowerCase();
 
   if (normalized.includes('canceled') || normalized.includes('cancelled')) {
-    return 'Payment confirmation was cancelled. You can try again.';
+    return appI18n.t("Payment confirmation was cancelled. You can try again.");
   }
 
   if (normalized.includes('invalid api key provided')) {
-    return 'Stripe is not configured correctly. Set a real EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY in the client app and a matching STRIPE_SECRET_KEY in the backend.';
+    return appI18n.t("Stripe is not configured correctly. Set a real EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY in the client app and a matching STRIPE_SECRET_KEY in the backend.");
   }
 
   return message;
@@ -177,31 +178,31 @@ export default function WalletTopUpScreen() {
   const needsCardField = selectedMethod === 'CREDIT_CARD' || selectedMethod === 'DEBIT_CARD';
   const methodDisabledReason = useMemo(() => {
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
-      return 'Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.';
+      return appI18n.t("Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.");
     }
 
     if (selectedMethod === 'APPLE_PAY' && Platform.OS !== 'ios') {
-      return 'Apple Pay is only available on iOS.';
+      return appI18n.t("Apple Pay is only available on iOS.");
     }
 
     if (selectedMethod === 'GOOGLE_PAY' && Platform.OS !== 'android') {
-      return 'Google Pay is only available on Android.';
+      return appI18n.t("Google Pay is only available on Android.");
     }
 
     if (selectedMethod === 'APPLE_PAY' && !merchantIdentifier) {
-      return 'Apple Pay is not configured. Set EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER and rebuild the iOS app.';
+      return appI18n.t("Apple Pay is not configured. Set EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER and rebuild the iOS app.");
     }
 
     if (!publishableKey) {
-      return 'Stripe is not configured. Set EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to a real pk_test_ or pk_live_ key.';
+      return appI18n.t("Stripe is not configured. Set EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to a real pk_test_ or pk_live_ key.");
     }
 
     if (amount <= 0) {
-      return 'Enter a valid amount to continue.';
+      return appI18n.t("Enter a valid amount to continue.");
     }
 
     if (needsCardField && !cardComplete) {
-      return 'Complete your card details to continue.';
+      return appI18n.t("Complete your card details to continue.");
     }
 
     return '';
@@ -209,7 +210,7 @@ export default function WalletTopUpScreen() {
 
   const confirmStripeTopUp = async (topUp: CustomerWalletTopUpResponse['topUp']): Promise<void> => {
     if (!topUp.stripeClientSecret) {
-      throw new Error('Missing Stripe client secret from the backend.');
+      throw new Error(appI18n.t("Missing Stripe client secret from the backend."));
     }
 
     if (selectedMethod === 'APPLE_PAY') {
@@ -269,7 +270,7 @@ export default function WalletTopUpScreen() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
-    throw new Error('Wallet top-up is still pending. Please check your wallet again in a moment.');
+    throw new Error(appI18n.t("Wallet top-up is still pending. Please check your wallet again in a moment."));
   };
 
   const onSubmit = async (): Promise<void> => {
@@ -301,7 +302,7 @@ export default function WalletTopUpScreen() {
             : 'Wallet top-up failed.'),
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to add money to wallet.');
+      setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to add money to wallet."));
     } finally {
       setIsSubmitting(false);
     }
@@ -335,12 +336,11 @@ export default function WalletTopUpScreen() {
                   size={20}
                 />
               </View>
-              <Text style={styles.heroLabel}>Wallet Top-Up</Text>
+              <Text style={styles.heroLabel}>{appI18n.t("Wallet Top-Up")}</Text>
             </View>
-            <Text style={styles.heroTitle}>Add Money</Text>
+            <Text style={styles.heroTitle}>{appI18n.t("Add Money")}</Text>
             <Text style={styles.heroSubtitle}>
-              Funds are added to your app wallet after Stripe confirms the payment.
-            </Text>
+              {appI18n.t("Funds are added to your app wallet after Stripe confirms the payment.")}</Text>
             <View style={styles.currencyRow}>
               <View style={styles.currencyIconWrap}>
                 <IconSymbol
@@ -349,12 +349,12 @@ export default function WalletTopUpScreen() {
                   size={16}
                 />
               </View>
-              <Text style={styles.currencyText}>Wallet currency: {defaultCurrency}</Text>
+              <Text style={styles.currencyText}>{appI18n.t("Wallet currency:")} {defaultCurrency}</Text>
             </View>
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Amount</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Amount")}</Text>
             <TextInput
               value={amountValue}
               onChangeText={setAmountValue}
@@ -369,7 +369,7 @@ export default function WalletTopUpScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Payment method</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Payment method")}</Text>
             {PAYMENT_OPTIONS.map((option) => {
               const isSelected = option.method === selectedMethod;
               const isUnsupported =
@@ -387,10 +387,10 @@ export default function WalletTopUpScreen() {
                       <IconSymbol name={option.icon} color="#111827" size={18} />
                     </View>
                     <View style={styles.optionTextBlock}>
-                      <Text style={styles.optionTitle}>{option.title}</Text>
-                      <Text style={styles.optionDescription}>{option.description}</Text>
+                      <Text style={styles.optionTitle}>{appI18n.t(option.title)}</Text>
+                      <Text style={styles.optionDescription}>{appI18n.t(option.description)}</Text>
                       {isUnsupported ? (
-                        <Text style={styles.optionHint}>Not available on this device/build.</Text>
+                        <Text style={styles.optionHint}>{appI18n.t("Not available on this device/build.")}</Text>
                       ) : null}
                     </View>
                   </View>
@@ -404,7 +404,7 @@ export default function WalletTopUpScreen() {
 
           {needsCardField ? (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Card details</Text>
+              <Text style={styles.sectionTitle}>{appI18n.t("Card details")}</Text>
               <View style={styles.cardFieldWrap}>
                 <CardField
                   postalCodeEnabled={false}
@@ -438,13 +438,12 @@ export default function WalletTopUpScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#111827" />
             ) : (
-              <Text style={styles.primaryButtonText}>Confirm Top-Up</Text>
+              <Text style={styles.primaryButtonText}>{appI18n.t("Confirm Top-Up")}</Text>
             )}
           </Pressable>
 
           <Text style={styles.footerText}>
-            Saved cards are not used automatically for wallet top-ups in this version.
-          </Text>
+            {appI18n.t("Saved cards are not used automatically for wallet top-ups in this version.")}</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

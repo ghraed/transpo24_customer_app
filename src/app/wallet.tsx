@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { getCustomerWallet } from '@/lib/api';
 import type { CustomerWalletSummary, CustomerWalletTransaction } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 function IconSymbol({
   name,
@@ -38,7 +39,7 @@ function formatMoney(amount: number, currency: string | null | undefined): strin
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${amount.toFixed(2)} ${code}`;
+    return appI18n.t("{{value0}} {{value1}}", { value0: amount.toFixed(2), value1: code });
   }
 }
 
@@ -50,15 +51,15 @@ function formatDate(value: string): string {
 function getTransactionTitle(transaction: CustomerWalletTransaction): string {
   switch (transaction.type) {
     case 'TOP_UP':
-      return 'Wallet top-up';
+      return appI18n.t("Wallet top-up");
     case 'HOLD':
-      return 'Reserved funds';
+      return appI18n.t("Reserved funds");
     case 'CAPTURE':
-      return 'Trip payment';
+      return appI18n.t("Trip payment");
     case 'RELEASE':
-      return 'Released funds';
+      return appI18n.t("Released funds");
     case 'ADDITIONAL_CHARGE':
-      return 'Additional charge';
+      return appI18n.t("Additional charge");
     case 'REFUND':
       return 'Refund';
     default:
@@ -123,7 +124,7 @@ export default function WalletScreen() {
         }
       } catch (error) {
         if (active) {
-          setErrorMessage(error instanceof Error ? error.message : 'Failed to load wallet.');
+          setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to load wallet."));
         }
       } finally {
         if (active) {
@@ -160,23 +161,23 @@ export default function WalletScreen() {
                 size={20}
               />
             </View>
-            <Text style={styles.walletLabel}>App Wallet</Text>
+            <Text style={styles.walletLabel}>{appI18n.t("App Wallet")}</Text>
           </View>
 
           <Text style={styles.walletAmount}>
             {formatMoney(wallet?.availableBalance ?? 0, wallet?.currency)}
           </Text>
-          <Text style={styles.walletMeta}>Available balance</Text>
+          <Text style={styles.walletMeta}>{appI18n.t("Available balance")}</Text>
 
           <View style={styles.statRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Total balance</Text>
+              <Text style={styles.statLabel}>{appI18n.t("Total balance")}</Text>
               <Text style={styles.statValue}>
                 {formatMoney(wallet?.balance ?? 0, wallet?.currency)}
               </Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Reserved</Text>
+              <Text style={styles.statLabel}>{appI18n.t("Reserved")}</Text>
               <Text style={styles.statValue}>
                 {formatMoney(wallet?.reservedBalance ?? 0, wallet?.currency)}
               </Text>
@@ -194,7 +195,7 @@ export default function WalletScreen() {
               })
             }
           >
-            <Text style={styles.primaryButtonText}>Add Money</Text>
+            <Text style={styles.primaryButtonText}>{appI18n.t("Add Money")}</Text>
           </Pressable>
 
           <View style={styles.currencyRow}>
@@ -206,13 +207,13 @@ export default function WalletScreen() {
               />
             </View>
             <Text style={styles.currencyText}>
-              Wallet currency: {wallet?.currency ?? 'Set on first successful top-up'}
+              {appI18n.t("Wallet currency:")} {wallet?.currency ?? appI18n.t("Set on first successful top-up")}
             </Text>
           </View>
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Recent activity</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Recent activity")}</Text>
 
           {isLoading ? (
             <ActivityIndicator color="#111827" />
@@ -232,7 +233,7 @@ export default function WalletScreen() {
                       <View style={styles.transactionCopy}>
                         <Text style={styles.transactionTitle}>{getTransactionTitle(transaction)}</Text>
                         <Text style={styles.transactionMeta}>
-                          {transaction.description || 'Wallet activity'}
+                          {transaction.description || appI18n.t("Wallet activity")}
                         </Text>
                       </View>
                     </View>
@@ -254,8 +255,7 @@ export default function WalletScreen() {
                 />
               </View>
               <Text style={styles.emptyText}>
-                No wallet activity yet. Add money to start using your app wallet.
-              </Text>
+                {appI18n.t("No wallet activity yet. Add money to start using your app wallet.")}</Text>
             </View>
           )}
         </View>

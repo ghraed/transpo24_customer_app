@@ -5,6 +5,7 @@ import {
   getCachedTranslation,
   setCachedTranslation,
 } from '@/localization/storage';
+import appI18n from '@/localization/i18n';
 
 export interface TranslateTextRequest {
   text: string;
@@ -41,7 +42,7 @@ function getHeaders(): HeadersInit {
 }
 
 function buildCacheKey(sourceLanguage: AppLanguage, targetLanguage: AppLanguage, text: string): string {
-  return `${sourceLanguage}:${targetLanguage}:${text.trim()}`;
+  return appI18n.t("{{value0}}:{{value1}}:{{value2}}", { value0: sourceLanguage, value1: targetLanguage, value2: text.trim() });
 }
 
 async function postJson<T>(path: string, payload: unknown): Promise<T> {
@@ -52,7 +53,7 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Translation request failed with status ${response.status}.`);
+    throw new Error(appI18n.t("Translation request failed with status {{value0}}.", { value0: response.status }));
   }
 
   return (await response.json()) as T;

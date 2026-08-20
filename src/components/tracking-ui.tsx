@@ -10,6 +10,8 @@ import {
   type ColorValue,
 } from 'react-native';
 
+import appI18n from '@/localization/i18n';
+
 export const clientTheme = {
   background: '#FAFAFA',
   surface: '#FFFFFF',
@@ -88,7 +90,7 @@ export function TrackingProgress({ currentStage }: { currentStage: TrackingStage
                     isComplete ? styles.progressLabelDone : null,
                   ]}
                 >
-                  {stage.label}
+                  {appI18n.t(stage.label)}
                 </Text>
               </View>
               {index < TRACKING_STAGES.length - 1 ? <View style={styles.progressSpacer} /> : null}

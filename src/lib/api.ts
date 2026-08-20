@@ -51,6 +51,7 @@ import type {
   VehicleVinDecodeResult,
 } from '@/types/vehicle';
 import { sanitizeVin } from '@/utils/vin';
+import appI18n from '@/localization/i18n';
 
 interface ApiErrorResponse {
   message?: string | string[];
@@ -89,7 +90,7 @@ function toNetworkError(endpoint: string, error: unknown): Error {
     }
   }
 
-  return error instanceof Error ? error : new Error('Unexpected network error.');
+  return error instanceof Error ? error : new Error(appI18n.t("Unexpected network error."));
 }
 
 async function fetchWithNetworkError(endpoint: string, init: RequestInit): Promise<Response> {
@@ -112,7 +113,7 @@ async function parseError(response: Response, fallback: string): Promise<Error> 
       const errorData = JSON.parse(raw) as ApiErrorResponse;
       return new Error(toMessage(errorData, fallback));
     } catch {
-      return new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+      return new Error(appI18n.t("{{value0}} Server returned: {{value1}}", { value0: fallback, value1: raw.slice(0, 200) }));
     }
   } catch {
     return new Error(fallback);
@@ -120,7 +121,7 @@ async function parseError(response: Response, fallback: string): Promise<Error> 
 }
 
 function toResponseParseError(fallback: string, raw: string): Error {
-  return new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+  return new Error(appI18n.t("{{value0}} Server returned: {{value1}}", { value0: fallback, value1: raw.slice(0, 200) }));
 }
 
 function sanitizeMalformedJson(raw: string): string {
@@ -191,7 +192,7 @@ async function parseJsonBody<T>(response: Response, fallback: string): Promise<T
     return parsed;
   }
 
-  throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+  throw new Error(appI18n.t("{{value0}} Server returned: {{value1}}", { value0: fallback, value1: raw.slice(0, 200) }));
 }
 
 async function parseNullableJsonBody<T>(
@@ -209,7 +210,7 @@ async function parseNullableJsonBody<T>(
     return parsed;
   }
 
-  throw new Error(`${fallback} Server returned: ${raw.slice(0, 200)}`);
+  throw new Error(appI18n.t("{{value0}} Server returned: {{value1}}", { value0: fallback, value1: raw.slice(0, 200) }));
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -562,7 +563,7 @@ export async function createFurnitureTransportRequest(
     };
 
     request.onerror = () => {
-      reject(new Error('Failed to create furniture transport request.'));
+      reject(new Error(appI18n.t("Failed to create furniture transport request.")));
     };
 
     request.send(formData);
@@ -710,7 +711,7 @@ export async function uploadRequestPhotos(
     };
 
     request.onerror = () => {
-      reject(new Error('Failed to upload request photos.'));
+      reject(new Error(appI18n.t("Failed to upload request photos.")));
     };
 
     request.send(formData);
@@ -1356,7 +1357,7 @@ export async function cancelCollectedTrip(
         if (!parsed) {
           reject(
             new Error(
-              `Failed to parse cancel trip payment response. Server returned: ${responseText.slice(0, 200)}`,
+              appI18n.t("Failed to parse cancel trip payment response. Server returned: {{value0}}", { value0: responseText.slice(0, 200) }),
             ),
           );
           return;
@@ -1365,7 +1366,7 @@ export async function cancelCollectedTrip(
         if (!isValidCancelTripPaymentResponse(parsed)) {
           reject(
             new Error(
-              'Trip cancellation completed but the refund details response was invalid.',
+              appI18n.t("Trip cancellation completed but the refund details response was invalid."),
             ),
           );
           return;

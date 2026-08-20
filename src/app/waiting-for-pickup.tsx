@@ -45,6 +45,7 @@ import {
   validateItemPickedUpPayload,
   validateTripStatusUpdatedPayload,
 } from '@/utils/pickupValidation';
+import appI18n from '@/localization/i18n';
 
 type RouteParams = {
   tripId?: string;
@@ -107,7 +108,7 @@ export default function WaitingForPickupScreen() {
     if (!isRouteValid || !pickupLocation || !dropoffLocation) {
       setTimeout(
         () =>
-          setErrorMessage('Invalid tracking parameters. Please reopen tracking from request status.'),
+          setErrorMessage(appI18n.t("Invalid tracking parameters. Please reopen tracking from request status.")),
         0,
       );
       return;
@@ -115,7 +116,7 @@ export default function WaitingForPickupScreen() {
 
     const token = getAccessToken();
     if (!token) {
-      setTimeout(() => setErrorMessage('Missing auth token. Please login again.'), 0);
+      setTimeout(() => setErrorMessage(appI18n.t("Missing auth token. Please login again.")), 0);
       return;
     }
 
@@ -126,7 +127,7 @@ export default function WaitingForPickupScreen() {
       setTimeout(
         () =>
           setErrorMessage(
-            error instanceof Error ? error.message : 'Failed to connect realtime socket.',
+            error instanceof Error ? error.message : appI18n.t("Failed to connect realtime socket."),
           ),
         0,
       );
@@ -179,11 +180,11 @@ export default function WaitingForPickupScreen() {
     });
 
     const unsubDisconnect = onSocketDisconnect(() => {
-      setErrorMessage('Socket disconnected. Waiting to reconnect...');
+      setErrorMessage(appI18n.t("Socket disconnected. Waiting to reconnect..."));
     });
 
     const unsubSocketError = onSocketError((message) => {
-      setErrorMessage(message || 'Socket connection error.');
+      setErrorMessage(message || appI18n.t("Socket connection error."));
     });
 
     const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
@@ -206,8 +207,8 @@ export default function WaitingForPickupScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
-          <Text style={styles.fallbackText}>Invalid waiting-for-pickup route parameters.</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Tracking unavailable")}</Text>
+          <Text style={styles.fallbackText}>{appI18n.t("Invalid waiting-for-pickup route parameters.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -217,10 +218,9 @@ export default function WaitingForPickupScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Tracking unavailable")}</Text>
           <Text style={styles.fallbackText}>
-            Pickup tracking map is available on iOS and Android only.
-          </Text>
+            {appI18n.t("Pickup tracking map is available on iOS and Android only.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -236,10 +236,10 @@ export default function WaitingForPickupScreen() {
         longitudeDelta: 0.03,
       }}
     >
-      <NativeMarker coordinate={pickupLocation} title="Pickup" />
-      <NativeMarker coordinate={dropoffLocation} title="Dropoff" pinColor="#FF5E57" />
+      <NativeMarker coordinate={pickupLocation} title={appI18n.t("Pickup")} />
+      <NativeMarker coordinate={dropoffLocation} title={appI18n.t("Dropoff")} pinColor="#FF5E57" />
       {driverLocation ? (
-        <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
+        <NativeMarker coordinate={driverLocation} title={appI18n.t("Driver")} anchor={{ x: 0.5, y: 0.5 }}>
           <Text style={styles.driverMarkerIcon}>🚗</Text>
         </NativeMarker>
       ) : null}
@@ -251,14 +251,14 @@ export default function WaitingForPickupScreen() {
       <TrackingScrollable>
         <TrackingHero
           eyebrow={`Order #${tripId || 'N/A'}`}
-          title="Waiting at pickup"
+          title={appI18n.t("Waiting at pickup")}
           description="The driver has arrived. This screen stays active until the pickup is confirmed."
         />
 
         <TrackingProgress currentStage={2} />
 
         <TrackingMapShell
-          title="Pickup map"
+          title={appI18n.t("Pickup map")}
           subtitle="Current driver, pickup, and destination markers."
           onExpand={() => setIsMapExpanded(true)}
         >
@@ -266,48 +266,49 @@ export default function WaitingForPickupScreen() {
         </TrackingMapShell>
 
         <TrackingScreenCard>
-          <TrackingInfoPill label={isWaiting ? 'Waiting for confirmation' : 'Pickup confirmed'} tone="accent" />
-          <Text style={styles.cardTitle}>Pickup stage</Text>
+          <TrackingInfoPill label={isWaiting ? appI18n.t('Waiting for confirmation') : appI18n.t('Pickup confirmed')} tone="accent" />
+          <Text style={styles.cardTitle}>{appI18n.t("Pickup stage")}</Text>
           <Text style={styles.cardBody}>
-            The driver confirms item pickup from their app. Once that happens, this flow moves to
-            the delivery tracking screen.
-          </Text>
+            {appI18n.t("The driver confirms item pickup from their app. Once that happens, this flow moves to the delivery tracking screen.")}</Text>
           <TrackingMetaRow
-            label="Pickup address"
+            label={appI18n.t("Pickup address")}
             value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
           />
           <TrackingMetaRow
-            label="Dropoff address"
+            label={appI18n.t("Dropoff address")}
             value={
               dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
             }
           />
           {latestAdditionalCharge ? (
             <View style={styles.noticeCard}>
-              <Text style={styles.noticeTitle}>Additional charge added</Text>
+              <Text style={styles.noticeTitle}>{appI18n.t("Additional charge added")}</Text>
               <Text style={styles.noticeText}>
-                {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} for{' '}
-                {latestAdditionalCharge.reason}
+                {appI18n.t('{{amount}} {{currency}} for {{reason}}', {
+                  amount: latestAdditionalCharge.amount.toFixed(2),
+                  currency: latestAdditionalCharge.currency,
+                  reason: latestAdditionalCharge.reason,
+                })}
               </Text>
             </View>
           ) : null}
           {isWaiting ? (
             <View style={styles.inlineRow}>
               <ActivityIndicator size="small" color={clientTheme.accentStrong} />
-              <Text style={styles.helperText}>Listening for pickup confirmation...</Text>
+              <Text style={styles.helperText}>{appI18n.t("Listening for pickup confirmation...")}</Text>
             </View>
           ) : null}
           {pickupInfo ? (
             <View style={styles.confirmedCard}>
-              <Text style={styles.confirmedTitle}>Pickup confirmed</Text>
+              <Text style={styles.confirmedTitle}>{appI18n.t("Pickup confirmed")}</Text>
               <Text style={styles.helperText}>
-                Picked up at {new Date(pickupInfo.pickedUpAt).toLocaleString(undefined, { hour12: false })}
+                {appI18n.t("Picked up at")} {new Date(pickupInfo.pickedUpAt).toLocaleString(undefined, { hour12: false })}
               </Text>
               {pickupInfo.pickupNotes ? (
-                <Text style={styles.helperText}>Notes: {pickupInfo.pickupNotes}</Text>
+                <Text style={styles.helperText}>{appI18n.t("Notes:")} {pickupInfo.pickupNotes}</Text>
               ) : null}
               <Text style={styles.helperText}>
-                Proof photos received: {pickupInfo.pickupProofPhotos.length}
+                {appI18n.t("Proof photos received:")} {pickupInfo.pickupProofPhotos.length}
               </Text>
             </View>
           ) : null}
@@ -336,14 +337,14 @@ export default function WaitingForPickupScreen() {
               )
             }
           >
-            <Text style={styles.secondaryButtonText}>Open delivery tracking</Text>
+            <Text style={styles.secondaryButtonText}>{appI18n.t("Open delivery tracking")}</Text>
           </Pressable>
         </TrackingScreenCard>
       </TrackingScrollable>
 
       <TrackingMapModal
         visible={isMapExpanded}
-        title="Pickup map"
+        title={appI18n.t("Pickup map")}
         onClose={() => setIsMapExpanded(false)}
       >
         {renderMap(styles.expandedMap)}

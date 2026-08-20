@@ -46,6 +46,7 @@ import {
   validateTripStatusUpdatedPayload,
 } from '@/utils/deliveryValidation';
 import { calculateDistanceMeters } from '@/utils/pickupValidation';
+import appI18n from '@/localization/i18n';
 
 type RouteParams = {
   tripId?: string;
@@ -130,13 +131,13 @@ export default function CustomerDeliveryTrackingScreen() {
 
   useEffect(() => {
     if (!isRouteValid || !pickupLocation || !dropoffLocation) {
-      setTimeout(() => setErrorMessage('Invalid delivery tracking parameters.'), 0);
+      setTimeout(() => setErrorMessage(appI18n.t("Invalid delivery tracking parameters.")), 0);
       return;
     }
 
     const token = getAccessToken();
     if (!token) {
-      setTimeout(() => setErrorMessage('Missing auth token. Please login again.'), 0);
+      setTimeout(() => setErrorMessage(appI18n.t("Missing auth token. Please login again.")), 0);
       return;
     }
 
@@ -147,7 +148,7 @@ export default function CustomerDeliveryTrackingScreen() {
       setTimeout(
         () =>
           setErrorMessage(
-            error instanceof Error ? error.message : 'Failed to connect realtime socket.',
+            error instanceof Error ? error.message : appI18n.t("Failed to connect realtime socket."),
           ),
         0,
       );
@@ -206,11 +207,11 @@ export default function CustomerDeliveryTrackingScreen() {
     });
 
     const unsubDisconnect = onSocketDisconnect(() => {
-      setErrorMessage('Socket disconnected. Waiting to reconnect...');
+      setErrorMessage(appI18n.t("Socket disconnected. Waiting to reconnect..."));
     });
 
     const unsubSocketError = onSocketError((message) => {
-      setErrorMessage(message || 'Socket connection error.');
+      setErrorMessage(message || appI18n.t("Socket connection error."));
     });
 
     const unsubAdditionalCharge = onAdditionalChargeAdded((payload) => {
@@ -235,10 +236,9 @@ export default function CustomerDeliveryTrackingScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Map configuration missing</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Map configuration missing")}</Text>
           <Text style={styles.fallbackText}>
-            Set the Google Maps API key to display delivery tracking.
-          </Text>
+            {appI18n.t("Set the Google Maps API key to display delivery tracking.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -248,8 +248,8 @@ export default function CustomerDeliveryTrackingScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
-          <Text style={styles.fallbackText}>Invalid delivery tracking route parameters.</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Tracking unavailable")}</Text>
+          <Text style={styles.fallbackText}>{appI18n.t("Invalid delivery tracking route parameters.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -264,10 +264,9 @@ export default function CustomerDeliveryTrackingScreen() {
     return (
       <SafeAreaView style={styles.fallbackScreen}>
         <TrackingScreenCard>
-          <Text style={styles.fallbackTitle}>Tracking unavailable</Text>
+          <Text style={styles.fallbackTitle}>{appI18n.t("Tracking unavailable")}</Text>
           <Text style={styles.fallbackText}>
-            Delivery tracking map is available on iOS and Android only.
-          </Text>
+            {appI18n.t("Delivery tracking map is available on iOS and Android only.")}</Text>
         </TrackingScreenCard>
       </SafeAreaView>
     );
@@ -283,15 +282,15 @@ export default function CustomerDeliveryTrackingScreen() {
         longitudeDelta: 0.04,
       }}
     >
-      <NativeMarker coordinate={pickupLocation} title="Pickup" />
-      <NativeMarker coordinate={dropoffLocation} title="Dropoff" anchor={{ x: 0.5, y: 0.5 }}>
+      <NativeMarker coordinate={pickupLocation} title={appI18n.t("Pickup")} />
+      <NativeMarker coordinate={dropoffLocation} title={appI18n.t("Dropoff")} anchor={{ x: 0.5, y: 0.5 }}>
         <View style={styles.destinationXMarker}>
           <Text style={styles.destinationXText}>X</Text>
         </View>
       </NativeMarker>
       {driverLocation ? (
         <>
-          <NativeMarker coordinate={driverLocation} title="Driver" anchor={{ x: 0.5, y: 0.5 }}>
+          <NativeMarker coordinate={driverLocation} title={appI18n.t("Driver")} anchor={{ x: 0.5, y: 0.5 }}>
             <Text style={styles.driverMarkerIcon}>🚗</Text>
           </NativeMarker>
           <NativeMapViewDirections
@@ -319,14 +318,14 @@ export default function CustomerDeliveryTrackingScreen() {
       <TrackingScrollable>
         <TrackingHero
           eyebrow={`Order #${tripId || 'N/A'}`}
-          title="Delivery in progress"
+          title={appI18n.t("Delivery in progress")}
           description="The delivery map updates live while the driver heads to the dropoff address."
         />
 
         <TrackingProgress currentStage={4} />
 
         <TrackingMapShell
-          title="Delivery map"
+          title={appI18n.t("Delivery map")}
           subtitle="Live route from driver location to your destination."
           onExpand={() => setIsMapExpanded(true)}
         >
@@ -335,38 +334,40 @@ export default function CustomerDeliveryTrackingScreen() {
 
         <TrackingScreenCard>
           <TrackingInfoPill
-            label={driverLocation ? 'Live delivery active' : 'Waiting for route updates'}
+            label={driverLocation ? appI18n.t('Live delivery active') : appI18n.t('Waiting for route updates')}
             tone={driverLocation ? 'success' : 'accent'}
           />
           <Text style={styles.cardTitle}>{statusText}</Text>
           <Text style={styles.cardBody}>
-            You will be notified as the driver approaches the delivery location.
-          </Text>
+            {appI18n.t("You will be notified as the driver approaches the delivery location.")}</Text>
           {nearDeliveryBanner ? (
             <View style={styles.successCard}>
-              <Text style={styles.successTitle}>Delivery approaching</Text>
+              <Text style={styles.successTitle}>{appI18n.t("Delivery approaching")}</Text>
               <Text style={styles.successText}>{nearDeliveryBanner}</Text>
             </View>
           ) : null}
           <TrackingMetaRow
-            label="Dropoff address"
+            label={appI18n.t("Dropoff address")}
             value={
               dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
             }
           />
-          <TrackingMetaRow label="Distance to dropoff" value={distanceText} />
+          <TrackingMetaRow label={appI18n.t("Distance to dropoff")} value={distanceText} />
           {!driverLocation ? (
             <View style={styles.inlineRow}>
               <ActivityIndicator size="small" color={clientTheme.accentStrong} />
-              <Text style={styles.helperText}>Waiting for driver location...</Text>
+              <Text style={styles.helperText}>{appI18n.t("Waiting for driver location...")}</Text>
             </View>
           ) : null}
           {latestAdditionalCharge ? (
             <View style={styles.noticeCard}>
-              <Text style={styles.noticeTitle}>Additional charge added</Text>
+              <Text style={styles.noticeTitle}>{appI18n.t("Additional charge added")}</Text>
               <Text style={styles.noticeText}>
-                {latestAdditionalCharge.amount.toFixed(2)} {latestAdditionalCharge.currency} for{' '}
-                {latestAdditionalCharge.reason}
+                {appI18n.t('{{amount}} {{currency}} for {{reason}}', {
+                  amount: latestAdditionalCharge.amount.toFixed(2),
+                  currency: latestAdditionalCharge.currency,
+                  reason: latestAdditionalCharge.reason,
+                })}
               </Text>
             </View>
           ) : null}
@@ -377,7 +378,7 @@ export default function CustomerDeliveryTrackingScreen() {
 
       <TrackingMapModal
         visible={isMapExpanded}
-        title="Delivery map"
+        title={appI18n.t("Delivery map")}
         onClose={() => setIsMapExpanded(false)}
       >
         {renderMap(styles.expandedMap)}

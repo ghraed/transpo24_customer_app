@@ -1,14 +1,15 @@
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { clientTheme } from '@/components/tracking-ui';
+import appI18n from '@/localization/i18n';
 
 export default function SimplePage() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.eyebrow}>Utility</Text>
-        <Text style={styles.title}>Simple Page</Text>
-        <Text style={styles.subtitle}>If you can see this, routing works.</Text>
+        <Text style={styles.eyebrow}>{appI18n.t("Utility")}</Text>
+        <Text style={styles.title}>{appI18n.t("Simple Page")}</Text>
+        <Text style={styles.subtitle}>{appI18n.t("If you can see this, routing works.")}</Text>
       </View>
     </SafeAreaView>
   );

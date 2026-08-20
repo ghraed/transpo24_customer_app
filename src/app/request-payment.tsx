@@ -37,6 +37,7 @@ import type {
   PaymentSummary,
   RequestStatusResponse,
 } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 type PaymentOption = {
   method: PaymentMethod;
@@ -115,22 +116,22 @@ function formatMoney(amount: number, currency: string | null | undefined): strin
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${amount.toFixed(2)} ${code}`;
+    return appI18n.t("{{value0}} {{value1}}", { value0: amount.toFixed(2), value1: code });
   }
 }
 
 function getPaymentMethodLabel(method: PaymentMethod): string {
   switch (method) {
     case 'CREDIT_CARD':
-      return 'Credit card';
+      return appI18n.t("Credit card");
     case 'DEBIT_CARD':
-      return 'Debit card';
+      return appI18n.t("Debit card");
     case 'APPLE_PAY':
-      return 'Apple Pay';
+      return appI18n.t("Apple Pay");
     case 'GOOGLE_PAY':
-      return 'Google Pay';
+      return appI18n.t("Google Pay");
     case 'APP_WALLET':
-      return 'App wallet';
+      return appI18n.t("App wallet");
     default:
       return method;
   }
@@ -139,10 +140,10 @@ function getPaymentMethodLabel(method: PaymentMethod): string {
 function toStripeErrorMessage(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes('canceled') || normalized.includes('cancelled')) {
-    return 'Payment confirmation was cancelled. You can try again.';
+    return appI18n.t("Payment confirmation was cancelled. You can try again.");
   }
   if (normalized.includes('invalid api key provided')) {
-    return 'Stripe is not configured correctly. Set a real EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY in the client app and a matching STRIPE_SECRET_KEY in the backend.';
+    return appI18n.t("Stripe is not configured correctly. Set a real EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY in the client app and a matching STRIPE_SECRET_KEY in the backend.");
   }
   return message;
 }
@@ -238,25 +239,25 @@ export default function RequestPaymentScreen() {
   const needsCardField = selectedMethod === 'CREDIT_CARD' || selectedMethod === 'DEBIT_CARD';
   const methodDisabledReason = useMemo(() => {
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
-      return 'Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.';
+      return appI18n.t("Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.");
     }
     if (selectedMethod === 'APPLE_PAY' && Platform.OS !== 'ios') {
-      return 'Apple Pay is only available on iOS.';
+      return appI18n.t("Apple Pay is only available on iOS.");
     }
     if (selectedMethod === 'GOOGLE_PAY' && Platform.OS !== 'android') {
-      return 'Google Pay is only available on Android.';
+      return appI18n.t("Google Pay is only available on Android.");
     }
     if (selectedMethod === 'APPLE_PAY' && !merchantIdentifier) {
-      return 'Apple Pay is not configured. Set EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER to your real Apple merchant identifier and rebuild the iOS app.';
+      return appI18n.t("Apple Pay is not configured. Set EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER to your real Apple merchant identifier and rebuild the iOS app.");
     }
     if (needsStripe && !publishableKey) {
-      return 'Stripe is not configured. Set EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to a real pk_test_ or pk_live_ key.';
+      return appI18n.t("Stripe is not configured. Set EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to a real pk_test_ or pk_live_ key.");
     }
     if (!requestData || !offerData || !requestId || !offerId) {
-      return 'Missing payment context. Please go back and choose the offer again.';
+      return appI18n.t("Missing payment context. Please go back and choose the offer again.");
     }
     if (needsCardField && !cardComplete) {
-      return 'Complete your card details to continue.';
+      return appI18n.t("Complete your card details to continue.");
     }
     return '';
   }, [
@@ -274,10 +275,10 @@ export default function RequestPaymentScreen() {
   ]);
 
   const submitLabel = useMemo(() => {
-    if (selectedMethod === 'APP_WALLET') return 'Pay from Wallet';
-    if (selectedMethod === 'APPLE_PAY') return 'Pay with Apple Pay';
-    if (selectedMethod === 'GOOGLE_PAY') return 'Pay with Google Pay';
-    return 'Pay Now';
+    if (selectedMethod === 'APP_WALLET') return appI18n.t("Pay from Wallet");
+    if (selectedMethod === 'APPLE_PAY') return appI18n.t("Pay with Apple Pay");
+    if (selectedMethod === 'GOOGLE_PAY') return appI18n.t("Pay with Google Pay");
+    return appI18n.t("Pay Now");
   }, [selectedMethod]);
 
   const navigateToNextStep = (nextRequestId: string): void => {
@@ -312,7 +313,7 @@ export default function RequestPaymentScreen() {
 
   const confirmStripeBackedPayment = async (payment: PaymentSummary): Promise<void> => {
     if (!payment.stripeClientSecret) {
-      throw new Error('Missing Stripe client secret from the backend.');
+      throw new Error(appI18n.t("Missing Stripe client secret from the backend."));
     }
 
     if (selectedMethod === 'APPLE_PAY') {
@@ -404,7 +405,7 @@ export default function RequestPaymentScreen() {
         setPaymentResult(existingPayment);
       }
 
-      if (!createdPayment) throw new Error('Missing payment information.');
+      if (!createdPayment) throw new Error(appI18n.t("Missing payment information."));
 
       if (selectedMethod !== 'APP_WALLET' && isPendingPaymentStatus(createdPayment.status)) {
         await confirmStripeBackedPayment(createdPayment);
@@ -415,7 +416,7 @@ export default function RequestPaymentScreen() {
 
       if (!isSuccessfulPaymentStatus(latestPayment.status)) {
         throw new Error(
-          `Payment was not completed successfully. Current status: ${latestPayment.status}.`,
+          appI18n.t("Payment was not completed successfully. Current status: {{value0}}.", { value0: latestPayment.status }),
         );
       }
 
@@ -423,7 +424,7 @@ export default function RequestPaymentScreen() {
       const finalizedRequest = await getCustomerRequestStatus(requestId);
       if (!isFinalizedRequestStatus(finalizedRequest.status)) {
         throw new Error(
-          `Payment succeeded but request finalization is still pending. Current request status: ${finalizedRequest.status}.`,
+          appI18n.t("Payment succeeded but request finalization is still pending. Current request status: {{value0}}.", { value0: finalizedRequest.status }),
         );
       }
 
@@ -445,7 +446,7 @@ export default function RequestPaymentScreen() {
         }
       }
 
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to complete payment.');
+      setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to complete payment."));
     } finally {
       setIsSubmitting(false);
     }
@@ -476,10 +477,9 @@ export default function RequestPaymentScreen() {
         <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
         <View style={styles.centeredContainer}>
           <Text style={styles.errorText}>
-            Missing payment context. Please go back and choose the driver again.
-          </Text>
+            {appI18n.t("Missing payment context. Please go back and choose the driver again.")}</Text>
           <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
-            <Text style={styles.secondaryButtonText}>Go Back</Text>
+            <Text style={styles.secondaryButtonText}>{appI18n.t("Go Back")}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -509,39 +509,37 @@ export default function RequestPaymentScreen() {
                 size={20}
               />
             </View>
-            <Text style={styles.heroLabel}>Payment</Text>
+            <Text style={styles.heroLabel}>{appI18n.t("Payment")}</Text>
           </View>
-          <Text style={styles.heroTitle}>Pay Now</Text>
+          <Text style={styles.heroTitle}>{appI18n.t("Pay Now")}</Text>
           <Text style={styles.heroSubtitle}>
-            The agreed amount will be collected now when you confirm the driver. If you cancel before pickup, 85% is refunded automatically and 15% is kept as the cancellation fee.
-          </Text>
+            {appI18n.t("The agreed amount will be collected now when you confirm the driver. If you cancel before pickup, 85% is refunded automatically and 15% is kept as the cancellation fee.")}</Text>
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Payment Summary</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Payment Summary")}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Selected driver</Text>
+            <Text style={styles.summaryLabel}>{appI18n.t("Selected driver")}</Text>
             <Text style={styles.summaryValue}>{offerData.driverName || 'Driver'}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Agreed amount</Text>
+            <Text style={styles.summaryLabel}>{appI18n.t("Agreed amount")}</Text>
             <Text style={styles.summaryValue}>{formatMoney(amount, currency)}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Pickup</Text>
+            <Text style={styles.summaryLabel}>{appI18n.t("Pickup")}</Text>
             <Text style={styles.summaryValue}>{requestData.pickupLocation.address || 'N/A'}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Estimated pickup</Text>
+            <Text style={styles.summaryLabel}>{appI18n.t("Estimated pickup")}</Text>
             <Text style={styles.summaryValue}>{formatDate(offerData.estimatedPickupAt)}</Text>
           </View>
           <Text style={styles.helperText}>
-            This payment is collected now and held in the platform until the trip outcome is resolved.
-          </Text>
+            {appI18n.t("This payment is collected now and held in the platform until the trip outcome is resolved.")}</Text>
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Choose Payment Method</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Choose Payment Method")}</Text>
           {PAYMENT_OPTIONS.map((option) => {
             const isSelected = option.method === selectedMethod;
             const isUnavailableInExpoGo =
@@ -561,17 +559,15 @@ export default function RequestPaymentScreen() {
                     <IconSymbol name={option.icon} color="#111827" size={18} />
                   </View>
                   <View style={styles.methodCopy}>
-                    <Text style={styles.methodTitle}>{option.title}</Text>
-                    <Text style={styles.methodDescription}>{option.description}</Text>
+                    <Text style={styles.methodTitle}>{appI18n.t(option.title)}</Text>
+                    <Text style={styles.methodDescription}>{appI18n.t(option.description)}</Text>
                     {isUnavailableInExpoGo ? (
                       <Text style={styles.methodHint}>
-                        Development build required. Native wallets do not work in Expo Go.
-                      </Text>
+                        {appI18n.t("Development build required. Native wallets do not work in Expo Go.")}</Text>
                     ) : null}
                     {isUnavailableOnPlatform ? (
                       <Text style={styles.methodHint}>
-                        This payment method is not available on this platform.
-                      </Text>
+                        {appI18n.t("This payment method is not available on this platform.")}</Text>
                     ) : null}
                     {option.method === 'APPLE_PAY' &&
                     supportCheckComplete &&
@@ -579,8 +575,7 @@ export default function RequestPaymentScreen() {
                     !isExpoGo &&
                     !applePaySupported ? (
                       <Text style={styles.methodHint}>
-                        Apple Pay is currently unavailable on this device.
-                      </Text>
+                        {appI18n.t("Apple Pay is currently unavailable on this device.")}</Text>
                     ) : null}
                     {option.method === 'GOOGLE_PAY' &&
                     supportCheckComplete &&
@@ -588,8 +583,7 @@ export default function RequestPaymentScreen() {
                     !isExpoGo &&
                     !googlePaySupported ? (
                       <Text style={styles.methodHint}>
-                        Google Pay is currently unavailable on this device.
-                      </Text>
+                        {appI18n.t("Google Pay is currently unavailable on this device.")}</Text>
                     ) : null}
                   </View>
                 </View>
@@ -603,7 +597,7 @@ export default function RequestPaymentScreen() {
 
         {needsCardField ? (
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Card Details</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Card Details")}</Text>
             <View style={styles.cardFieldWrap}>
               <CardField
                 postalCodeEnabled={false}
@@ -631,14 +625,14 @@ export default function RequestPaymentScreen() {
         {!supportCheckComplete && (selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') ? (
           <View style={styles.inlineInfo}>
             <ActivityIndicator size="small" color="#111827" />
-            <Text style={styles.helperText}>Checking device payment support…</Text>
+            <Text style={styles.helperText}>{appI18n.t("Checking device payment support…")}</Text>
           </View>
         ) : null}
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Review</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Review")}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Chosen method</Text>
+            <Text style={styles.summaryLabel}>{appI18n.t("Chosen method")}</Text>
             <Text style={styles.summaryValue}>{getPaymentMethodLabel(selectedOption.method)}</Text>
           </View>
           {selectedMethod === 'APPLE_PAY' ? (
@@ -650,17 +644,16 @@ export default function RequestPaymentScreen() {
           ) : null}
           {selectedMethod === 'GOOGLE_PAY' ? (
             <Text style={styles.helperText}>
-              Google Pay on Android does not use an Apple merchant identifier.
-            </Text>
+              {appI18n.t("Google Pay on Android does not use an Apple merchant identifier.")}</Text>
           ) : null}
           {paymentResult ? (
             <>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Payment status</Text>
+                <Text style={styles.summaryLabel}>{appI18n.t("Payment status")}</Text>
                 <Text style={styles.summaryValue}>{paymentResult.status}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Collected amount</Text>
+                <Text style={styles.summaryLabel}>{appI18n.t("Collected amount")}</Text>
                 <Text style={styles.summaryValue}>
                   {formatMoney(
                     paymentResult.capturedAmount > 0 ? paymentResult.capturedAmount : paymentResult.amount,
@@ -687,7 +680,7 @@ export default function RequestPaymentScreen() {
         {methodDisabledReason ? <Text style={styles.helperText}>{methodDisabledReason}</Text> : null}
 
         <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
-          <Text style={styles.secondaryButtonText}>Back to Offers</Text>
+          <Text style={styles.secondaryButtonText}>{appI18n.t("Back to Offers")}</Text>
         </Pressable>
       </ScrollView>
 
@@ -695,30 +688,29 @@ export default function RequestPaymentScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalBadge}>
-              <Text style={styles.modalBadgeText}>Important</Text>
+              <Text style={styles.modalBadgeText}>{appI18n.t("Important")}</Text>
             </View>
-            <Text style={styles.modalTitle}>Immediate payment capture</Text>
+            <Text style={styles.modalTitle}>{appI18n.t("Immediate payment capture")}</Text>
             <Text style={styles.modalBody}>
-              Confirming this driver charges {formatMoney(amount, currency)} immediately.
+              {appI18n.t('Confirming this driver charges {{amount}} immediately.', {
+                amount: formatMoney(amount, currency),
+              })}
             </Text>
 
             <View style={styles.noticePanel}>
-              <Text style={styles.noticePanelTitle}>Cancellation policy</Text>
+              <Text style={styles.noticePanelTitle}>{appI18n.t("Cancellation policy")}</Text>
               <Text style={styles.noticePanelText}>
-                Before pickup: 85% is refunded automatically and 15% is kept as the cancellation fee.
-              </Text>
+                {appI18n.t("Before pickup: 85% is refunded automatically and 15% is kept as the cancellation fee.")}</Text>
               <Text style={styles.noticePanelText}>
-                After pickup: automatic cancellation is not available and the case goes to manual review.
-              </Text>
+                {appI18n.t("After pickup: automatic cancellation is not available and the case goes to manual review.")}</Text>
             </View>
 
             <Text style={styles.modalFootnote}>
-              Continue only if you want to pay now and lock this offer for the selected driver.
-            </Text>
+              {appI18n.t("Continue only if you want to pay now and lock this offer for the selected driver.")}</Text>
 
             <View style={styles.modalActions}>
               <Pressable style={styles.modalSecondaryButton} onPress={closePaymentNotice}>
-                <Text style={styles.modalSecondaryButtonText}>Review again</Text>
+                <Text style={styles.modalSecondaryButtonText}>{appI18n.t("Review again")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalPrimaryButton, isSubmitting && styles.disabledButton]}
@@ -726,7 +718,7 @@ export default function RequestPaymentScreen() {
                 onPress={confirmPaymentNotice}
               >
                 <Text style={styles.modalPrimaryButtonText}>
-                  {isSubmitting ? 'Processing…' : 'Confirm and Pay'}
+                  {isSubmitting ? appI18n.t('Processing…') : appI18n.t('Confirm and Pay')}
                 </Text>
               </Pressable>
             </View>

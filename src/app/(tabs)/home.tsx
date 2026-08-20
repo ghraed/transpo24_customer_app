@@ -27,6 +27,7 @@ import type {
   CustomerHomeResponse,
 } from "@/types/customer-request";
 import type { Service } from "@/types/service";
+import appI18n from '@/localization/i18n';
 
 const serviceIcons: Record<string, SymbolViewProps["name"]> = {
   VEHICLE_TRANSPORT: {
@@ -138,7 +139,7 @@ function compactAddress(
     .filter(Boolean);
 
   if (parts.length >= 2) {
-    return `${parts[0]}, ${parts[1]}`;
+    return appI18n.t("{{value0}}, {{value1}}", { value0: parts[0], value1: parts[1] });
   }
 
   return parts[0] ?? fallback;
@@ -167,7 +168,7 @@ function getRequestDateLabel(
 
 function getRequestReference(requestId: string): string {
   const compactId = requestId.replace(/-/g, "").slice(0, 8).toUpperCase();
-  return `ID ${compactId || requestId}`;
+  return appI18n.t("ID {{value0}}", { value0: compactId || requestId });
 }
 
 function getRouteLabel(
@@ -177,7 +178,7 @@ function getRouteLabel(
 ): string {
   const pickup = compactAddress(request.pickupAddress, t("Pickup"));
   const dropoff = compactAddress(request.dropoffAddress, t("Dropoff"));
-  return `${pickup} ${directionArrow} ${dropoff}`;
+  return appI18n.t("{{value0}} {{value1}} {{value2}}", { value0: pickup, value1: directionArrow, value2: dropoff });
 }
 
 function getStatusTone(status: CustomerHomeRequestSummary["status"]): {

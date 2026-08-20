@@ -45,6 +45,7 @@ import type {
 import type { VehicleCondition } from '@/types/vehicle-condition';
 import type { VehicleDetailsPayload } from '@/types/vehicle';
 import { formatDistanceKm } from '@/utils/routeDistance';
+import appI18n from '@/localization/i18n';
 
 type ParsedItemDetails = NonNullable<CustomerRequest['itemDetails']>;
 
@@ -174,27 +175,56 @@ function parsePendingFurniturePhotoAssets(raw: string | undefined): LocalPhotoAs
 }
 
 function formatLocation(location?: LocationData): string {
-  if (!location) return 'Missing location';
+  if (!location) return appI18n.t("Missing location");
   if (location.address?.trim()) return location.address;
-  return `Lat: ${location.coordinates.latitude.toFixed(6)}  |  Lng: ${location.coordinates.longitude.toFixed(6)}`;
+  return appI18n.t("Lat: {{value0}}  |  Lng: {{value1}}", { value0: location.coordinates.latitude.toFixed(6), value1: location.coordinates.longitude.toFixed(6) });
 }
 
 function formatSchedule(isImmediate: boolean, scheduledPickupAt?: string): string {
-  if (isImmediate) return 'Immediate pickup';
-  if (!scheduledPickupAt) return 'Missing schedule';
+  if (isImmediate) return appI18n.t("Immediate pickup");
+  if (!scheduledPickupAt) return appI18n.t("Missing schedule");
   const date = new Date(scheduledPickupAt);
-  if (Number.isNaN(date.getTime())) return 'Invalid schedule';
+  if (Number.isNaN(date.getTime())) return appI18n.t("Invalid schedule");
   return date.toLocaleString(undefined, { hour12: false });
 }
 
 function formatItemType(itemType: ItemType | undefined): string {
-  if (!itemType) return 'Missing item type';
-  return itemType.replace('_', ' ');
+  if (!itemType) return appI18n.t("Missing item type");
+  const labels: Record<ItemType, string> = {
+    VEHICLE: 'Vehicle',
+    MOTORCYCLE: 'Motorcycle',
+    GOODS: 'Goods',
+    FURNITURE: 'Furniture',
+    OTHER: 'Other',
+  };
+  return appI18n.t(labels[itemType]);
+}
+
+function formatEnumLabel(value: string): string {
+  const labels: Record<string, string> = {
+    RUNNING: 'Running vehicle',
+    NEEDS_JUMP_START: 'Needs jump-start',
+    NEEDS_WINCH: 'Needs winch',
+    NEEDS_CRANE: 'Needs crane',
+    MISSING_WHEELS: 'Missing wheels',
+    SPORT_BIKE: 'Sport bike',
+    CRUISER: 'Cruiser',
+    ELECTRIC_MOTORCYCLE: 'Electric motorcycle',
+    SCOOTER: 'Scooter',
+    OTHER: 'Other',
+    WORKING: 'Working',
+    NOT_WORKING: 'Not working',
+    DAMAGED: 'Damaged',
+    UNKNOWN: 'Unknown',
+  };
+  if (labels[value]) return appI18n.t(labels[value]);
+  const normalized = value.replace(/_/g, ' ').toLowerCase();
+  return appI18n.t(normalized.charAt(0).toUpperCase() + normalized.slice(1));
 }
 
 function formatHeavyShipmentType(value: GoodsHeavyShipmentType | undefined): string {
-  if (!value) return 'Not specified';
-  return value === 'ONE_HEAVY_ITEM' ? 'One heavy item' : 'Multiple smaller pieces';
+  if (!value) return appI18n.t("Not specified");
+  return value === 'ONE_HEAVY_ITEM' ? appI18n.t('One heavy item') : appI18n.t('Multiple smaller pieces');
 }
 
 function resolvePhotoUrl(url: string): string {
@@ -205,7 +235,7 @@ function resolvePhotoUrl(url: string): string {
   }
 
   const baseUrl = getApiBaseUrl();
-  return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+  return appI18n.t("{{value0}}{{value1}}{{value2}}", { value0: baseUrl, value1: trimmed.startsWith('/') ? '' : '/', value2: trimmed });
 }
 
 function buildFurnitureLocationPayload(location: LocationData) {
@@ -614,7 +644,7 @@ export default function SubmitRequestScreen() {
 
   const onSubmit = async (): Promise<void> => {
     if (validationErrors.length > 0) {
-      setErrorMessage(validationErrors[0] ?? 'Request details are incomplete.');
+      setErrorMessage(validationErrors[0] ?? appI18n.t("Request details are incomplete."));
       return;
     }
 
@@ -744,7 +774,7 @@ export default function SubmitRequestScreen() {
         const payload: UpdateScheduleAndItemDetailsPayload = {
           isImmediate,
           scheduledPickupAt: isImmediate ? undefined : scheduledPickupAt,
-          itemTitle: itemDetails.title?.trim() || 'Vehicle transport',
+          itemTitle: itemDetails.title?.trim() || appI18n.t("Vehicle transport"),
           itemDescription: itemDetails.description ?? undefined,
           itemType: itemDetails.type ?? 'VEHICLE',
           itemBrand: vehicleDetails?.vehicleBrand?.trim() || itemDetails.brand || undefined,
@@ -784,18 +814,18 @@ export default function SubmitRequestScreen() {
       setSuccessMessage('Request submitted successfully.');
       navigateToRequestStatus(submitted);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to submit request.';
+      const message = error instanceof Error ? error.message : appI18n.t("Failed to submit request.");
       const normalized = message.toLowerCase();
       if (normalized.includes('pickup location')) {
-        setErrorMessage('Pickup location is missing. Please edit pickup location.');
+        setErrorMessage(appI18n.t("Pickup location is missing. Please edit pickup location."));
         return;
       }
       if (normalized.includes('dropoff location')) {
-        setErrorMessage('Dropoff location is missing. Please edit dropoff location.');
+        setErrorMessage(appI18n.t("Dropoff location is missing. Please edit dropoff location."));
         return;
       }
       if (normalized.includes('only draft requests')) {
-        setErrorMessage('This request is no longer draft and cannot be submitted again.');
+        setErrorMessage(appI18n.t("This request is no longer draft and cannot be submitted again."));
         return;
       }
       setErrorMessage(message);
@@ -834,45 +864,44 @@ export default function SubmitRequestScreen() {
             <View style={styles.heroBadge}>
               <IconSymbol name={{ ios: 'paperplane.fill', android: 'send', web: 'send' }} color="#111827" size={20} />
             </View>
-            <Text style={styles.heroLabel}>Final Review</Text>
+            <Text style={styles.heroLabel}>{appI18n.t("Final Review")}</Text>
           </View>
-          <Text style={styles.title}>Submit Request</Text>
+          <Text style={styles.title}>{appI18n.t("Submit Request")}</Text>
           <Text style={styles.subtitle}>
-            Review your transport request before sending it to drivers.
-          </Text>
+            {appI18n.t("Review your transport request before sending it to drivers.")}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service</Text>
-          <Text style={styles.value}>{serviceName || serviceKey || serviceId || 'Unknown service'}</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Service")}</Text>
+          <Text style={styles.value}>{serviceName || serviceKey || serviceId || appI18n.t("Unknown service")}</Text>
         </View>
 
         {vehicleDetails ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Vehicle Details</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Vehicle Details")}</Text>
             <Text style={styles.value}>
               {vehicleDetails.vehicleBrand} {vehicleDetails.vehicleModel}
               {vehicleDetails.vehicleManufactureYear ? ` / ${vehicleDetails.vehicleManufactureYear}` : ''}
             </Text>
-            {vehicleDetails.vehicleSeries ? <Text style={styles.value}>Series: {vehicleDetails.vehicleSeries}</Text> : null}
-            {vehicleDetails.vehicleVariant ? <Text style={styles.value}>Variant: {vehicleDetails.vehicleVariant}</Text> : null}
+            {vehicleDetails.vehicleSeries ? <Text style={styles.value}>{appI18n.t("Series:")} {vehicleDetails.vehicleSeries}</Text> : null}
+            {vehicleDetails.vehicleVariant ? <Text style={styles.value}>{appI18n.t("Variant:")} {vehicleDetails.vehicleVariant}</Text> : null}
             {vehicleDetails.vehicleEstimatedWeightKg ? (
-              <Text style={styles.value}>Estimated weight: {vehicleDetails.vehicleEstimatedWeightKg} kg</Text>
+              <Text style={styles.value}>{appI18n.t("Estimated weight:")} {vehicleDetails.vehicleEstimatedWeightKg} kg</Text>
             ) : null}
             {vehicleConditionDetails?.vehicleCondition ? (
-              <Text style={styles.value}>Vehicle condition: {vehicleConditionDetails.vehicleCondition}</Text>
+              <Text style={styles.value}>{appI18n.t("Vehicle condition:")} {formatEnumLabel(vehicleConditionDetails.vehicleCondition)}</Text>
             ) : null}
             {vehicleConditionDetails?.vehicleConditionNotes ? (
-              <Text style={styles.value}>Condition notes: {vehicleConditionDetails.vehicleConditionNotes}</Text>
+              <Text style={styles.value}>{appI18n.t("Condition notes:")} {vehicleConditionDetails.vehicleConditionNotes}</Text>
             ) : null}
           </View>
         ) : null}
 
         {isMotorcycleTransport ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Photos")}</Text>
             {pendingMotorcyclePhotoAssets.length === 0 ? (
-              <Text style={styles.value}>No photos added</Text>
+              <Text style={styles.value}>{appI18n.t("No photos added")}</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {pendingMotorcyclePhotoAssets.map((photo, index) => (
@@ -885,9 +914,9 @@ export default function SubmitRequestScreen() {
 
         {isGoodsTransport ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Photos")}</Text>
             {pendingGoodsPhotoAssets.length === 0 ? (
-              <Text style={styles.value}>No photos added</Text>
+              <Text style={styles.value}>{appI18n.t("No photos added")}</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {pendingGoodsPhotoAssets.map((photo, index) => (
@@ -900,9 +929,9 @@ export default function SubmitRequestScreen() {
 
         {isFurnitureTransport ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Photos")}</Text>
             {pendingFurniturePhotoAssets.length === 0 ? (
-              <Text style={styles.value}>No photos added</Text>
+              <Text style={styles.value}>{appI18n.t("No photos added")}</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {pendingFurniturePhotoAssets.map((photo, index) => (
@@ -916,8 +945,8 @@ export default function SubmitRequestScreen() {
         {isMotorcycleTransport && pendingMotorcycleDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Date & Time</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>
               {formatSchedule(
@@ -931,21 +960,21 @@ export default function SubmitRequestScreen() {
         {isMotorcycleTransport && pendingMotorcycleDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Motorcycle Details</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              <Text style={styles.sectionTitle}>{appI18n.t("Motorcycle Details")}</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
-            <Text style={styles.value}>Type: {pendingMotorcycleDetails.motorcycleType.replace(/_/g, ' ')}</Text>
+            <Text style={styles.value}>{appI18n.t("Type:")} {formatEnumLabel(pendingMotorcycleDetails.motorcycleType)}</Text>
             <Text style={styles.value}>
-              Condition: {pendingMotorcycleDetails.motorcycleCondition.replace(/_/g, ' ')}
+              {appI18n.t("Condition:")} {formatEnumLabel(pendingMotorcycleDetails.motorcycleCondition)}
             </Text>
             <Text style={styles.value}>
-              Chassis number: {pendingMotorcycleDetails.chassisNumber?.trim() || 'Not provided'}
+              {appI18n.t("Chassis number:")} {pendingMotorcycleDetails.chassisNumber?.trim() || appI18n.t("Not provided")}
             </Text>
             <Text style={styles.value}>
-              Special wrapping: {pendingMotorcycleDetails.requiresSpecialWrapping ? 'Yes' : 'No'}
+              {appI18n.t("Special wrapping:")} {pendingMotorcycleDetails.requiresSpecialWrapping ? appI18n.t('Yes') : appI18n.t('No')}
             </Text>
             <Text style={styles.value}>
-              Dedicated carrier: {pendingMotorcycleDetails.requiresDedicatedCarrier ? 'Yes' : 'No'}
+              {appI18n.t("Dedicated carrier:")} {pendingMotorcycleDetails.requiresDedicatedCarrier ? appI18n.t('Yes') : appI18n.t('No')}
             </Text>
           </View>
         ) : null}
@@ -953,8 +982,8 @@ export default function SubmitRequestScreen() {
         {isGoodsTransport && pendingGoodsDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Date & Time</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>
               {formatSchedule(
@@ -968,20 +997,20 @@ export default function SubmitRequestScreen() {
         {isGoodsTransport && pendingGoodsDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Goods Details</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              <Text style={styles.sectionTitle}>{appI18n.t("Goods Details")}</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
-            <Text style={styles.value}>Shipment size: {pendingGoodsDetails.shipmentSize}</Text>
-            <Text style={styles.value}>Description: {pendingGoodsDetails.goodsDescription}</Text>
-            <Text style={styles.value}>Approximate weight: {pendingGoodsDetails.approximateWeightKg} kg</Text>
-            <Text style={styles.value}>Number of pieces: {pendingGoodsDetails.numberOfPieces}</Text>
-            <Text style={styles.value}>Fragile: {pendingGoodsDetails.isFragile ? 'Yes' : 'No'}</Text>
+            <Text style={styles.value}>{appI18n.t("Shipment size:")} {pendingGoodsDetails.shipmentSize}</Text>
+            <Text style={styles.value}>{appI18n.t("Description:")} {pendingGoodsDetails.goodsDescription}</Text>
+            <Text style={styles.value}>{appI18n.t("Approximate weight:")} {pendingGoodsDetails.approximateWeightKg} kg</Text>
+            <Text style={styles.value}>{appI18n.t("Number of pieces:")} {pendingGoodsDetails.numberOfPieces}</Text>
+            <Text style={styles.value}>{appI18n.t("Fragile:")} {pendingGoodsDetails.isFragile ? appI18n.t('Yes') : appI18n.t('No')}</Text>
             <Text style={styles.value}>
-              Refrigeration: {pendingGoodsDetails.requiresRefrigeration ? 'Yes' : 'No'}
+              {appI18n.t("Refrigeration:")} {pendingGoodsDetails.requiresRefrigeration ? appI18n.t('Yes') : appI18n.t('No')}
             </Text>
             {pendingGoodsDetails.approximateWeightKg >= 50 ? (
               <Text style={styles.value}>
-                Heavy shipment: {formatHeavyShipmentType(pendingGoodsDetails.heavyShipmentType)}
+                {appI18n.t("Heavy shipment:")} {formatHeavyShipmentType(pendingGoodsDetails.heavyShipmentType)}
               </Text>
             ) : null}
           </View>
@@ -990,8 +1019,8 @@ export default function SubmitRequestScreen() {
         {isFurnitureTransport && pendingFurnitureDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Date & Time</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>
               {(() => {
@@ -1005,41 +1034,41 @@ export default function SubmitRequestScreen() {
         {isFurnitureTransport && pendingFurnitureDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Furniture Details</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+              <Text style={styles.sectionTitle}>{appI18n.t("Furniture Details")}</Text>
+              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
-            <Text style={styles.value}>Description: {pendingFurnitureDetails.furnitureDescription}</Text>
-            <Text style={styles.value}>Approximate item count: {pendingFurnitureDetails.approximateItemCount}</Text>
-            <Text style={styles.value}>Needs helpers: {pendingFurnitureDetails.needsHelpers ? 'Yes' : 'No'}</Text>
+            <Text style={styles.value}>{appI18n.t("Description:")} {pendingFurnitureDetails.furnitureDescription}</Text>
+            <Text style={styles.value}>{appI18n.t("Approximate item count:")} {pendingFurnitureDetails.approximateItemCount}</Text>
+            <Text style={styles.value}>{appI18n.t("Needs helpers:")} {pendingFurnitureDetails.needsHelpers ? appI18n.t('Yes') : appI18n.t('No')}</Text>
             {pendingFurnitureDetails.needsHelpers &&
             typeof pendingFurnitureDetails.helpersCount === 'number' ? (
-              <Text style={styles.value}>Number of helpers: {pendingFurnitureDetails.helpersCount}</Text>
+              <Text style={styles.value}>{appI18n.t("Number of helpers:")} {pendingFurnitureDetails.helpersCount}</Text>
             ) : null}
             <Text style={styles.value}>
-              Moving date: {new Date(pendingFurnitureDetails.movingDate).toLocaleString(undefined, { hour12: false })}
+              {appI18n.t("Moving date:")} {new Date(pendingFurnitureDetails.movingDate).toLocaleString(undefined, { hour12: false })}
             </Text>
             <Text style={styles.value}>
-              Can help loading: {pendingFurnitureDetails.customerCanHelpLoading ? 'Yes' : 'No'}
+              {appI18n.t("Can help loading:")} {pendingFurnitureDetails.customerCanHelpLoading ? appI18n.t('Yes') : appI18n.t('No')}
             </Text>
           </View>
         ) : null}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pickup Location</Text>
-            <Pressable onPress={navigateToPickup}><Text style={styles.editText}>Edit</Text></Pressable>
+            <Text style={styles.sectionTitle}>{appI18n.t("Pickup Location")}</Text>
+            <Pressable onPress={navigateToPickup}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
           </View>
           <Text style={styles.value}>{formatLocation(pickupLocation)}</Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Dropoff Location</Text>
-            <Pressable onPress={navigateToDropoff}><Text style={styles.editText}>Edit</Text></Pressable>
+            <Text style={styles.sectionTitle}>{appI18n.t("Dropoff Location")}</Text>
+            <Pressable onPress={navigateToDropoff}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
           </View>
           <Text style={styles.value}>{formatLocation(dropoffLocation)}</Text>
           {routeDistanceKm !== null ? (
-            <Text style={styles.value}>Route distance: {formatDistanceKm(routeDistanceKm)}</Text>
+            <Text style={styles.value}>{appI18n.t("Route distance:")} {formatDistanceKm(routeDistanceKm)}</Text>
           ) : null}
         </View>
 
@@ -1047,44 +1076,55 @@ export default function SubmitRequestScreen() {
           <>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Date & Time</Text>
-                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+                <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
+                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
               </View>
               <Text style={styles.value}>{formatSchedule(isImmediate, scheduledPickupAt)}</Text>
             </View>
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Item Details</Text>
-                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>Edit</Text></Pressable>
+                <Text style={styles.sectionTitle}>{appI18n.t("Item Details")}</Text>
+                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
               </View>
-              <Text style={styles.value}>Title: {itemDetails?.title ?? 'N/A'}</Text>
-              <Text style={styles.value}>Type: {formatItemType(itemDetails?.type ?? undefined)}</Text>
-              {itemDetails?.description ? <Text style={styles.value}>Description: {itemDetails.description}</Text> : null}
+              <Text style={styles.value}>{appI18n.t("Title:")} {itemDetails?.title ?? 'N/A'}</Text>
+              <Text style={styles.value}>{appI18n.t("Type:")} {formatItemType(itemDetails?.type ?? undefined)}</Text>
+              {itemDetails?.description ? <Text style={styles.value}>{appI18n.t("Description:")} {itemDetails.description}</Text> : null}
               {(itemDetails?.brand || itemDetails?.model || itemDetails?.year) ? (
                 <Text style={styles.value}>
-                  {`Brand/Model/Year: ${itemDetails.brand ?? '-'} / ${itemDetails.model ?? '-'} / ${itemDetails.year ?? '-'}`}
+                  {appI18n.t('Brand/Model/Year: {{brand}} / {{model}} / {{year}}', {
+                    brand: itemDetails.brand ?? '-',
+                    model: itemDetails.model ?? '-',
+                    year: itemDetails.year ?? '-',
+                  })}
                 </Text>
               ) : null}
-              {itemDetails?.condition ? <Text style={styles.value}>Condition: {itemDetails.condition}</Text> : null}
-              {itemDetails?.weightKg ? <Text style={styles.value}>Weight: {itemDetails.weightKg} kg</Text> : null}
+              {itemDetails?.condition ? <Text style={styles.value}>{appI18n.t("Condition:")} {itemDetails.condition}</Text> : null}
+              {itemDetails?.weightKg ? <Text style={styles.value}>{appI18n.t("Weight:")} {itemDetails.weightKg} kg</Text> : null}
               {(itemDetails?.dimensions.lengthCm || itemDetails?.dimensions.widthCm || itemDetails?.dimensions.heightCm) ? (
                 <Text style={styles.value}>
-                  {`Dimensions: ${itemDetails.dimensions.lengthCm ?? '-'} x ${itemDetails.dimensions.widthCm ?? '-'} x ${itemDetails.dimensions.heightCm ?? '-'} cm`}
+                  {appI18n.t('Dimensions: {{length}} x {{width}} x {{height}} cm', {
+                    length: itemDetails.dimensions.lengthCm ?? '-',
+                    width: itemDetails.dimensions.widthCm ?? '-',
+                    height: itemDetails.dimensions.heightCm ?? '-',
+                  })}
                 </Text>
               ) : null}
               <Text style={styles.value}>
-                Loading help: {itemDetails?.requiresLoadingHelp ? `Yes (${itemDetails.loadingWorkersCount ?? 0} workers)` : 'No'}
+                {appI18n.t("Loading help:")}{' '}
+                {itemDetails?.requiresLoadingHelp
+                  ? appI18n.t('Yes ({{workers}} workers)', { workers: itemDetails.loadingWorkersCount ?? 0 })
+                  : appI18n.t('No')}
               </Text>
               {itemDetails?.specialInstructions ? (
-                <Text style={styles.value}>Special instructions: {itemDetails.specialInstructions}</Text>
+                <Text style={styles.value}>{appI18n.t("Special instructions:")} {itemDetails.specialInstructions}</Text>
               ) : null}
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Photos</Text>
+              <Text style={styles.sectionTitle}>{appI18n.t("Photos")}</Text>
               {photos.length === 0 ? (
-                <Text style={styles.value}>No photos added</Text>
+                <Text style={styles.value}>{appI18n.t("No photos added")}</Text>
               ) : (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                   {photos.map((photo) => (
@@ -1095,12 +1135,12 @@ export default function SubmitRequestScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Optional Note</Text>
+              <Text style={styles.sectionTitle}>{appI18n.t("Optional Note")}</Text>
               <TextInput
                 value={customerNote}
                 onChangeText={setCustomerNote}
                 onFocus={scrollNoteIntoView}
-                placeholder="Add a note for drivers, optional"
+                placeholder={appI18n.t("Add a note for drivers, optional")}
                 placeholderTextColor="#98a2b3"
                 style={styles.noteInput}
                 multiline
@@ -1111,12 +1151,12 @@ export default function SubmitRequestScreen() {
 
         {isMotorcycleTransport || isGoodsTransport || isFurnitureTransport ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Optional Note</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Optional Note")}</Text>
             <TextInput
               value={customerNote}
               onChangeText={setCustomerNote}
               onFocus={scrollNoteIntoView}
-              placeholder="Add a note for drivers, optional"
+              placeholder={appI18n.t("Add a note for drivers, optional")}
               placeholderTextColor="#98a2b3"
               style={styles.noteInput}
               multiline
@@ -1125,8 +1165,7 @@ export default function SubmitRequestScreen() {
         ) : null}
 
         <Text style={styles.helperText}>
-          Drivers will review your request and send offers.
-        </Text>
+          {appI18n.t("Drivers will review your request and send offers.")}</Text>
 
         {validationErrors.length > 0 ? (
           <View style={styles.errorCard}>
@@ -1136,7 +1175,7 @@ export default function SubmitRequestScreen() {
           </View>
         ) : null}
 
-        {isSubmitting ? <Text style={styles.progressText}>Submitting request...</Text> : null}
+        {isSubmitting ? <Text style={styles.progressText}>{appI18n.t("Submitting request...")}</Text> : null}
         {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           <Pressable
@@ -1144,7 +1183,7 @@ export default function SubmitRequestScreen() {
             disabled={!canSubmit}
             onPress={() => void onSubmit()}
           >
-            {isSubmitting ? <ActivityIndicator color="#111827" /> : <Text style={styles.submitText}>Submit Request</Text>}
+            {isSubmitting ? <ActivityIndicator color="#111827" /> : <Text style={styles.submitText}>{appI18n.t("Submit Request")}</Text>}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

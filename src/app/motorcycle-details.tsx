@@ -39,6 +39,7 @@ import {
   VIN_DECODE_EMPTY_RESULT_MESSAGE,
   VIN_DECODE_NETWORK_ERROR_MESSAGE,
 } from '@/utils/vin';
+import appI18n from '@/localization/i18n';
 
 const MAX_PHOTOS = 8;
 
@@ -75,10 +76,10 @@ function SearchableDropdown(props: {
 }) {
   return (
     <View>
-      <Text style={styles.label}>{props.label}</Text>
+      <Text style={styles.label}>{appI18n.t(props.label)}</Text>
       <Pressable style={styles.dropdownButton} onPress={props.onToggle}>
         <Text style={props.valueLabel ? styles.dropdownValue : styles.dropdownPlaceholder}>
-          {props.valueLabel || props.placeholder}
+          {props.valueLabel || appI18n.t(props.placeholder)}
         </Text>
         <Text style={styles.dropdownChevron}>{props.isOpen ? '▲' : '▼'}</Text>
       </Pressable>
@@ -87,17 +88,17 @@ function SearchableDropdown(props: {
           <TextInput
             value={props.searchText}
             onChangeText={props.onSearchChange}
-            placeholder="Search..."
+            placeholder={appI18n.t("Search...")}
             placeholderTextColor="#98a2b3"
             style={styles.dropdownSearch}
           />
           <ScrollView style={styles.dropdownList} nestedScrollEnabled>
             {props.options.length === 0 ? (
-              <Text style={styles.emptyText}>No results</Text>
+              <Text style={styles.emptyText}>{appI18n.t("No results")}</Text>
             ) : (
               props.options.map((option) => (
                 <Pressable key={option.id} style={styles.dropdownItem} onPress={() => props.onSelect(option)}>
-                  <Text style={styles.dropdownItemText}>{option.label}</Text>
+                  <Text style={styles.dropdownItemText}>{appI18n.t(option.label)}</Text>
                 </Pressable>
               ))
             )}
@@ -129,15 +130,15 @@ function formatValidationMessage(form: MotorcycleTransportFormData): string | nu
   }
 
   if (!form.motorcycleType) {
-    return 'Please select the motorcycle type.';
+    return appI18n.t("Please select the motorcycle type.");
   }
 
   if (!form.motorcycleCondition) {
-    return 'Please select the motorcycle condition.';
+    return appI18n.t("Please select the motorcycle condition.");
   }
 
   if (!form.isImmediate && form.scheduledPickupAt.getTime() <= Date.now()) {
-    return 'Scheduled pickup must be in the future.';
+    return appI18n.t("Scheduled pickup must be in the future.");
   }
 
   return null;
@@ -330,7 +331,7 @@ export default function MotorcycleDetailsScreen() {
 
   const onContinue = (): void => {
     if (!canContinue) {
-      setErrorMessage('Missing selected service. Please go back and choose a service again.');
+      setErrorMessage(appI18n.t("Missing selected service. Please go back and choose a service again."));
       return;
     }
 
@@ -368,13 +369,13 @@ export default function MotorcycleDetailsScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-        setErrorMessage('Media library permission is needed to select photos.');
+        setErrorMessage(appI18n.t("Media library permission is needed to select photos."));
         return;
       }
 
       const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
       if (remainingSlots <= 0) {
-        setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+        setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
         return;
       }
 
@@ -400,12 +401,12 @@ export default function MotorcycleDetailsScreen() {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-        setErrorMessage('Camera permission is needed to take photos.');
+        setErrorMessage(appI18n.t("Camera permission is needed to take photos."));
         return;
       }
 
       if (selectedPhotos.length >= MAX_PHOTOS) {
-        setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+        setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
         return;
       }
 
@@ -447,19 +448,18 @@ export default function MotorcycleDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
       <View style={styles.heroBlock}>
-        <Text style={styles.title}>Tell us about the motorcycle</Text>
+        <Text style={styles.title}>{appI18n.t("Tell us about the motorcycle")}</Text>
         <Text style={styles.subtitle}>
-          Add the motorcycle details, pickup timing and photos before choosing the route.
-        </Text>
+          {appI18n.t("Add the motorcycle details, pickup timing and photos before choosing the route.")}</Text>
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Manual Motorcycle Selection</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("Manual Motorcycle Selection")}</Text>
       <SearchableDropdown
-        label="Motorcycle Type"
-        placeholder="Select motorcycle type"
+        label={appI18n.t("Motorcycle Type")}
+        placeholder={appI18n.t("Select motorcycle type")}
         options={typeOptions}
-        valueLabel={MOTORCYCLE_TYPE_OPTIONS.find((option) => option.value === form.motorcycleType)?.label ?? ''}
+        valueLabel={appI18n.t(MOTORCYCLE_TYPE_OPTIONS.find((option) => option.value === form.motorcycleType)?.label ?? '')}
         isOpen={openDropdown === 'type'}
         searchText={typeSearch}
         onToggle={() => setOpenDropdown((prev) => (prev === 'type' ? null : 'type'))}
@@ -473,9 +473,9 @@ export default function MotorcycleDetailsScreen() {
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>VIN / Chassis</Text>
-      <Text style={styles.sectionHint}>Use VIN decode if you want us to prefill the details automatically.</Text>
-      <Text style={styles.label}>VIN / Chassis Number (optional)</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("VIN / Chassis")}</Text>
+      <Text style={styles.sectionHint}>{appI18n.t("Use VIN decode if you want us to prefill the details automatically.")}</Text>
+      <Text style={styles.label}>{appI18n.t("VIN / Chassis Number (optional)")}</Text>
       <TextInput
         value={form.chassisNumber}
         onChangeText={(value) => {
@@ -484,7 +484,7 @@ export default function MotorcycleDetailsScreen() {
           setVinMessage('');
           setErrorMessage('');
         }}
-        placeholder="Enter 17-character VIN"
+        placeholder={appI18n.t("Enter 17-character VIN")}
         placeholderTextColor="#98a2b3"
         style={styles.input}
         autoCapitalize="characters"
@@ -497,22 +497,22 @@ export default function MotorcycleDetailsScreen() {
         {isDecodingVin ? (
           <ActivityIndicator color="#111827" />
         ) : (
-          <Text style={styles.secondaryButtonText}>Decode VIN</Text>
+          <Text style={styles.secondaryButtonText}>{appI18n.t("Decode VIN")}</Text>
         )}
       </Pressable>
       {vinMessage ? <Text style={styles.infoText}>{vinMessage}</Text> : null}
       {decodedVin ? (
         <View style={styles.decodedCard}>
-          <Text style={styles.decodedTitle}>Decoded VIN details</Text>
-          {decodedVin.make ? <Text style={styles.decodedText}>Make: {decodedVin.make}</Text> : null}
-          {decodedVin.model ? <Text style={styles.decodedText}>Model: {decodedVin.model}</Text> : null}
-          {decodedVin.year ? <Text style={styles.decodedText}>Year: {decodedVin.year}</Text> : null}
-          {decodedVin.trim ? <Text style={styles.decodedText}>Trim: {decodedVin.trim}</Text> : null}
+          <Text style={styles.decodedTitle}>{appI18n.t("Decoded VIN details")}</Text>
+          {decodedVin.make ? <Text style={styles.decodedText}>{appI18n.t("Make:")} {decodedVin.make}</Text> : null}
+          {decodedVin.model ? <Text style={styles.decodedText}>{appI18n.t("Model:")} {decodedVin.model}</Text> : null}
+          {decodedVin.year ? <Text style={styles.decodedText}>{appI18n.t("Year:")} {decodedVin.year}</Text> : null}
+          {decodedVin.trim ? <Text style={styles.decodedText}>{appI18n.t("Trim:")} {decodedVin.trim}</Text> : null}
           {decodedVin.vehicleType ? (
-            <Text style={styles.decodedText}>Vehicle type: {decodedVin.vehicleType}</Text>
+            <Text style={styles.decodedText}>{appI18n.t("Vehicle type:")} {decodedVin.vehicleType}</Text>
           ) : null}
           {decodedVin.bodyClass ? (
-            <Text style={styles.decodedText}>Body class: {decodedVin.bodyClass}</Text>
+            <Text style={styles.decodedText}>{appI18n.t("Body class:")} {decodedVin.bodyClass}</Text>
           ) : null}
         </View>
       ) : null}
@@ -520,10 +520,10 @@ export default function MotorcycleDetailsScreen() {
 
       <View style={styles.sectionCard}>
       <SearchableDropdown
-        label="Motorcycle Condition"
-        placeholder="Select motorcycle condition"
+        label={appI18n.t("Motorcycle Condition")}
+        placeholder={appI18n.t("Select motorcycle condition")}
         options={conditionOptions}
-        valueLabel={MOTORCYCLE_CONDITION_OPTIONS.find((option) => option.value === form.motorcycleCondition)?.label ?? ''}
+        valueLabel={appI18n.t(MOTORCYCLE_CONDITION_OPTIONS.find((option) => option.value === form.motorcycleCondition)?.label ?? '')}
         isOpen={openDropdown === 'condition'}
         searchText={conditionSearch}
         onToggle={() => setOpenDropdown((prev) => (prev === 'condition' ? null : 'condition'))}
@@ -537,9 +537,9 @@ export default function MotorcycleDetailsScreen() {
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Transport Requirements</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("Transport Requirements")}</Text>
       <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Requires special wrapping</Text>
+        <Text style={styles.switchLabel}>{appI18n.t("Requires special wrapping")}</Text>
         <Pressable
           style={[styles.switchChip, form.requiresSpecialWrapping && styles.switchChipActive]}
           onPress={() =>
@@ -555,12 +555,12 @@ export default function MotorcycleDetailsScreen() {
               form.requiresSpecialWrapping && styles.switchChipTextActive,
             ]}
           >
-            {form.requiresSpecialWrapping ? 'Yes' : 'No'}
+            {form.requiresSpecialWrapping ? appI18n.t('Yes') : appI18n.t('No')}
           </Text>
         </Pressable>
       </View>
       <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Requires dedicated carrier</Text>
+        <Text style={styles.switchLabel}>{appI18n.t("Requires dedicated carrier")}</Text>
         <Pressable
           style={[styles.switchChip, form.requiresDedicatedCarrier && styles.switchChipActive]}
           onPress={() =>
@@ -576,43 +576,41 @@ export default function MotorcycleDetailsScreen() {
               form.requiresDedicatedCarrier && styles.switchChipTextActive,
             ]}
           >
-            {form.requiresDedicatedCarrier ? 'Yes' : 'No'}
+            {form.requiresDedicatedCarrier ? appI18n.t('Yes') : appI18n.t('No')}
           </Text>
         </Pressable>
       </View>
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Date & Time</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
       <View style={styles.toggleRow}>
         <Pressable
           style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
           onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
         >
           <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
-            Immediate pickup
-          </Text>
+            {appI18n.t("Immediate pickup")}</Text>
         </Pressable>
         <Pressable
           style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
           onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
         >
           <Text style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}>
-            Schedule for later
-          </Text>
+            {appI18n.t("Schedule for later")}</Text>
         </Pressable>
       </View>
 
       {!form.isImmediate ? (
         <View style={styles.datetimeContainer}>
           <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+            <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Date")}</Text>
             <Text style={styles.pickerButtonValue}>
               {form.scheduledPickupAt.toLocaleDateString()}
             </Text>
           </Pressable>
           <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
-            <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+            <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Time")}</Text>
             <Text style={styles.pickerButtonValue}>
               {form.scheduledPickupAt.toLocaleTimeString([], {
                 hour: '2-digit',
@@ -626,14 +624,14 @@ export default function MotorcycleDetailsScreen() {
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Upload Photos</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("Upload Photos")}</Text>
       <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
       <View style={styles.actionsRow}>
         <Pressable style={[styles.secondaryButton, styles.flexButton]} onPress={() => void pickFromLibrary()}>
-          <Text style={styles.secondaryButtonText}>Add Photos</Text>
+          <Text style={styles.secondaryButtonText}>{appI18n.t("Add Photos")}</Text>
         </Pressable>
         <Pressable style={[styles.photoButton, styles.flexButton]} onPress={() => void takePhoto()}>
-          <Text style={styles.photoButtonText}>Take Photo</Text>
+          <Text style={styles.photoButtonText}>{appI18n.t("Take Photo")}</Text>
         </Pressable>
       </View>
       {isPickingPhoto ? <ActivityIndicator color="#111827" style={styles.loader} /> : null}
@@ -642,7 +640,7 @@ export default function MotorcycleDetailsScreen() {
           <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
             <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
             <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
-              <Text style={styles.removePhotoText}>Remove</Text>
+              <Text style={styles.removePhotoText}>{appI18n.t("Remove")}</Text>
             </Pressable>
           </View>
         ))}
@@ -656,7 +654,7 @@ export default function MotorcycleDetailsScreen() {
         onPress={onContinue}
         disabled={!canContinue}
       >
-        <Text style={styles.continueText}>Continue to Pickup Location</Text>
+        <Text style={styles.continueText}>{appI18n.t("Continue to Pickup Location")}</Text>
         <IconSymbol
           name={{ ios: 'arrow.right', android: 'east', web: 'east' }}
           color="#FFFFFF"

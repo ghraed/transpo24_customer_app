@@ -20,6 +20,7 @@ import { getCustomerRequests } from '@/lib/api';
 import { formatDateOnly } from '@/localization/format';
 import { useAppLanguage } from '@/localization/provider';
 import type { CustomerHomeRequestSummary, CustomerRequestStatus } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 const serviceIcons: Record<string, SymbolViewProps['name']> = {
   VEHICLE_TRANSPORT: { ios: 'car.fill', android: 'directions_car', web: 'directions_car' },
@@ -94,7 +95,7 @@ function compactAddress(address: string | null | undefined, fallback: string): s
     .filter(Boolean);
 
   if (parts.length >= 2) {
-    return `${parts[0]}, ${parts[1]}`;
+    return appI18n.t("{{value0}}, {{value1}}", { value0: parts[0], value1: parts[1] });
   }
 
   return parts[0] ?? fallback;
@@ -102,7 +103,7 @@ function compactAddress(address: string | null | undefined, fallback: string): s
 
 function getReference(requestId: string): string {
   const compactId = requestId.replace(/-/g, '').slice(0, 8).toUpperCase();
-  return `TRP-${compactId || requestId}`;
+  return appI18n.t("TRP-{{value0}}", { value0: compactId || requestId });
 }
 
 function getRequestDate(request: CustomerHomeRequestSummary, t: (key: string) => string): string {

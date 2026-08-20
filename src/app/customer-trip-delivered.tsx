@@ -24,6 +24,7 @@ import {
 } from '@/components/tracking-ui';
 import { getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 type RouteParams = {
   tripId?: string;
@@ -40,7 +41,7 @@ function resolveAssetUrl(url: string): string {
   }
 
   const baseUrl = getApiBaseUrl();
-  return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+  return appI18n.t("{{value0}}{{value1}}{{value2}}", { value0: baseUrl, value1: trimmed.startsWith('/') ? '' : '/', value2: trimmed });
 }
 
 export default function CustomerTripDeliveredScreen() {
@@ -69,7 +70,7 @@ export default function CustomerTripDeliveredScreen() {
         setTracking(response);
       } catch (error) {
         setErrorMessage(
-          error instanceof Error ? error.message : 'Failed to load delivery details.',
+          error instanceof Error ? error.message : appI18n.t("Failed to load delivery details."),
         );
       } finally {
         setIsLoading(false);
@@ -90,34 +91,34 @@ export default function CustomerTripDeliveredScreen() {
       <TrackingScrollable>
         <TrackingHero
           eyebrow={`Order #${tripId}`}
-          title="Delivery completed"
+          title={appI18n.t("Delivery completed")}
           description="Your request has been delivered. Delivery proof and final details are shown below."
         />
 
         <TrackingProgress currentStage={5} />
 
         <TrackingScreenCard>
-          <TrackingInfoPill label="Delivered" tone="success" />
-          <TrackingMetaRow label="Trip ID" value={tripId} />
+          <TrackingInfoPill label={appI18n.t("Delivered")} tone="success" />
+          <TrackingMetaRow label={appI18n.t("Trip ID")} value={tripId} />
           <TrackingMetaRow
-            label="Delivered at"
+            label={appI18n.t("Delivered at")}
             value={deliveredAt ? new Date(deliveredAt).toLocaleString(undefined, { hour12: false }) : 'N/A'}
           />
-          {deliveryNotes ? <TrackingMetaRow label="Delivery notes" value={deliveryNotes} /> : null}
+          {deliveryNotes ? <TrackingMetaRow label={appI18n.t("Delivery notes")} value={deliveryNotes} /> : null}
           {tracking?.nearDeliveryNotifiedAt ? (
             <TrackingMetaRow
-              label="Near-delivery alert"
+              label={appI18n.t("Near-delivery alert")}
               value={new Date(tracking.nearDeliveryNotifiedAt).toLocaleString(undefined, { hour12: false })}
             />
           ) : null}
         </TrackingScreenCard>
 
         <TrackingScreenCard>
-          <Text style={styles.sectionTitle}>Delivery proof</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Delivery proof")}</Text>
           {isLoading ? (
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={clientTheme.accentStrong} />
-              <Text style={styles.bodyText}>Loading delivery proof...</Text>
+              <Text style={styles.bodyText}>{appI18n.t("Loading delivery proof...")}</Text>
             </View>
           ) : proofPhotos.length > 0 ? (
             <ScrollView
@@ -144,18 +145,17 @@ export default function CustomerTripDeliveredScreen() {
               />
             </Pressable>
           ) : (
-            <Text style={styles.bodyText}>Delivery proof photos will appear here when available.</Text>
+            <Text style={styles.bodyText}>{appI18n.t("Delivery proof photos will appear here when available.")}</Text>
           )}
         </TrackingScreenCard>
 
         {ratingAvailable ? (
           <TrackingScreenCard>
-            <Text style={styles.sectionTitle}>Next step</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Next step")}</Text>
             <Text style={styles.bodyText}>
-              Final delivery is confirmed. You can now rate the driver.
-            </Text>
+              {appI18n.t("Final delivery is confirmed. You can now rate the driver.")}</Text>
             <Pressable style={styles.primaryButton} onPress={onRateDriver}>
-              <Text style={styles.primaryButtonText}>Rate driver</Text>
+              <Text style={styles.primaryButtonText}>{appI18n.t("Rate driver")}</Text>
             </Pressable>
           </TrackingScreenCard>
         ) : null}
@@ -166,7 +166,7 @@ export default function CustomerTripDeliveredScreen() {
           style={styles.secondaryButton}
           onPress={() => router.replace(`/request-status?requestId=${encodeURIComponent(tripId)}`)}
         >
-          <Text style={styles.secondaryButtonText}>Back to request status</Text>
+          <Text style={styles.secondaryButtonText}>{appI18n.t("Back to request status")}</Text>
         </Pressable>
 
         <Modal

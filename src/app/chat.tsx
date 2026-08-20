@@ -38,6 +38,7 @@ import {
   waitForSocketConnection,
 } from '@/services/socketService';
 import type { ChatMessage, ChatRoom, ChatRoomMessagesResponse } from '@/types/chat';
+import appI18n from '@/localization/i18n';
 
 type RouteParams = {
   chatRoomId?: string;
@@ -109,10 +110,10 @@ function normalizeErrorMessage(error: unknown, fallback: string): string {
 
   const message = error.message.toLowerCase();
   if (message.includes('not found')) {
-    return 'No chat room is available for this transport request yet.';
+    return appI18n.t("No chat room is available for this transport request yet.");
   }
   if (message.includes('forbidden') || message.includes('not allowed') || message.includes('unauthorized')) {
-    return 'You are not authorized to access this chat.';
+    return appI18n.t("You are not authorized to access this chat.");
   }
 
   return error.message || fallback;
@@ -196,7 +197,7 @@ export default function ChatScreen() {
       if (resolvedRoomId) {
         const response = await loadAllRoomMessages(resolvedRoomId);
         if (!isAccessibleRoom(response.room)) {
-          throw new Error('This chat is closed and no longer accessible.');
+          throw new Error(appI18n.t("This chat is closed and no longer accessible."));
         }
         nextRoom = response.room;
         setRoom(response.room);
@@ -204,17 +205,17 @@ export default function ChatScreen() {
       } else if (transportRequestId) {
         nextRoom = await getChatRoomByTransportRequestId(transportRequestId);
         if (!isAccessibleRoom(nextRoom)) {
-          throw new Error('This chat is closed and no longer accessible.');
+          throw new Error(appI18n.t("This chat is closed and no longer accessible."));
         }
         const response = await loadAllRoomMessages(nextRoom.id);
         if (!isAccessibleRoom(response.room)) {
-          throw new Error('This chat is closed and no longer accessible.');
+          throw new Error(appI18n.t("This chat is closed and no longer accessible."));
         }
         nextRoom = response.room;
         setRoom(response.room);
         setMessages(response.messages);
       } else {
-        throw new Error('Missing chat room context.');
+        throw new Error(appI18n.t("Missing chat room context."));
       }
 
       try {
@@ -230,7 +231,7 @@ export default function ChatScreen() {
     } catch (error) {
       setRoom(null);
       setMessages([]);
-      setErrorMessage(normalizeErrorMessage(error, 'Failed to load chat conversation.'));
+      setErrorMessage(normalizeErrorMessage(error, appI18n.t("Failed to load chat conversation.")));
       return null;
     } finally {
       setIsLoading(false);
@@ -263,7 +264,7 @@ export default function ChatScreen() {
       setTimeout(
         () =>
           setSocketStatusText(
-            error instanceof Error ? error.message : 'Failed to connect realtime chat.',
+            error instanceof Error ? error.message : appI18n.t("Failed to connect realtime chat."),
           ),
         0,
       );
@@ -284,7 +285,7 @@ export default function ChatScreen() {
       .catch((error) => {
         if (isActive) {
           setSocketStatusText(
-            error instanceof Error ? error.message : 'Realtime chat connection timed out.',
+            error instanceof Error ? error.message : appI18n.t("Realtime chat connection timed out."),
           );
         }
       });
@@ -333,7 +334,7 @@ export default function ChatScreen() {
     });
 
     const unsubSocketError = onSocketError((message) => {
-      setSocketStatusText(message || 'Realtime chat connection issue.');
+      setSocketStatusText(message || appI18n.t("Realtime chat connection issue."));
     });
 
     return () => {
@@ -378,7 +379,7 @@ export default function ChatScreen() {
       );
       setDraft('');
     } catch (error) {
-      setSendErrorMessage(normalizeErrorMessage(error, 'Failed to send your message.'));
+      setSendErrorMessage(normalizeErrorMessage(error, appI18n.t("Failed to send your message.")));
     } finally {
       setIsSending(false);
     }
@@ -468,7 +469,7 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.headerCard}>
-          <Text style={styles.title}>Chat with driver</Text>
+          <Text style={styles.title}>{appI18n.t("Chat with driver")}</Text>
           <Text style={styles.subtitle}>
             {room
               ? `Transport request #${room.transportRequestId}`
@@ -476,8 +477,7 @@ export default function ChatScreen() {
           </Text>
           {room ? (
             <Text style={styles.statusPill}>
-              Chat active
-            </Text>
+              {appI18n.t("Chat active")}</Text>
           ) : null}
           {effectiveSocketStatusText ? (
             <Text style={styles.socketText}>{effectiveSocketStatusText}</Text>
@@ -487,13 +487,13 @@ export default function ChatScreen() {
         {isLoading ? (
           <View style={styles.centeredContainer}>
             <ActivityIndicator size="large" color="#1D4ED8" />
-            <Text style={styles.mutedText}>Loading messages…</Text>
+            <Text style={styles.mutedText}>{appI18n.t("Loading messages…")}</Text>
           </View>
         ) : errorMessage ? (
           <View style={styles.centeredContainer}>
             <Text style={styles.errorText}>{errorMessage}</Text>
             <Pressable style={styles.retryButton} onPress={() => void loadConversation()}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{appI18n.t("Retry")}</Text>
             </Pressable>
           </View>
         ) : (
@@ -547,8 +547,7 @@ export default function ChatScreen() {
                             isClientMessage ? styles.clientTranslationHint : undefined,
                           ]}
                         >
-                          Translating...
-                        </Text>
+                          {appI18n.t("Translating...")}</Text>
                       ) : null}
                       {isShowingTranslation ? (
                         <View
@@ -591,10 +590,9 @@ export default function ChatScreen() {
               }}
               ListEmptyComponent={
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>No messages yet</Text>
+                  <Text style={styles.emptyTitle}>{appI18n.t("No messages yet")}</Text>
                   <Text style={styles.mutedText}>
-                    Start the conversation once your driver is ready.
-                  </Text>
+                    {appI18n.t("Start the conversation once your driver is ready.")}</Text>
                 </View>
               }
             />
@@ -613,7 +611,7 @@ export default function ChatScreen() {
                   value={draft}
                   onChangeText={setDraft}
                   onFocus={() => scrollToLatestMessage(true)}
-                  placeholder="Type a message"
+                  placeholder={appI18n.t("Type a message")}
                   style={styles.input}
                   multiline
                   editable={!isSending}
@@ -627,7 +625,7 @@ export default function ChatScreen() {
                   disabled={isSending || !draft.trim()}
                 >
                   <Text style={styles.sendButtonText}>
-                    {isSending ? 'Sending…' : 'Send'}
+                    {isSending ? appI18n.t('Sending…') : appI18n.t('Send')}
                   </Text>
                 </Pressable>
               </View>

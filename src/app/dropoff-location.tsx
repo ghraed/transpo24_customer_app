@@ -54,6 +54,7 @@ import type {
 } from '@/types/customer-request';
 import type { VehicleCondition } from '@/types/vehicle-condition';
 import type { VehicleDetailsPayload } from '@/types/vehicle';
+import appI18n from '@/localization/i18n';
 
 type SelectedDropoffLocation = {
   latitude: number;
@@ -72,10 +73,10 @@ const DEFAULT_REGION: Region = {
 
 function formatDistance(distanceMeters: number): string {
   if (distanceMeters < 1000) {
-    return `${Math.round(distanceMeters)} m`;
+    return appI18n.t("{{value0}} m", { value0: Math.round(distanceMeters) });
   }
 
-  return `${(distanceMeters / 1000).toFixed(distanceMeters >= 10 ? 1 : 2)} km`;
+  return appI18n.t("{{value0}} km", { value0: (distanceMeters / 1000).toFixed(distanceMeters >= 10 ? 1 : 2) });
 }
 
 function parsePendingRequestDetails(
@@ -353,7 +354,7 @@ export default function DropoffLocationScreen() {
     const nextLocation = {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
-      address: resolved.address || 'Current location',
+      address: resolved.address || appI18n.t("Current location"),
       placeId: resolved.placeId,
       source: 'device' as const,
     };
@@ -443,13 +444,15 @@ export default function DropoffLocationScreen() {
           if (isCancelled) return;
           setPlaceSuggestions(suggestions);
           setSearchMessage(
-            suggestions.length === 0 ? 'No matching places found.' : 'Choose a suggested address.',
+            suggestions.length === 0
+              ? appI18n.t('No matching places found.')
+              : appI18n.t('Choose a suggested address.'),
           );
         } catch (error) {
           if (isCancelled) return;
           setPlaceSuggestions([]);
           setSearchMessage(
-            error instanceof Error ? error.message : 'Places search failed. Please try again.',
+            error instanceof Error ? error.message : appI18n.t("Places search failed. Please try again."),
           );
         } finally {
           if (!isCancelled) {
@@ -506,7 +509,7 @@ export default function DropoffLocationScreen() {
       applyResolvedPlace(place);
     } catch (error) {
       setSearchMessage(
-        error instanceof Error ? error.message : 'Places search failed. Please try again.',
+        error instanceof Error ? error.message : appI18n.t("Places search failed. Please try again."),
       );
     } finally {
       setIsSearchingPlaces(false);
@@ -540,7 +543,7 @@ export default function DropoffLocationScreen() {
       applyResolvedPlace(place);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Places search failed. Please try again.';
+        error instanceof Error ? error.message : appI18n.t("Places search failed. Please try again.");
       setSearchMessage(message);
     } finally {
       setIsSearchingPlaces(false);
@@ -549,7 +552,7 @@ export default function DropoffLocationScreen() {
 
   const onContinue = useCallback(async () => {
     if (!selectedLocation) {
-      setErrorMessage('Please select a dropoff location first.');
+      setErrorMessage(appI18n.t("Please select a dropoff location first."));
       return;
     }
 
@@ -559,12 +562,12 @@ export default function DropoffLocationScreen() {
       serviceKey !== 'GOODS_TRANSPORT' &&
       serviceKey !== 'FURNITURE_TRANSPORT'
     ) {
-      setErrorMessage('Missing request. Please go back and select pickup location again.');
+      setErrorMessage(appI18n.t("Missing request. Please go back and select pickup location again."));
       return;
     }
 
     if (serviceId.length === 0) {
-      setErrorMessage('Missing selected service. Please go back and choose a service first.');
+      setErrorMessage(appI18n.t("Missing selected service. Please go back and choose a service first."));
       return;
     }
 
@@ -575,7 +578,7 @@ export default function DropoffLocationScreen() {
       if (serviceKey === 'MOTORCYCLE_TRANSPORT') {
         const pendingMotorcycleDetails = parsePendingMotorcycleDetails(pendingMotorcycleDetailsRaw);
         if (!pendingMotorcycleDetails) {
-          setErrorMessage('Motorcycle details are missing. Please go back and complete them first.');
+          setErrorMessage(appI18n.t("Motorcycle details are missing. Please go back and complete them first."));
           return;
         }
 
@@ -605,7 +608,7 @@ export default function DropoffLocationScreen() {
       if (serviceKey === 'GOODS_TRANSPORT') {
         const pendingGoodsDetails = parsePendingGoodsDetails(pendingGoodsDetailsRaw);
         if (!pendingGoodsDetails) {
-          setErrorMessage('Goods details are missing. Please go back and complete them first.');
+          setErrorMessage(appI18n.t("Goods details are missing. Please go back and complete them first."));
           return;
         }
 
@@ -637,7 +640,7 @@ export default function DropoffLocationScreen() {
           pendingFurnitureDetailsRaw,
         );
         if (!pendingFurnitureDetails) {
-          setErrorMessage('Furniture details are missing. Please go back and complete them first.');
+          setErrorMessage(appI18n.t("Furniture details are missing. Please go back and complete them first."));
           return;
         }
 
@@ -756,10 +759,10 @@ export default function DropoffLocationScreen() {
 
       router.push(nextRoute);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save dropoff location.';
+      const message = error instanceof Error ? error.message : appI18n.t("Failed to save dropoff location.");
 
       if (message.toLowerCase().includes('pickup location must be selected')) {
-        setErrorMessage('Please choose pickup location first. Redirecting...');
+        setErrorMessage(appI18n.t("Please choose pickup location first. Redirecting..."));
         setTimeout(() => {
           const pickupRoute = {
             pathname: '/pickup-location',
@@ -816,11 +819,14 @@ export default function DropoffLocationScreen() {
   const selectedDropoffLabel = selectedLocation?.address?.trim()
     ? selectedLocation.address
     : selectedLocation
-      ? 'Selected dropoff location.'
-      : 'Tap on the map or search for an address.';
+      ? appI18n.t('Selected dropoff location.')
+      : appI18n.t('Tap on the map or search for an address.');
 
   const selectedDropoffDetails = selectedLocation
-    ? `Lat: ${selectedLocation.latitude.toFixed(6)}  |  Lng: ${selectedLocation.longitude.toFixed(6)}`
+    ? appI18n.t('Lat: {{latitude}} | Lng: {{longitude}}', {
+        latitude: selectedLocation.latitude.toFixed(6),
+        longitude: selectedLocation.longitude.toFixed(6),
+      })
     : '';
 
   const pickupSummary = hasPickupCoordinates
@@ -853,10 +859,10 @@ export default function DropoffLocationScreen() {
           <View style={styles.heroBadge}>
             <IconSymbol name={{ ios: 'map.fill', android: 'place', web: 'place' }} color="#111827" size={20} />
           </View>
-          <Text style={styles.heroLabel}>Dropoff</Text>
+          <Text style={styles.heroLabel}>{appI18n.t("Dropoff")}</Text>
         </View>
-        <Text style={styles.title}>Dropoff Location</Text>
-        <Text style={styles.subtitle}>Where should the driver deliver your item?</Text>
+        <Text style={styles.title}>{appI18n.t("Dropoff Location")}</Text>
+        <Text style={styles.subtitle}>{appI18n.t("Where should the driver deliver your item?")}</Text>
       </View>
 
       <View style={styles.searchContainer}>
@@ -869,7 +875,7 @@ export default function DropoffLocationScreen() {
             setSearchMessage('');
           }}
           onSubmitEditing={() => void onSearchSubmit()}
-          placeholder="Search dropoff address"
+          placeholder={appI18n.t("Search dropoff address")}
           placeholderTextColor="#98a2b3"
           style={styles.searchInput}
           returnKeyType="search"
@@ -880,8 +886,7 @@ export default function DropoffLocationScreen() {
             : 'Google Places API key is not configured yet.'}
         </Text>
         <Text style={styles.searchHint}>
-          Start typing and tap a suggestion to pin the dropoff location.
-        </Text>
+          {appI18n.t("Start typing and tap a suggestion to pin the dropoff location.")}</Text>
         {placeSuggestions.length > 0 ? (
           <View style={styles.suggestionsList}>
             {placeSuggestions.map((suggestion) => (
@@ -905,7 +910,7 @@ export default function DropoffLocationScreen() {
           ) : (
             <>
               <IconSymbol name={{ ios: 'location.fill', android: 'my_location', web: 'my_location' }} color="#111827" size={16} />
-              <Text style={styles.locationButtonText}>Use Current Location</Text>
+              <Text style={styles.locationButtonText}>{appI18n.t("Use Current Location")}</Text>
             </>
           )}
         </Pressable>
@@ -930,8 +935,8 @@ export default function DropoffLocationScreen() {
             {hasPickupCoordinates ? (
               <NativeMarker
                 coordinate={{ latitude: pickupLatitude, longitude: pickupLongitude }}
-                title="Pickup location"
-                description={pickupAddress || 'Pickup location'}
+                title={appI18n.t("Pickup location")}
+                description={pickupAddress || appI18n.t("Pickup location")}
                 pinColor="#2563eb"
               />
             ) : null}
@@ -967,25 +972,24 @@ export default function DropoffLocationScreen() {
                   latitude: selectedLocation.latitude,
                   longitude: selectedLocation.longitude,
                 }}
-                title="Dropoff location"
-                description={selectedLocation.address ?? 'Selected dropoff location'}
+                title={appI18n.t("Dropoff location")}
+                description={selectedLocation.address ?? appI18n.t("Selected dropoff location")}
                 pinColor="#dc2626"
               />
             ) : null}
           </NativeMapView>
         ) : (
           <View style={styles.mapFallback}>
-            <Text style={styles.mapFallbackTitle}>Map preview is not available on web.</Text>
+            <Text style={styles.mapFallbackTitle}>{appI18n.t("Map preview is not available on web.")}</Text>
             <Text style={styles.mapFallbackText}>
-              Search for a destination above to pin the dropoff location, or open the app on iOS or Android for full map selection.
-            </Text>
+              {appI18n.t("Search for a destination above to pin the dropoff location, or open the app on iOS or Android for full map selection.")}</Text>
           </View>
         )}
 
         {isLoadingLocation ? (
           <View style={styles.mapOverlay}>
             <ActivityIndicator size="small" color="#1a73e8" />
-            <Text style={styles.mapOverlayText}>Getting your location...</Text>
+            <Text style={styles.mapOverlayText}>{appI18n.t("Getting your location...")}</Text>
           </View>
         ) : null}
       </View>
@@ -998,12 +1002,12 @@ export default function DropoffLocationScreen() {
         {selectedDropoffDetails ? <Text style={styles.bottomDetails}>{selectedDropoffDetails}</Text> : null}
         {distanceSummary ? (
           <View style={styles.distanceSummaryContainer}>
-            <Text style={styles.distanceLabel}>Distance from pickup:</Text>
+            <Text style={styles.distanceLabel}>{appI18n.t("Distance from pickup:")}</Text>
             <Text style={styles.distanceValue}>{distanceSummary}</Text>
           </View>
         ) : null}
         <View style={styles.pickupSummaryContainer}>
-          <Text style={styles.pickupLabel}>Pickup:</Text>
+          <Text style={styles.pickupLabel}>{appI18n.t("Pickup:")}</Text>
           <Text style={styles.pickupDetails}>{pickupSummary}</Text>
         </View>
       </View>
@@ -1020,7 +1024,7 @@ export default function DropoffLocationScreen() {
           {isSaving ? (
             <ActivityIndicator size="small" color="#111827" />
           ) : (
-            <Text style={styles.continueText}>Continue</Text>
+            <Text style={styles.continueText}>{appI18n.t("Continue")}</Text>
           )}
         </Pressable>
       </View>

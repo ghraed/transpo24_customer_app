@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import appI18n from '@/localization/i18n';
 
 export interface BackendConnectionTarget {
   label: string;
@@ -70,7 +71,7 @@ function readBackendEnvValue(baseName: 'API_URL' | 'SOCKET_URL'): string | undef
 
 export function createBackendReachabilityError(endpoint: string, envName = 'EXPO_PUBLIC_API_URL'): Error {
   return new Error(
-    `Cannot reach backend at ${endpoint}. Verify ${envName} and backend network access. ${formatBackendConnectionTargets()}.`,
+    appI18n.t("Cannot reach backend at {{value0}}. Verify {{value1}} and backend network access. {{value2}}.", { value0: endpoint, value1: envName, value2: formatBackendConnectionTargets() }),
   );
 }
 
@@ -80,7 +81,7 @@ export function getApiBaseUrl(): string {
     return normalizeUrl(explicit);
   }
 
-  throw new Error('EXPO_PUBLIC_API_URL is missing. Please set it in your environment.');
+  throw new Error(appI18n.t("EXPO_PUBLIC_API_URL is missing. Please set it in your environment."));
 }
 
 export function getSocketBaseUrl(): string {

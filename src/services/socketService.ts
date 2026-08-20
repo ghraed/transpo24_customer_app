@@ -28,6 +28,7 @@ import type {
   ChatTypingEvent,
   ChatTypingPayload,
 } from '@/types/chat';
+import appI18n from '@/localization/i18n';
 
 export type OfferNewPayload = {
   requestId: string;
@@ -59,14 +60,14 @@ function ensureSocketUrl(): string {
 
 function getSocket(): Socket {
   if (!socket) {
-    throw new Error('Socket is not connected. Call connectSocket first.');
+    throw new Error(appI18n.t("Socket is not connected. Call connectSocket first."));
   }
   return socket;
 }
 
 export function connectSocket(token: string): void {
   if (!token.trim()) {
-    throw new Error('Cannot connect socket without auth token.');
+    throw new Error(appI18n.t("Cannot connect socket without auth token."));
   }
 
   const url = ensureSocketUrl();
@@ -120,12 +121,12 @@ export function joinTripRoomWithAck(
       { tripId },
       (error: Error | null, response?: SocketAckResponse) => {
         if (error) {
-          reject(new Error(error.message || 'joinTripRoom timed out.'));
+          reject(new Error(error.message || appI18n.t("joinTripRoom timed out.")));
           return;
         }
 
         if (!response || typeof response.tripId !== 'string' || typeof response.room !== 'string') {
-          reject(new Error('joinTripRoom ack payload is invalid.'));
+          reject(new Error(appI18n.t("joinTripRoom ack payload is invalid.")));
           return;
         }
 
@@ -151,12 +152,12 @@ export function joinChatRoomWithAck(
       payload,
       (error: Error | null, response?: SocketAckResponse) => {
         if (error) {
-          reject(new Error(error.message || 'chat.join timed out.'));
+          reject(new Error(error.message || appI18n.t("chat.join timed out.")));
           return;
         }
 
         if (!response || typeof response.roomId !== 'string' || typeof response.room !== 'string') {
-          reject(new Error('chat.join ack payload is invalid.'));
+          reject(new Error(appI18n.t("chat.join ack payload is invalid.")));
           return;
         }
 
@@ -182,12 +183,12 @@ export function sendChatMessageViaSocket(
       payload,
       (error: Error | null, response?: ChatMessage) => {
         if (error) {
-          reject(new Error(error.message || 'chat.message.send timed out.'));
+          reject(new Error(error.message || appI18n.t("chat.message.send timed out.")));
           return;
         }
 
         if (!response || typeof response.id !== 'string' || typeof response.chatRoomId !== 'string') {
-          reject(new Error('chat.message.send ack payload is invalid.'));
+          reject(new Error(appI18n.t("chat.message.send ack payload is invalid.")));
           return;
         }
 
@@ -388,7 +389,7 @@ export function waitForSocketConnection(timeoutMs = 5000): Promise<string> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Socket connection timeout.'));
+      reject(new Error(appI18n.t("Socket connection timeout.")));
     }, timeoutMs);
 
     const handleConnect = (): void => {
@@ -398,7 +399,7 @@ export function waitForSocketConnection(timeoutMs = 5000): Promise<string> {
 
     const handleError = (error: Error): void => {
       cleanup();
-      reject(new Error(error.message || 'Socket connect error.'));
+      reject(new Error(error.message || appI18n.t("Socket connect error.")));
     };
 
     const cleanup = (): void => {
@@ -414,7 +415,7 @@ export function waitForSocketConnection(timeoutMs = 5000): Promise<string> {
 
 export function onSocketError(callback: (message: string) => void): () => void {
   const instance = getSocket();
-  const handler = (error: Error): void => callback(error.message || 'Socket connection error.');
+  const handler = (error: Error): void => callback(error.message || appI18n.t("Socket connection error."));
   instance.on('connect_error', handler);
   return () => instance.off('connect_error', handler);
 }

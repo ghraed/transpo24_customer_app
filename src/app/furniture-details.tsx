@@ -27,6 +27,7 @@ import type {
   LocalPhotoAsset,
   PendingFurnitureDetailsPayload,
 } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 const MAX_PHOTOS = 8;
 
@@ -104,31 +105,31 @@ function formatValidationMessage(
   selectedPhotos: LocalPhotoAsset[],
 ): string | null {
   if (selectedPhotos.length === 0) {
-    return 'Please add at least one furniture photo.';
+    return appI18n.t("Please add at least one furniture photo.");
   }
 
   if (!form.furnitureDescription.trim()) {
-    return 'Please describe the furniture to be transported.';
+    return appI18n.t("Please describe the furniture to be transported.");
   }
 
   const itemCount = Number(form.approximateItemCount);
   if (!Number.isInteger(itemCount) || itemCount < 1) {
-    return 'Approximate item count must be at least 1.';
+    return appI18n.t("Approximate item count must be at least 1.");
   }
 
   if (form.needsHelpers) {
     const helpersCount = Number(form.helpersCount);
     if (!Number.isInteger(helpersCount) || helpersCount < 1) {
-      return 'Please add a valid number of helpers.';
+      return appI18n.t("Please add a valid number of helpers.");
     }
   }
 
   if (Number.isNaN(form.movingDate.getTime())) {
-    return 'Please select a valid moving date.';
+    return appI18n.t("Please select a valid moving date.");
   }
 
   if (!form.isImmediate && form.movingDate.getTime() <= Date.now()) {
-    return 'Scheduled pickup must be in the future.';
+    return appI18n.t("Scheduled pickup must be in the future.");
   }
 
   return null;
@@ -183,7 +184,7 @@ export default function FurnitureDetailsScreen() {
 
   const onContinue = (): void => {
     if (!canContinue) {
-      setErrorMessage('Missing selected service. Please go back and choose a service again.');
+      setErrorMessage(appI18n.t("Missing selected service. Please go back and choose a service again."));
       return;
     }
 
@@ -222,13 +223,13 @@ export default function FurnitureDetailsScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-        setErrorMessage('Media library permission is needed to select photos.');
+        setErrorMessage(appI18n.t("Media library permission is needed to select photos."));
         return;
       }
 
       const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
       if (remainingSlots <= 0) {
-        setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+        setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
         return;
       }
 
@@ -254,12 +255,12 @@ export default function FurnitureDetailsScreen() {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-        setErrorMessage('Camera permission is needed to take photos.');
+        setErrorMessage(appI18n.t("Camera permission is needed to take photos."));
         return;
       }
 
       if (selectedPhotos.length >= MAX_PHOTOS) {
-        setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+        setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
         return;
       }
 
@@ -304,15 +305,14 @@ export default function FurnitureDetailsScreen() {
             <View style={styles.heroIconWrap}>
               <IconSymbol name="bed.double.fill" size={22} color="#111827" />
             </View>
-            <Text style={styles.title}>Prepare your furniture move</Text>
+            <Text style={styles.title}>{appI18n.t("Prepare your furniture move")}</Text>
             <Text style={styles.subtitle}>
-              Add photos, item details, helper needs, and moving time before choosing the pickup location.
-            </Text>
+              {appI18n.t("Add photos, item details, helper needs, and moving time before choosing the pickup location.")}</Text>
           </View>
 
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Furniture Photos</Text>
+              <Text style={styles.sectionTitle}>{appI18n.t("Furniture Photos")}</Text>
               <Text style={styles.photoCounter}>
                 {selectedPhotos.length} / {MAX_PHOTOS}
               </Text>
@@ -324,20 +324,19 @@ export default function FurnitureDetailsScreen() {
                 onPress={() => void pickFromLibrary()}
               >
                 <IconSymbol name="photo.on.rectangle" size={16} color="#111827" />
-                <Text style={styles.primaryButtonText}>Add Photos</Text>
+                <Text style={styles.primaryButtonText}>{appI18n.t("Add Photos")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.outlineButton, styles.flexButton]}
                 onPress={() => void takePhoto()}
               >
                 <IconSymbol name="camera" size={16} color="#111827" />
-                <Text style={styles.outlineButtonText}>Take Photo</Text>
+                <Text style={styles.outlineButtonText}>{appI18n.t("Take Photo")}</Text>
               </Pressable>
             </View>
 
             <Text style={styles.helperText}>
-              Add clear furniture photos so drivers can suggest the right helpers and equipment.
-            </Text>
+              {appI18n.t("Add clear furniture photos so drivers can suggest the right helpers and equipment.")}</Text>
 
             {isPickingPhoto ? <ActivityIndicator color="#2563EB" style={styles.loader} /> : null}
 
@@ -347,7 +346,7 @@ export default function FurnitureDetailsScreen() {
                   <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
                     <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
                     <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
-                      <Text style={styles.removePhotoText}>Remove</Text>
+                      <Text style={styles.removePhotoText}>{appI18n.t("Remove")}</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -356,36 +355,35 @@ export default function FurnitureDetailsScreen() {
               <View style={styles.emptyPhotoState}>
                 <IconSymbol name="photo" size={20} color="#98A2B3" />
                 <Text style={styles.emptyPhotoText}>
-                  Upload at least one photo so drivers can estimate handling and loading support.
-                </Text>
+                  {appI18n.t("Upload at least one photo so drivers can estimate handling and loading support.")}</Text>
               </View>
             )}
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Furniture Information</Text>
-            <Text style={styles.label}>Furniture Description</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Furniture Information")}</Text>
+            <Text style={styles.label}>{appI18n.t("Furniture Description")}</Text>
             <TextInput
               value={form.furnitureDescription}
               onChangeText={(value) => {
                 setForm((prev) => ({ ...prev, furnitureDescription: value }));
                 setErrorMessage('');
               }}
-              placeholder="Examples: sofas, refrigerator, bed, cabinets"
+              placeholder={appI18n.t("Examples: sofas, refrigerator, bed, cabinets")}
               placeholderTextColor="#98A2B3"
               style={[styles.input, styles.multilineInput]}
               multiline
               textAlignVertical="top"
             />
 
-            <Text style={styles.label}>Approximate Number of Items</Text>
+            <Text style={styles.label}>{appI18n.t("Approximate Number of Items")}</Text>
             <TextInput
               value={form.approximateItemCount}
               onChangeText={(value) => {
                 setForm((prev) => ({ ...prev, approximateItemCount: value }));
                 setErrorMessage('');
               }}
-              placeholder="Enter item count"
+              placeholder={appI18n.t("Enter item count")}
               placeholderTextColor="#98A2B3"
               style={styles.input}
               keyboardType="number-pad"
@@ -393,23 +391,21 @@ export default function FurnitureDetailsScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Pickup Time</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Pickup Time")}</Text>
             <View style={styles.toggleRow}>
               <Pressable
                 style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
                 onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
               >
                 <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
-                  Immediate pickup
-                </Text>
+                  {appI18n.t("Immediate pickup")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
                 onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
               >
                 <Text style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}>
-                  Schedule later
-                </Text>
+                  {appI18n.t("Schedule later")}</Text>
               </Pressable>
             </View>
 
@@ -419,14 +415,14 @@ export default function FurnitureDetailsScreen() {
                   <View style={styles.pickerIconWrap}>
                     <Text style={styles.pickerIconGlyph}>🗓</Text>
                   </View>
-                  <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+                  <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Date")}</Text>
                   <Text style={styles.pickerButtonValue}>{form.movingDate.toLocaleDateString()}</Text>
                 </Pressable>
                 <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
                   <View style={styles.pickerIconWrap}>
                     <Text style={styles.pickerIconGlyph}>🕒</Text>
                   </View>
-                  <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+                  <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Time")}</Text>
                   <Text style={styles.pickerButtonValue}>
                     {form.movingDate.toLocaleTimeString([], {
                       hour: '2-digit',
@@ -438,20 +434,18 @@ export default function FurnitureDetailsScreen() {
               </View>
             ) : (
               <Text style={styles.helperText}>
-                We’ll start matching a driver as soon as the request is submitted.
-              </Text>
+                {appI18n.t("We’ll start matching a driver as soon as the request is submitted.")}</Text>
             )}
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Helpers & Loading</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Helpers & Loading")}</Text>
 
             <View style={styles.switchRow}>
               <View style={styles.switchCopy}>
-                <Text style={styles.switchLabel}>I need helper</Text>
+                <Text style={styles.switchLabel}>{appI18n.t("I need helper")}</Text>
                 <Text style={styles.switchDescription}>
-                  Add helpers if the furniture requires extra loading support.
-                </Text>
+                  {appI18n.t("Add helpers if the furniture requires extra loading support.")}</Text>
               </View>
               <Pressable
                 style={[styles.switchChip, form.needsHelpers && styles.switchChipActive]}
@@ -464,7 +458,7 @@ export default function FurnitureDetailsScreen() {
                 }
               >
                 <Text style={[styles.switchChipText, form.needsHelpers && styles.switchChipTextActive]}>
-                  {form.needsHelpers ? 'Yes' : 'No'}
+                  {form.needsHelpers ? appI18n.t('Yes') : appI18n.t('No')}
                 </Text>
               </Pressable>
             </View>
@@ -476,7 +470,7 @@ export default function FurnitureDetailsScreen() {
                   setForm((prev) => ({ ...prev, helpersCount: value }));
                   setErrorMessage('');
                 }}
-                placeholder="Number of helpers"
+                placeholder={appI18n.t("Number of helpers")}
                 placeholderTextColor="#98A2B3"
                 style={[styles.input, styles.helperInput]}
                 keyboardType="number-pad"
@@ -487,10 +481,9 @@ export default function FurnitureDetailsScreen() {
 
             <View style={styles.switchRow}>
               <View style={styles.switchCopy}>
-                <Text style={styles.switchLabel}>I can help with loading</Text>
+                <Text style={styles.switchLabel}>{appI18n.t("I can help with loading")}</Text>
                 <Text style={styles.switchDescription}>
-                  Let drivers know if you can assist with carrying or loading items.
-                </Text>
+                  {appI18n.t("Let drivers know if you can assist with carrying or loading items.")}</Text>
               </View>
               <Pressable
                 style={[styles.switchChip, form.customerCanHelpLoading && styles.switchChipActive]}
@@ -507,14 +500,13 @@ export default function FurnitureDetailsScreen() {
                     form.customerCanHelpLoading && styles.switchChipTextActive,
                   ]}
                 >
-                  {form.customerCanHelpLoading ? 'Yes' : 'No'}
+                  {form.customerCanHelpLoading ? appI18n.t('Yes') : appI18n.t('No')}
                 </Text>
               </Pressable>
             </View>
 
             <Text style={styles.helperText}>
-              Drivers can still suggest the final helper count after reviewing the photos.
-            </Text>
+              {appI18n.t("Drivers can still suggest the final helper count after reviewing the photos.")}</Text>
           </View>
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
@@ -524,7 +516,7 @@ export default function FurnitureDetailsScreen() {
             onPress={onContinue}
             disabled={!canContinue}
           >
-            <Text style={styles.continueText}>Continue to Pickup Location</Text>
+            <Text style={styles.continueText}>{appI18n.t("Continue to Pickup Location")}</Text>
           </Pressable>
 
           {showDatePicker ? (

@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 import { registerPushToken } from '@/lib/api';
 import type { RegisterPushTokenPayload } from '@/notifications/types';
+import appI18n from '@/localization/i18n';
 
 const ANDROID_CHANNEL_ID = 'transport_jobs';
 
@@ -35,7 +36,7 @@ function resolvePlatform(): RegisterPushTokenPayload['platform'] | null {
 function assertPushEnvironmentSupported(): void {
   if (Platform.OS === 'android' && Constants.appOwnership === 'expo') {
     throw new Error(
-      'Expo Go on Android does not support remote push notifications. Install a development build or release build of the customer app.',
+      appI18n.t("Expo Go on Android does not support remote push notifications. Install a development build or release build of the customer app."),
     );
   }
 }
@@ -47,7 +48,7 @@ function requireProjectId(): string {
   }
 
   throw new Error(
-    'Expo push projectId is missing. Add expo.extra.eas.projectId to the customer app config or run the app from an EAS/dev build that provides Constants.easConfig.projectId.',
+    appI18n.t("Expo push projectId is missing. Add expo.extra.eas.projectId to the customer app config or run the app from an EAS/dev build that provides Constants.easConfig.projectId."),
   );
 }
 
@@ -100,7 +101,7 @@ export async function registerCustomerPushNotifications(): Promise<string> {
 
   if (!Device.isDevice) {
     throw new Error(
-      'Push notification registration requires a physical device.',
+      appI18n.t("Push notification registration requires a physical device."),
     );
   }
 
@@ -109,7 +110,7 @@ export async function registerCustomerPushNotifications(): Promise<string> {
 
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
-      throw new Error('Notification permission was not granted.');
+      throw new Error(appI18n.t("Notification permission was not granted."));
     }
 
     const projectId = requireProjectId();
@@ -117,7 +118,7 @@ export async function registerCustomerPushNotifications(): Promise<string> {
     const platform = resolvePlatform();
 
     if (!platform) {
-      throw new Error('Push notification registration is unsupported on this platform.');
+      throw new Error(appI18n.t("Push notification registration is unsupported on this platform."));
     }
 
     const payload: RegisterPushTokenPayload = {
@@ -133,6 +134,6 @@ export async function registerCustomerPushNotifications(): Promise<string> {
     console.warn('Failed to register customer push notifications.', error);
     throw (error instanceof Error
       ? error
-      : new Error('Failed to register customer push notifications.'));
+      : new Error(appI18n.t("Failed to register customer push notifications.")));
   }
 }

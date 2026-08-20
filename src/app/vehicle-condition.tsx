@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import type { VehicleConditionFormValues, VehicleConditionOption } from '@/types/vehicle-condition';
+import appI18n from '@/localization/i18n';
 
 type RouteParams = {
   serviceId?: string;
@@ -53,9 +54,9 @@ export default function VehicleConditionScreen() {
   const trimmedNotes = useMemo(() => form.notes?.trim() ?? '', [form.notes]);
 
   const validationError = useMemo(() => {
-    if (!form.condition) return 'Please select the vehicle condition.';
+    if (!form.condition) return appI18n.t("Please select the vehicle condition.");
     if (trimmedNotes.length > MAX_NOTES_LENGTH) {
-      return `Additional notes cannot exceed ${MAX_NOTES_LENGTH} characters.`;
+      return appI18n.t("Additional notes cannot exceed {{value0}} characters.", { value0: MAX_NOTES_LENGTH });
     }
     return '';
   }, [form.condition, trimmedNotes]);
@@ -97,15 +98,14 @@ export default function VehicleConditionScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.heroCard}>
-            <Text style={styles.eyebrow}>Vehicle transport</Text>
-            <Text style={styles.title}>Vehicle condition</Text>
+            <Text style={styles.eyebrow}>{appI18n.t("Vehicle transport")}</Text>
+            <Text style={styles.title}>{appI18n.t("Vehicle condition")}</Text>
             <Text style={styles.subtitle}>
-              Tell drivers the vehicle condition so they can prepare the right equipment.
-            </Text>
+              {appI18n.t("Tell drivers the vehicle condition so they can prepare the right equipment.")}</Text>
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Select condition</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Select condition")}</Text>
             <View style={styles.cardList}>
               {VEHICLE_CONDITION_OPTIONS.map((option) => {
                 const isSelected = form.condition === option.value;
@@ -123,7 +123,7 @@ export default function VehicleConditionScreen() {
                     </View>
                     <View style={styles.optionContent}>
                       <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
-                        {option.label}
+                        {appI18n.t(option.label)}
                       </Text>
                       <Text
                         style={[
@@ -131,7 +131,7 @@ export default function VehicleConditionScreen() {
                           isSelected && styles.optionDescriptionSelected,
                         ]}
                       >
-                        {option.description}
+                        {appI18n.t(option.description)}
                       </Text>
                     </View>
                   </Pressable>
@@ -141,14 +141,14 @@ export default function VehicleConditionScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Additional notes</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Additional notes")}</Text>
             <TextInput
               value={form.notes}
               onChangeText={(value) => {
                 setForm((prev) => ({ ...prev, notes: value }));
                 setErrorMessage('');
               }}
-              placeholder="Add any notes or extra details about the vehicle condition"
+              placeholder={appI18n.t("Add any notes or extra details about the vehicle condition")}
               placeholderTextColor="#98A2B3"
               style={styles.notesInput}
               multiline
@@ -161,7 +161,7 @@ export default function VehicleConditionScreen() {
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
           <Pressable style={styles.continueButton} onPress={onContinue}>
-            <Text style={styles.continueText}>Continue to pickup location</Text>
+            <Text style={styles.continueText}>{appI18n.t("Continue to pickup location")}</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -49,6 +49,7 @@ import type {
 } from '@/types/customer-request';
 import type { VehicleCondition } from '@/types/vehicle-condition';
 import type { VehicleDetailsPayload } from '@/types/vehicle';
+import appI18n from '@/localization/i18n';
 
 type PickupLocationRouteParams = {
   serviceId?: string;
@@ -321,7 +322,7 @@ export default function PickupLocationScreen() {
       const nextLocation = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        address: resolved.address || 'Current location',
+        address: resolved.address || appI18n.t("Current location"),
         placeId: resolved.placeId,
         source: 'device' as const,
       };
@@ -430,13 +431,15 @@ export default function PickupLocationScreen() {
           if (isCancelled) return;
           setPlaceSuggestions(suggestions);
           setSearchMessage(
-            suggestions.length === 0 ? 'No matching places found.' : 'Choose a suggested address.',
+            suggestions.length === 0
+              ? appI18n.t('No matching places found.')
+              : appI18n.t('Choose a suggested address.'),
           );
         } catch (error) {
           if (isCancelled) return;
           setPlaceSuggestions([]);
           setSearchMessage(
-            error instanceof Error ? error.message : 'Places search failed. Please try again.',
+            error instanceof Error ? error.message : appI18n.t("Places search failed. Please try again."),
           );
         } finally {
           if (!isCancelled) {
@@ -491,7 +494,7 @@ export default function PickupLocationScreen() {
       applyResolvedPlace(place);
     } catch (error) {
       setSearchMessage(
-        error instanceof Error ? error.message : 'Places search failed. Please try again.',
+        error instanceof Error ? error.message : appI18n.t("Places search failed. Please try again."),
       );
     } finally {
       setIsSearchingPlaces(false);
@@ -525,7 +528,7 @@ export default function PickupLocationScreen() {
       applyResolvedPlace(place);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Places search failed. Please try again.';
+        error instanceof Error ? error.message : appI18n.t("Places search failed. Please try again.");
       setSearchMessage(message);
     } finally {
       setIsSearchingPlaces(false);
@@ -534,12 +537,12 @@ export default function PickupLocationScreen() {
 
   const onContinue = useCallback(async () => {
     if (!selectedLocation) {
-      setErrorMessage('Please select a pickup location first.');
+      setErrorMessage(appI18n.t("Please select a pickup location first."));
       return;
     }
 
     if (!hasValidServiceId) {
-      setErrorMessage('Missing selected service. Please go back and choose a service first.');
+      setErrorMessage(appI18n.t("Missing selected service. Please go back and choose a service first."));
       return;
     }
 
@@ -552,7 +555,7 @@ export default function PickupLocationScreen() {
       if (serviceKey === 'MOTORCYCLE_TRANSPORT') {
         const pendingMotorcycleDetails = parsePendingMotorcycleDetails(pendingMotorcycleDetailsRaw);
         if (!pendingMotorcycleDetails) {
-          setErrorMessage('Motorcycle details are missing. Please go back and complete them first.');
+          setErrorMessage(appI18n.t("Motorcycle details are missing. Please go back and complete them first."));
           return;
         }
 
@@ -577,7 +580,7 @@ export default function PickupLocationScreen() {
       if (serviceKey === 'GOODS_TRANSPORT') {
         const pendingGoodsDetails = parsePendingGoodsDetails(pendingGoodsDetailsRaw);
         if (!pendingGoodsDetails) {
-          setErrorMessage('Goods details are missing. Please go back and complete them first.');
+          setErrorMessage(appI18n.t("Goods details are missing. Please go back and complete them first."));
           return;
         }
 
@@ -604,7 +607,7 @@ export default function PickupLocationScreen() {
           pendingFurnitureDetailsRaw,
         );
         if (!pendingFurnitureDetails) {
-          setErrorMessage('Furniture details are missing. Please go back and complete them first.');
+          setErrorMessage(appI18n.t("Furniture details are missing. Please go back and complete them first."));
           return;
         }
 
@@ -684,7 +687,7 @@ export default function PickupLocationScreen() {
 
       router.push(nextRoute);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save pickup location.';
+      const message = error instanceof Error ? error.message : appI18n.t("Failed to save pickup location.");
       setErrorMessage(message);
     } finally {
       setIsSaving(false);
@@ -694,23 +697,34 @@ export default function PickupLocationScreen() {
   const selectionLabel = selectedLocation?.address?.trim()
     ? selectedLocation.address
     : selectedLocation
-      ? 'Selected location'
-      : 'Tap on the map or search for an address.';
+      ? appI18n.t('Selected location')
+      : appI18n.t('Tap on the map or search for an address.');
 
   const locationDetails = selectedLocation
-    ? `Lat: ${selectedLocation.latitude.toFixed(6)}  |  Lng: ${selectedLocation.longitude.toFixed(6)}`
+    ? appI18n.t('Lat: {{latitude}} | Lng: {{longitude}}', {
+        latitude: selectedLocation.latitude.toFixed(6),
+        longitude: selectedLocation.longitude.toFixed(6),
+      })
     : '';
 
   const locationAccuracyText =
-    locationAccuracy !== null ? `GPS accuracy: about ${Math.round(locationAccuracy)}m` : '';
+    locationAccuracy !== null
+      ? appI18n.t('GPS accuracy: about {{accuracy}}m', { accuracy: Math.round(locationAccuracy) })
+      : '';
   const providerSummary = providerState
-    ? `GPS: ${providerState.gpsAvailable ? 'on' : 'off'} • Network: ${providerState.networkAvailable ? 'on' : 'off'} • Services: ${providerState.locationServicesEnabled ? 'on' : 'off'}`
+    ? appI18n.t('GPS: {{gps}} • Network: {{network}} • Services: {{services}}', {
+        gps: providerState.gpsAvailable ? appI18n.t('On') : appI18n.t('Off'),
+        network: providerState.networkAvailable ? appI18n.t('On') : appI18n.t('Off'),
+        services: providerState.locationServicesEnabled ? appI18n.t('On') : appI18n.t('Off'),
+      })
     : '';
   const locationMetaText = [
     lastLocationTimestamp
-      ? `Updated: ${new Date(lastLocationTimestamp).toLocaleTimeString([], { hour12: false })}`
+      ? appI18n.t('Updated: {{time}}', {
+          time: new Date(lastLocationTimestamp).toLocaleTimeString([], { hour12: false }),
+        })
       : null,
-    isMockedLocation === true ? 'Mocked location detected' : null,
+    isMockedLocation === true ? appI18n.t('Mocked location detected') : null,
   ]
     .filter(Boolean)
     .join(' • ');
@@ -738,10 +752,10 @@ export default function PickupLocationScreen() {
           <View style={styles.heroBadge}>
             <IconSymbol name={{ ios: 'mappin.and.ellipse', android: 'place', web: 'place' }} color="#111827" size={20} />
           </View>
-          <Text style={styles.heroLabel}>Pickup</Text>
+          <Text style={styles.heroLabel}>{appI18n.t("Pickup")}</Text>
         </View>
-        <Text style={styles.title}>Pickup Location</Text>
-        <Text style={styles.subtitle}>Where should the driver pick up your item?</Text>
+        <Text style={styles.title}>{appI18n.t("Pickup Location")}</Text>
+        <Text style={styles.subtitle}>{appI18n.t("Where should the driver pick up your item?")}</Text>
       </View>
 
       <View style={styles.searchContainer}>
@@ -754,7 +768,7 @@ export default function PickupLocationScreen() {
             setSearchMessage('');
           }}
           onSubmitEditing={() => void onSearchSubmit()}
-          placeholder="Search pickup address"
+          placeholder={appI18n.t("Search pickup address")}
           placeholderTextColor="#98a2b3"
           style={styles.searchInput}
           returnKeyType="search"
@@ -765,8 +779,7 @@ export default function PickupLocationScreen() {
             : 'Google Places API key is not configured yet.'}
         </Text>
         <Text style={styles.searchHint}>
-          Start typing and tap a suggestion to pin the pickup location.
-        </Text>
+          {appI18n.t("Start typing and tap a suggestion to pin the pickup location.")}</Text>
         {placeSuggestions.length > 0 ? (
           <View style={styles.suggestionsList}>
             {placeSuggestions.map((suggestion) => (
@@ -790,7 +803,7 @@ export default function PickupLocationScreen() {
           ) : (
             <>
               <IconSymbol name={{ ios: 'location.fill', android: 'my_location', web: 'my_location' }} color="#111827" size={16} />
-              <Text style={styles.locationButtonText}>Use Current Location</Text>
+              <Text style={styles.locationButtonText}>{appI18n.t("Use Current Location")}</Text>
             </>
           )}
         </Pressable>
@@ -815,24 +828,23 @@ export default function PickupLocationScreen() {
             {selectedLocation ? (
               <NativeMarker
                 coordinate={{ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }}
-                title="Pickup location"
-                description={selectedLocation.address ?? 'Selected location'}
+                title={appI18n.t("Pickup location")}
+                description={selectedLocation.address ?? appI18n.t("Selected location")}
               />
             ) : null}
           </NativeMapView>
         ) : (
           <View style={styles.mapFallback}>
-            <Text style={styles.mapFallbackTitle}>Map preview is not available on web.</Text>
+            <Text style={styles.mapFallbackTitle}>{appI18n.t("Map preview is not available on web.")}</Text>
             <Text style={styles.mapFallbackText}>
-              Search for an address above to pin the pickup location, or open the app on iOS or Android for full map selection.
-            </Text>
+              {appI18n.t("Search for an address above to pin the pickup location, or open the app on iOS or Android for full map selection.")}</Text>
           </View>
         )}
 
         {isLoadingLocation ? (
           <View style={styles.mapOverlay}>
             <ActivityIndicator size="small" color="#1a73e8" />
-            <Text style={styles.mapOverlayText}>Getting your location...</Text>
+            <Text style={styles.mapOverlayText}>{appI18n.t("Getting your location...")}</Text>
           </View>
         ) : null}
       </View>
@@ -856,7 +868,7 @@ export default function PickupLocationScreen() {
           onPress={() => void onContinue()}
           disabled={!canContinue}
         >
-          {isSaving ? <ActivityIndicator size="small" color="#111827" /> : <Text style={styles.continueText}>Continue</Text>}
+          {isSaving ? <ActivityIndicator size="small" color="#111827" /> : <Text style={styles.continueText}>{appI18n.t("Continue")}</Text>}
         </Pressable>
       </View>
     </KeyboardAvoidingView>

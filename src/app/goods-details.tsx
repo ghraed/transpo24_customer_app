@@ -28,6 +28,7 @@ import type {
   LocalPhotoAsset,
   PendingGoodsDetailsPayload,
 } from '@/types/customer-request';
+import appI18n from '@/localization/i18n';
 
 const MAX_PHOTOS = 8;
 
@@ -123,10 +124,10 @@ function SearchableDropdown(props: {
 }) {
   return (
     <View>
-      <Text style={styles.label}>{props.label}</Text>
+      <Text style={styles.label}>{appI18n.t(props.label)}</Text>
       <Pressable style={styles.dropdownButton} onPress={props.onToggle}>
         <Text style={props.valueLabel ? styles.dropdownValue : styles.dropdownPlaceholder}>
-          {props.valueLabel || props.placeholder}
+          {props.valueLabel || appI18n.t(props.placeholder)}
         </Text>
         <Text style={styles.dropdownChevron}>{props.isOpen ? '▲' : '▼'}</Text>
       </Pressable>
@@ -135,13 +136,13 @@ function SearchableDropdown(props: {
           <TextInput
             value={props.searchText}
             onChangeText={props.onSearchChange}
-            placeholder="Search..."
+            placeholder={appI18n.t("Search...")}
             placeholderTextColor="#98A2B3"
             style={styles.dropdownSearch}
           />
           <ScrollView style={styles.dropdownList} nestedScrollEnabled>
             {props.options.length === 0 ? (
-              <Text style={styles.emptyText}>No results</Text>
+              <Text style={styles.emptyText}>{appI18n.t("No results")}</Text>
             ) : (
               props.options.map((option) => (
                 <Pressable
@@ -149,7 +150,7 @@ function SearchableDropdown(props: {
                   style={styles.dropdownItem}
                   onPress={() => props.onSelect(option)}
                 >
-                  <Text style={styles.dropdownItemText}>{option.label}</Text>
+                  <Text style={styles.dropdownItemText}>{appI18n.t(option.label)}</Text>
                 </Pressable>
               ))
             )}
@@ -214,25 +215,25 @@ function buildDefaultScheduledPickupAt(raw?: string): Date {
 
 function formatValidationMessage(form: GoodsTransportFormData): string | null {
   if (!form.shipmentSize) {
-    return 'Please select a shipment size.';
+    return appI18n.t("Please select a shipment size.");
   }
 
   if (!form.goodsDescription.trim()) {
-    return 'Please describe the goods you want to transport.';
+    return appI18n.t("Please describe the goods you want to transport.");
   }
 
   const weight = Number(form.approximateWeightKg);
   if (!Number.isFinite(weight) || weight <= 0) {
-    return 'Approximate weight must be greater than 0.';
+    return appI18n.t("Approximate weight must be greater than 0.");
   }
 
   const pieces = Number(form.numberOfPieces);
   if (!Number.isInteger(pieces) || pieces < 1) {
-    return 'Number of pieces must be at least 1.';
+    return appI18n.t("Number of pieces must be at least 1.");
   }
 
   if (!form.isImmediate && form.scheduledPickupAt.getTime() <= Date.now()) {
-    return 'Scheduled pickup must be in the future.';
+    return appI18n.t("Scheduled pickup must be in the future.");
   }
 
   return null;
@@ -295,7 +296,7 @@ export default function GoodsDetailsScreen() {
 
   const onContinue = (): void => {
     if (!canContinue) {
-      setErrorMessage('Missing selected service. Please go back and choose a service again.');
+      setErrorMessage(appI18n.t("Missing selected service. Please go back and choose a service again."));
       return;
     }
 
@@ -338,13 +339,13 @@ export default function GoodsDetailsScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-        setErrorMessage('Media library permission is needed to select photos.');
+        setErrorMessage(appI18n.t("Media library permission is needed to select photos."));
         return;
       }
 
       const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
       if (remainingSlots <= 0) {
-        setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+        setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
         return;
       }
 
@@ -370,12 +371,12 @@ export default function GoodsDetailsScreen() {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-        setErrorMessage('Camera permission is needed to take photos.');
+        setErrorMessage(appI18n.t("Camera permission is needed to take photos."));
         return;
       }
 
       if (selectedPhotos.length >= MAX_PHOTOS) {
-        setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+        setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
         return;
       }
 
@@ -420,19 +421,18 @@ export default function GoodsDetailsScreen() {
             <View style={styles.heroIconWrap}>
               <IconSymbol name="shippingbox.fill" size={22} color="#111827" />
             </View>
-            <Text style={styles.title}>Describe the shipment</Text>
+            <Text style={styles.title}>{appI18n.t("Describe the shipment")}</Text>
             <Text style={styles.subtitle}>
-              Add size, weight, timing, and handling notes before choosing the pickup location.
-            </Text>
+              {appI18n.t("Add size, weight, timing, and handling notes before choosing the pickup location.")}</Text>
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Shipment Size</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Shipment Size")}</Text>
             <SearchableDropdown
-              label="Size"
-              placeholder="Select shipment size"
+              label={appI18n.t("Size")}
+              placeholder={appI18n.t("Select shipment size")}
               options={sizeOptions}
-              valueLabel={selectedShipmentSize?.label ?? ''}
+              valueLabel={appI18n.t(selectedShipmentSize?.label ?? '')}
               isOpen={openDropdown === 'size'}
               searchText={sizeSearch}
               onToggle={() => setOpenDropdown((prev) => (prev === 'size' ? null : 'size'))}
@@ -446,17 +446,17 @@ export default function GoodsDetailsScreen() {
 
             {selectedShipmentSize ? (
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryTitle}>{selectedShipmentSize.label} shipment</Text>
+                <Text style={styles.summaryTitle}>{appI18n.t(selectedShipmentSize.label)} {appI18n.t("shipment")}</Text>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Approximate weight</Text>
+                  <Text style={styles.summaryLabel}>{appI18n.t("Approximate weight")}</Text>
                   <Text style={styles.summaryValue}>{selectedShipmentSize.approximateWeight}</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Dimensions</Text>
+                  <Text style={styles.summaryLabel}>{appI18n.t("Dimensions")}</Text>
                   <Text style={styles.summaryValue}>{selectedShipmentSize.dimensions}</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Best for</Text>
+                  <Text style={styles.summaryLabel}>{appI18n.t("Best for")}</Text>
                   <Text style={styles.summaryValue}>{selectedShipmentSize.usage}</Text>
                 </View>
               </View>
@@ -464,15 +464,15 @@ export default function GoodsDetailsScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Goods Information</Text>
-            <Text style={styles.label}>Goods Description</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Goods Information")}</Text>
+            <Text style={styles.label}>{appI18n.t("Goods Description")}</Text>
             <TextInput
               value={form.goodsDescription}
               onChangeText={(value) => {
                 setForm((prev) => ({ ...prev, goodsDescription: value }));
                 setErrorMessage('');
               }}
-              placeholder="Examples: electronics, clothing, food items, furniture"
+              placeholder={appI18n.t("Examples: electronics, clothing, food items, furniture")}
               placeholderTextColor="#98A2B3"
               style={[styles.input, styles.multilineInput]}
               multiline
@@ -481,7 +481,7 @@ export default function GoodsDetailsScreen() {
 
             <View style={styles.dualInputRow}>
               <View style={styles.dualInputItem}>
-                <Text style={styles.label}>Approx. Weight (kg)</Text>
+                <Text style={styles.label}>{appI18n.t("Approx. Weight (kg)")}</Text>
                 <TextInput
                   value={form.approximateWeightKg}
                   onChangeText={(value) => {
@@ -495,7 +495,7 @@ export default function GoodsDetailsScreen() {
                     }));
                     setErrorMessage('');
                   }}
-                  placeholder="Enter weight"
+                  placeholder={appI18n.t("Enter weight")}
                   placeholderTextColor="#98A2B3"
                   style={styles.input}
                   keyboardType="decimal-pad"
@@ -503,7 +503,7 @@ export default function GoodsDetailsScreen() {
               </View>
 
               <View style={styles.dualInputItem}>
-                <Text style={styles.label}>Pieces</Text>
+                <Text style={styles.label}>{appI18n.t("Pieces")}</Text>
                 <TextInput
                   value={form.numberOfPieces}
                   onChangeText={(value) => {
@@ -517,7 +517,7 @@ export default function GoodsDetailsScreen() {
                     }));
                     setErrorMessage('');
                   }}
-                  placeholder="Enter pieces"
+                  placeholder={appI18n.t("Enter pieces")}
                   placeholderTextColor="#98A2B3"
                   style={styles.input}
                   keyboardType="number-pad"
@@ -527,15 +527,14 @@ export default function GoodsDetailsScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Pickup Time</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Pickup Time")}</Text>
             <View style={styles.toggleRow}>
               <Pressable
                 style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
                 onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
               >
                 <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
-                  Immediate pickup
-                </Text>
+                  {appI18n.t("Immediate pickup")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
@@ -544,8 +543,7 @@ export default function GoodsDetailsScreen() {
                 <Text
                   style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}
                 >
-                  Schedule later
-                </Text>
+                  {appI18n.t("Schedule later")}</Text>
               </Pressable>
             </View>
 
@@ -555,7 +553,7 @@ export default function GoodsDetailsScreen() {
                   <View style={styles.pickerIconWrap}>
                     <Text style={styles.pickerIconGlyph}>🗓</Text>
                   </View>
-                  <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+                  <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Date")}</Text>
                   <Text style={styles.pickerButtonValue}>
                     {form.scheduledPickupAt.toLocaleDateString()}
                   </Text>
@@ -564,7 +562,7 @@ export default function GoodsDetailsScreen() {
                   <View style={styles.pickerIconWrap}>
                     <Text style={styles.pickerIconGlyph}>🕒</Text>
                   </View>
-                  <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+                  <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Time")}</Text>
                   <Text style={styles.pickerButtonValue}>
                     {form.scheduledPickupAt.toLocaleTimeString([], {
                       hour: '2-digit',
@@ -576,14 +574,13 @@ export default function GoodsDetailsScreen() {
               </View>
             ) : (
               <Text style={styles.helperText}>
-                We’ll start matching a driver as soon as the request is submitted.
-              </Text>
+                {appI18n.t("We’ll start matching a driver as soon as the request is submitted.")}</Text>
             )}
           </View>
 
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Shipment Photos</Text>
+              <Text style={styles.sectionTitle}>{appI18n.t("Shipment Photos")}</Text>
               <Text style={styles.photoCounter}>
                 {selectedPhotos.length} / {MAX_PHOTOS}
               </Text>
@@ -595,14 +592,14 @@ export default function GoodsDetailsScreen() {
                 onPress={() => void pickFromLibrary()}
               >
                 <IconSymbol name="photo.on.rectangle" size={16} color="#111827" />
-                <Text style={styles.primaryButtonText}>Add Photos</Text>
+                <Text style={styles.primaryButtonText}>{appI18n.t("Add Photos")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.outlineButton, styles.flexButton]}
                 onPress={() => void takePhoto()}
               >
                 <IconSymbol name="camera" size={16} color="#111827" />
-                <Text style={styles.outlineButtonText}>Take Photo</Text>
+                <Text style={styles.outlineButtonText}>{appI18n.t("Take Photo")}</Text>
               </Pressable>
             </View>
 
@@ -614,7 +611,7 @@ export default function GoodsDetailsScreen() {
                   <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
                     <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
                     <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
-                      <Text style={styles.removePhotoText}>Remove</Text>
+                      <Text style={styles.removePhotoText}>{appI18n.t("Remove")}</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -623,25 +620,24 @@ export default function GoodsDetailsScreen() {
               <View style={styles.emptyPhotoState}>
                 <IconSymbol name="photo" size={20} color="#98A2B3" />
                 <Text style={styles.emptyPhotoText}>
-                  Photos help drivers understand the shipment size and handling needs.
-                </Text>
+                  {appI18n.t("Photos help drivers understand the shipment size and handling needs.")}</Text>
               </View>
             )}
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Special Handling</Text>
+            <Text style={styles.sectionTitle}>{appI18n.t("Special Handling")}</Text>
             <View style={styles.switchRow}>
               <View style={styles.switchCopy}>
-                <Text style={styles.switchLabel}>Fragile goods</Text>
-                <Text style={styles.switchDescription}>Mark items that require careful handling.</Text>
+                <Text style={styles.switchLabel}>{appI18n.t("Fragile goods")}</Text>
+                <Text style={styles.switchDescription}>{appI18n.t("Mark items that require careful handling.")}</Text>
               </View>
               <Pressable
                 style={[styles.switchChip, form.isFragile && styles.switchChipActive]}
                 onPress={() => setForm((prev) => ({ ...prev, isFragile: !prev.isFragile }))}
               >
                 <Text style={[styles.switchChipText, form.isFragile && styles.switchChipTextActive]}>
-                  {form.isFragile ? 'Yes' : 'No'}
+                  {form.isFragile ? appI18n.t('Yes') : appI18n.t('No')}
                 </Text>
               </Pressable>
             </View>
@@ -650,8 +646,8 @@ export default function GoodsDetailsScreen() {
 
             <View style={styles.switchRow}>
               <View style={styles.switchCopy}>
-                <Text style={styles.switchLabel}>Requires refrigeration</Text>
-                <Text style={styles.switchDescription}>Use this for temperature-sensitive goods.</Text>
+                <Text style={styles.switchLabel}>{appI18n.t("Requires refrigeration")}</Text>
+                <Text style={styles.switchDescription}>{appI18n.t("Use this for temperature-sensitive goods.")}</Text>
               </View>
               <Pressable
                 style={[styles.switchChip, form.requiresRefrigeration && styles.switchChipActive]}
@@ -668,7 +664,7 @@ export default function GoodsDetailsScreen() {
                     form.requiresRefrigeration && styles.switchChipTextActive,
                   ]}
                 >
-                  {form.requiresRefrigeration ? 'Yes' : 'No'}
+                  {form.requiresRefrigeration ? appI18n.t('Yes') : appI18n.t('No')}
                 </Text>
               </Pressable>
             </View>
@@ -681,7 +677,7 @@ export default function GoodsDetailsScreen() {
             onPress={onContinue}
             disabled={!canContinue}
           >
-            <Text style={styles.continueText}>Continue to Pickup Location</Text>
+            <Text style={styles.continueText}>{appI18n.t("Continue to Pickup Location")}</Text>
           </Pressable>
 
           {showDatePicker ? (

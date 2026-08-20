@@ -46,6 +46,7 @@ import {
   VIN_DECODE_EMPTY_RESULT_MESSAGE,
   VIN_DECODE_NETWORK_ERROR_MESSAGE,
 } from '@/utils/vin';
+import appI18n from '@/localization/i18n';
 
 type RouteParams = {
   serviceId?: string;
@@ -164,14 +165,14 @@ function SearchableDropdown(props: {
   const isInactive = Boolean(props.disabled) || props.options.length === 0;
   return (
     <View>
-      <Text style={styles.label}>{props.label}</Text>
+      <Text style={styles.label}>{appI18n.t(props.label)}</Text>
       <Pressable
         style={[styles.dropdownButton, isInactive && styles.dropdownDisabled]}
         onPress={props.onToggle}
         disabled={isInactive}
       >
         <Text style={props.valueLabel ? styles.dropdownValue : styles.dropdownPlaceholder}>
-          {props.valueLabel || props.placeholder}
+          {props.valueLabel || appI18n.t(props.placeholder)}
         </Text>
         <Text style={styles.dropdownChevron}>{props.isOpen ? '▲' : '▼'}</Text>
       </Pressable>
@@ -180,17 +181,17 @@ function SearchableDropdown(props: {
           <TextInput
             value={props.searchText}
             onChangeText={props.onSearchChange}
-            placeholder="Search..."
+            placeholder={appI18n.t("Search...")}
             placeholderTextColor="#98a2b3"
             style={styles.dropdownSearch}
           />
           <ScrollView style={styles.dropdownList} nestedScrollEnabled>
             {props.options.length === 0 ? (
-              <Text style={styles.emptyText}>No results</Text>
+              <Text style={styles.emptyText}>{appI18n.t("No results")}</Text>
             ) : (
               props.options.map((option) => (
                 <Pressable key={option.id} style={styles.dropdownItem} onPress={() => props.onSelect(option)}>
-                  <Text style={styles.dropdownItemText}>{option.label}</Text>
+                  <Text style={styles.dropdownItemText}>{appI18n.t(option.label)}</Text>
                 </Pressable>
               ))
             )}
@@ -275,7 +276,7 @@ export default function VehicleDetailsScreen() {
         const list = await getVehicleBrands();
         if (!cancelled) setBrands(list);
       } catch (error) {
-        if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Failed to load vehicle brands.');
+        if (!cancelled) setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to load vehicle brands."));
       } finally {
         if (!cancelled) setIsLoadingBrands(false);
       }
@@ -307,7 +308,7 @@ export default function VehicleDetailsScreen() {
       const list = await getVehicleModels(brand.id);
       setModels(list);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to load vehicle models.');
+      setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to load vehicle models."));
     } finally {
       setIsLoadingModels(false);
     }
@@ -331,7 +332,7 @@ export default function VehicleDetailsScreen() {
       const list = await getVehicleSeries(model.id);
       setSeries(list);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to load vehicle series.');
+      setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to load vehicle series."));
     } finally {
       setIsLoadingSeries(false);
     }
@@ -352,7 +353,7 @@ export default function VehicleDetailsScreen() {
       const list = await getVehicleYears(nextSeries.id);
       setYears(list);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to load vehicle years.');
+      setErrorMessage(error instanceof Error ? error.message : appI18n.t("Failed to load vehicle years."));
     } finally {
       setIsLoadingYears(false);
     }
@@ -631,13 +632,13 @@ export default function VehicleDetailsScreen() {
   const pickFromLibrary = useCallback(async (): Promise<void> => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-      setErrorMessage('Media library permission is needed to select photos.');
+      setErrorMessage(appI18n.t("Media library permission is needed to select photos."));
       return;
     }
 
     const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
     if (remainingSlots <= 0) {
-      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
       return;
     }
 
@@ -658,13 +659,13 @@ export default function VehicleDetailsScreen() {
   const takePhoto = useCallback(async (): Promise<void> => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-      setErrorMessage('Camera permission is needed to take photos.');
+      setErrorMessage(appI18n.t("Camera permission is needed to take photos."));
       return;
     }
 
     const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
     if (remainingSlots <= 0) {
-      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
       return;
     }
 
@@ -686,12 +687,12 @@ export default function VehicleDetailsScreen() {
 
   const onContinue = useCallback(() => {
     if (!canContinue) {
-      setErrorMessage(validationErrors[0] ?? 'Please complete the vehicle details.');
+      setErrorMessage(validationErrors[0] ?? appI18n.t("Please complete the vehicle details."));
       return;
     }
 
     if (!requestForm.isImmediate && requestForm.scheduledPickupAt.getTime() <= Date.now()) {
-      setErrorMessage('Scheduled pickup must be in the future.');
+      setErrorMessage(appI18n.t("Scheduled pickup must be in the future."));
       return;
     }
 
@@ -771,7 +772,7 @@ export default function VehicleDetailsScreen() {
           showsVerticalScrollIndicator={false}
         >
       <View style={styles.heroBlock}>
-        <Text style={styles.title}>Tell us about the vehicle</Text>
+        <Text style={styles.title}>{appI18n.t("Tell us about the vehicle")}</Text>
         <Text style={styles.subtitle}>
           {isVehicleTransport
             ? 'Add the vehicle, pickup timing and photos before choosing the route.'
@@ -780,8 +781,8 @@ export default function VehicleDetailsScreen() {
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>VIN / Chassis</Text>
-      <Text style={styles.sectionHint}>Use VIN decode if you want us to prefill the details automatically.</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("VIN / Chassis")}</Text>
+      <Text style={styles.sectionHint}>{appI18n.t("Use VIN decode if you want us to prefill the details automatically.")}</Text>
       <View style={styles.vinInputRow}>
         <TextInput
           value={form.vin ?? ''}
@@ -790,7 +791,7 @@ export default function VehicleDetailsScreen() {
             setFallbackMessage('');
             setErrorMessage('');
           }}
-          placeholder="Enter 17-character VIN"
+          placeholder={appI18n.t("Enter 17-character VIN")}
           placeholderTextColor="#98a2b3"
           style={styles.vinInput}
           autoCapitalize="characters"
@@ -829,7 +830,7 @@ export default function VehicleDetailsScreen() {
         onPress={() => void decodeVin()}
         disabled={!canDecodeVin}
       >
-        {isDecodingVin ? <ActivityIndicator color="#111827" /> : <Text style={styles.secondaryButtonText}>Decode VIN</Text>}
+        {isDecodingVin ? <ActivityIndicator color="#111827" /> : <Text style={styles.secondaryButtonText}>{appI18n.t("Decode VIN")}</Text>}
       </Pressable>
 
       {fallbackMessage ? <Text style={styles.warning}>{fallbackMessage}</Text> : null}
@@ -839,10 +840,10 @@ export default function VehicleDetailsScreen() {
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Manual Vehicle Selection</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("Manual Vehicle Selection")}</Text>
       <SearchableDropdown
-        label="Vehicle Brand"
-        placeholder="Select brand"
+        label={appI18n.t("Vehicle Brand")}
+        placeholder={appI18n.t("Select brand")}
         options={filteredBrandOptions}
         valueLabel={form.brandName}
         isOpen={openDropdown === 'brand'}
@@ -857,11 +858,11 @@ export default function VehicleDetailsScreen() {
       />
       {!isLoadingBrands && brands.length === 0 ? (
         <View>
-          <Text style={styles.label}>Vehicle Brand (manual)</Text>
+          <Text style={styles.label}>{appI18n.t("Vehicle Brand (manual)")}</Text>
           <TextInput
             value={form.brandName}
             onChangeText={(value) => setForm((prev) => ({ ...prev, brandName: value, brandId: undefined }))}
-            placeholder="Type vehicle brand"
+            placeholder={appI18n.t("Type vehicle brand")}
             placeholderTextColor="#98a2b3"
             style={styles.input}
           />
@@ -870,8 +871,8 @@ export default function VehicleDetailsScreen() {
 
       {isLoadingModels ? <ActivityIndicator color="#111827" style={styles.loader} /> : null}
       <SearchableDropdown
-        label="Vehicle Model"
-        placeholder="Select model"
+        label={appI18n.t("Vehicle Model")}
+        placeholder={appI18n.t("Select model")}
         options={filteredModelOptions}
         valueLabel={form.modelName}
         isOpen={openDropdown === 'model'}
@@ -886,11 +887,11 @@ export default function VehicleDetailsScreen() {
       />
       {!isLoadingModels && models.length === 0 ? (
         <View>
-          <Text style={styles.label}>Vehicle Model (manual)</Text>
+          <Text style={styles.label}>{appI18n.t("Vehicle Model (manual)")}</Text>
           <TextInput
             value={form.modelName}
             onChangeText={(value) => setForm((prev) => ({ ...prev, modelName: value, modelId: undefined }))}
-            placeholder="Type vehicle model"
+            placeholder={appI18n.t("Type vehicle model")}
             placeholderTextColor="#98a2b3"
             style={styles.input}
           />
@@ -899,8 +900,8 @@ export default function VehicleDetailsScreen() {
 
       {isLoadingSeries ? <ActivityIndicator color="#111827" style={styles.loader} /> : null}
       <SearchableDropdown
-        label="Vehicle Series / Variant (optional)"
-        placeholder="Select series"
+        label={appI18n.t("Vehicle Series / Variant (optional)")}
+        placeholder={appI18n.t("Select series")}
         options={filteredSeriesOptions}
         valueLabel={form.seriesName ?? ''}
         isOpen={openDropdown === 'series'}
@@ -915,11 +916,11 @@ export default function VehicleDetailsScreen() {
       />
       {!isLoadingSeries && series.length === 0 ? (
         <View>
-          <Text style={styles.label}>Series / Variant (manual)</Text>
+          <Text style={styles.label}>{appI18n.t("Series / Variant (manual)")}</Text>
           <TextInput
             value={form.seriesName ?? ''}
             onChangeText={(value) => setForm((prev) => ({ ...prev, seriesName: value }))}
-            placeholder="Type series or variant"
+            placeholder={appI18n.t("Type series or variant")}
             placeholderTextColor="#98a2b3"
             style={styles.input}
           />
@@ -928,8 +929,8 @@ export default function VehicleDetailsScreen() {
 
       {isLoadingYears ? <ActivityIndicator color="#111827" style={styles.loader} /> : null}
       <SearchableDropdown
-        label="Manufacture Year"
-        placeholder="Select year"
+        label={appI18n.t("Manufacture Year")}
+        placeholder={appI18n.t("Select year")}
         options={filteredYearOptions}
         valueLabel={form.manufactureYear ? String(form.manufactureYear) : ''}
         isOpen={openDropdown === 'year'}
@@ -946,19 +947,19 @@ export default function VehicleDetailsScreen() {
         disabled={false}
       />
 
-      <Text style={styles.label}>Estimated Weight (kg)</Text>
+      <Text style={styles.label}>{appI18n.t("Estimated Weight (kg)")}</Text>
       <TextInput
         value={form.estimatedWeightKg ? String(form.estimatedWeightKg) : ''}
         onChangeText={(value) => setForm((prev) => ({ ...prev, estimatedWeightKg: toNumericOrUndefined(value) }))}
-        placeholder="Estimated vehicle weight in kg"
+        placeholder={appI18n.t("Estimated vehicle weight in kg")}
         placeholderTextColor="#98a2b3"
         style={styles.input}
         keyboardType="decimal-pad"
       />
 
       <SearchableDropdown
-        label="Body Type"
-        placeholder="Select body type"
+        label={appI18n.t("Body Type")}
+        placeholder={appI18n.t("Select body type")}
         options={filteredBodyTypeOptions}
         valueLabel={form.bodyType ?? ''}
         isOpen={openDropdown === 'bodyType'}
@@ -971,11 +972,11 @@ export default function VehicleDetailsScreen() {
         }}
       />
 
-      <Text style={styles.label}>Variant (optional)</Text>
+      <Text style={styles.label}>{appI18n.t("Variant (optional)")}</Text>
       <TextInput
         value={form.variantName ?? ''}
         onChangeText={(value) => setForm((prev) => ({ ...prev, variantName: value }))}
-        placeholder="Trim / variant"
+        placeholder={appI18n.t("Trim / variant")}
         placeholderTextColor="#98a2b3"
         style={styles.input}
       />
@@ -984,30 +985,28 @@ export default function VehicleDetailsScreen() {
       {isVehicleTransport ? (
         <>
           <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Date & Time</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
           <View style={styles.toggleRow}>
             <Pressable
               style={[styles.optionChip, requestForm.isImmediate && styles.optionChipActive]}
               onPress={() => setRequestForm((prev) => ({ ...prev, isImmediate: true }))}
             >
               <Text style={[styles.optionChipText, requestForm.isImmediate && styles.optionChipTextActive]}>
-                Immediate pickup
-              </Text>
+                {appI18n.t("Immediate pickup")}</Text>
             </Pressable>
             <Pressable
               style={[styles.optionChip, !requestForm.isImmediate && styles.optionChipActive]}
               onPress={() => setRequestForm((prev) => ({ ...prev, isImmediate: false }))}
             >
               <Text style={[styles.optionChipText, !requestForm.isImmediate && styles.optionChipTextActive]}>
-                Schedule for later
-              </Text>
+                {appI18n.t("Schedule for later")}</Text>
             </Pressable>
           </View>
 
           {!requestForm.isImmediate ? (
             <View style={styles.datetimeContainer}>
               <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
-                <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+                <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Date")}</Text>
                 <Text style={styles.pickerButtonValue}>
                   {requestForm.scheduledPickupAt
                     ? requestForm.scheduledPickupAt.toLocaleDateString()
@@ -1015,7 +1014,7 @@ export default function VehicleDetailsScreen() {
                 </Text>
               </Pressable>
               <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
-                <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+                <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Time")}</Text>
                 <Text style={styles.pickerButtonValue}>
                   {requestForm.scheduledPickupAt
                     ? requestForm.scheduledPickupAt.toLocaleTimeString([], {
@@ -1031,30 +1030,30 @@ export default function VehicleDetailsScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Request Details</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Request Details")}</Text>
           <View style={styles.fieldRow}>
-            <Text style={styles.label}>Transport Title</Text>
+            <Text style={styles.label}>{appI18n.t("Transport Title")}</Text>
             <TextInput
               value={requestForm.itemTitle}
               onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemTitle: value }))}
-              placeholder="Transport title (optional)"
+              placeholder={appI18n.t("Transport title (optional)")}
               placeholderTextColor="#98a2b3"
               style={styles.input}
             />
           </View>
           <View style={styles.fieldRow}>
-            <Text style={styles.label}>Extra Details</Text>
+            <Text style={styles.label}>{appI18n.t("Extra Details")}</Text>
             <TextInput
               value={requestForm.itemDescription ?? ''}
               onChangeText={(value) => setRequestForm((prev) => ({ ...prev, itemDescription: value }))}
-              placeholder="Extra details for the driver (optional)"
+              placeholder={appI18n.t("Extra details for the driver (optional)")}
               placeholderTextColor="#98a2b3"
               style={[styles.input, styles.textarea]}
               multiline
             />
           </View>
           <View style={[styles.switchRow, styles.fieldRow]}>
-            <Text style={styles.switchLabel}>Requires loading help</Text>
+            <Text style={styles.switchLabel}>{appI18n.t("Requires loading help")}</Text>
             <Pressable
               style={[styles.switchChip, requestForm.requiresLoadingHelp && styles.switchChipActive]}
               onPress={() =>
@@ -1071,19 +1070,19 @@ export default function VehicleDetailsScreen() {
                   requestForm.requiresLoadingHelp && styles.switchChipTextActive,
                 ]}
               >
-                {requestForm.requiresLoadingHelp ? 'Yes' : 'No'}
+                {requestForm.requiresLoadingHelp ? appI18n.t('Yes') : appI18n.t('No')}
               </Text>
             </Pressable>
           </View>
           {requestForm.requiresLoadingHelp ? (
             <View style={styles.fieldRow}>
-              <Text style={styles.label}>Loading Workers Count</Text>
+              <Text style={styles.label}>{appI18n.t("Loading Workers Count")}</Text>
               <TextInput
                 value={requestForm.loadingWorkersCount ?? ''}
                 onChangeText={(value) =>
                   setRequestForm((prev) => ({ ...prev, loadingWorkersCount: value }))
                 }
-                placeholder="Loading workers count"
+                placeholder={appI18n.t("Loading workers count")}
                 placeholderTextColor="#98a2b3"
                 style={styles.input}
                 keyboardType="number-pad"
@@ -1091,13 +1090,13 @@ export default function VehicleDetailsScreen() {
             </View>
           ) : null}
           <View style={styles.fieldRow}>
-            <Text style={styles.label}>Special Instructions</Text>
+            <Text style={styles.label}>{appI18n.t("Special Instructions")}</Text>
             <TextInput
               value={requestForm.specialInstructions ?? ''}
               onChangeText={(value) =>
                 setRequestForm((prev) => ({ ...prev, specialInstructions: value }))
               }
-              placeholder="Special instructions (optional)"
+              placeholder={appI18n.t("Special instructions (optional)")}
               placeholderTextColor="#98a2b3"
               style={[styles.input, styles.textarea]}
               multiline
@@ -1106,14 +1105,14 @@ export default function VehicleDetailsScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Upload Photos</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Upload Photos")}</Text>
           <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
           <View style={styles.actionsRow}>
             <Pressable style={[styles.secondaryButton, styles.flexButton]} onPress={() => void pickFromLibrary()}>
-              <Text style={styles.secondaryButtonText}>Add Photos</Text>
+              <Text style={styles.secondaryButtonText}>{appI18n.t("Add Photos")}</Text>
             </Pressable>
             <Pressable style={[styles.photoButton, styles.flexButton]} onPress={() => void takePhoto()}>
-              <Text style={styles.photoButtonText}>Take Photo</Text>
+              <Text style={styles.photoButtonText}>{appI18n.t("Take Photo")}</Text>
             </Pressable>
           </View>
           <View style={styles.photoGrid}>
@@ -1121,7 +1120,7 @@ export default function VehicleDetailsScreen() {
               <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
                 <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
                 <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
-                  <Text style={styles.removePhotoText}>Remove</Text>
+                  <Text style={styles.removePhotoText}>{appI18n.t("Remove")}</Text>
                 </Pressable>
               </View>
             ))}
@@ -1135,7 +1134,7 @@ export default function VehicleDetailsScreen() {
         onPress={onContinue}
         disabled={!canContinue}
       >
-        <Text style={styles.continueText}>Continue to Vehicle Condition</Text>
+        <Text style={styles.continueText}>{appI18n.t("Continue to Vehicle Condition")}</Text>
         <IconSymbol
           name={{ ios: 'arrow.right', android: 'east', web: 'east' }}
           color="#FFFFFF"

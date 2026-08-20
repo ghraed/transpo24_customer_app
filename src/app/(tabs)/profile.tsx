@@ -253,7 +253,7 @@ export default function ProfileTabScreen() {
               <Text style={styles.dropdownValue}>
                 {selectedLanguage.nativeLabel}
               </Text>
-              <Text style={styles.dropdownMeta}>{selectedLanguage.label}</Text>
+              <Text style={styles.dropdownMeta}>{t(selectedLanguage.label)}</Text>
             </View>
             <View style={styles.dropdownIconWrap}>
               <IconSymbol
@@ -296,7 +296,7 @@ export default function ProfileTabScreen() {
                       <Text style={styles.languageName}>
                         {config.nativeLabel}
                       </Text>
-                      <Text style={styles.languageMeta}>{config.label}</Text>
+                      <Text style={styles.languageMeta}>{t(config.label)}</Text>
                     </View>
                     <Text
                       style={[

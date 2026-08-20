@@ -35,6 +35,7 @@ import type {
   UpdateScheduleAndItemDetailsPayload,
 } from '@/types/customer-request';
 import type { VehicleCondition } from '@/types/vehicle-condition';
+import appI18n from '@/localization/i18n';
 
 type ServiceKey =
   | 'VEHICLE_TRANSPORT'
@@ -273,13 +274,13 @@ export default function DateTimeScreen() {
   const pickFromLibrary = async (): Promise<void> => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-      setErrorMessage('Media library permission is needed to select photos.');
+      setErrorMessage(appI18n.t("Media library permission is needed to select photos."));
       return;
     }
 
     const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
     if (remainingSlots <= 0) {
-      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
       return;
     }
 
@@ -300,13 +301,13 @@ export default function DateTimeScreen() {
   const takePhoto = async (): Promise<void> => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-      setErrorMessage('Camera permission is needed to take photos.');
+      setErrorMessage(appI18n.t("Camera permission is needed to take photos."));
       return;
     }
 
     const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
     if (remainingSlots <= 0) {
-      setErrorMessage(`You can upload up to ${MAX_PHOTOS} photos.`);
+      setErrorMessage(appI18n.t("You can upload up to {{value0}} photos.", { value0: MAX_PHOTOS }));
       return;
     }
 
@@ -328,7 +329,7 @@ export default function DateTimeScreen() {
 
   const onContinue = async (): Promise<void> => {
     if (validationErrors.length > 0) {
-      setErrorMessage(validationErrors[0] ?? 'Please complete required fields.');
+      setErrorMessage(validationErrors[0] ?? appI18n.t("Please complete required fields."));
       return;
     }
 
@@ -374,8 +375,8 @@ export default function DateTimeScreen() {
           const message =
             uploadError instanceof Error
               ? uploadError.message
-              : 'Details were saved, but photo upload failed. Please retry.';
-          setErrorMessage(`${message} You can retry without losing form data.`);
+              : appI18n.t("Details were saved, but photo upload failed. Please retry.");
+          setErrorMessage(appI18n.t("{{value0}} You can retry without losing form data.", { value0: message }));
           return;
         } finally {
           setIsUploadingPhotos(false);
@@ -426,11 +427,11 @@ export default function DateTimeScreen() {
       router.push(nextRoute);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Failed to save date and item details.';
+        error instanceof Error ? error.message : appI18n.t("Failed to save date and item details.");
       const normalized = message.toLowerCase();
 
       if (normalized.includes('pickup location must be selected')) {
-        setErrorMessage('Pickup location is missing. Redirecting to pickup step...');
+        setErrorMessage(appI18n.t("Pickup location is missing. Redirecting to pickup step..."));
         setTimeout(() => {
           const route = {
             pathname: '/pickup-location',
@@ -447,7 +448,7 @@ export default function DateTimeScreen() {
       }
 
       if (normalized.includes('dropoff location must be selected')) {
-        setErrorMessage('Dropoff location is missing. Redirecting to dropoff step...');
+        setErrorMessage(appI18n.t("Dropoff location is missing. Redirecting to dropoff step..."));
         setTimeout(() => {
           const route = {
             pathname: '/dropoff-location',
@@ -497,32 +498,29 @@ export default function DateTimeScreen() {
             <View style={styles.heroBadge}>
               <IconSymbol name={{ ios: 'calendar', android: 'event', web: 'event' }} color="#111827" size={20} />
             </View>
-            <Text style={styles.heroLabel}>Request Details</Text>
+            <Text style={styles.heroLabel}>{appI18n.t("Request Details")}</Text>
           </View>
-          <Text style={styles.title}>Date, Item Details & Photos</Text>
+          <Text style={styles.title}>{appI18n.t("Date, Item Details & Photos")}</Text>
           <Text style={styles.subtitle}>
-            Tell us when, what, and show us what you want to transport.
-          </Text>
+            {appI18n.t("Tell us when, what, and show us what you want to transport.")}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date & Time</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
           <View style={styles.toggleRow}>
             <Pressable
               style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
               onPress={() => updateForm('isImmediate', true)}
             >
               <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
-                Immediate pickup
-              </Text>
+                {appI18n.t("Immediate pickup")}</Text>
             </Pressable>
             <Pressable
               style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
               onPress={() => updateForm('isImmediate', false)}
             >
               <Text style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}>
-                Schedule for later
-              </Text>
+                {appI18n.t("Schedule for later")}</Text>
             </Pressable>
           </View>
 
@@ -532,7 +530,7 @@ export default function DateTimeScreen() {
                 <View style={styles.pickerIconWrap}>
                   <Text style={styles.pickerIconGlyph}>🗓</Text>
                 </View>
-                <Text style={styles.pickerButtonLabel}>Pickup Date</Text>
+                <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Date")}</Text>
                 <Text style={styles.pickerButtonValue}>
                   {form.scheduledPickupAt ? form.scheduledPickupAt.toLocaleDateString() : 'Select date'}
                 </Text>
@@ -541,7 +539,7 @@ export default function DateTimeScreen() {
                 <View style={styles.pickerIconWrap}>
                   <Text style={styles.pickerIconGlyph}>🕒</Text>
                 </View>
-                <Text style={styles.pickerButtonLabel}>Pickup Time</Text>
+                <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Time")}</Text>
                 <Text style={styles.pickerButtonValue}>
                   {form.scheduledPickupAt
                     ? form.scheduledPickupAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -553,16 +551,16 @@ export default function DateTimeScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Item Details</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Item Details")}</Text>
           <TextInput
             value={form.itemTitle}
             onChangeText={(value) => updateForm('itemTitle', value)}
-            placeholder="BMW 320i 2020 / Sofa set / 10 moving boxes"
+            placeholder={appI18n.t("BMW 320i 2020 / Sofa set / 10 moving boxes")}
             style={styles.input}
             placeholderTextColor="#98a2b3"
           />
 
-          <Text style={styles.fieldLabel}>Item type</Text>
+          <Text style={styles.fieldLabel}>{appI18n.t("Item type")}</Text>
           <View style={styles.optionsWrap}>
             {ITEM_TYPE_OPTIONS.map((option) => (
               <Pressable
@@ -571,7 +569,7 @@ export default function DateTimeScreen() {
                 onPress={() => updateForm('itemType', option.value)}
               >
                 <Text style={[styles.optionChipText, form.itemType === option.value && styles.optionChipTextActive]}>
-                  {option.label}
+                  {appI18n.t(option.label)}
                 </Text>
               </Pressable>
             ))}
@@ -580,7 +578,7 @@ export default function DateTimeScreen() {
           <TextInput
             value={form.itemDescription}
             onChangeText={(value) => updateForm('itemDescription', value)}
-            placeholder="Item description (optional)"
+            placeholder={appI18n.t("Item description (optional)")}
             style={[styles.input, styles.textarea]}
             placeholderTextColor="#98a2b3"
             multiline
@@ -590,14 +588,14 @@ export default function DateTimeScreen() {
             <TextInput
               value={form.itemBrand}
               onChangeText={(value) => updateForm('itemBrand', value)}
-              placeholder="Brand (optional)"
+              placeholder={appI18n.t("Brand (optional)")}
               style={[styles.input, styles.halfInput]}
               placeholderTextColor="#98a2b3"
             />
             <TextInput
               value={form.itemModel}
               onChangeText={(value) => updateForm('itemModel', value)}
-              placeholder="Model (optional)"
+              placeholder={appI18n.t("Model (optional)")}
               style={[styles.input, styles.halfInput]}
               placeholderTextColor="#98a2b3"
             />
@@ -606,13 +604,13 @@ export default function DateTimeScreen() {
           <TextInput
             value={form.itemYear}
             onChangeText={(value) => updateForm('itemYear', value)}
-            placeholder="Year (optional)"
+            placeholder={appI18n.t("Year (optional)")}
             style={styles.input}
             placeholderTextColor="#98a2b3"
             keyboardType="number-pad"
           />
 
-          <Text style={styles.fieldLabel}>Condition (optional)</Text>
+          <Text style={styles.fieldLabel}>{appI18n.t("Condition (optional)")}</Text>
           <View style={styles.optionsWrap}>
             {ITEM_CONDITION_OPTIONS.map((option) => (
               <Pressable
@@ -626,7 +624,7 @@ export default function DateTimeScreen() {
                     form.itemCondition === option.value && styles.optionChipTextActive,
                   ]}
                 >
-                  {option.label}
+                  {appI18n.t(option.label)}
                 </Text>
               </Pressable>
             ))}
@@ -635,7 +633,7 @@ export default function DateTimeScreen() {
           <TextInput
             value={form.itemWeightKg}
             onChangeText={(value) => updateForm('itemWeightKg', value)}
-            placeholder="Weight (kg, optional)"
+            placeholder={appI18n.t("Weight (kg, optional)")}
             style={styles.input}
             placeholderTextColor="#98a2b3"
             keyboardType="decimal-pad"
@@ -645,7 +643,7 @@ export default function DateTimeScreen() {
             <TextInput
               value={form.itemLengthCm}
               onChangeText={(value) => updateForm('itemLengthCm', value)}
-              placeholder="Length cm"
+              placeholder={appI18n.t("Length cm")}
               style={[styles.input, styles.thirdInput]}
               placeholderTextColor="#98a2b3"
               keyboardType="decimal-pad"
@@ -653,7 +651,7 @@ export default function DateTimeScreen() {
             <TextInput
               value={form.itemWidthCm}
               onChangeText={(value) => updateForm('itemWidthCm', value)}
-              placeholder="Width cm"
+              placeholder={appI18n.t("Width cm")}
               style={[styles.input, styles.thirdInput]}
               placeholderTextColor="#98a2b3"
               keyboardType="decimal-pad"
@@ -661,7 +659,7 @@ export default function DateTimeScreen() {
             <TextInput
               value={form.itemHeightCm}
               onChangeText={(value) => updateForm('itemHeightCm', value)}
-              placeholder="Height cm"
+              placeholder={appI18n.t("Height cm")}
               style={[styles.input, styles.thirdInput]}
               placeholderTextColor="#98a2b3"
               keyboardType="decimal-pad"
@@ -669,7 +667,7 @@ export default function DateTimeScreen() {
           </View>
 
           <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Requires loading help</Text>
+            <Text style={styles.switchLabel}>{appI18n.t("Requires loading help")}</Text>
             <Switch
               value={form.requiresLoadingHelp}
               trackColor={{ false: '#E5E7EB', true: '#FFD86F' }}
@@ -685,7 +683,7 @@ export default function DateTimeScreen() {
             <TextInput
               value={form.loadingWorkersCount}
               onChangeText={(value) => updateForm('loadingWorkersCount', value)}
-              placeholder="Loading workers count"
+              placeholder={appI18n.t("Loading workers count")}
               style={styles.input}
               placeholderTextColor="#98a2b3"
               keyboardType="number-pad"
@@ -695,7 +693,7 @@ export default function DateTimeScreen() {
           <TextInput
             value={form.specialInstructions}
             onChangeText={(value) => updateForm('specialInstructions', value)}
-            placeholder="Special instructions (optional)"
+            placeholder={appI18n.t("Special instructions (optional)")}
             style={[styles.input, styles.textarea]}
             placeholderTextColor="#98a2b3"
             multiline
@@ -703,20 +701,19 @@ export default function DateTimeScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upload Photos</Text>
+          <Text style={styles.sectionTitle}>{appI18n.t("Upload Photos")}</Text>
           <Text style={styles.helperText}>
-            Add clear photos to help drivers give accurate quotes.
-          </Text>
+            {appI18n.t("Add clear photos to help drivers give accurate quotes.")}</Text>
           <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
 
           <View style={styles.row}>
             <Pressable style={[styles.actionButton, styles.halfInput]} onPress={() => void pickFromLibrary()}>
               <IconSymbol name={{ ios: 'photo.on.rectangle', android: 'photo_library', web: 'photo_library' }} color="#111827" size={16} />
-              <Text style={styles.actionButtonText}>Add Photos</Text>
+              <Text style={styles.actionButtonText}>{appI18n.t("Add Photos")}</Text>
             </Pressable>
             <Pressable style={[styles.actionButtonSecondary, styles.halfInput]} onPress={() => void takePhoto()}>
               <IconSymbol name={{ ios: 'camera', android: 'photo_camera', web: 'photo_camera' }} color="#111827" size={16} />
-              <Text style={styles.actionButtonSecondaryText}>Take Photo</Text>
+              <Text style={styles.actionButtonSecondaryText}>{appI18n.t("Take Photo")}</Text>
             </Pressable>
           </View>
 
@@ -725,7 +722,7 @@ export default function DateTimeScreen() {
               <View key={`${photo.uri}-${index}`} style={styles.photoItem}>
                 <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
                 <Pressable style={styles.removePhotoButton} onPress={() => removePhoto(index)}>
-                  <Text style={styles.removePhotoText}>Remove</Text>
+                  <Text style={styles.removePhotoText}>{appI18n.t("Remove")}</Text>
                 </Pressable>
               </View>
             ))}
@@ -742,8 +739,8 @@ export default function DateTimeScreen() {
           </View>
         ) : null}
 
-        {isSavingDetails ? <Text style={styles.progressText}>Saving details...</Text> : null}
-        {isUploadingPhotos ? <Text style={styles.progressText}>Uploading photos...</Text> : null}
+        {isSavingDetails ? <Text style={styles.progressText}>{appI18n.t("Saving details...")}</Text> : null}
+        {isUploadingPhotos ? <Text style={styles.progressText}>{appI18n.t("Uploading photos...")}</Text> : null}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </ScrollView>
 
@@ -786,7 +783,7 @@ export default function DateTimeScreen() {
           disabled={!canContinue}
           onPress={() => void onContinue()}
         >
-          {isBusy ? <ActivityIndicator color="#111827" /> : <Text style={styles.continueText}>Continue</Text>}
+          {isBusy ? <ActivityIndicator color="#111827" /> : <Text style={styles.continueText}>{appI18n.t("Continue")}</Text>}
         </Pressable>
       </View>
     </KeyboardAvoidingView>

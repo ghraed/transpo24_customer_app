@@ -3,6 +3,7 @@ import {
   parsePhoneNumberFromString,
   type CountryCode,
 } from 'libphonenumber-js';
+import appI18n from '@/localization/i18n';
 
 export function normalizePhoneNumber(
   localNumber: string,
@@ -13,7 +14,7 @@ export function normalizePhoneNumber(
 }
 
 export function getCallingCode(country: CountryCode): string {
-  return `+${getCountryCallingCode(country)}`;
+  return appI18n.t("+{{value0}}", { value0: getCountryCallingCode(country) });
 }
 
 export function countryFlag(country: CountryCode): string {
