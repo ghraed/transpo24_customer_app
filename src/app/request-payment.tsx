@@ -145,7 +145,16 @@ function toStripeErrorMessage(message: string): string {
   if (normalized.includes('invalid api key provided')) {
     return appI18n.t("Stripe is not configured correctly. Set a real EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY in the client app and a matching STRIPE_SECRET_KEY in the backend.");
   }
+  if (normalized.includes('something went wrong') || normalized.includes('request id')) {
+    return appI18n.t("Stripe could not confirm this payment. Check that the client publishable key and backend secret key use the same Stripe account and mode. The 4242 test card only works with pk_test_ and sk_test_ keys.");
+  }
   return message;
+}
+
+function getStripePublishableKeyMode(key: string): 'test' | 'live' | null {
+  if (key.startsWith('pk_test_')) return 'test';
+  if (key.startsWith('pk_live_')) return 'live';
+  return null;
 }
 
 function isSuccessfulPaymentStatus(status: PaymentStatus): boolean {
@@ -312,6 +321,20 @@ export default function RequestPaymentScreen() {
   };
 
   const confirmStripeBackedPayment = async (payment: PaymentSummary): Promise<void> => {
+    const clientStripeMode = getStripePublishableKeyMode(publishableKey);
+    if (
+      payment.stripeMode &&
+      clientStripeMode &&
+      payment.stripeMode !== clientStripeMode
+    ) {
+      throw new Error(
+        appI18n.t("Stripe configuration mismatch: this payment was created in {{value0}} mode, but the app is using a {{value1}} publishable key. Use matching Stripe keys. The 4242 test card requires pk_test_ in the app and sk_test_ in the backend.", {
+          value0: payment.stripeMode,
+          value1: clientStripeMode,
+        }),
+      );
+    }
+
     if (!payment.stripeClientSecret) {
       throw new Error(appI18n.t("Missing Stripe client secret from the backend."));
     }

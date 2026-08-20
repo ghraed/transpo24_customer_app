@@ -423,6 +423,7 @@ export interface PaymentSummary {
   paymentMethod: PaymentMethod;
   provider: PaymentProvider;
   status: PaymentStatus;
+  stripeMode: 'test' | 'live' | null;
   stripePaymentIntentId: string | null;
   stripeClientSecret: string | null;
   stripeChargeId: string | null;
