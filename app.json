@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "Transpo24",
+    "slug": "transpo24",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "app",
+    "scheme": "transpo24",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
