@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -19,11 +19,11 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { getCustomerHome } from "@/lib/api";
 import {
   deleteCustomerAccountSession,
   switchCustomerAccountOnDevice,
 } from "@/lib/auth-token";
-import { getCustomerHome } from "@/lib/api";
 import { getCountryLabel } from "@/lib/country-currency";
 import {
   LANGUAGE_CONFIGS,
@@ -260,15 +260,15 @@ export default function ProfileTabScreen() {
                 name={
                   isLanguageOpen
                     ? {
-                        ios: "chevron.up",
-                        android: "keyboard_arrow_up",
-                        web: "keyboard_arrow_up",
-                      }
+                      ios: "chevron.up",
+                      android: "keyboard_arrow_up",
+                      web: "keyboard_arrow_up",
+                    }
                     : {
-                        ios: "chevron.down",
-                        android: "keyboard_arrow_down",
-                        web: "keyboard_arrow_down",
-                      }
+                      ios: "chevron.down",
+                      android: "keyboard_arrow_down",
+                      web: "keyboard_arrow_down",
+                    }
                 }
                 color="#111827"
                 size={16}
@@ -347,7 +347,7 @@ export default function ProfileTabScreen() {
             <Text style={styles.actionText}>{t("Edit Profile")}</Text>
           </Pressable>
 
-          <Pressable style={styles.actionRow}>
+          {/* <Pressable style={styles.actionRow}>
             <View style={styles.actionIconWrap}>
               <IconSymbol
                 name={{
@@ -360,7 +360,7 @@ export default function ProfileTabScreen() {
               />
             </View>
             <Text style={styles.actionText}>{t("Settings")}</Text>
-          </Pressable>
+          </Pressable> */}
 
           <Pressable
             style={styles.actionRow}
@@ -436,8 +436,8 @@ export default function ProfileTabScreen() {
             <Text style={styles.modalBody}>
               {pendingLanguageConfig
                 ? t("Switch app language to {{language}}?", {
-                    language: pendingLanguageConfig.nativeLabel,
-                  })
+                  language: pendingLanguageConfig.nativeLabel,
+                })
                 : t("Switch app language?")}
             </Text>
 
