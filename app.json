@@ -70,10 +70,10 @@
       "reactCompiler": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "87c3c78e-ead9-4a42-8d09-86e17d5fb9ff"
-      },
-      "router": {}
+        "projectId": "d3e62d2e-cc21-4c2a-afb8-9b05f492c725"
+      }
     },
     "owner": "raed.gh"
   }
