@@ -1,8 +1,7 @@
 /**
- * Replace the bracketed text below with the final, approved legal copy before
- * publishing. The app renders this text verbatim on the Legal page.
+ * The app renders this legal copy verbatim on its public legal pages.
  */
-export const TERMS_OF_SERVICE = `Last updated: [24-Aug-2026]
+export const TERMS_OF_SERVICE = `Last updated: 24 August 2026
 
 These Terms of Service ("Terms") govern access to and use of the Transpo24 platform, including the Transpo24 customer application, the Transpo24 transport-provider/driver application, the Transpo24 website and associated services.
 
@@ -847,9 +846,7 @@ Mandatory consumer rights regarding jurisdiction remain unaffected.
 
 **Autobasilea GmbH / Transpo24**
 
-Address: [ADDRESS]
-Email: [EMAIL]
-Telephone: [PHONE, IF APPLICABLE]
+Email: support@transpo24.com
 
 ---
 
@@ -883,7 +880,7 @@ By using Transpo24, the user acknowledges that:
 
 `;
 
-export const PRIVACY_POLICY = `24-Aug-2026
+export const PRIVACY_POLICY = `Last updated: 24 August 2026
 
 This Privacy Policy explains how Transpo24 collects, uses, stores, shares and protects personal data when users access or use the Transpo24 platform.
 
@@ -1680,9 +1677,7 @@ Questions or requests concerning privacy may be directed to:
 
 **Autobasilea GmbH / Transpo24**
 
-Address: [ADDRESS]
-Privacy Email: [PRIVACY EMAIL]
-Telephone: [PHONE, IF APPLICABLE]
+Privacy Email: info@transpo24.com
 
 ---
 

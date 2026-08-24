@@ -4,16 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PRIVACY_POLICY, TERMS_OF_SERVICE } from '@/content/legal';
 
-type LegalDocument = 'privacy' | 'terms';
+export type LegalDocument = 'privacy' | 'terms';
+
+type LegalDocumentScreenProps = {
+  document?: LegalDocument;
+};
 
 function resolveDocument(value: string | string[] | undefined): LegalDocument {
   return value === 'privacy' ? 'privacy' : 'terms';
 }
 
-export default function LegalScreen() {
+export function LegalDocumentScreen({ document }: LegalDocumentScreenProps) {
   const router = useRouter();
-  const { document } = useLocalSearchParams<{ document?: string | string[] }>();
-  const activeDocument = resolveDocument(document);
+  const params = useLocalSearchParams<{ document?: string | string[] }>();
+  const activeDocument = document ?? resolveDocument(params.document);
   const isTerms = activeDocument === 'terms';
   const title = isTerms ? 'Terms of Service' : 'Privacy Policy';
   const content = isTerms ? TERMS_OF_SERVICE : PRIVACY_POLICY;
@@ -40,6 +44,10 @@ export default function LegalScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+export default function LegalScreen() {
+  return <LegalDocumentScreen />;
 }
 
 const styles = StyleSheet.create({

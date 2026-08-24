@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1024, initial-scale=1" />
+    <title>Transpo24 Google Play feature graphic</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body {
+        width: 1024px;
+        height: 500px;
+        margin: 0;
+        overflow: hidden;
+      }
+      body {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 58px;
+        padding: 56px 72px;
+        color: #fff;
+        background: linear-gradient(125deg, #126cc4 0%, #208aef 58%, #55b7ff 100%);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      .orb {
+        position: absolute;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.09);
+      }
+      .orb.one { width: 270px; height: 270px; right: -80px; top: -110px; }
+      .orb.two { width: 190px; height: 190px; right: 180px; bottom: -115px; }
+      .mark {
+        z-index: 1;
+        width: 330px;
+        height: 330px;
+        flex: 0 0 auto;
+        overflow: hidden;
+        border: 10px solid rgba(255, 255, 255, 0.28);
+        border-radius: 72px;
+        background: #fff;
+        box-shadow: 0 24px 50px rgba(4, 53, 105, 0.28);
+      }
+      .mark img { width: 100%; height: 100%; object-fit: cover; }
+      .copy { z-index: 1; max-width: 500px; }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 70px;
+        line-height: 1;
+        letter-spacing: -3px;
+      }
+      .tagline {
+        margin: 0 0 30px;
+        color: #fff3b8;
+        font-size: 30px;
+        font-weight: 700;
+      }
+      .services {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <span class="orb one"></span>
+    <span class="orb two"></span>
+    <div class="mark"><img src="../../assets/images/icon.png" alt="" /></div>
+    <div class="copy">
+      <h1>Transpo24</h1>
+      <p class="tagline">Transport made simple</p>
+      <p class="services">Vehicles · Motorcycles<br />Goods · Furniture</p>
+    </div>
+  </body>
+</html>
