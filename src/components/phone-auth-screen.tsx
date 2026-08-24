@@ -19,13 +19,23 @@ import { CountryPicker } from '@/components/country-picker';
 import { LoginIntroGate } from '@/components/login-intro-gate';
 import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
-import { sendPhoneVerificationCode } from '@/lib/api';
+import {
+  sendPhoneVerificationCode,
+  skipPhoneVerificationForTemporaryTestCustomer,
+} from '@/lib/api';
 import {
   getTrustedCustomer,
   restoreTrustedCustomerSession,
+  setCustomerSession,
   useAuthSession,
 } from '@/lib/auth-token';
+import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
 import { normalizePhoneNumber } from '@/lib/phone-number';
+import {
+  LANGUAGE_CONFIGS,
+  SUPPORTED_LANGUAGES,
+  type AppLanguage,
+} from '@/localization/languages';
 import { useAppLanguage } from '@/localization/provider';
 
 type PhoneAuthScreenProps = {
@@ -35,7 +45,12 @@ type PhoneAuthScreenProps = {
 export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { isRTL } = useAppLanguage();
+  const {
+    hasSavedLanguage,
+    isChangingLanguage,
+    isRTL,
+    setLanguage,
+  } = useAppLanguage();
   const auth = useAuthSession();
   const keyboardInset = useAndroidKeyboardInset();
   const [country, setCountry] = useState<CountryCode>('LB');
@@ -47,10 +62,12 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   const [isLoadingTrustedSession, setIsLoadingTrustedSession] = useState(mode === 'login');
   const [isUsingDifferentPhoneNumber, setIsUsingDifferentPhoneNumber] = useState(false);
   const [isRestoringTrustedSession, setIsRestoringTrustedSession] = useState(false);
+  const [isSkippingVerification, setIsSkippingVerification] = useState(false);
 
   const normalizedPhoneNumber = normalizePhoneNumber(localNumber, country);
   const hasTrustedCustomer = mode === 'login' && Boolean(trustedPhoneNumber);
   const showTrustedCustomerChoice = hasTrustedCustomer && !isUsingDifferentPhoneNumber;
+  const needsDefaultLanguage = mode === 'register' && !hasSavedLanguage;
 
   useEffect(() => {
     if (mode !== 'login') return;
@@ -126,6 +143,28 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
     setIsUsingDifferentPhoneNumber(false);
   }, []);
 
+  const skipVerification = useCallback(async () => {
+    if (isSkippingVerification) return;
+
+    setError('');
+    setIsSkippingVerification(true);
+    try {
+      const session = await skipPhoneVerificationForTemporaryTestCustomer();
+      await setCustomerSession(session);
+      void registerCustomerPushNotifications().catch(() => undefined);
+      router.dismissAll();
+      router.replace((session.profileCompleted ? '/(tabs)/home' : '/complete-profile') as never);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : t('Unable to sign in to the temporary test account.'),
+      );
+    } finally {
+      setIsSkippingVerification(false);
+    }
+  }, [isSkippingVerification, router, t]);
+
   const handleCountryChange = useCallback((nextCountry: CountryCode) => {
     setCountry(nextCountry);
   }, []);
@@ -142,6 +181,11 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
 
     router.replace('/');
   }, [mode, router]);
+
+  const selectDefaultLanguage = useCallback((nextLanguage: AppLanguage) => {
+    setError('');
+    void setLanguage(nextLanguage);
+  }, [setLanguage]);
 
   if (auth.status === 'authenticated') return <Redirect href="/(tabs)/home" />;
   if (auth.status === 'needsProfileCompletion') return <Redirect href={'/complete-profile' as never} />;
@@ -179,7 +223,32 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                   {error}
                 </Text>
               ) : null}
-              {isLoadingTrustedSession ? (
+              {needsDefaultLanguage ? (
+                <View>
+                  <Text style={[styles.title, isRTL && styles.rtl]}>{t('Select language')}</Text>
+                  <Text style={[styles.languageHelp, isRTL && styles.rtl]}>
+                    {t('Choose the app language before confirming the switch.')}
+                  </Text>
+                  <View style={styles.languageChoices}>
+                    {SUPPORTED_LANGUAGES.map((code) => {
+                      const config = LANGUAGE_CONFIGS[code];
+                      return (
+                        <Pressable
+                          key={code}
+                          accessibilityRole="button"
+                          accessibilityLabel={config.nativeLabel}
+                          style={[styles.languageChoice, isChangingLanguage && styles.disabled]}
+                          disabled={isChangingLanguage}
+                          onPress={() => selectDefaultLanguage(code)}
+                        >
+                          <Text style={styles.languageChoiceNative}>{config.nativeLabel}</Text>
+                          <Text style={styles.languageChoiceLabel}>{t(config.label)}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : isLoadingTrustedSession ? (
                 <View style={styles.trustedSessionLoading}>
                   <ActivityIndicator color="#9A6500" />
                 </View>
@@ -276,6 +345,21 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                   >
                     {isLoading ? <ActivityIndicator color="#111827" /> : <Text style={styles.buttonText}>{t('Send verification code')}</Text>}
                   </Pressable>
+                  {mode === 'login' && __DEV__ ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Skip verification')}
+                      style={[styles.secondaryButton, isSkippingVerification && styles.disabled]}
+                      disabled={isSkippingVerification}
+                      onPress={() => void skipVerification()}
+                    >
+                      {isSkippingVerification ? (
+                        <ActivityIndicator color="#9A6500" />
+                      ) : (
+                        <Text style={styles.secondaryButtonText}>{t('Skip verification')}</Text>
+                      )}
+                    </Pressable>
+                  ) : null}
                 </>
               )}
               <View style={styles.footerRow}>
@@ -372,6 +456,22 @@ const styles = StyleSheet.create({
   rtlInput: { textAlign: 'right' },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   error: { color: '#C62828', fontSize: 14, marginTop: 10 },
+  languageHelp: { color: clientTheme.textMuted, fontSize: 14, lineHeight: 21, marginTop: -14, marginBottom: 18 },
+  languageChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  languageChoice: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    minHeight: 62,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D1A52A',
+    backgroundColor: '#FFF9E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  languageChoiceNative: { color: clientTheme.text, fontSize: 15, fontWeight: '800' },
+  languageChoiceLabel: { color: '#9A6500', fontSize: 12, marginTop: 2 },
   legalConsent: {
     flexDirection: 'row',
     alignItems: 'flex-start',

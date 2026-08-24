@@ -288,6 +288,21 @@ export async function sendPhoneVerificationCode(phoneNumber: string): Promise<vo
   }
 }
 
+export async function skipPhoneVerificationForTemporaryTestCustomer(): Promise<CustomerSessionResponse> {
+  const endpoint = `${getApiBaseUrl()}/auth/testing/customer-login`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) {
+    throw await parseError(response, 'Unable to sign in to the temporary test account.');
+  }
+  return parseJsonBody<CustomerSessionResponse>(
+    response,
+    'Failed to parse the temporary test sign-in response.',
+  );
+}
+
 export async function verifyPhoneVerificationCode(
   phoneNumber: string,
   code: string,

@@ -44,7 +44,7 @@ function getServiceCopy(
       };
     case 'MOTORCYCLE_TRANSPORT':
       return {
-        title: t('Motorcycle'),
+        title: t('Motorcycle & Bicycle'),
         description: t('Bikes, scooters and motorbikes.'),
       };
     case 'GOODS_TRANSPORT':
@@ -54,7 +54,7 @@ function getServiceCopy(
       };
     case 'FURNITURE_TRANSPORT':
       return {
-        title: t('Furniture'),
+        title: t('House Moving'),
         description: t('Home, office and bulky items.'),
       };
     default:

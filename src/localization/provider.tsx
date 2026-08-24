@@ -23,6 +23,7 @@ import { getStoredLanguage, setStoredLanguage } from '@/localization/storage';
 type LocalizationContextValue = {
   ready: boolean;
   language: AppLanguage;
+  hasSavedLanguage: boolean;
   locale: string;
   isRTL: boolean;
   isChangingLanguage: boolean;
@@ -56,6 +57,7 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
   const [ready, setReady] = useState(false);
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
   const [language, setLanguageState] = useState<AppLanguage>(DEFAULT_LANGUAGE);
+  const [hasSavedLanguage, setHasSavedLanguage] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -73,6 +75,7 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
       }
 
       setLanguageState(resolvedLanguage);
+      setHasSavedLanguage(Boolean(storedLanguage));
       setReady(true);
     })();
 
@@ -82,7 +85,7 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
   }, []);
 
   const setLanguage = useCallback(async (nextLanguage: AppLanguage): Promise<void> => {
-    if (nextLanguage === language || isChangingLanguage) {
+    if (isChangingLanguage || (nextLanguage === language && hasSavedLanguage)) {
       return;
     }
 
@@ -90,6 +93,7 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
 
     try {
       await setStoredLanguage(nextLanguage);
+      setHasSavedLanguage(true);
       const rtlChanged = syncRTL(nextLanguage);
       await i18n.changeLanguage(nextLanguage);
       setLanguageState(nextLanguage);
@@ -105,16 +109,17 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
     } finally {
       setIsChangingLanguage(false);
     }
-  }, [isChangingLanguage, language]);
+  }, [hasSavedLanguage, isChangingLanguage, language]);
 
   const value = useMemo<LocalizationContextValue>(() => ({
     ready,
     language,
+    hasSavedLanguage,
     locale: getLocaleForLanguage(language),
     isRTL: isRTLLanguage(language),
     isChangingLanguage,
     setLanguage,
-  }), [isChangingLanguage, language, ready, setLanguage]);
+  }), [hasSavedLanguage, isChangingLanguage, language, ready, setLanguage]);
 
   return (
     <LocalizationContext.Provider value={value}>

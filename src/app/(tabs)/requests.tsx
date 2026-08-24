@@ -43,11 +43,11 @@ function getServiceLabel(
     case 'VEHICLE_TRANSPORT':
       return t('Vehicle transport');
     case 'MOTORCYCLE_TRANSPORT':
-      return t('Motorcycle transport');
+      return t('Motorcycle & Bicycle');
     case 'GOODS_TRANSPORT':
       return t('Goods transport');
     case 'FURNITURE_TRANSPORT':
-      return t('Furniture transport');
+      return t('House Moving');
     default:
       return fallback || t('Service');
   }
