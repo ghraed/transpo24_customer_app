@@ -31,11 +31,9 @@ Transpo24 is a technology marketplace. Physical transport services are provided 
 
 Maps & Navigation
 
-## Required Console values not stored here
+## Account-deletion URL
 
-- Public support website
-- Public privacy-policy URL
-- Public account-deletion URL
+https://admin.transpo24.com/account-deletion
 
 ## Support email
 
@@ -44,3 +42,11 @@ support@transpo24.com
 ## Privacy contact
 
 info@transpo24.com
+
+## Support website
+
+https://transpo24.com
+
+## Privacy-policy URL
+
+https://transpo24.com/privacy
