@@ -19,17 +19,19 @@ Last audited: 24 August 2026
 - [x] Public support email is `support@transpo24.com` and privacy contact is `info@transpo24.com`.
 - [x] Support website is `https://transpo24.com` and the canonical privacy-policy URL is `https://transpo24.com/privacy`.
 - [x] The Privacy Policy and Terms are publicly deployed at `https://transpo24.com/privacy` and `https://transpo24.com/terms`.
-- [x] A public account-deletion request page is deployed at `https://admin.transpo24.com/account-deletion`.
+- [x] Public-site source includes a complete account-deletion request page for `https://transpo24.com/account-deletion`.
+- [x] Customer chat includes report-driver, report-message, block and unblock controls backed by an admin moderation queue.
+- [x] The API supports backend-only reusable Google Play review credentials through optional environment variables.
 - [x] Expo SDK 56 dependencies are aligned and npm is the single configured package manager.
 - [x] TypeScript, ESLint, Jest (16 tests), and Android bundle export pass.
 
 ## Still required before production submission
 
 - [ ] Add the operator's verified postal address to the legal content.
-- [ ] Enter `https://admin.transpo24.com/account-deletion` in the Play Console account-deletion URL field.
+- [ ] Deploy and verify `https://transpo24.com/account-deletion`, then enter it in the Play Console account-deletion URL field.
 - [ ] Upload the prepared files from `phone-screenshots/` to the Play Console phone screenshots section.
 - [ ] Build a new production AAB from the current source, download it, and verify its final manifest still targets API 36 or higher and excludes blocked permissions.
-- [ ] Provide permanent, reusable phone/OTP review access and English App Access instructions.
+- [ ] Configure the dedicated reviewer phone/OTP, prepare its customer data, and enter English App Access instructions.
 - [ ] Complete and submit Data Safety, Content rating, Target audience and content, Ads, Health apps, and Financial features declarations.
 - [ ] Select app category, countries/regions, and free/paid availability in Play Console.
 - [ ] Satisfy Play developer-account verification and closed-testing requirements if they apply to the account.

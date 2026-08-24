@@ -645,12 +645,17 @@ Users must not use communication services for:
 
 * threats;
 * harassment;
+* hateful or discriminatory content;
+* sexual or exploitative content;
 * fraud;
 * unlawful discrimination;
 * criminal activity;
 * illegal content;
-* spam; or
+* spam;
+* sharing another person's private or identifying information without permission; or
 * attempts to compromise Platform security.
+
+Users can report a driver or a specific received message from the chat screen and can block the other participant. Transpo24 may review reports and associated messages, restrict messaging, remove content where applicable, suspend or terminate accounts, preserve evidence, or refer credible safety or legal threats to the appropriate authority.
 
 ---
 
@@ -1437,27 +1442,19 @@ Where the EU General Data Protection Regulation applies to a particular processi
 
 Transpo24 will retain personal data only for as long as reasonably necessary for the purposes for which it was collected or as required by law.
 
-Different categories may have different retention periods.
+Profile, authentication, device-token and active-session data is deleted or irreversibly de-identified following a verified account-deletion request, except where a specific legal or safety obligation requires limited retention.
 
-Factors may include:
+Transaction, payment, tax, accounting, fraud-prevention, insurance, safety, legal-claim and dispute records may be retained for up to seven years where required or permitted by law.
 
-* active account status;
-* contract performance;
-* payment requirements;
-* tax obligations;
-* accounting obligations;
-* legal claims;
-* regulatory requirements;
-* insurance matters;
-* dispute resolution;
-* fraud prevention; and
-* security requirements.
+When an applicable retention period ends, retained personal data is deleted or irreversibly anonymised.
 
 ---
 
 # 30. Account Deletion
 
-Users may request account deletion subject to applicable legal and operational requirements.
+Users can request deletion in the Transpo24 app under Profile → Account → Delete account, or without the app at https://transpo24.com/account-deletion by emailing info@transpo24.com.
+
+After verifying the requester, Transpo24 will delete or irreversibly de-identify account profile, authentication, active-session and device-token data. Transpo24 aims to complete verified requests within 30 days unless applicable law permits or requires more time.
 
 Deletion of an account does not necessarily require immediate deletion of all associated data.
 

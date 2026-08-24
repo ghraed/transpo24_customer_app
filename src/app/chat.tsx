@@ -2,10 +2,13 @@ import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,10 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import {
+  blockChatParticipant,
   getChatRoomByTransportRequestId,
   getChatRoomMessages,
   markChatRoomMessagesAsRead,
+  reportChatParticipant,
   sendChatMessage,
+  unblockChatParticipant,
 } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth-token';
 import { LANGUAGE_CONFIGS, SUPPORTED_LANGUAGES, type AppLanguage } from '@/localization/languages';
@@ -37,7 +43,12 @@ import {
   sendChatMessageViaSocket,
   waitForSocketConnection,
 } from '@/services/socketService';
-import type { ChatMessage, ChatRoom, ChatRoomMessagesResponse } from '@/types/chat';
+import type {
+  ChatMessage,
+  ChatReportReason,
+  ChatRoom,
+  ChatRoomMessagesResponse,
+} from '@/types/chat';
 import appI18n from '@/localization/i18n';
 
 type RouteParams = {
@@ -47,6 +58,15 @@ type RouteParams = {
 
 const INITIAL_PAGE_LIMIT = 100;
 const CHAT_INPUT_BOTTOM_PADDING = 12;
+const REPORT_REASONS: { value: ChatReportReason; label: string }[] = [
+  { value: 'HARASSMENT', label: 'Harassment or bullying' },
+  { value: 'HATE_SPEECH', label: 'Hate speech' },
+  { value: 'SEXUAL_CONTENT', label: 'Sexual content' },
+  { value: 'THREATS_OR_VIOLENCE', label: 'Threats or violence' },
+  { value: 'SPAM_OR_SCAM', label: 'Spam or scam' },
+  { value: 'PERSONAL_INFORMATION', label: 'Sharing personal information' },
+  { value: 'OTHER', label: 'Other' },
+];
 
 function containsArabicCharacters(value: string): boolean {
   return /[\u0600-\u06FF]/.test(value);
@@ -177,10 +197,103 @@ export default function ChatScreen() {
   const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
   const [expandedTranslations, setExpandedTranslations] = useState<Record<string, boolean>>({});
   const [translatingMessageIds, setTranslatingMessageIds] = useState<Record<string, boolean>>({});
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [reportMessageId, setReportMessageId] = useState<string | undefined>();
+  const [reportReason, setReportReason] = useState<ChatReportReason>('HARASSMENT');
+  const [reportDetails, setReportDetails] = useState('');
+  const [isSubmittingSafetyAction, setIsSubmittingSafetyAction] = useState(false);
+  const [safetyMessage, setSafetyMessage] = useState('');
 
   const resolvedRoomId = room?.id ?? initialRoomId;
   const effectiveSocketStatusText =
     socketStatusText || (!getAccessToken() ? 'Realtime unavailable. Please login again.' : '');
+
+  const applyBlockState = useCallback(
+    (state: Pick<ChatRoom, 'isBlockedByCurrentUser' | 'isBlockedByOtherUser' | 'canSendMessages'>) => {
+      setRoom((previous) => (previous ? { ...previous, ...state } : previous));
+    },
+    [],
+  );
+
+  const openReportModal = useCallback((messageId?: string) => {
+    setReportMessageId(messageId);
+    setReportReason('HARASSMENT');
+    setReportDetails('');
+    setSafetyMessage('');
+    setIsReportModalVisible(true);
+  }, []);
+
+  const submitReport = useCallback(async (): Promise<void> => {
+    if (!room) {
+      return;
+    }
+    if (reportReason === 'OTHER' && !reportDetails.trim()) {
+      setSafetyMessage('Please describe what happened.');
+      return;
+    }
+
+    setIsSubmittingSafetyAction(true);
+    setSafetyMessage('');
+    try {
+      await reportChatParticipant(room.id, {
+        messageId: reportMessageId,
+        reason: reportReason,
+        details: reportDetails.trim() || undefined,
+      });
+      setIsReportModalVisible(false);
+      Alert.alert('Report submitted', 'Thank you. Our safety team will review this report.');
+    } catch (error) {
+      setSafetyMessage(normalizeErrorMessage(error, 'Failed to submit the report.'));
+    } finally {
+      setIsSubmittingSafetyAction(false);
+    }
+  }, [reportDetails, reportMessageId, reportReason, room]);
+
+  const changeBlockState = useCallback(async (): Promise<void> => {
+    if (!room) {
+      return;
+    }
+
+    setIsSubmittingSafetyAction(true);
+    setSafetyMessage('');
+    try {
+      const state = room.isBlockedByCurrentUser
+        ? await unblockChatParticipant(room.id)
+        : await blockChatParticipant(room.id);
+      applyBlockState(state);
+      Alert.alert(
+        room.isBlockedByCurrentUser ? 'Driver unblocked' : 'Driver blocked',
+        room.isBlockedByCurrentUser
+          ? 'You can send messages again.'
+          : 'Neither participant can send messages in this conversation until you unblock the driver.',
+      );
+    } catch (error) {
+      Alert.alert('Safety action failed', normalizeErrorMessage(error, 'Please try again.'));
+    } finally {
+      setIsSubmittingSafetyAction(false);
+    }
+  }, [applyBlockState, room]);
+
+  const confirmBlockChange = useCallback(() => {
+    if (!room) {
+      return;
+    }
+    const isUnblocking = room.isBlockedByCurrentUser;
+    Alert.alert(
+      isUnblocking ? 'Unblock driver?' : 'Block driver?',
+      isUnblocking
+        ? 'This will allow messages in this conversation again.'
+        : 'Blocking stops both participants from sending messages in this conversation. You can unblock later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isUnblocking ? 'Unblock' : 'Block',
+          style: isUnblocking ? 'default' : 'destructive',
+          onPress: () => void changeBlockState(),
+        },
+      ],
+    );
+  }, [changeBlockState, room]);
 
   useEffect(() => {
     setTranslatedMessages({});
@@ -354,6 +467,15 @@ export default function ChatScreen() {
       return;
     }
 
+    if (!room.canSendMessages) {
+      setSendErrorMessage(
+        room.isBlockedByCurrentUser
+          ? 'Unblock the driver before sending a message.'
+          : 'Messaging is unavailable for this conversation.',
+      );
+      return;
+    }
+
     if (!body) {
       setSendErrorMessage('Enter a message before sending.');
       return;
@@ -479,6 +601,36 @@ export default function ChatScreen() {
             <Text style={styles.statusPill}>
               {appI18n.t("Chat active")}</Text>
           ) : null}
+          {room ? (
+            <View style={styles.safetyActions}>
+              <Pressable
+                style={styles.safetyButton}
+                onPress={() => openReportModal()}
+                disabled={isSubmittingSafetyAction}
+                accessibilityRole="button"
+                accessibilityLabel="Report driver"
+              >
+                <Text style={styles.safetyButtonText}>Report driver</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.safetyButton, room.isBlockedByCurrentUser && styles.unblockButton]}
+                onPress={confirmBlockChange}
+                disabled={isSubmittingSafetyAction}
+                accessibilityRole="button"
+              >
+                <Text style={styles.safetyButtonText}>
+                  {room.isBlockedByCurrentUser ? 'Unblock driver' : 'Block driver'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {room && !room.canSendMessages ? (
+            <Text style={styles.blockedNotice}>
+              {room.isBlockedByCurrentUser
+                ? 'You blocked this driver. Messaging is paused.'
+                : 'Messaging is unavailable for this conversation.'}
+            </Text>
+          ) : null}
           {effectiveSocketStatusText ? (
             <Text style={styles.socketText}>{effectiveSocketStatusText}</Text>
           ) : null}
@@ -528,7 +680,15 @@ export default function ChatScreen() {
                         isClientMessage ? styles.clientBubble : styles.driverBubble,
                       ]}
                       onPress={() => void translateMessage(item)}
+                      onLongPress={
+                        isClientMessage ? undefined : () => openReportModal(item.id)
+                      }
                       disabled={!item.body || isTranslating}
+                      accessibilityHint={
+                        isClientMessage
+                          ? 'Tap to translate'
+                          : 'Tap to translate. Long press to report this message.'
+                      }
                     >
                       {displayedBody ? (
                         <Text
@@ -606,6 +766,13 @@ export default function ChatScreen() {
               ]}
             >
               {sendErrorMessage ? <Text style={styles.errorText}>{sendErrorMessage}</Text> : null}
+              {room && !room.canSendMessages ? (
+                <Text style={styles.closedText}>
+                  {room.isBlockedByCurrentUser
+                    ? 'Unblock the driver to continue this conversation.'
+                    : 'Messages cannot be sent in this conversation.'}
+                </Text>
+              ) : null}
               <View style={styles.inputRow}>
                 <TextInput
                   value={draft}
@@ -614,15 +781,16 @@ export default function ChatScreen() {
                   placeholder={appI18n.t("Type a message")}
                   style={styles.input}
                   multiline
-                  editable={!isSending}
+                  editable={!isSending && Boolean(room?.canSendMessages)}
                 />
                 <Pressable
                   style={[
                     styles.sendButton,
-                    (isSending || !draft.trim()) && styles.sendButtonDisabled,
+                    (isSending || !draft.trim() || !room?.canSendMessages) &&
+                      styles.sendButtonDisabled,
                   ]}
                   onPress={() => void onSend()}
-                  disabled={isSending || !draft.trim()}
+                  disabled={isSending || !draft.trim() || !room?.canSendMessages}
                 >
                   <Text style={styles.sendButtonText}>
                     {isSending ? appI18n.t('Sending…') : appI18n.t('Send')}
@@ -633,6 +801,75 @@ export default function ChatScreen() {
           </>
         )}
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={isReportModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsReportModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.reportSheet}>
+            <ScrollView contentContainerStyle={styles.reportSheetContent}>
+              <Text style={styles.reportTitle}>
+                {reportMessageId ? 'Report this message' : 'Report driver'}
+              </Text>
+              <Text style={styles.reportDescription}>
+                Reports are sent to the Transpo24 safety team for review. The driver is not told who
+                submitted the report.
+              </Text>
+              <Text style={styles.reportSectionLabel}>What happened?</Text>
+              {REPORT_REASONS.map((reason) => (
+                <Pressable
+                  key={reason.value}
+                  style={[
+                    styles.reasonOption,
+                    reportReason === reason.value && styles.reasonOptionSelected,
+                  ]}
+                  onPress={() => setReportReason(reason.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: reportReason === reason.value }}
+                >
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      reportReason === reason.value && styles.radioCircleSelected,
+                    ]}
+                  />
+                  <Text style={styles.reasonText}>{reason.label}</Text>
+                </Pressable>
+              ))}
+              <TextInput
+                value={reportDetails}
+                onChangeText={setReportDetails}
+                placeholder={reportReason === 'OTHER' ? 'Describe what happened (required)' : 'Add details (optional)'}
+                style={styles.reportInput}
+                multiline
+                maxLength={1000}
+              />
+              {safetyMessage ? <Text style={styles.errorText}>{safetyMessage}</Text> : null}
+              <View style={styles.reportFooter}>
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => setIsReportModalVisible(false)}
+                  disabled={isSubmittingSafetyAction}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.reportSubmitButton}
+                  onPress={() => void submitReport()}
+                  disabled={isSubmittingSafetyAction}
+                >
+                  <Text style={styles.reportSubmitButtonText}>
+                    {isSubmittingSafetyAction ? 'Submitting…' : 'Submit report'}
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -674,6 +911,32 @@ const styles = StyleSheet.create({
   socketText: {
     fontSize: 12,
     color: clientTheme.textMuted,
+  },
+  safetyActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  safetyButton: {
+    minHeight: 36,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: clientTheme.danger,
+    borderRadius: 9,
+    paddingHorizontal: 12,
+  },
+  unblockButton: {
+    borderColor: clientTheme.accentStrong,
+  },
+  safetyButtonText: {
+    color: clientTheme.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  blockedNotice: {
+    color: clientTheme.danger,
+    fontSize: 13,
+    fontWeight: '600',
   },
   centeredContainer: {
     flex: 1,
@@ -840,5 +1103,104 @@ const styles = StyleSheet.create({
     color: clientTheme.textMuted,
     fontSize: 13,
     textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: clientTheme.overlay,
+  },
+  reportSheet: {
+    maxHeight: '92%',
+    backgroundColor: clientTheme.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  reportSheetContent: {
+    padding: 20,
+    paddingBottom: 32,
+    gap: 12,
+  },
+  reportTitle: {
+    color: clientTheme.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  reportDescription: {
+    color: clientTheme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  reportSectionLabel: {
+    color: clientTheme.text,
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  reasonOption: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  reasonOptionSelected: {
+    borderColor: clientTheme.accentStrong,
+    backgroundColor: clientTheme.accentSoft,
+  },
+  radioCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: clientTheme.textMuted,
+  },
+  radioCircleSelected: {
+    borderWidth: 5,
+    borderColor: clientTheme.accentStrong,
+  },
+  reasonText: {
+    color: clientTheme.text,
+    fontSize: 14,
+    flex: 1,
+  },
+  reportInput: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+    borderRadius: 10,
+    padding: 12,
+    color: clientTheme.text,
+    textAlignVertical: 'top',
+  },
+  reportFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  cancelButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: clientTheme.border,
+  },
+  cancelButtonText: {
+    color: clientTheme.text,
+    fontWeight: '700',
+  },
+  reportSubmitButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: clientTheme.danger,
+  },
+  reportSubmitButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
 });

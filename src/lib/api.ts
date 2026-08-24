@@ -6,10 +6,13 @@ import {
 } from './auth-token';
 import type { RegisterPushTokenPayload } from '@/notifications/types';
 import type {
+  ChatBlockState,
   ChatMessage,
   ChatMessageReadReceipt,
+  ChatReport,
   ChatRoom,
   ChatRoomMessagesResponse,
+  CreateChatReportPayload,
   SendChatMessagePayload,
 } from '@/types/chat';
 import type {
@@ -1209,6 +1212,52 @@ export async function markChatRoomMessagesAsRead(roomId: string): Promise<ChatMe
     response,
     'Failed to parse chat read response.',
   );
+}
+
+export async function reportChatParticipant(
+  roomId: string,
+  payload: CreateChatReportPayload,
+): Promise<ChatReport> {
+  const endpoint = `${getApiBaseUrl()}/chat/rooms/${encodeURIComponent(roomId)}/reports`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to submit chat report.');
+  }
+
+  return parseJsonBody<ChatReport>(response, 'Failed to parse chat report response.');
+}
+
+export async function blockChatParticipant(roomId: string): Promise<ChatBlockState> {
+  const endpoint = `${getApiBaseUrl()}/chat/rooms/${encodeURIComponent(roomId)}/block`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to block chat participant.');
+  }
+
+  return parseJsonBody<ChatBlockState>(response, 'Failed to parse chat block response.');
+}
+
+export async function unblockChatParticipant(roomId: string): Promise<ChatBlockState> {
+  const endpoint = `${getApiBaseUrl()}/chat/rooms/${encodeURIComponent(roomId)}/block`;
+  const response = await fetchWithNetworkError(endpoint, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to unblock chat participant.');
+  }
+
+  return parseJsonBody<ChatBlockState>(response, 'Failed to parse chat unblock response.');
 }
 
 export async function getCustomerRequestOffers(requestId: string): Promise<CustomerRequestOffersResponse> {

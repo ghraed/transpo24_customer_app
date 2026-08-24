@@ -33,7 +33,7 @@ Maps & Navigation
 
 ## Account-deletion URL
 
-https://admin.transpo24.com/account-deletion
+https://transpo24.com/account-deletion
 
 ## Support email
 
