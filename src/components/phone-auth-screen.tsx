@@ -42,6 +42,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   const [localNumber, setLocalNumber] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false);
   const [trustedPhoneNumber, setTrustedPhoneNumber] = useState('');
   const [isLoadingTrustedSession, setIsLoadingTrustedSession] = useState(mode === 'login');
   const [isUsingDifferentPhoneNumber, setIsUsingDifferentPhoneNumber] = useState(false);
@@ -71,6 +72,11 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   const sendCode = useCallback(async () => {
     if (isLoading) return;
 
+    if (mode === 'register' && !hasAcceptedLegal) {
+      setError(t('Please accept the Terms of Service and Privacy Policy to create an account.'));
+      return;
+    }
+
     if (!normalizedPhoneNumber) {
       setError(t('Enter a valid phone number.'));
       return;
@@ -91,7 +97,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, normalizedPhoneNumber, router, t]);
+  }, [hasAcceptedLegal, isLoading, mode, normalizedPhoneNumber, router, t]);
 
   const continueTrustedSession = useCallback(async () => {
     if (!hasTrustedCustomer || isRestoringTrustedSession) return;
@@ -227,11 +233,45 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                       onSubmitEditing={() => void sendCode()}
                     />
                   </View>
+                  {mode === 'register' ? (
+                    <View style={styles.legalConsent}>
+                      <Pressable
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: hasAcceptedLegal }}
+                        accessibilityLabel={t('Agree to Terms of Service and Privacy Policy')}
+                        style={[styles.checkbox, hasAcceptedLegal && styles.checkboxChecked]}
+                        onPress={() => {
+                          setError('');
+                          setHasAcceptedLegal((accepted) => !accepted);
+                        }}
+                      >
+                        {hasAcceptedLegal ? <Text style={styles.checkmark}>✓</Text> : null}
+                      </Pressable>
+                      <View style={styles.legalCopy}>
+                        <Text style={[styles.legalText, isRTL && styles.rtl]}>
+                          {t('I agree to the')}
+                        </Text>
+                        <Pressable
+                          accessibilityRole="link"
+                          onPress={() => router.push('/legal?document=terms' as never)}
+                        >
+                          <Text style={[styles.legalLink, isRTL && styles.rtl]}>{t('Terms of Service')}</Text>
+                        </Pressable>
+                        <Text style={[styles.legalText, isRTL && styles.rtl]}>{t('and')}</Text>
+                        <Pressable
+                          accessibilityRole="link"
+                          onPress={() => router.push('/legal?document=privacy' as never)}
+                        >
+                          <Text style={[styles.legalLink, isRTL && styles.rtl]}>{t('Privacy Policy')}</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t('Send verification code')}
-                    style={[styles.button, isLoading && styles.disabled]}
-                    disabled={isLoading}
+                    style={[styles.button, (isLoading || (mode === 'register' && !hasAcceptedLegal)) && styles.disabled]}
+                    disabled={isLoading || (mode === 'register' && !hasAcceptedLegal)}
                     onPress={() => void sendCode()}
                   >
                     {isLoading ? <ActivityIndicator color="#111827" /> : <Text style={styles.buttonText}>{t('Send verification code')}</Text>}
@@ -332,6 +372,27 @@ const styles = StyleSheet.create({
   rtlInput: { textAlign: 'right' },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   error: { color: '#C62828', fontSize: 14, marginTop: 10 },
+  legalConsent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 18,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#B9850C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxChecked: { backgroundColor: '#F6C90E' },
+  checkmark: { color: '#111827', fontSize: 16, fontWeight: '900', lineHeight: 18 },
+  legalCopy: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingTop: 1 },
+  legalText: { color: clientTheme.textMuted, fontSize: 13, lineHeight: 20 },
+  legalLink: { color: '#8A5B00', fontSize: 13, fontWeight: '800', lineHeight: 20 },
   button: {
     minHeight: 54,
     borderRadius: 16,
