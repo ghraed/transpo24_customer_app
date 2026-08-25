@@ -1,1710 +1,764 @@
 /**
  * The app renders this legal copy verbatim on its public legal pages.
  */
-export const TERMS_OF_SERVICE = `Last updated: 24 August 2026
+export const TERMS_OF_SERVICE = `Effective date: 25 August 2026
+Interim Version – Pending Final Legal Review
 
-These Terms of Service ("Terms") govern access to and use of the Transpo24 platform, including the Transpo24 customer application, the Transpo24 transport-provider/driver application, the Transpo24 website and associated services.
+1. Operator
 
-At launch, Transpo24 is operated by:
+Transpo24 is a digital transport marketplace currently operated by:
 
-Switzerland
+Autobasilea GmbH
+Riehenring 32
+4058 Basel, Switzerland
+UID / Handelsregister-Nr.: CHE-327.671.246
+Email: info@transpo24.ch
+Phone: +41 79 800 98 00
 
-In these Terms, "Transpo24", "we", "us", "our" and "Platform" refer to Autobasilea GmbH acting as operator of the Transpo24 platform.
+Transpo24 is the platform and brand name.
 
-"Customer" means a person or business requesting transport services.
+The platform may in the future be transferred to a dedicated Transpo24 legal entity. Any such change will be communicated in accordance with applicable law.
 
-"Transport Provider" means an independent person, sole trader, company or other business offering transport services through Transpo24.
+2. About Transpo24
 
----
+Transpo24 is a digital marketplace and matching platform that connects customers who require transport services with independent transport service providers.
 
-# 1. Nature of Transpo24
+Transpo24 does not own or operate a fleet of transport vehicles and does not generally perform the transport itself.
 
-Transpo24 is a digital marketplace and technology platform that connects Customers seeking transport services with independent Transport Providers offering transport services.
+The actual transport service is carried out by the transport service provider selected by the customer.
 
-Transpo24 may provide functionality including:
+Transpo24 consists of two connected applications:
 
-* transport-request creation;
-* transport matching;
-* offer submission;
-* offer comparison;
-* customer-provider communication;
-* GPS and location services;
-* transport-status updates;
-* payment processing;
-* identity verification;
-* document verification;
-* vehicle registration;
-* transport photographs;
-* pickup and delivery evidence;
-* reviews and ratings;
-* notifications;
-* support services; and
-* other marketplace-related functionality.
+* a Customer App, used to create and manage transport requests; and
+* a Driver / Transport Provider App, used by transport service providers to receive requests, submit offers and manage transports.
 
-Unless expressly stated otherwise for a specific service:
+Both applications operate through the same Transpo24 platform and backend.
 
-**Transpo24 does not itself perform the physical transport.**
+3. Users
 
-Transpo24 is not the owner or operator of the independent Transport Provider's vehicle.
+Transpo24 may be used by both private individuals and businesses.
 
-Transpo24 does not normally take possession of transported goods.
+Customers may include individuals, garages, vehicle dealers, retailers, furniture businesses and other companies.
 
-Transpo24 is not, merely by facilitating a transaction:
+Transport service providers may include, where legally permitted:
 
-* the carrier;
-* freight forwarder;
-* moving company;
-* courier;
-* owner of transported goods;
-* sender;
-* recipient;
-* employer of the Transport Provider; or
-* operator of the Transport Provider's transport business.
+* self-employed individuals;
+* sole proprietorships;
+* transport companies; and
+* other businesses using their own legally permitted vehicles and equipment.
 
----
+Registration on Transpo24 does not by itself determine a person’s legal employment or self-employment status.
 
-# 2. Contract Between Customer and Transport Provider
+Each transport service provider is responsible for complying with all legal requirements applicable to their activity.
 
-When a Customer accepts an offer submitted by a Transport Provider, the Customer and the selected Transport Provider enter into a separate agreement for the relevant transport service.
+4. Transport Categories
 
-Unless Transpo24 expressly states otherwise:
+Transpo24 may facilitate transport requests including:
 
-**The transport contract is between the Customer and the Transport Provider.**
+* vehicle transport;
+* motorcycle and bicycle transport;
+* goods, parcel and cargo transport; and
+* furniture transport and household moving services.
 
-Transpo24 facilitates the transaction but is not the party physically performing the transport.
+Additional categories may be added or modified over time.
 
-The Transport Provider is responsible for performing the agreed transport service.
+5. How the Platform Works
 
-The Customer is responsible for providing accurate and lawful information concerning the requested transport.
+A customer creates a transport request and provides relevant information such as:
 
----
-
-# 3. Independent Transport Providers
-
-Transport Providers are independent users of the Transpo24 marketplace.
-
-They are not employees of Transpo24 merely because they use the Platform.
-
-Transport Providers independently determine, subject to applicable law:
-
-* whether they wish to use Transpo24;
-* when they are available;
-* how frequently they work;
-* which requests they view;
-* which requests they accept or reject;
-* whether they submit an offer;
-* what price they offer;
-* what transport categories they provide;
-* which vehicle they use;
-* which equipment they use;
-* which routes they take;
-* how they organise their business; and
-* how many assignments they undertake.
-
-Transpo24 does not guarantee:
-
-* minimum working hours;
-* minimum income;
-* minimum number of assignments;
-* minimum revenue;
-* exclusive work; or
-* continued availability of transport requests.
-
-Transport Providers may, unless otherwise restricted by law or a separate written agreement, provide services through other platforms or directly to other customers.
-
----
-
-# 4. No Employment Relationship
-
-Nothing in these Terms is intended to create an employment relationship between Transpo24 and a Transport Provider.
-
-Transport Providers are not entitled merely by using Transpo24 to:
-
-* wages from Transpo24;
-* paid holidays;
-* sick pay;
-* employee benefits;
-* employee pension benefits;
-* minimum working hours;
-* reimbursement of normal business expenses; or
-* other rights applicable specifically to employees.
-
-Transport Providers provide their own vehicles, fuel, insurance, equipment and other operational resources unless expressly agreed otherwise in writing.
-
-Transport Providers are responsible for their own business, tax and social-security obligations to the extent applicable.
-
-Nothing in these Terms overrides a legal classification imposed by mandatory law.
-
-If a competent authority determines that a particular relationship must legally be classified differently, applicable mandatory law shall prevail.
-
----
-
-# 5. No Agency, Partnership or Authority
-
-Transport Providers do not have authority to act on behalf of Transpo24.
-
-Nothing in these Terms creates:
-
-* a partnership;
-* joint venture;
-* franchise;
-* agency relationship;
-* fiduciary relationship; or
-* employment relationship
-
-between Transpo24 and an independent Transport Provider.
-
-A Transport Provider may not:
-
-* enter into contracts on behalf of Transpo24;
-* make guarantees on behalf of Transpo24;
-* represent themselves as an employee of Transpo24; or
-* create obligations for Transpo24.
-
----
-
-# 6. Transport Provider Requirements
-
-Each Transport Provider is responsible for ensuring that they are legally permitted to perform every transport they accept.
-
-Depending on the transport and applicable law, this may include maintaining:
-
-* valid identity documentation;
-* driving licence;
-* vehicle registration;
-* vehicle inspections;
-* business registration;
-* social-security registration;
-* tax registration;
-* transport licences;
-* operating permits;
-* professional authorisations;
-* motor-vehicle insurance;
-* liability insurance;
-* cargo insurance;
-* accident insurance;
-* dangerous-goods certification;
-* equipment certifications; and
-* other legally required documentation.
-
-The Transport Provider is responsible for ensuring that documents remain valid.
-
-Verification by Transpo24 does not transfer the Transport Provider's legal obligations to Transpo24.
-
----
-
-# 7. Vehicles and Equipment
-
-Transport Providers are responsible for ensuring that vehicles and equipment used for transport are:
-
-* legally registered;
-* properly insured;
-* roadworthy;
-* adequately maintained;
-* suitable for the requested transport;
-* within permitted weight and capacity limits;
-* equipped as legally required; and
-* operated in accordance with applicable law.
-
-Transpo24 does not assume operational control of a Transport Provider's vehicle.
-
----
-
-# 8. Transport Provider Responsibility
-
-The Transport Provider is responsible for the manner in which the physical transport is performed.
-
-This includes responsibility for matters such as:
-
-* driving;
-* route selection;
-* loading;
-* unloading;
-* cargo securing;
-* vehicle safety;
-* parking;
-* traffic-law compliance;
-* weight restrictions;
-* working-time restrictions;
-* road restrictions;
-* handling of transported property;
-* protection of cargo; and
-* compliance with applicable transport regulations.
-
-Navigation information or other assistance provided by Transpo24 is informational only and does not replace the Transport Provider's professional judgment.
-
----
-
-# 9. Customer Responsibilities
-
-Customers must provide accurate, complete and truthful information regarding every requested transport.
-
-This may include:
-
-* item type;
-* quantity;
-* dimensions;
-* weight;
-* value;
-* condition;
-* packaging;
 * pickup location;
 * delivery location;
-* access conditions;
+* type of transport;
+* size and/or weight;
+* condition of the item;
 * photographs;
-* required equipment;
-* special handling requirements;
-* dangerous or restricted characteristics; and
-* other information relevant to safe and lawful transport.
+* requested date or time; and
+* any special requirements.
 
-The Customer must have the legal right to possess and arrange transport of the relevant property.
+Relevant transport service providers may receive or view the request through the platform.
 
----
+Transport service providers are free to decide whether they wish to submit an offer.
 
-# 10. Responsibility for Transported Goods
+The customer may compare available offers and choose the transport service provider they prefer.
 
-The Customer is responsible for accurately declaring what is being transported.
+6. Matching and Existing Routes
 
-The Customer must not:
+Transpo24 may match transport requests with transport service providers based on factors such as:
 
-* conceal the actual contents of a shipment;
-* provide false descriptions;
-* provide misleading photographs;
-* misrepresent the weight or dimensions;
-* misrepresent ownership;
-* conceal hazardous characteristics; or
-* use Transpo24 to arrange unlawful transport.
+* pickup and delivery locations;
+* travel direction;
+* vehicle type;
+* available capacity;
+* equipment;
+* transport category; and
+* availability.
 
-The Customer is responsible for the consequences of false, incomplete, fraudulent or misleading declarations to the extent permitted by applicable law.
+For example, a transport service provider already travelling from Basel to Zürich may receive a request to transport an item along the same or a similar route.
 
----
+Transpo24 does not generally require a transport service provider to accept a particular request or to travel a specific route solely because a request is displayed.
 
-# 11. Prohibited Goods
+7. Prices and Offers
 
-Transpo24 must not be used to arrange transport of goods whose possession, sale, delivery or transport is illegal.
+Transpo24 does not currently impose a mandatory transport price.
 
-Prohibited goods may include, without limitation:
+Transport service providers generally determine the price they wish to offer for a transport request.
 
-* illegal drugs;
-* unlawful narcotics;
-* stolen property;
-* illegal firearms;
+The platform may provide non-binding examples, calculation tools or price guidance to assist transport service providers.
+
+Such information is for guidance only and does not constitute a mandatory price.
+
+The customer sees the applicable offer before accepting and confirming a booking.
+
+In the future, Transpo24 may introduce automated or AI-assisted suggested prices or price ranges based on factors such as distance, transport category, size, weight, condition, required equipment, route and historical transport data.
+
+Unless otherwise expressly stated, such recommendations remain non-binding.
+
+8. Payments and Platform Fees
+
+Payments may be processed through third-party payment providers integrated into Transpo24.
+
+Available payment methods may include, depending on availability:
+
+* credit and debit cards;
+* TWINT;
+* Apple Pay;
+* Google Pay; and
+* other payment methods displayed within the platform.
+
+Transpo24 may charge a platform commission or service fee for successfully facilitated transports.
+
+The applicable commission or fee will be displayed to the relevant user before the applicable transaction where required.
+
+Payment methods, fees and payment providers may change over time.
+
+9. Additional Costs
+
+Additional transport-related costs may arise in certain circumstances, for example due to:
+
+* waiting time;
+* tolls or parking;
+* additional stops;
+* additional labour;
+* special equipment; or
+* requirements that were not correctly declared when the transport request was created.
+
+Where supported by the platform, additional costs may require supporting evidence and customer approval before being charged.
+
+10. Customer Responsibilities
+
+Customers must provide complete and accurate information about the transport request.
+
+The customer is responsible for ensuring that:
+
+* they have the legal right to request transportation of the item;
+* the information provided about the item is accurate;
+* the declared size, weight and condition are correct;
+* all required legal declarations or permits are available; and
+* the item may legally be possessed and transported.
+
+Customers must inform the transport service provider about any relevant risk or special handling requirement.
+
+11. Prohibited Items
+
+Customers must not use Transpo24 to transport items whose possession or transportation is prohibited by law.
+
+This includes, in particular:
+
+* illegal drugs or controlled substances without lawful authorization;
 * illegal weapons;
-* illegal ammunition;
+* ammunition;
 * explosives;
 * prohibited hazardous materials;
-* unlawfully transported dangerous goods;
-* contraband;
-* illegally obtained goods;
-* goods connected with criminal activity;
-* protected wildlife transported unlawfully;
-* unlawfully transported human remains;
-* property whose possession is prohibited; and
-* any goods whose transport violates applicable law.
+* stolen property;
+* unlawfully possessed goods; and
+* any other item prohibited by applicable law.
 
-Transpo24 may restrict additional categories through Platform policies.
+Items subject to special permits, declarations or regulatory requirements may only be transported where all applicable legal requirements have been fulfilled.
 
----
+Transpo24 may suspend or cancel a request and may cooperate with competent authorities where required by law.
 
-# 12. Restricted Goods
+12. Sealed Packages and Undeclared Contents
 
-Some goods may only be transported subject to specific legal requirements.
+Transpo24 does not take physical possession of transported items.
 
-These may include:
+A transport service provider may not reasonably be able to know the contents of a sealed package, container or vehicle.
 
-* hazardous materials;
-* valuable goods;
-* regulated chemicals;
-* animals;
-* machinery;
-* fuel;
-* batteries;
-* medical items;
-* oversized items; and
-* other regulated cargo.
+The customer remains responsible for providing truthful information about the transported item and for ensuring that its contents are lawful.
 
-The Customer and Transport Provider are responsible for ensuring that all applicable declarations, packaging, permits and transport requirements are satisfied.
+Nothing in these Terms excludes any inspection, reporting or other obligation imposed by applicable law.
 
----
+13. Transport Service Provider Responsibilities
 
-# 13. Closed, Sealed or Hidden Contents
+Transport service providers are responsible for ensuring that they meet all legal requirements applicable to the transports they perform.
 
-Transpo24 does not normally physically inspect transported goods.
+Depending on the activity, these may include:
 
-Transpo24 may therefore be unable to determine the actual contents of:
+* valid identification;
+* appropriate driving licence;
+* vehicle registration;
+* adequate insurance;
+* legally compliant vehicle and equipment;
+* required transport permits or licences;
+* tax and social insurance obligations; and
+* applicable business registrations.
 
-* sealed packages;
-* closed boxes;
-* containers;
-* luggage;
-* furniture;
-* vehicles;
-* pallets;
-* wrapped items; or
-* other closed cargo.
+Transpo24 may request and verify documents before or during access to the platform.
 
-A Transport Provider may also be unable to know the true contents of a sealed or misleadingly described shipment.
+14. Transport Performance
 
-The Customer remains responsible for declaring the contents truthfully.
+Once a transport has been accepted, the transport service provider is expected to perform it carefully and professionally.
 
----
+The platform may require status updates, photographs, pickup or delivery confirmations and GPS tracking during an active transport.
 
-# 14. Illegal Activities
+Transport service providers remain responsible for complying with applicable road, vehicle, cargo-security and transport regulations.
 
-Users are individually responsible for their own conduct.
+15. GPS and Communication
 
-No user may use Transpo24 to:
+Transpo24 may provide GPS tracking and in-app communication features for active transport requests.
 
-* commit a crime;
-* facilitate a crime;
-* transport illegal property;
-* conceal illegal activity;
-* commit fraud;
-* transport stolen goods;
-* evade legal requirements; or
-* otherwise violate applicable law.
+Location information may be used for purposes including:
 
-Where illegal conduct is caused by the actions of a Customer or Transport Provider, responsibility remains with the person or entity responsible for that conduct, subject to applicable law.
-
-**The fact that Transpo24 facilitated matching, communication or payment does not make Transpo24 responsible for an independent user's illegal conduct.**
-
-Nothing in these Terms excludes responsibility that Transpo24 cannot legally exclude.
-
----
-
-# 15. No Approval of Cargo by Transpo24
-
-A transport request being:
-
-* published;
-* matched;
-* shown to a Transport Provider;
-* accepted;
-* paid;
-* tracked; or
-* completed
-
-does not constitute confirmation by Transpo24 that the cargo is lawful.
-
-Transpo24 does not guarantee the accuracy of a Customer's cargo declaration.
-
----
-
-# 16. User Verification
-
-Transpo24 may perform verification procedures.
-
-These may include:
-
-* identity verification;
-* phone verification;
-* business verification;
-* licence checks;
-* vehicle-document checks;
-* insurance-document checks;
-* KYC checks;
-* fraud-prevention checks; and
-* other safety or regulatory checks.
-
-Passing a Transpo24 verification process does not constitute a guarantee that a user will always act legally, honestly or competently.
-
----
-
-# 17. Right to Request Information
-
-Transpo24 may request additional documentation or information where reasonably required for:
-
-* fraud prevention;
-* user safety;
-* legal compliance;
-* account security;
-* payment compliance;
-* investigation of complaints;
-* transport verification; or
-* regulatory obligations.
-
----
-
-# 18. Suspension and Reporting
-
-Transpo24 may, where reasonably justified:
-
-* remove a transport request;
-* refuse a transaction;
-* suspend an account;
-* terminate an account;
-* suspend a payout;
-* request further documents;
-* preserve relevant records;
-* restrict access to a feature; or
-* cooperate with competent authorities.
-
-This may occur where Transpo24 reasonably suspects:
-
-* fraud;
-* illegal goods;
-* criminal activity;
-* falsified documents;
-* payment abuse;
-* safety risks;
-* serious policy breaches; or
-* legal violations.
-
----
-
-# 19. Prices
-
-Transport Providers determine their own offered prices.
-
-Transpo24 does not normally set the Transport Provider's final transport price.
-
-Transpo24 may provide:
-
-* estimated prices;
-* suggested prices;
-* price ranges;
-* calculation tools;
-* historical pricing;
-* distance-based estimates;
-* AI-generated price suggestions; or
-* other pricing guidance.
-
-Unless expressly stated otherwise, these are non-binding recommendations.
-
-The Transport Provider remains free to determine the final price of their own offer.
-
----
-
-# 20. Customer Selection
-
-Customers may compare offers and choose which Transport Provider they wish to use.
-
-Transpo24 does not guarantee that the cheapest, highest-rated or recommended Transport Provider is suitable for every situation.
-
-The Customer is responsible for deciding which offer to accept.
-
----
-
-# 21. Platform Fees and Commission
-
-Transpo24 may charge fees or commissions for Platform services.
-
-Applicable fees may include:
-
-* platform commission;
-* service fee;
-* transaction fee;
-* payment-processing charge; and
-* other disclosed fees.
-
-Where required, applicable fees will be shown before the relevant transaction is concluded.
-
-Transpo24 may change fees applicable to future transactions.
-
----
-
-# 22. Payments
-
-Payments may be processed using third-party payment service providers.
-
-Users may therefore also be subject to the payment provider's terms.
-
-Transpo24 may facilitate:
-
-* payment collection;
-* authorisation;
-* payment holding;
-* refunds;
-* provider payouts;
-* chargeback handling; and
-* payment disputes.
-
-Processing a payment does not make Transpo24 the physical transport provider.
-
----
-
-# 23. Payouts
-
-Payouts may be withheld, delayed or reviewed where reasonably necessary because of:
-
-* payment disputes;
-* suspected fraud;
-* chargebacks;
-* refund requests;
-* legal obligations;
-* identity-verification issues;
-* payment-provider restrictions; or
-* suspected violations of these Terms.
-
----
-
-# 24. Additional Costs
-
-Transport Providers must not knowingly impose undisclosed additional costs without legitimate justification.
-
-Where additional costs arise, the Transport Provider should, where reasonably possible:
-
-1. inform the Customer;
-2. explain the reason;
-3. provide supporting evidence where appropriate; and
-4. obtain Customer approval.
-
-This may not be possible where urgent measures are required to protect persons, property or cargo.
-
----
-
-# 25. Cancellations
-
-Transpo24 may maintain a separate cancellation and refund policy.
-
-Cancellation consequences may depend on circumstances such as:
-
-* time remaining before pickup;
-* whether the Transport Provider already began travelling;
-* expenses incurred;
-* Customer no-show;
-* Transport Provider no-show;
-* incorrect transport information;
-* safety issues;
-* inability to legally perform the transport; or
-* mutual agreement.
-
----
-
-# 26. Damage and Loss
-
-Where damage, loss or theft occurs during the physical transport, responsibility will generally be determined between the Customer and the Transport Provider according to:
-
-* the transport contract;
-* applicable law;
-* the facts of the incident; and
-* applicable insurance.
-
-The Transport Provider remains responsible for obligations imposed on the person physically performing the transport.
-
----
-
-# 27. Insurance
-
-Transport Providers are responsible for maintaining legally required insurance.
-
-Transpo24 may request insurance documentation but does not guarantee:
-
-* ongoing validity;
-* policy limits;
-* exclusions;
-* claim acceptance;
-* suitability for a specific shipment; or
-* adequacy of insurance coverage.
-
-Customers should independently consider whether high-value items require additional insurance.
-
----
-
-# 28. Accidents and Traffic Violations
-
-Transport Providers are responsible for their own driving and vehicle operation.
-
-Transpo24 is not responsible merely because an assignment was obtained through the Platform for:
-
-* speeding;
-* parking violations;
-* traffic violations;
-* driving offences;
-* negligent driving;
-* vehicle defects;
-* improper cargo securing;
-* accidents caused by the Transport Provider; or
-* other operational conduct of the Transport Provider.
-
----
-
-# 29. GPS and Tracking
-
-Transpo24 may provide GPS and transport-tracking functionality.
-
-GPS information may be:
-
-* inaccurate;
-* delayed;
-* unavailable;
-* affected by signal quality; or
-* affected by device settings.
-
-GPS functionality does not guarantee the exact physical location of a person, vehicle or shipment.
-
----
-
-# 30. Communications
-
-Transpo24 may provide in-app communications.
-
-Users are responsible for content they send.
-
-Users must not use communication services for:
-
-* threats;
-* harassment;
-* hateful or discriminatory content;
-* sexual or exploitative content;
-* fraud;
-* unlawful discrimination;
-* criminal activity;
-* illegal content;
-* spam;
-* sharing another person's private or identifying information without permission; or
-* attempts to compromise Platform security.
-
-Users can report a driver or a specific received message from the chat screen and can block the other participant. Transpo24 may review reports and associated messages, restrict messaging, remove content where applicable, suspend or terminate accounts, preserve evidence, or refer credible safety or legal threats to the appropriate authority.
-
----
-
-# 31. Ratings and Reviews
-
-Transpo24 may permit Customers and Transport Providers to review each other.
-
-Reviews must be based on genuine experiences.
-
-Transpo24 may remove or restrict reviews where reasonably believed to involve:
-
-* fraud;
-* manipulation;
-* threats;
-* unlawful content;
-* irrelevant content;
-* false information;
-* personal information; or
-* abuse.
-
----
-
-# 32. Platform Circumvention
-
-Users may not deliberately misuse information obtained through Transpo24 primarily to avoid applicable Platform fees for transactions introduced through Transpo24, where such restrictions are permitted under applicable law.
-
-Repeated or deliberate circumvention may result in account restriction or termination.
-
----
-
-# 33. User Accounts
-
-Users are responsible for:
-
-* keeping account information accurate;
-* protecting account credentials;
-* preventing unauthorised account access;
-* notifying Transpo24 of suspected compromise; and
-* ensuring use complies with these Terms.
-
-Accounts may not be transferred without permission.
-
----
-
-# 34. Platform Availability
-
-Transpo24 does not guarantee uninterrupted availability.
-
-The Platform may be unavailable because of:
-
-* maintenance;
-* software updates;
-* server failures;
-* telecommunications failures;
-* third-party outages;
-* cybersecurity incidents;
-* force majeure; or
-* other circumstances outside reasonable control.
-
----
-
-# 35. Third-Party Services
-
-Transpo24 may integrate external providers for services such as:
-
-* payment processing;
-* maps;
-* navigation;
-* identity verification;
-* SMS;
-* email;
-* push notifications;
-* hosting;
-* cloud infrastructure;
-* analytics; and
-* security services.
-
-Third-party services may be governed by their own terms.
-
----
-
-# 36. Limitation of Transpo24 Responsibility
-
-To the maximum extent permitted by applicable law, Transpo24 is responsible for operating the technology marketplace and does not assume the independent Transport Provider's obligations relating to physical transport.
-
-In particular, Transpo24 is not responsible merely because a transaction was facilitated through the Platform for:
-
-* illegal goods provided by a Customer;
-* undeclared cargo;
-* falsely declared cargo;
-* stolen property provided by a Customer;
-* criminal acts of a Customer;
-* criminal acts of a Transport Provider;
-* Transport Provider driving behaviour;
-* traffic offences;
-* loading mistakes by a Transport Provider;
-* cargo-securing failures by a Transport Provider;
-* Transport Provider vehicle defects;
-* inadequate insurance maintained by a Transport Provider;
-* licence violations by a Transport Provider;
-* tax obligations of a Transport Provider;
-* social-security obligations of an independent Transport Provider;
-* damage caused during physical transport;
-* loss caused during physical transport; or
-* theft committed by a user.
-
-Nothing in these Terms excludes or limits liability that cannot lawfully be excluded under mandatory Swiss law.
-
----
-
-# 37. User Indemnification
-
-To the extent permitted by applicable law, a user must compensate Transpo24 for losses, liabilities, claims, penalties and reasonable costs resulting directly from that user's:
-
-* unlawful conduct;
-* fraudulent activity;
-* illegal cargo;
-* false cargo declaration;
-* undeclared dangerous goods;
-* infringement of third-party rights;
-* breach of these Terms;
-* lack of required permits;
-* lack of legally required insurance; or
-* violation of applicable law.
-
-This does not apply to the extent Transpo24 itself is legally responsible for the relevant loss.
-
----
-
-# 38. Cooperation With Authorities
-
-Transpo24 may cooperate with police, courts, regulatory bodies and other competent authorities where required or permitted by law.
-
-Transpo24 may preserve or disclose relevant records where legally authorised or required.
-
----
-
-# 39. Changes to the Platform
-
-Transpo24 may introduce, change or remove Platform functionality.
-
-This may include changes relating to:
-
-* transport categories;
+* transport tracking;
 * matching;
-* pricing tools;
-* AI features;
-* payment methods;
-* provider requirements;
-* verification;
-* safety features; and
-* communication functionality.
+* operational safety;
+* pickup and delivery coordination; and
+* dispute resolution.
 
----
+Personal data is handled in accordance with the applicable Transpo24 Privacy Policy and applicable data protection law.
 
-# 40. Changes to These Terms
+16. Cancellations and Refunds
 
-Transpo24 may update these Terms for future use where reasonably necessary.
+Cancellation and refund conditions may depend on the status of the transport request and any costs already incurred.
 
-Material changes will be communicated where required by law.
+The applicable cancellation conditions will be displayed within the platform where relevant.
 
----
+Transpo24 may cancel, suspend or refuse a transport request where necessary, including where:
 
-# 41. Transfer of the Platform
+* illegal or prohibited goods are suspected;
+* information is materially incorrect;
+* safety concerns exist;
+* required payment cannot be completed; or
+* performance is prevented by circumstances outside reasonable control.
 
-The operation of Transpo24 may later be transferred from Autobasilea GmbH to another affiliated company, successor or dedicated Transpo24 company.
+17. Liability
 
-Where required by applicable law, users will be informed and any legally required consent will be obtained.
+Transpo24 provides the digital platform, matching, communication and payment infrastructure.
 
----
+The actual transport is generally performed by the selected transport service provider.
 
-# 42. Severability
+Responsibility for transport damage, loss, delay, accidents and other events relating to the physical transport will be determined according to the circumstances, the relationship between the parties and applicable Swiss law.
 
-If any provision is invalid or unenforceable, the remaining provisions remain effective to the extent permitted by law.
+Nothing in these Terms excludes or limits liability where such exclusion or limitation is prohibited by mandatory law.
 
----
+Transport service providers are responsible for maintaining any insurance legally required for their activities.
 
-# 43. Governing Law
+18. Suspension and Misuse
 
-These Terms are governed by Swiss law, subject to mandatory consumer and conflict-of-law provisions.
+Transpo24 may restrict or suspend an account in cases including:
 
----
+* fraud;
+* false or forged documents;
+* unlawful transport activity;
+* serious safety violations;
+* misuse of payment systems;
+* repeated material breaches of these Terms; or
+* use of the platform for prohibited activities.
 
-# 44. Jurisdiction
+19. Platform Circumvention
 
-Subject to mandatory jurisdiction rules, disputes concerning Transpo24 shall be submitted to the competent courts at the registered office of the Platform operator.
+Users should not deliberately use information obtained through Transpo24 to bypass the platform for a transport request introduced through Transpo24 where such restriction is permitted by applicable law.
 
-Mandatory consumer rights regarding jurisdiction remain unaffected.
+Specific consequences of platform circumvention may be set out separately and must comply with applicable law.
 
----
+20. Intellectual Property
 
-# 45. Contact
+The Transpo24 name, platform, software, designs, logos and other protected materials may only be used as permitted by the relevant rights holder.
 
-**Autobasilea GmbH / Transpo24**
+Transpo24 is currently operated by Autobasilea GmbH. Ownership and operation of the platform may later be transferred to a dedicated Transpo24 legal entity.
 
-Email: support@transpo24.com
+21. Privacy
 
----
+Personal data is processed in accordance with applicable Swiss data protection law and, where applicable, the GDPR.
 
-# 46. Important Acknowledgement
+A separate Transpo24 Privacy Policy provides further information regarding data collection, processing, GPS/location data, KYC documents, payment providers, user rights, storage and deletion.
 
-By using Transpo24, the user acknowledges that:
+22. Changes to the Platform and Terms
 
-1. Transpo24 is primarily a technology marketplace.
+Transpo24 may develop and modify its services, matching system, payment methods, non-binding price guidance and other platform functions over time.
 
-2. Transpo24 does not normally perform the physical transport.
+Material changes affecting users’ legal rights or obligations will be communicated as required by applicable law.
 
-3. Transport Providers are independent users and are not employees of Transpo24 merely because they use the Platform.
+Changes to technical functionality or non-binding pricing guidance do not affect the price of a transport already agreed between a customer and transport service provider.
 
-4. Transport Providers determine when they work, which requests they accept and what price they offer.
+23. Switzerland and Future Expansion
 
-5. Transport Providers use and remain responsible for their own vehicles, equipment, licences, permits and insurance.
+Transpo24 will initially operate in Switzerland.
 
-6. Customers are responsible for truthfully declaring the property they wish to transport.
+The technical platform may support additional countries in the future.
 
-7. Customers must not use Transpo24 to arrange transport of illegal property.
+The availability of technical functionality in another country does not mean that Transpo24 will launch there without first considering applicable local legal and regulatory requirements.
 
-8. Transport Providers remain responsible for determining whether a transport can legally and safely be performed.
+24. Governing Law
 
-9. Transpo24 normally does not physically inspect transported goods and cannot guarantee the actual contents of sealed or concealed cargo.
+These Terms are governed by Swiss law, subject to any mandatory legal protections applicable to consumers or other users.
 
-10. Customers and Transport Providers remain responsible for their own fraudulent, criminal, negligent or unlawful acts.
+Any mandatory statutory jurisdiction rights remain unaffected.
 
-11. Matching, communication, GPS tracking or payment processing by Transpo24 does not by itself transfer responsibility for an independent user's illegal conduct to Transpo24.
+25. Contact
 
-12. Mandatory legal obligations that cannot legally be excluded remain unaffected.
+Transpo24
+operated by Autobasilea GmbH
 
-`;
-
-export const PRIVACY_POLICY = `Last updated: 24 August 2026
-
-This Privacy Policy explains how Transpo24 collects, uses, stores, shares and protects personal data when users access or use the Transpo24 platform.
-
-At launch, Transpo24 is operated by:
-
+Riehenring 32
+4058 Basel
 Switzerland
 
-For the purposes of applicable data-protection law, Autobasilea GmbH is generally responsible for the personal data processed in connection with operation of the Transpo24 platform, unless another party is independently responsible for particular processing.
+Email: info@transpo24.ch
+Phone: +41 79 800 98 00
+UID / Handelsregister-Nr.: CHE-327.671.246
 
----
+⸻
 
-# 1. Scope
+IMPORTANT NOTICE
 
-This Privacy Policy applies to:
+This is an interim version of the Transpo24 Terms & Conditions prepared for temporary platform/app submission purposes.
+
+The Terms are currently undergoing legal review and may be replaced or updated before the commercial launch of Transpo24.`;
+
+export const PRIVACY_POLICY = `TRANSPO24 – PRIVACY POLICY
+
+Effective date: 25 August 2026
+Interim Version – Pending Final Legal Review
+
+1. Who We Are
+
+Transpo24 is a digital transport marketplace and matching platform currently operated by:
+
+Autobasilea GmbH
+Riehenring 32
+4058 Basel, Switzerland
+UID / Handelsregister-Nr.: CHE-327.671.246
+
+Email: privacy@transpo24.ch
+General contact: info@transpo24.ch
+Phone: +41 79 800 98 00
+
+Transpo24 is the platform and brand name.
+
+The platform may in the future be transferred to a dedicated Transpo24 legal entity. If this occurs, users will be informed as required by applicable law.
+
+2. Scope of This Privacy Policy
+
+This Privacy Policy explains how personal data is collected, used, stored and shared when users access or use:
 
 * the Transpo24 Customer App;
-* the Transpo24 Transport Provider App;
+* the Transpo24 Driver / Transport Provider App;
 * the Transpo24 website;
-* Transpo24 account services;
-* transport matching;
-* payment-related processing;
-* customer support;
-* GPS and location functionality;
-* communications;
-* KYC and verification;
-* notifications; and
-* other services provided through Transpo24.
+* related support, communication, payment and platform services.
 
----
+Transpo24 currently consists of two separate applications connected through the same backend:
 
-# 2. Categories of Users
+* a Customer App for persons and businesses requesting transport services; and
+* a Driver / Transport Provider App for persons and businesses offering transport services.
 
-Transpo24 may process data relating to:
+3. Role of Transpo24
 
-* Customers;
-* Transport Providers;
-* drivers;
-* businesses;
-* business representatives;
-* passengers or contacts associated with a transport;
-* pickup contacts;
-* delivery contacts;
-* website visitors;
-* support requesters; and
-* other persons whose data is lawfully provided through the Platform.
+Transpo24 provides digital marketplace, matching, communication and payment-related infrastructure.
 
----
+Transpo24 does not generally take physical possession of transported goods and does not operate its own transport fleet.
 
-# 3. Account Information
+Transport services are generally performed by the transport service provider selected by the customer.
 
-When a user creates or manages an account, Transpo24 may process information such as:
+Questions concerning responsibility for transported goods, prohibited contents, transport damage, loss, disputes, customer declarations or the actual performance of a transport are governed primarily by the applicable Transpo24 Terms & Conditions and mandatory law.
+
+This Privacy Policy relates only to the processing of personal data.
+
+4. Personal Data We May Collect
+
+4.1 Account and Profile Data
+
+We may collect:
 
 * full name;
 * email address;
 * telephone number;
-* account identifier;
+* profile information;
+* profile image, where provided;
 * preferred language;
-* profile photograph;
-* account type;
-* business name;
 * account status;
-* registration date; and
-* login and security information.
+* customer or transport-provider account type.
 
----
+For business users, we may additionally collect:
 
-# 4. Customer Transport Information
-
-When a Customer creates a transport request, Transpo24 may process:
-
-* pickup address;
-* delivery address;
-* pickup contact;
-* delivery contact;
-* requested date;
-* requested time;
-* transport category;
-* goods description;
-* dimensions;
-* weight;
-* quantity;
-* condition;
-* photographs;
-* required equipment;
-* special instructions;
-* Customer notes;
-* accepted offer;
-* transport status; and
-* related transaction information.
-
----
-
-# 5. Transport Provider Information
-
-For Transport Providers, Transpo24 may process:
-
-* name;
-* date of birth where required;
-* address;
-* telephone number;
-* email;
-* profile photograph;
-* business details;
-* business registration information;
 * company name;
-* tax-related information where required;
-* service area;
-* vehicle information;
-* working availability;
-* transport categories;
-* capacity information;
-* equipment information;
-* ratings;
-* reviews;
-* accepted jobs;
-* completed jobs;
-* pricing offers; and
-* payout-related information.
+* business address;
+* company registration details;
+* contact person;
+* VAT or other business information where required.
 
----
+5. Transport Provider Verification and KYC Data
 
-# 6. Identity and KYC Data
+Transport service providers may be required to provide information and documents such as:
 
-Transport Providers and, in some circumstances, Customers may be required to complete identity or compliance verification.
-
-Transpo24 may process:
-
-* identity-document type;
-* identity-document number;
-* copy or image of identification;
-* photograph or selfie;
-* date of birth;
-* nationality where legally required;
-* residential information;
-* company documents;
-* beneficial-owner information where legally required;
-* verification status;
-* verification results;
-* fraud-risk indicators; and
-* information requested by identity-verification providers.
-
-Verification may be performed directly by Transpo24 or through an external verification provider.
-
----
-
-# 7. Driver and Vehicle Documents
-
-For Transport Providers, Transpo24 may process:
-
+* identity document;
 * driving licence;
-* vehicle registration document;
-* vehicle plate number;
-* vehicle make;
-* vehicle model;
-* year;
-* photographs of the vehicle;
-* vehicle capacity;
-* insurance documents;
-* permit information;
-* certification information;
-* equipment details; and
-* document expiry dates.
+* vehicle registration;
+* vehicle details;
+* insurance documentation;
+* transport licences or permits, where required;
+* company documentation;
+* other information needed to verify eligibility to use the platform.
 
----
+The exact documents required may vary according to transport category, vehicle type and legal requirements.
 
-# 8. Insurance and Compliance Information
+6. Transport and Booking Data
 
-Where applicable, Transpo24 may process:
+When a transport request is created or performed, we may process information such as:
 
-* insurance provider;
-* policy information;
-* insurance evidence;
-* policy expiry;
-* transport permits;
-* professional licences;
-* regulatory documentation; and
-* compliance status.
+* pickup location;
+* delivery location;
+* transport category;
+* description of the item;
+* size and weight;
+* vehicle or item condition;
+* photographs;
+* requested date and time;
+* special transport requirements;
+* driver offers;
+* accepted offer;
+* booking status;
+* pickup and delivery confirmations;
+* additional expense requests;
+* delivery evidence;
+* ratings and feedback.
 
----
+7. Location and GPS Data
 
-# 9. Location Data
-
-Transpo24 may process location information where necessary for Platform functionality.
+Where enabled and necessary for the service, Transpo24 may process location information.
 
 This may include:
 
-* current device location;
-* approximate location;
-* precise GPS location;
-* pickup location;
-* delivery location;
-* Transport Provider location;
-* route progress;
-* estimated arrival information; and
-* location timestamps.
+* pickup and delivery locations;
+* approximate or precise location of transport service providers;
+* live GPS location during an active transport;
+* route-related information;
+* location used for matching suitable transport requests.
 
 Location data may be used for:
 
-* finding nearby transport opportunities;
-* transport matching;
-* pickup coordination;
-* delivery coordination;
-* route-related functionality;
-* estimated arrival times;
+* matching transport requests;
+* showing relevant jobs to transport service providers;
+* coordinating pickup and delivery;
 * active transport tracking;
-* safety;
-* fraud prevention; and
-* support.
-
----
-
-# 10. Active Transport Tracking
-
-During an active transport, Transpo24 may make relevant location information available to the Customer in order to provide transport-tracking functionality.
-
-Location sharing should be limited to what is reasonably necessary for the relevant transport functionality.
-
-Transpo24 does not intend to publicly disclose a Transport Provider's precise location.
-
----
-
-# 11. Location Permissions
-
-The mobile applications may request device permission to access location services.
-
-The exact functionality available may depend on whether the user grants:
-
-* foreground location access;
-* background location access; or
-* precise location access.
-
-Where required, the application will request the necessary device-level permission.
-
-Users may modify device permissions through their operating-system settings, but disabling required permissions may prevent certain Transpo24 features from functioning.
-
----
-
-# 12. Photographs and Media
-
-Transpo24 may process photographs or other media including:
-
-* cargo photographs;
-* furniture photographs;
-* vehicle photographs;
-* pickup evidence;
-* delivery evidence;
-* damage evidence;
-* invoice photographs;
-* receipts;
-* identity photographs; and
-* profile photographs.
-
-These may be used for:
-
-* transport matching;
-* documentation;
-* dispute resolution;
+* operational safety;
 * fraud prevention;
-* insurance support;
-* service verification; and
-* user support.
+* support and dispute investigation.
 
----
+Live location tracking should only be active where required for an active transport or another clearly disclosed platform function.
 
-# 13. Communications
+8. Communication Data
 
-Transpo24 may process communications sent through Platform functionality.
+Transpo24 may process communications made through platform features, including:
 
-This may include:
+* in-app chat messages;
+* images sent through chat;
+* location sharing;
+* support requests;
+* notifications;
+* OTP and verification communications.
 
-* chat messages;
-* support messages;
-* attachments;
-* photographs;
-* message metadata;
-* timestamps;
-* reports; and
-* complaint communications.
+Where technical measures are used to protect users from unnecessary disclosure of personal contact details, such measures may also process message content for the purpose of detecting contact information or misuse.
 
-Such information may be processed for:
+9. Payment Data
 
-* providing communication features;
-* customer support;
-* dispute resolution;
-* fraud prevention;
-* safety;
-* enforcement of Platform rules; and
-* compliance with law.
+Payments may be processed through third-party payment service providers.
 
----
+Available payment methods may include:
 
-# 14. Payment Information
+* credit and debit cards;
+* TWINT;
+* Apple Pay;
+* Google Pay;
+* other payment methods made available through the platform.
 
-Payments may be processed by third-party payment providers.
+Transpo24 does not intend to store complete payment card numbers.
 
-Transpo24 may process or receive payment-related information such as:
+Payment providers may process information such as:
 
-* transaction identifier;
-* Customer identifier;
-* Transport Provider payout identifier;
-* transaction amount;
-* currency;
+* payment amount;
+* payment method;
+* transaction reference;
 * payment status;
 * refund status;
-* chargeback status;
-* payout status;
-* payment-provider account identifier; and
-* limited payment-method information.
+* payout information;
+* fraud-prevention information.
 
-Where a payment provider directly collects payment-card information, Transpo24 may not receive or store the complete payment-card number.
+Transport service providers may also provide bank or payout information to the relevant payment provider.
 
----
+10. Technical and Device Information
 
-# 15. Device and Technical Information
-
-Transpo24 may automatically process information such as:
+We may process technical information such as:
 
 * IP address;
 * device type;
 * operating system;
-* application version;
-* browser;
+* app version;
 * device identifiers;
-* push-notification token;
-* language;
-* time zone;
-* login information;
+* login records;
 * crash information;
-* technical logs;
-* security events; and
-* usage information.
+* security logs;
+* notification tokens;
+* browser information;
+* general app usage information.
 
----
+11. Why We Use Personal Data
 
-# 16. Push Notifications
-
-Where users enable notifications, Transpo24 may process push-notification tokens.
-
-Notifications may relate to:
-
-* new offers;
-* new requests;
-* transport updates;
-* provider selection;
-* driver arrival;
-* delivery status;
-* payments;
-* account security;
-* support; and
-* other Platform functionality.
-
-Users can usually control notification permissions through their device settings.
-
----
-
-# 17. Purposes of Processing
-
-Transpo24 may process personal data for purposes including:
+We may process personal data for purposes including:
 
 * creating and managing accounts;
 * verifying users;
-* verifying Transport Providers;
-* creating transport requests;
-* matching Customers with Transport Providers;
-* displaying transport offers;
-* managing accepted transports;
+* matching customers with suitable transport service providers;
+* enabling transport offers;
+* processing bookings;
+* coordinating pickup and delivery;
 * providing GPS tracking;
-* enabling communication;
-* processing payments;
-* managing payouts;
-* preventing fraud;
-* protecting users;
-* detecting abuse;
-* enforcing Platform policies;
-* handling complaints;
-* resolving disputes;
+* processing payments and payouts;
 * providing customer support;
-* complying with legal obligations;
-* improving Platform functionality;
-* maintaining security;
-* monitoring technical performance; and
-* developing new features.
+* handling additional expenses;
+* investigating complaints and disputes;
+* preventing fraud and platform misuse;
+* protecting platform security;
+* fulfilling legal obligations;
+* improving platform functionality;
+* communicating important service information.
 
----
+Marketing communications will only be sent where permitted by applicable law and, where required, with the user’s consent.
 
-# 18. Legal Basis
+12. Smart Matching
 
-Depending on the applicable law and type of processing, Transpo24 may process personal data because:
+Transpo24 may use automated systems to identify transport requests that may be relevant to a transport service provider.
 
-* processing is necessary to provide requested services;
-* processing is necessary to perform contractual obligations;
-* processing is necessary to comply with legal obligations;
-* processing is necessary for legitimate business interests;
-* the user has provided consent where required; or
-* another lawful basis applies.
+Matching may consider factors such as:
 
-Where consent is legally required, Transpo24 will seek the appropriate consent.
+* location;
+* direction of travel;
+* pickup and delivery route;
+* transport category;
+* vehicle type;
+* available capacity;
+* equipment;
+* time and availability.
 
----
+For example, a transport service provider already travelling from Basel toward Zürich may be shown a transport request along the same or a similar route.
 
-# 19. Legitimate Interests
+The purpose is to improve matching and make better use of available transport capacity.
 
-Where legally permitted, Transpo24 may process personal data for legitimate interests including:
+13. Future AI-Assisted Pricing
 
-* preventing fraud;
-* ensuring Platform security;
-* enforcing Platform rules;
-* improving services;
-* investigating complaints;
-* preventing misuse;
-* maintaining reliable payment processing; and
-* protecting users and third parties.
+Transpo24 may in the future use historical transport data and automated or AI-assisted systems to provide non-binding pricing guidance.
 
-Such processing will be balanced against applicable rights and interests of affected persons.
+Such systems may consider factors including:
 
----
+* distance;
+* transport category;
+* size and weight;
+* condition;
+* equipment requirements;
+* route;
+* timing;
+* historical transport data.
 
-# 20. Data Shared Between Customers and Transport Providers
+Any such price recommendation is intended as guidance unless explicitly stated otherwise.
 
-To facilitate a transport, certain information may be shared between the Customer and selected or prospective Transport Providers.
+The actual legal and data-protection framework for future AI functionality will be reviewed before activation where required.
 
-This may include information such as:
+14. Who We May Share Data With
 
-* first name or profile information;
-* pickup area;
-* delivery area;
+Personal data may be shared where necessary with:
+
+Other Platform Users
+
+For a specific transport, relevant information may be shared between customer and transport service provider, for example:
+
+* pickup and delivery information;
 * transport description;
-* photographs;
-* transport requirements;
-* offer information;
-* selected contact details where necessary;
-* active transport location information; and
-* transport status.
+* status;
+* relevant photos;
+* necessary communication.
 
-Transpo24 should limit disclosure to information reasonably necessary for Platform functionality.
+Payment Providers
 
----
+Payment and payout information may be shared with payment processors.
 
-# 21. Service Providers
+Technology Providers
 
-Transpo24 may use external service providers for activities such as:
+Data may be processed by providers supporting:
 
-* cloud hosting;
-* database hosting;
-* payment processing;
-* mapping;
-* geolocation;
-* identity verification;
-* SMS delivery;
-* email delivery;
-* push notifications;
+* hosting;
+* cloud storage;
+* maps;
+* GPS;
+* notifications;
+* communication;
+* OTP verification;
+* KYC;
+* security;
 * analytics;
-* security monitoring;
-* customer support; and
-* technical infrastructure.
+* technical support.
 
-These providers may process personal data on behalf of Transpo24 or as independent controllers, depending on the service.
+Authorities
 
----
+Information may be disclosed to authorities, courts or law-enforcement bodies where required by law or a valid legal request.
 
-# 22. Payment Providers
+Transpo24 does not sell users’ personal data.
 
-Payment information may be shared with payment service providers where necessary to:
+15. Prohibited or Undeclared Goods
 
-* collect payments;
-* authenticate payments;
-* prevent payment fraud;
-* issue refunds;
-* handle chargebacks;
-* make payouts; and
-* comply with financial regulations.
+Customers are responsible for accurately describing the goods or items they request to be transported.
 
-Payment providers may independently process personal data in accordance with their own privacy notices.
+Transpo24 may process information concerning suspected prohibited or illegal goods for purposes including:
 
----
-
-# 23. Maps and Location Providers
-
-Transpo24 may use third-party mapping, navigation and geolocation services.
-
-Relevant location, route or device information may therefore be processed by those providers as required to provide the applicable functionality.
-
----
-
-# 24. Identity Verification Providers
-
-Where Transpo24 uses an external KYC or identity-verification provider, relevant information may be shared for:
-
-* identity verification;
-* document verification;
+* platform safety;
 * fraud prevention;
-* sanctions or regulatory checks where legally required; and
-* account protection.
+* investigation;
+* legal compliance;
+* cooperation with competent authorities.
 
----
+Transpo24 does not generally inspect the physical contents of sealed packages, containers or vehicles.
 
-# 25. Legal Authorities
+Responsibility for the legality, declaration and transport of goods is governed by the Transpo24 Terms & Conditions and applicable law.
 
-Transpo24 may disclose personal data where required or permitted by law to:
+16. Disputes and Claims
 
-* courts;
-* police;
-* prosecutors;
-* regulatory bodies;
-* tax authorities;
-* financial authorities;
-* transport authorities; or
-* other competent authorities.
+Where a complaint, dispute or damage claim occurs, Transpo24 may process relevant information including:
 
-Transpo24 may also preserve records where required by a lawful order or legal obligation.
-
----
-
-# 26. Fraud and Safety
-
-Personal data may be processed where reasonably necessary to detect or investigate:
-
-* fraud;
-* stolen accounts;
-* falsified documentation;
-* illegal shipments;
-* payment abuse;
-* safety incidents;
-* harassment;
-* criminal activity;
-* prohibited goods; or
-* misuse of Transpo24.
-
----
-
-# 27. International Data Transfers
-
-Some service providers may process data outside Switzerland.
-
-Where personal data is transferred internationally, Transpo24 will use measures required by applicable data-protection law.
-
-These measures may include:
-
-* recognised adequate jurisdictions;
-* contractual safeguards;
-* standard contractual clauses;
-* supplementary safeguards; or
-* another legally permitted transfer mechanism.
-
----
-
-# 28. European Users
-
-Where the EU General Data Protection Regulation applies to a particular processing activity, Transpo24 will apply relevant GDPR requirements in addition to applicable Swiss data-protection requirements.
-
----
-
-# 29. Data Retention
-
-Transpo24 will retain personal data only for as long as reasonably necessary for the purposes for which it was collected or as required by law.
-
-Profile, authentication, device-token and active-session data is deleted or irreversibly de-identified following a verified account-deletion request, except where a specific legal or safety obligation requires limited retention.
-
-Transaction, payment, tax, accounting, fraud-prevention, insurance, safety, legal-claim and dispute records may be retained for up to seven years where required or permitted by law.
-
-When an applicable retention period ends, retained personal data is deleted or irreversibly anonymised.
-
----
-
-# 30. Account Deletion
-
-Users can request deletion in the Transpo24 app under Profile → Account → Delete account, or without the app at https://transpo24.com/account-deletion by emailing info@transpo24.com.
-
-After verifying the requester, Transpo24 will delete or irreversibly de-identify account profile, authentication, active-session and device-token data. Transpo24 aims to complete verified requests within 30 days unless applicable law permits or requires more time.
-
-Deletion of an account does not necessarily require immediate deletion of all associated data.
-
-Certain information may need to be retained where necessary for:
-
-* legal obligations;
-* tax or accounting requirements;
+* booking details;
+* photographs;
+* chat records;
 * payment records;
-* unresolved disputes;
+* GPS or location information;
+* pickup and delivery evidence;
+* user statements;
+* support correspondence.
+
+Such data may be used to investigate the issue, assist the parties, prevent fraud, comply with legal obligations and protect legitimate legal interests.
+
+The processing of dispute-related data does not mean that Transpo24 accepts responsibility for the underlying physical transport or goods.
+
+17. Data Retention
+
+Personal data is retained only for as long as reasonably necessary for:
+
+* provision of the service;
+* legal obligations;
+* accounting and tax requirements;
 * fraud prevention;
-* legal claims;
-* safety investigations; or
-* enforcement purposes.
+* safety;
+* dispute resolution;
+* establishment, exercise or defence of legal claims.
 
----
+Different categories of data may be subject to different retention periods.
 
-# 31. Data Security
+Specific retention periods may be updated to reflect technical, legal and regulatory requirements.
 
-Transpo24 will use reasonable technical and organisational measures designed to protect personal data.
+18. Account Deletion
 
-These may include measures such as:
+Users may request deletion of their account.
 
-* encryption;
-* authentication controls;
-* access controls;
-* network security;
-* secure transport protocols;
-* password hashing;
-* audit logging;
-* backup controls;
-* environment separation;
-* access restrictions; and
-* security monitoring.
+Certain information may need to be retained after account deletion where required by law or reasonably necessary for:
 
-No system can guarantee absolute security.
+* accounting;
+* tax records;
+* outstanding payments;
+* disputes;
+* fraud prevention;
+* legal claims.
 
----
+Where retention is no longer necessary, data will be deleted or anonymized as appropriate.
 
-# 32. Access Controls
+19. International Data Transfers
 
-Sensitive information such as identity documents, verification documents and payment-related information should be accessible only to authorised persons and systems where required for legitimate purposes.
+Some service providers may process information outside Switzerland.
 
----
+Where required, Transpo24 will use legally recognized mechanisms and safeguards for international transfers of personal data.
 
-# 33. User Rights
+20. Data Security
+
+Transpo24 uses reasonable technical and organizational measures designed to protect personal data against:
+
+* unauthorized access;
+* loss;
+* misuse;
+* alteration;
+* disclosure;
+* destruction.
+
+No digital system can guarantee absolute security.
+
+Users are responsible for protecting their account credentials and should notify Transpo24 if they suspect unauthorized access.
+
+21. User Rights
 
 Depending on applicable law, users may have rights including:
 
-* obtaining information about personal data processing;
-* requesting access to personal data;
-* requesting correction of inaccurate information;
-* requesting deletion where legally available;
-* objecting to certain processing;
-* withdrawing consent where processing is based on consent;
-* requesting restriction in appropriate circumstances;
-* requesting data portability where applicable; and
-* submitting a complaint to a competent data-protection authority.
+* access to personal data;
+* correction of inaccurate data;
+* deletion;
+* restriction of processing;
+* objection to certain processing;
+* withdrawal of consent where processing is based on consent;
+* receipt or portability of certain data.
 
-These rights may be subject to legal limitations.
+Requests may be sent to:
 
----
+privacy@transpo24.ch
 
-# 34. Correcting Information
+Identity verification may be required before processing a request.
 
-Users may be able to correct some account information directly through the application.
+22. Children
 
-Other correction requests may be submitted to Transpo24 support.
+Transpo24 is not intended for children who are not legally permitted to enter into the relevant contracts or provide transport services.
 
----
+Transport service providers must meet the applicable legal age and licensing requirements.
 
-# 35. Withdrawal of Consent
+23. Changes to This Privacy Policy
 
-Where processing is based on consent, users may withdraw consent.
+This Privacy Policy may be updated where:
 
-Withdrawal does not affect the lawfulness of processing performed before withdrawal.
+* platform functions change;
+* new payment methods are introduced;
+* new countries are launched;
+* new technologies are introduced;
+* legal requirements change.
 
-Certain Platform functions may become unavailable where the withdrawn consent is necessary to provide them.
+Material changes will be communicated as required by applicable law.
 
----
+24. Future Company Transfer
 
-# 36. Location Withdrawal
+Transpo24 is currently intended to be operated by Autobasilea GmbH.
 
-Users may disable device location permissions.
+If the platform is later transferred to a dedicated Transpo24 company or another lawful operator, personal data and user relationships may be transferred where legally permitted.
 
-However, functions such as:
+Users will be informed where required by law.
 
-* matching;
-* nearby transport requests;
-* active transport tracking;
-* route coordination; or
-* estimated arrival features
+25. Contact
 
-may no longer function correctly.
+Transpo24
+operated by Autobasilea GmbH
 
----
+Riehenring 32
+4058 Basel
+Switzerland
 
-# 37. Children's Data
+Email: privacy@transpo24.ch
+General contact: info@transpo24.ch
+Phone: +41 79 800 98 00
+UID / Handelsregister-Nr.: CHE-327.671.246
 
-Transpo24 is not intended for independent use by children below the legally permitted age for entering into the relevant services.
+⸻
 
-Where age restrictions apply, users must satisfy applicable minimum-age requirements.
+IMPORTANT NOTICE
 
----
+This is an interim Privacy Policy prepared for temporary platform and app submission purposes.
 
-# 38. Business Accounts
-
-Where a company provides personal data relating to its staff, drivers or representatives, the company is responsible for ensuring that it is legally permitted to provide that information.
-
----
-
-# 39. Other People Included in a Transport
-
-A Customer may provide information about other persons, such as:
-
-* pickup contact;
-* delivery contact;
-* business representative; or
-* property owner.
-
-The Customer should only provide such information where they are legally permitted to do so and where reasonably necessary for the transport.
-
----
-
-# 40. Automated Matching
-
-Transpo24 may use automated systems to determine which transport requests or Transport Providers appear relevant.
-
-Matching factors may include:
-
-* location;
-* transport category;
-* vehicle;
-* capacity;
-* availability;
-* route;
-* distance;
-* equipment; and
-* other relevant factors.
-
----
-
-# 41. AI and Automated Recommendations
-
-Transpo24 may in the future use automated or AI-supported systems to provide:
-
-* price suggestions;
-* route-related recommendations;
-* matching recommendations;
-* fraud indicators; or
-* other assistance.
-
-Where required by applicable law, Transpo24 will provide additional information about automated processing that has significant legal or comparable effects.
-
----
-
-# 42. Analytics
-
-Transpo24 may use analytics to understand:
-
-* application performance;
-* feature usage;
-* crashes;
-* technical errors;
-* usage trends; and
-* service performance.
-
-Where consent is legally required for particular analytics technologies, Transpo24 will seek such consent.
-
----
-
-# 43. Website Cookies
-
-The Transpo24 website may use cookies or similar technologies.
-
-Some cookies may be necessary for operation.
-
-Other cookies may be used for:
-
-* preferences;
-* analytics;
-* security; or
-* marketing.
-
-Where legally required, users will be given appropriate choices regarding non-essential cookies.
-
-A separate Cookie Policy may provide additional information.
-
----
-
-# 44. Business Transfer
-
-If Transpo24 is transferred from Autobasilea GmbH to another company, or if the relevant business is sold, reorganised or transferred, personal data may be transferred as part of that transaction where legally permitted.
-
-Affected users will be informed where required by law.
-
----
-
-# 45. Changes to This Privacy Policy
-
-Transpo24 may update this Privacy Policy to reflect:
-
-* legal changes;
-* new features;
-* new service providers;
-* new countries;
-* new payment systems;
-* changes to data processing; or
-* security and compliance requirements.
-
-Material changes will be communicated where legally required.
-
----
-
-# 46. Contact
-
-Questions or requests concerning privacy may be directed to:
-
-**Autobasilea GmbH / Transpo24**
-
-Privacy Email: info@transpo24.com
-
----
-
-# 47. Swiss Data Protection Authority
-
-Users may have the right to contact the competent Swiss data-protection authority where they believe their personal data has been processed unlawfully.
-
----
-
-# 48. Summary
-
-When using Transpo24, users should understand that:
-
-1. Transpo24 processes account and transport information to operate the marketplace.
-
-2. Transport Providers may be required to provide identity, vehicle, insurance and verification documents.
-
-3. GPS data may be processed for matching and active transport tracking.
-
-4. Customers and Transport Providers may receive limited information about each other where necessary to perform the transport.
-
-5. Payment providers may independently process payment information.
-
-6. Transpo24 may process communications, photographs and delivery evidence for support, security and dispute resolution.
-
-7. Personal data may be shared with technical service providers where necessary to operate Transpo24.
-
-8. Personal data may be disclosed to authorities where legally required or permitted.
-
-9. Data is retained only as long as reasonably necessary or legally required.
-
-10. Users may have rights to access, correct or delete personal information subject to applicable legal restrictions.
-`;
+It is currently subject to final legal review and may be amended before the commercial launch of Transpo24.`;

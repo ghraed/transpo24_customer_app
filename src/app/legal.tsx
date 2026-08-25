@@ -19,7 +19,7 @@ export function LegalDocumentScreen({ document }: LegalDocumentScreenProps) {
   const params = useLocalSearchParams<{ document?: string | string[] }>();
   const activeDocument = document ?? resolveDocument(params.document);
   const isTerms = activeDocument === 'terms';
-  const title = isTerms ? 'Terms of Service' : 'Privacy Policy';
+  const title = isTerms ? 'Terms & Conditions' : 'Privacy Policy';
   const content = isTerms ? TERMS_OF_SERVICE : PRIVACY_POLICY;
   const otherDocument: LegalDocument = isTerms ? 'privacy' : 'terms';
   const otherLabel = isTerms ? 'Privacy Policy' : 'Terms of Service';

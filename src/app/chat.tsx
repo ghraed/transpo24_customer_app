@@ -56,6 +56,11 @@ type RouteParams = {
   transportRequestId?: string;
 };
 
+type TranslatedMessage = {
+  language: AppLanguage;
+  text: string;
+};
+
 const INITIAL_PAGE_LIMIT = 100;
 const CHAT_INPUT_BOTTOM_PADDING = 12;
 const REPORT_REASONS: { value: ChatReportReason; label: string }[] = [
@@ -84,6 +89,10 @@ function containsGermanMarkers(value: string): boolean {
   return /[äöüß]/i.test(value);
 }
 
+function containsItalianMarkers(value: string): boolean {
+  return /[àìòù]/i.test(value);
+}
+
 function normalizeComparableText(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
@@ -95,6 +104,7 @@ function buildSourceLanguageCandidates(text: string, targetLanguage: AppLanguage
     prioritized.push('ar');
   } else {
     if (containsSpanishMarkers(text)) prioritized.push('es');
+    if (containsItalianMarkers(text)) prioritized.push('it');
     if (containsFrenchMarkers(text)) prioritized.push('fr');
     if (containsGermanMarkers(text)) prioritized.push('de');
     prioritized.push('en');
@@ -194,8 +204,7 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSending, setIsSending] = useState<boolean>(false);
   const [socketStatusText, setSocketStatusText] = useState<string>('');
-  const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
-  const [expandedTranslations, setExpandedTranslations] = useState<Record<string, boolean>>({});
+  const [translatedMessages, setTranslatedMessages] = useState<Record<string, TranslatedMessage>>({});
   const [translatingMessageIds, setTranslatingMessageIds] = useState<Record<string, boolean>>({});
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [reportMessageId, setReportMessageId] = useState<string | undefined>();
@@ -203,6 +212,8 @@ export default function ChatScreen() {
   const [reportDetails, setReportDetails] = useState('');
   const [isSubmittingSafetyAction, setIsSubmittingSafetyAction] = useState(false);
   const [safetyMessage, setSafetyMessage] = useState('');
+  const activeLanguageRef = useRef<AppLanguage>(language);
+  const translationRequestedMessageIdsRef = useRef<Set<string>>(new Set());
 
   const resolvedRoomId = room?.id ?? initialRoomId;
   const effectiveSocketStatusText =
@@ -296,9 +307,8 @@ export default function ChatScreen() {
   }, [changeBlockState, room]);
 
   useEffect(() => {
-    setTranslatedMessages({});
-    setExpandedTranslations({});
-    setTranslatingMessageIds({});
+    activeLanguageRef.current = language;
+    translationRequestedMessageIdsRef.current.clear();
   }, [language]);
 
   const loadConversation = useCallback(async (): Promise<ChatRoom | null> => {
@@ -507,20 +517,17 @@ export default function ChatScreen() {
     }
   }, [draft, room]);
 
-  const translateMessage = useCallback(async (message: ChatMessage): Promise<void> => {
+  const translateIncomingMessage = useCallback(async (message: ChatMessage): Promise<void> => {
     const body = message.body?.trim() ?? '';
-    if (!body) {
+    if (!body || message.senderRole !== 'DRIVER') {
       return;
     }
 
-    const existingTranslation = translatedMessages[message.id];
-    if (existingTranslation) {
-      setExpandedTranslations((current) => ({
-        ...current,
-        [message.id]: !current[message.id],
-      }));
+    const translationKey = `${language}:${message.id}`;
+    if (translationRequestedMessageIdsRef.current.has(translationKey)) {
       return;
     }
+    translationRequestedMessageIdsRef.current.add(translationKey);
 
     setTranslatingMessageIds((current) => ({ ...current, [message.id]: true }));
 
@@ -542,10 +549,13 @@ export default function ChatScreen() {
         }
       }
 
-      setTranslatedMessages((current) => ({ ...current, [message.id]: translated }));
-      setExpandedTranslations((current) => ({
+      if (activeLanguageRef.current !== language) {
+        return;
+      }
+
+      setTranslatedMessages((current) => ({
         ...current,
-        [message.id]: normalizeComparableText(translated) !== normalizeComparableText(body),
+        [message.id]: { language, text: translated },
       }));
     } finally {
       setTranslatingMessageIds((current) => {
@@ -554,7 +564,13 @@ export default function ChatScreen() {
         return next;
       });
     }
-  }, [language, translatedMessages]);
+  }, [language]);
+
+  useEffect(() => {
+    for (const message of messages) {
+      void translateIncomingMessage(message);
+    }
+  }, [messages, translateIncomingMessage]);
 
   const sortedMessages = useMemo(
     () =>
@@ -662,8 +678,16 @@ export default function ChatScreen() {
               ]}
               renderItem={({ item }) => {
                 const isClientMessage = item.senderRole === 'CLIENT';
-                const translatedText = translatedMessages[item.id];
-                const isShowingTranslation = Boolean(expandedTranslations[item.id] && translatedText);
+                const translatedMessage = translatedMessages[item.id];
+                const translatedText = translatedMessage?.language === language
+                  ? translatedMessage.text
+                  : undefined;
+                const isShowingTranslation = Boolean(
+                  !isClientMessage &&
+                  translatedText &&
+                  item.body &&
+                  normalizeComparableText(translatedText) !== normalizeComparableText(item.body),
+                );
                 const isTranslating = Boolean(translatingMessageIds[item.id]);
                 const displayedBody = isShowingTranslation ? translatedText : item.body;
 
@@ -679,15 +703,13 @@ export default function ChatScreen() {
                         styles.messageBubble,
                         isClientMessage ? styles.clientBubble : styles.driverBubble,
                       ]}
-                      onPress={() => void translateMessage(item)}
                       onLongPress={
                         isClientMessage ? undefined : () => openReportModal(item.id)
                       }
-                      disabled={!item.body || isTranslating}
                       accessibilityHint={
                         isClientMessage
-                          ? 'Tap to translate'
-                          : 'Tap to translate. Long press to report this message.'
+                          ? undefined
+                          : 'Long press to report this message.'
                       }
                     >
                       {displayedBody ? (
