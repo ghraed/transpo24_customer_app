@@ -382,6 +382,42 @@ export default function ProfileTabScreen() {
 
           <Pressable
             style={styles.actionRow}
+            onPress={() => router.push("/privacy")}
+          >
+            <View style={styles.actionIconWrap}>
+              <IconSymbol
+                name={{
+                  ios: "hand.raised.fill",
+                  android: "privacy_tip",
+                  web: "privacy_tip",
+                }}
+                color="#111827"
+                size={18}
+              />
+            </View>
+            <Text style={styles.actionText}>{t("Privacy Policy")}</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionRow}
+            onPress={() => router.push("/terms")}
+          >
+            <View style={styles.actionIconWrap}>
+              <IconSymbol
+                name={{
+                  ios: "doc.text.fill",
+                  android: "description",
+                  web: "description",
+                }}
+                color="#111827"
+                size={18}
+              />
+            </View>
+            <Text style={styles.actionText}>{t("Terms of Service")}</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionRow}
             onPress={() => void onRegisterPush()}
           >
             <View style={styles.actionIconWrap}>

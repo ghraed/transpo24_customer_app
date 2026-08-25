@@ -14,6 +14,17 @@ const STRIPE_MERCHANT_IDENTIFIER =
   process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() ||
   process.env.EXPO_STRIPE_MERCHANT_IDENTIFIER?.trim() ||
   '';
+const STRIPE_PUBLISHABLE_KEY =
+  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() || '';
+
+if (
+  process.env.EAS_BUILD_PROFILE === 'production' &&
+  !STRIPE_PUBLISHABLE_KEY.startsWith('pk_live_')
+) {
+  throw new Error(
+    'Production builds require EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to be a Stripe live publishable key (pk_live_...).',
+  );
+}
 
 export default ({ config }: ConfigContext) => {
   const existingPlugins = Array.isArray(config.plugins) ? config.plugins : [];
