@@ -67,6 +67,11 @@ async function ensureAndroidChannel(): Promise<void> {
 }
 
 async function requestNotificationPermissions(): Promise<boolean> {
+  // Android 13+ will not show the notification permission dialog until a
+  // channel exists.  Do this here (and await it) instead of relying on the
+  // fire-and-forget setup in initializeNotifications().
+  await ensureAndroidChannel();
+
   const existingPermissions = await Notifications.getPermissionsAsync();
   if (existingPermissions.granted) {
     return true;
