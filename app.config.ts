@@ -16,13 +16,23 @@ const STRIPE_MERCHANT_IDENTIFIER =
   '';
 const STRIPE_PUBLISHABLE_KEY =
   process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() || '';
+const EAS_BUILD_PROFILE = process.env.EAS_BUILD_PROFILE?.trim() || '';
 
 if (
-  process.env.EAS_BUILD_PROFILE === 'production' &&
+  EAS_BUILD_PROFILE === 'production' &&
   !STRIPE_PUBLISHABLE_KEY.startsWith('pk_live_')
 ) {
   throw new Error(
     'Production builds require EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to be a Stripe live publishable key (pk_live_...).',
+  );
+}
+
+if (
+  EAS_BUILD_PROFILE === 'play-test' &&
+  !STRIPE_PUBLISHABLE_KEY.startsWith('pk_test_')
+) {
+  throw new Error(
+    'Play testing builds require EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to be a Stripe test publishable key (pk_test_...).',
   );
 }
 

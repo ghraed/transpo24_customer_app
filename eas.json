@@ -6,10 +6,17 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "preview"
+    },
+    "play-test": {
+      "distribution": "store",
+      "environment": "preview",
+      "autoIncrement": true
     },
     "production": {
       "environment": "production",
@@ -23,9 +30,14 @@
     }
   },
   "submit": {
-    "production": {
+    "play-test": {
       "android": {
         "track": "internal"
+      }
+    },
+    "production": {
+      "android": {
+        "track": "production"
       }
     }
   }
