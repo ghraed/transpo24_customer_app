@@ -1,12 +1,13 @@
 # Google Play release checklist
 
-Last audited: 24 August 2026
+Last audited: 27 August 2026
 
 ## Completed in the project
 
 - [x] Android package is `com.transpo24.app`.
 - [x] EAS project is `@raed.gh/transpo24` (`d3e62d2e-cc21-4c2a-afb8-9b05f492c725`).
-- [x] Baseline production AAB `e6b18515-8659-4fa7-839e-d796d50f25ff` was verified with `targetSdkVersion="36"`.
+- [x] Production AAB `50116ad3-b420-4ba5-9c25-8ab34940b0a3` (version code 4) was built from current commit `08e6dd3411926beb608d42c192f1ed7f24389cd4` and passed Bundletool validation.
+- [x] Its final manifest uses `com.transpo24.app`, targets API 36, disables Android backup, and excludes microphone, overlay, broad photo/video, and background-location permissions.
 - [x] `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW` are blocked from generated Android manifests.
 - [x] Android app-data backup is disabled.
 - [x] Signup requires explicit Terms of Service and Privacy Policy acceptance.
@@ -27,10 +28,10 @@ Last audited: 24 August 2026
 
 ## Still required before production submission
 
-- [ ] Add the operator's verified postal address to the legal content.
-- [ ] Deploy and verify `https://transpo24.com/account-deletion`, then enter it in the Play Console account-deletion URL field.
+- [x] Add the operator's verified postal address to the legal content.
+- [x] Deploy and verify `https://transpo24.com/account-deletion`; entering it in the Play Console account-deletion URL field remains a console task.
 - [ ] Upload the prepared files from `phone-screenshots/` to the Play Console phone screenshots section.
-- [ ] Build a new production AAB from the current source, download it, and verify its final manifest still targets API 36 or higher and excludes blocked permissions.
+- [x] Build a new production AAB from the current source, download it, and verify its final manifest still targets API 36 or higher and excludes blocked permissions.
 - [ ] Configure the dedicated reviewer phone/OTP, prepare its customer data, and enter English App Access instructions.
 - [ ] Complete and submit Data Safety, Content rating, Target audience and content, Ads, Health apps, and Financial features declarations.
 - [ ] Select app category, countries/regions, and free/paid availability in Play Console.

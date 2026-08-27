@@ -1,6 +1,6 @@
 # Transpo24 customer app — Google Play release checklist
 
-Last reviewed: 24 August 2026
+Last reviewed: 27 August 2026
 
 This checklist covers the customer Android app (`com.transpo24.app`). Passing it reduces common
 review failures but does not guarantee approval; Google Play Console declarations must match the
@@ -10,10 +10,14 @@ production build and backend behavior exactly.
 
 - Android release targets API 36, uses package `com.transpo24.app`, disables Android backup, and
   excludes microphone, overlay, broad photo/video, and background-location permissions.
+- Production EAS build `50116ad3-b420-4ba5-9c25-8ab34940b0a3` (version code 4) was built from
+  commit `08e6dd3411926beb608d42c192f1ed7f24389cd4` and verified with Bundletool. Its final manifest
+  targets API 36, disables backup, and excludes microphone, overlay, broad photo/video, and
+  background-location permissions.
 - The app contains Privacy Policy and Terms links and requires acceptance during phone sign-in.
 - Account deletion is available in Profile → Account → Delete account.
-- A public deletion request page is available at `https://transpo24.com/account-deletion` after the
-  public-site deployment. It starts a request by email without requiring the app.
+- A public deletion request page is live at `https://transpo24.com/account-deletion`. It starts a
+  request by email without requiring the app.
 - The retention disclosure distinguishes promptly deleted/de-identified account data from legally
   retained transaction, payment, tax, safety, fraud and dispute records (up to seven years).
 - Customer-to-driver chat provides report-driver, report-message, block and unblock controls.
@@ -31,12 +35,13 @@ production build and backend behavior exactly.
 3. Create or prepare the customer account for that phone number with representative profile,
    request, offer, tracking and chat data that a reviewer can inspect.
 4. Deploy the admin dashboard and assign staff to review the Chat Safety Reports queue.
-5. Deploy the public site and verify these URLs from an incognito browser:
+5. Confirm these deployed public-site URLs remain reachable from an incognito browser:
    - `https://transpo24.com/privacy`
    - `https://transpo24.com/terms`
    - `https://transpo24.com/account-deletion`
-6. Build a new production Android App Bundle with EAS. Do not upload an APK for production.
-7. Smoke-test the exact signed AAB through Play internal testing before promoting it.
+6. Use verified production AAB version code 4 from EAS build
+   `50116ad3-b420-4ba5-9c25-8ab34940b0a3`. Do not upload an APK for production.
+7. Smoke-test this exact signed AAB through Play internal testing before promoting it.
 
 ## Play Console — App content
 
