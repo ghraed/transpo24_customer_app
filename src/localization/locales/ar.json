@@ -236,7 +236,7 @@
   "ID {{value0}}": "ID {{value0}}",
   "{{value0}} {{value1}} {{value2}}": "{{value0}} {{value1}} {{value2}}",
   "Delete account?": "حذف الحساب؟",
-  "This permanently deletes your account, signs you out on all devices, and cannot be undone.": "سيؤدي هذا إلى حذف حسابك نهائياً، وتسجيل خروجك من جميع الأجهزة، ولا يمكن التراجع عنه.",
+  "This permanently deletes your account, signs you out on all devices, and cannot be undone. If you have an active transport request, complete or cancel it before deleting your account.": "سيؤدي هذا إلى حذف حسابك نهائياً، وتسجيل خروجك من جميع الأجهزة، ولا يمكن التراجع عنه. إذا كان لديك طلب نقل نشط، فأكمله أو ألغِه قبل حذف حسابك.",
   "Delete account": "حذف الحساب",
   "Unable to delete account": "تعذر حذف الحساب",
   "Please try again.": "يرجى المحاولة مرة أخرى.",

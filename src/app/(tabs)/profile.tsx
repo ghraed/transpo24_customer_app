@@ -113,7 +113,7 @@ export default function ProfileTabScreen() {
     if (isDeletingAccount) return;
     Alert.alert(
       t("Delete account?"),
-      t("This permanently deletes your account, signs you out on all devices, and cannot be undone."),
+      t("This permanently deletes your account, signs you out on all devices, and cannot be undone. If you have an active transport request, complete or cancel it before deleting your account."),
       [
         { text: t("Cancel"), style: "cancel" },
         {

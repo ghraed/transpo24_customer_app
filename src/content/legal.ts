@@ -683,6 +683,8 @@ Specific retention periods may be updated to reflect technical, legal and regula
 
 Users may request deletion of their account.
 
+Users may submit a deletion request at any time. If an account has an active transport request, that transport request must first be completed or cancelled before account deletion can be completed.
+
 Certain information may need to be retained after account deletion where required by law or reasonably necessary for:
 
 * accounting;

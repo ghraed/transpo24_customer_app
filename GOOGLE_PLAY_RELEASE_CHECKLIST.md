@@ -10,14 +10,18 @@ production build and backend behavior exactly.
 
 - Android release targets API 36, uses package `com.transpo24.app`, disables Android backup, and
   excludes microphone, overlay, broad photo/video, and background-location permissions.
-- Production EAS build `50116ad3-b420-4ba5-9c25-8ab34940b0a3` (version code 4) was built from
-  commit `08e6dd3411926beb608d42c192f1ed7f24389cd4` and verified with Bundletool. Its final manifest
+- Production EAS build `1472c057-b68d-47ca-bf64-9e99918ce6fa` (version code 5) was built from the
+  release workspace based on commit `38952d4aaeb18e2797a2fd7843ce7326f2c479c2` and verified with
+  Bundletool and `jarsigner`. Its SHA-256 is
+  `179705404edca2725a36d9d60e05e7c4f0c7b708b77a504ad029c1f2c28c9df4`. Its final manifest
   targets API 36, disables backup, and excludes microphone, overlay, broad photo/video, and
   background-location permissions.
 - The app contains Privacy Policy and Terms links and requires acceptance during phone sign-in.
 - Account deletion is available in Profile → Account → Delete account.
 - A public deletion request page is live at `https://transpo24.com/account-deletion`. It starts a
   request by email without requiring the app.
+- The in-app and public deletion paths disclose that an active transport request must be completed
+  or cancelled before account deletion can be completed.
 - The retention disclosure distinguishes promptly deleted/de-identified account data from legally
   retained transaction, payment, tax, safety, fraud and dispute records (up to seven years).
 - Customer-to-driver chat provides report-driver, report-message, block and unblock controls.
@@ -39,8 +43,8 @@ production build and backend behavior exactly.
    - `https://transpo24.com/privacy`
    - `https://transpo24.com/terms`
    - `https://transpo24.com/account-deletion`
-6. Use verified production AAB version code 4 from EAS build
-   `50116ad3-b420-4ba5-9c25-8ab34940b0a3`. Do not upload an APK for production.
+6. Use verified production AAB version code 5 from EAS build
+   `1472c057-b68d-47ca-bf64-9e99918ce6fa`. Do not upload an APK for production.
 7. Smoke-test this exact signed AAB through Play internal testing before promoting it.
 
 ## Play Console — App content

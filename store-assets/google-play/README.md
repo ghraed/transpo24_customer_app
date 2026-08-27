@@ -6,13 +6,15 @@ Last audited: 27 August 2026
 
 - [x] Android package is `com.transpo24.app`.
 - [x] EAS project is `@raed.gh/transpo24` (`d3e62d2e-cc21-4c2a-afb8-9b05f492c725`).
-- [x] Production AAB `50116ad3-b420-4ba5-9c25-8ab34940b0a3` (version code 4) was built from current commit `08e6dd3411926beb608d42c192f1ed7f24389cd4` and passed Bundletool validation.
+- [x] Production AAB `1472c057-b68d-47ca-bf64-9e99918ce6fa` (version code 5) was built from the release workspace based on commit `38952d4aaeb18e2797a2fd7843ce7326f2c479c2` and passed Bundletool and signature validation.
+- [x] Its SHA-256 is `179705404edca2725a36d9d60e05e7c4f0c7b708b77a504ad029c1f2c28c9df4`.
 - [x] Its final manifest uses `com.transpo24.app`, targets API 36, disables Android backup, and excludes microphone, overlay, broad photo/video, and background-location permissions.
 - [x] `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW` are blocked from generated Android manifests.
 - [x] Android app-data backup is disabled.
 - [x] Signup requires explicit Terms of Service and Privacy Policy acceptance.
 - [x] Terms and Privacy content is available in-app through dedicated routes.
 - [x] In-app account deletion is available from Profile.
+- [x] In-app and public deletion paths disclose the active-transport-request prerequisite.
 - [x] Google Play icon is available as `icon-512.png` (512 x 512, RGBA PNG).
 - [x] Feature graphic is available as `feature-graphic-1024x500.png` (1024 x 500, RGB PNG).
 - [x] Three Play-compatible phone screenshots are available in `phone-screenshots/` (login, home, and completed orders).

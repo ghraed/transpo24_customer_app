@@ -236,7 +236,7 @@
   "ID {{value0}}": "ID {{value0}}",
   "{{value0}} {{value1}} {{value2}}": "{{value0}} {{value1}} {{value2}}",
   "Delete account?": "Konto löschen?",
-  "This permanently deletes your account, signs you out on all devices, and cannot be undone.": "Dadurch wird Ihr Konto endgültig gelöscht, Sie werden auf allen Geräten abgemeldet und dieser Vorgang kann nicht rückgängig gemacht werden.",
+  "This permanently deletes your account, signs you out on all devices, and cannot be undone. If you have an active transport request, complete or cancel it before deleting your account.": "Dadurch wird Ihr Konto endgültig gelöscht, Sie werden auf allen Geräten abgemeldet und dieser Vorgang kann nicht rückgängig gemacht werden. Wenn Sie einen aktiven Transportauftrag haben, schließen Sie ihn ab oder stornieren Sie ihn, bevor Sie Ihr Konto löschen.",
   "Delete account": "Konto löschen",
   "Unable to delete account": "Konto konnte nicht gelöscht werden",
   "Please try again.": "Bitte versuchen Sie es erneut.",
