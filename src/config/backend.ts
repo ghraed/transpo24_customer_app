@@ -60,13 +60,18 @@ function readBackendEnvValue(baseName: 'API_URL' | 'SOCKET_URL'): string | undef
   }
 
   if (Platform.OS === 'android') {
-    const androidOverride = process.env[`EXPO_PUBLIC_ANDROID_${baseName}`]?.trim();
+    const androidOverride =
+      baseName === 'API_URL'
+        ? process.env.EXPO_PUBLIC_ANDROID_API_URL?.trim()
+        : process.env.EXPO_PUBLIC_ANDROID_SOCKET_URL?.trim();
     if (androidOverride) {
       return androidOverride;
     }
   }
 
-  return process.env[`EXPO_PUBLIC_${baseName}`]?.trim();
+  return baseName === 'API_URL'
+    ? process.env.EXPO_PUBLIC_API_URL?.trim()
+    : process.env.EXPO_PUBLIC_SOCKET_URL?.trim();
 }
 
 export function createBackendReachabilityError(endpoint: string, envName = 'EXPO_PUBLIC_API_URL'): Error {
