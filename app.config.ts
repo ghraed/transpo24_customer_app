@@ -16,7 +16,19 @@ const STRIPE_MERCHANT_IDENTIFIER =
   '';
 const STRIPE_PUBLISHABLE_KEY =
   process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() || '';
+const API_URL = process.env.EXPO_PUBLIC_API_URL?.trim() || '';
+const ANDROID_API_URL = process.env.EXPO_PUBLIC_ANDROID_API_URL?.trim() || '';
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL?.trim() || '';
+const ANDROID_SOCKET_URL = process.env.EXPO_PUBLIC_ANDROID_SOCKET_URL?.trim() || '';
 const EAS_BUILD_PROFILE = process.env.EAS_BUILD_PROFILE?.trim() || '';
+
+function isProductionApiUrl(value: string): boolean {
+  try {
+    return new URL(value).origin === 'https://api.transpo24.com';
+  } catch {
+    return false;
+  }
+}
 
 if (
   EAS_BUILD_PROFILE === 'production' &&
@@ -34,6 +46,22 @@ if (
   throw new Error(
     'Play testing builds require EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to be a Stripe test publishable key (pk_test_...).',
   );
+}
+
+if (EAS_BUILD_PROFILE === 'play-test') {
+  const backendUrls = [API_URL, ANDROID_API_URL, SOCKET_URL, ANDROID_SOCKET_URL].filter(Boolean);
+
+  if (!API_URL) {
+    throw new Error(
+      'Play testing builds require EXPO_PUBLIC_API_URL to point to the staging API.',
+    );
+  }
+
+  if (backendUrls.some(isProductionApiUrl)) {
+    throw new Error(
+      'Play testing builds must not use https://api.transpo24.com. Set all API and socket URLs to the staging API that uses Stripe test credentials.',
+    );
+  }
 }
 
 export default ({ config }: ConfigContext) => {
