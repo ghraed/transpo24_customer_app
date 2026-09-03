@@ -22,7 +22,7 @@ export interface DecodedVinResult {
   manufactureYear?: number;
   estimatedWeightKg?: number;
   bodyType?: string;
-  source: 'VEHICLE_DATABASES';
+  source: 'swisscarinfo' | 'oneautoapi' | 'VIN_API';
 }
 
 export type VehicleVinDecodeResult = DecodedVinResult;

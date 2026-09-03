@@ -781,7 +781,10 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
     bodyType: data.bodyType ?? data.bodyClass,
     errorCode: data.errorCode,
     errorText: data.errorText,
-    source: 'VEHICLE_DATABASES',
+    source:
+      data.source === 'swisscarinfo' || data.source === 'oneautoapi'
+        ? data.source
+        : 'VIN_API',
   };
 }
 
