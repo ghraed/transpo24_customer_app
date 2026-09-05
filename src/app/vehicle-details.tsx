@@ -99,6 +99,11 @@ function parsePositiveInteger(value: string | undefined): number | undefined {
   return Number.isInteger(parsed) ? parsed : undefined;
 }
 
+function formatSwissRegistrationNumber(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 9);
+  return digits.match(/.{1,3}/g)?.join('.') ?? '';
+}
+
 function hasDecodedVehicleData(input: {
   make?: string;
   model?: string;
@@ -241,6 +246,9 @@ export default function VehicleDetailsScreen() {
 
   const [isLoadingBrands, setIsLoadingBrands] = useState<boolean>(true);
   const [isDecodingVin, setIsDecodingVin] = useState<boolean>(false);
+  const [isSwissRegistered, setIsSwissRegistered] = useState<boolean>(false);
+  const [swissRegistrationNumber, setSwissRegistrationNumber] =
+    useState<string>('');
   const [isLoadingModels, setIsLoadingModels] = useState<boolean>(false);
   const [isLoadingSeries, setIsLoadingSeries] = useState<boolean>(false);
   const [isLoadingYears, setIsLoadingYears] = useState<boolean>(false);
@@ -408,11 +416,7 @@ export default function VehicleDetailsScreen() {
   );
 
   const normalizedVin = useMemo(() => sanitizeVin(form.vin ?? ''), [form.vin]);
-  const vinValidationMessage = useMemo(
-    () => (normalizedVin ? getVinValidationMessage(normalizedVin) : null),
-    [normalizedVin],
-  );
-  const canDecodeVin = normalizedVin.length > 0 && !vinValidationMessage && !isDecodingVin;
+  const canDecodeVin = !isDecodingVin;
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
@@ -484,13 +488,25 @@ export default function VehicleDetailsScreen() {
       return;
     }
 
+    const swissRegistrationDigits = swissRegistrationNumber.replace(/\D/g, '');
+    if (isSwissRegistered && swissRegistrationDigits.length !== 9) {
+      setFallbackMessage(
+        appI18n.t('Swiss registration number must contain exactly 9 digits.'),
+      );
+      return;
+    }
+
     setIsDecodingVin(true);
     setFallbackMessage('');
     setErrorMessage('');
     setOpenDropdown(null);
 
     try {
-      const decoded = await decodeVehicleVin(vin);
+      const decoded = await decodeVehicleVin(vin, {
+        swissRegistrationNumber: isSwissRegistered
+          ? swissRegistrationDigits
+          : undefined,
+      });
       const hasUsefulData = hasDecodedVehicleData(decoded);
 
       if (!hasUsefulData) {
@@ -498,18 +514,13 @@ export default function VehicleDetailsScreen() {
         return;
       }
 
-      const shouldResolveBrand = !form.brandName.trim() && Boolean(decoded.make);
-      const shouldResolveModel = !form.modelName.trim() && Boolean(decoded.model);
-      const shouldResolveSeries = !form.seriesName?.trim() && Boolean(decoded.series ?? decoded.trim);
-
       let matchedBrand: VehicleCatalogBrand | undefined;
       let loadedModels: VehicleCatalogModel[] = [];
       let matchedModel: VehicleCatalogModel | undefined;
       let loadedSeries: VehicleCatalogSeries[] = [];
       let matchedSeries: VehicleCatalogSeries | undefined;
-      let loadedYears: VehicleCatalogYearOption[] = [];
 
-      if (shouldResolveBrand && decoded.make) {
+      if (decoded.make) {
         const decodedBrand = normalizeForMatch(decoded.make);
         matchedBrand = brands.find(
           (brand) => normalizeForMatch(brand.name) === decodedBrand,
@@ -522,7 +533,7 @@ export default function VehicleDetailsScreen() {
         setModels(loadedModels);
       }
 
-      if (shouldResolveModel && decoded.model && loadedModels.length > 0) {
+      if (decoded.model && loadedModels.length > 0) {
         const decodedModel = normalizeForMatch(decoded.model);
         matchedModel =
           loadedModels.find(
@@ -542,8 +553,9 @@ export default function VehicleDetailsScreen() {
         setSeries(loadedSeries);
       }
 
-      if (shouldResolveSeries && loadedSeries.length > 0) {
-        const decodedSeriesRaw = decoded.series ?? decoded.trim ?? '';
+      const decodedSeriesRaw =
+        decoded.series ?? decoded.variantCode ?? decoded.variant ?? decoded.trim ?? '';
+      if (decodedSeriesRaw && loadedSeries.length > 0) {
         const decodedSeries = normalizeForMatch(decodedSeriesRaw);
         matchedSeries =
           loadedSeries.find(
@@ -565,50 +577,37 @@ export default function VehicleDetailsScreen() {
 
       if (matchedSeries) {
         await pickSeries(matchedSeries);
-        loadedYears = await getVehicleYears(matchedSeries.id);
-        setYears(loadedYears);
+        setYears(await getVehicleYears(matchedSeries.id));
       }
 
       setForm((prev) => ({
         ...prev,
         vin,
-        brandId: prev.brandId ?? matchedBrand?.id,
-        brandName: prev.brandName.trim() ? prev.brandName : decoded.make ?? prev.brandName,
-        modelId: prev.modelId ?? matchedModel?.id,
-        modelName: prev.modelName.trim() ? prev.modelName : decoded.model ?? prev.modelName,
-        seriesId: prev.seriesId ?? matchedSeries?.id,
+        brandId: matchedBrand?.id,
+        brandName: decoded.make ?? prev.brandName,
+        modelId: matchedModel?.id,
+        modelName: matchedModel?.name ?? decoded.model ?? prev.modelName,
+        seriesId: matchedSeries?.id,
         seriesName:
-          prev.seriesName?.trim()
-            ? prev.seriesName
-            : matchedSeries?.name ??
-              decoded.series ??
-              decoded.variant ??
-              decoded.trim ??
-              prev.seriesName,
+          matchedSeries?.name ??
+          decoded.series ??
+          decoded.variantCode ??
+          decoded.variant ??
+          decoded.trim ??
+          prev.seriesName,
         variantName:
-          prev.variantName?.trim()
-            ? prev.variantName
-            : decoded.variant ??
-              decoded.trim ??
-              matchedSeries?.variantName ??
-              prev.variantName,
-        manufactureYear:
-          prev.manufactureYear ??
-          (decoded.manufactureYear &&
-          loadedYears.length > 0 &&
-          !loadedYears.some((yearOption) => yearOption.year === decoded.manufactureYear)
-            ? undefined
-            : decoded.manufactureYear),
+          decoded.variantCode ??
+          decoded.variant ??
+          decoded.trim ??
+          matchedSeries?.variantName ??
+          prev.variantName,
+        manufactureYear: decoded.manufactureYear ?? prev.manufactureYear,
         estimatedWeightKg:
-          prev.estimatedWeightKg && prev.estimatedWeightKg > 0
-            ? prev.estimatedWeightKg
-            : decoded.estimatedWeightKg && decoded.estimatedWeightKg > 0
-              ? decoded.estimatedWeightKg
-              : matchedSeries?.estimatedWeightKg ?? prev.estimatedWeightKg,
+          decoded.estimatedWeightKg && decoded.estimatedWeightKg > 0
+            ? decoded.estimatedWeightKg
+            : matchedSeries?.estimatedWeightKg ?? prev.estimatedWeightKg,
         bodyType:
-          prev.bodyType?.trim()
-            ? prev.bodyType
-            : decoded.bodyClass ?? decoded.bodyType ?? matchedSeries?.bodyType ?? prev.bodyType,
+          decoded.bodyClass ?? decoded.bodyType ?? matchedSeries?.bodyType ?? prev.bodyType,
         source: 'VIN_API',
       }));
     } catch {
@@ -618,13 +617,12 @@ export default function VehicleDetailsScreen() {
     }
   }, [
     brands,
-    form.brandName,
-    form.modelName,
-    form.seriesName,
     form.vin,
+    isSwissRegistered,
     pickBrand,
     pickModel,
     pickSeries,
+    swissRegistrationNumber,
   ]);
 
   const canContinue = validationErrors.length === 0 && !isDecodingVin;
@@ -817,6 +815,8 @@ export default function VehicleDetailsScreen() {
               setModels([]);
               setSeries([]);
               setYears([]);
+              setIsSwissRegistered(false);
+              setSwissRegistrationNumber('');
               setFallbackMessage('');
               setErrorMessage('');
             }}
@@ -825,6 +825,51 @@ export default function VehicleDetailsScreen() {
           </Pressable>
         ) : null}
       </View>
+      <View style={[styles.switchRow, styles.swissRegistrationToggle]}>
+        <Text style={styles.switchLabel}>{appI18n.t('Swiss-registered vehicle')}</Text>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: isSwissRegistered }}
+          style={[styles.switchChip, isSwissRegistered && styles.switchChipActive]}
+          onPress={() => {
+            setIsSwissRegistered((current) => !current);
+            setSwissRegistrationNumber('');
+            setFallbackMessage('');
+            setErrorMessage('');
+          }}
+        >
+          <Text
+            style={[
+              styles.switchChipText,
+              isSwissRegistered && styles.switchChipTextActive,
+            ]}
+          >
+            {isSwissRegistered ? appI18n.t('Yes') : appI18n.t('No')}
+          </Text>
+        </Pressable>
+      </View>
+      {isSwissRegistered ? (
+        <View style={styles.swissRegistrationField}>
+          <Text style={styles.label}>
+            {appI18n.t('Swiss registration number (Stammnummer)')}
+          </Text>
+          <TextInput
+            value={swissRegistrationNumber}
+            onChangeText={(value) => {
+              setSwissRegistrationNumber(formatSwissRegistrationNumber(value));
+              setFallbackMessage('');
+              setErrorMessage('');
+            }}
+            placeholder={appI18n.t('Field 18, for example 671.912.676')}
+            placeholderTextColor="#98a2b3"
+            style={styles.input}
+            keyboardType="number-pad"
+          />
+          <Text style={styles.sectionHint}>
+            {appI18n.t('Find this 9-digit number in field 18 of the Swiss registration document.')}
+          </Text>
+        </View>
+      ) : null}
       <Pressable
         style={[styles.secondaryButton, !canDecodeVin && styles.secondaryButtonDisabled]}
         onPress={() => void decodeVin()}
@@ -1379,6 +1424,12 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#111827',
     fontWeight: '700',
+  },
+  swissRegistrationToggle: {
+    marginTop: 12,
+  },
+  swissRegistrationField: {
+    marginTop: 12,
   },
   toggleRow: {
     flexDirection: 'row',

@@ -736,9 +736,17 @@ export async function uploadRequestPhotos(
   });
 }
 
-export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeResult> {
+export async function decodeVehicleVin(
+  vin: string,
+  options: { swissRegistrationNumber?: string } = {},
+): Promise<VehicleVinDecodeResult> {
   const normalizedVin = sanitizeVin(vin);
-  const endpoint = `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(normalizedVin)}`;
+  const query = new URLSearchParams();
+  if (options.swissRegistrationNumber) {
+    query.set('swissRegistrationNumber', options.swissRegistrationNumber);
+  }
+  const queryString = query.toString();
+  const endpoint = `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(normalizedVin)}${queryString ? `?${queryString}` : ''}`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
@@ -762,6 +770,7 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
     model: data.model,
     year: data.year ?? (typeof data.manufactureYear === 'number' ? String(data.manufactureYear) : undefined),
     trim: data.trim ?? data.variant,
+    variantCode: data.variantCode,
     vehicleType: data.vehicleType,
     bodyClass: data.bodyClass ?? data.bodyType,
     manufacturer: data.manufacturer,
@@ -772,6 +781,23 @@ export async function decodeVehicleVin(vin: string): Promise<VehicleVinDecodeRes
     transmissionStyle: data.transmissionStyle,
     driveType: data.driveType,
     doors: data.doors,
+    grossWeightKg: data.grossWeightKg,
+    payloadKg: data.payloadKg,
+    enginePowerKw: data.enginePowerKw,
+    enginePowerHp: data.enginePowerHp,
+    engineTorqueNm: data.engineTorqueNm,
+    lengthMm: data.lengthMm,
+    widthMm: data.widthMm,
+    heightMm: data.heightMm,
+    wheelbaseMm: data.wheelbaseMm,
+    seats: data.seats,
+    maxSpeedKmh: data.maxSpeedKmh,
+    brakedTowingKg: data.brakedTowingKg,
+    unbrakedTowingKg: data.unbrakedTowingKg,
+    co2CombinedGKm: data.co2CombinedGKm,
+    fuelConsumptionCombinedL100Km: data.fuelConsumptionCombinedL100Km,
+    euroStandard: data.euroStandard,
+    color: data.color,
     series: data.series ?? data.variant ?? data.trim,
     variant: data.variant ?? data.trim,
     manufactureYear:
