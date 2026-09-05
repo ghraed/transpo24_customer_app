@@ -7,19 +7,23 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "environment": "development"
+      "environment": "development",
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
-      "environment": "preview"
+      "environment": "preview",
+      "channel": "preview"
     },
     "play-test": {
       "distribution": "store",
       "environment": "preview",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "play-test"
     },
     "production": {
       "environment": "production",
+      "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.transpo24.com",
         "EXPO_PUBLIC_SOCKET_URL": "https://api.transpo24.com",
@@ -33,7 +37,8 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "production-apk"
     }
   },
   "submit": {

@@ -9,11 +9,16 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "com.transpo24.app"
+      "bundleIdentifier": "com.transpo24.app",
+      "config": {
+        "googleMapsApiKey": ""
+      }
     },
     "android": {
       "allowBackup": false,
       "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW"
       ],
@@ -23,7 +28,16 @@
       },
       "softwareKeyboardLayoutMode": "pan",
       "predictiveBackGestureEnabled": false,
-      "package": "com.transpo24.app"
+      "package": "com.transpo24.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -78,6 +92,12 @@
         "projectId": "d3e62d2e-cc21-4c2a-afb8-9b05f492c725"
       }
     },
-    "owner": "raed.gh"
+    "owner": "raed.gh",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d3e62d2e-cc21-4c2a-afb8-9b05f492c725"
+    }
   }
 }
