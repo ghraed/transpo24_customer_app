@@ -96,8 +96,6 @@ describe('vehicle review editing', () => {
       'continue',
       'confirmPickup',
       'confirmDropoff',
-      'continue',
-      'continue',
     ]) {
       await act(async () => {
         button(tree, `vehicleRequest.${label}`).props.onPress();
@@ -126,17 +124,26 @@ describe('vehicle review editing', () => {
     await act(async () => {
       button(tree, 'vehicleRequest.confirmPickup').props.onPress();
     });
-    await edit('schedule');
+    expect(button(tree, 'vehicleRequest.camera')).toBeDefined();
+    expect(button(tree, 'vehicleRequest.gallery')).toBeDefined();
+    expect(button(tree, 'vehicleRequest.submit')).toBeDefined();
     const at = new Date(Date.now() + 172800000).toISOString();
     await act(async () => {
       tree.root
         .findByType(ScheduleEditor)
         .props.onChange({ immediate: false, at });
     });
+    expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
     await act(async () => {
-      button(tree, 'vehicleRequest.save').props.onPress();
+      tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at: new Date(Date.now() - 1000).toISOString() });
     });
-    await edit('schedule');
+    expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(true);
+    await act(async () => {
+      tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at });
+    });
+    await act(async () => button(tree, 'vehicleRequest.back').props.onPress());
+    expect(tree.root.findByType(AddressEditor).props.value.address).toBe('Zurich');
+    await act(async () => button(tree, 'vehicleRequest.confirmDropoff').props.onPress());
     expect(tree.root.findByType(ScheduleEditor).props.value.at).toBe(at);
     const saved = writeVehicleDraft.mock.calls.at(-1)[0];
     expect(saved.pickup.address).toBe('Bern');

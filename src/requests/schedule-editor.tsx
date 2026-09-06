@@ -85,6 +85,7 @@ export function ScheduleEditor({
   ) : null;
   return (
     <View style={styles.card}>
+      <Text style={styles.title}>{t('vehicleRequest.step.schedule')}</Text>
       <View style={styles.row}>
         <Text style={styles.body}>{t('vehicleRequest.immediate')}</Text>
         <Switch
@@ -155,6 +156,7 @@ export function ScheduleEditor({
 const styles = StyleSheet.create({
   body: { color: '#111827', fontSize: 14, lineHeight: 20 },
   section: { gap: 16 },
+  title: { color: '#111827', fontSize: 18, fontWeight: '700' },
   card: {
     backgroundColor: '#FFF',
     borderRadius: 22,

@@ -23,7 +23,7 @@ import { useAuthSession } from '@/lib/auth-token';
 import { submitVehicleDraft } from '@/requests/submit-vehicle-draft';
 import { getDrivingDistance } from '@/lib/places';
 import { AddressEditor } from '@/requests/address-editor';
-import { ScheduleEditor, scheduleLabel } from '@/requests/schedule-editor';
+import { ScheduleEditor } from '@/requests/schedule-editor';
 import { VehicleEditor } from '@/requests/vehicle-editor';
 import {
   clearVehicleDraft,
@@ -45,8 +45,6 @@ const STEPS: VehicleStep[] = [
   'condition',
   'pickup',
   'dropoff',
-  'schedule',
-  'photos',
   'review',
 ];
 const STAGE: Record<VehicleStep, number> = {
@@ -56,7 +54,7 @@ const STAGE: Record<VehicleStep, number> = {
   dropoff: 3,
   schedule: 4,
   photos: 4,
-  review: 5,
+  review: 4,
 };
 
 export default function VehicleRequestRoute() {
@@ -130,8 +128,9 @@ function VehicleRequest({
   const errors = validateVehicleDraft(draft, clock);
   const stepErrors = errors.filter((issue) => issue.step === step);
   const go = (next: VehicleStep, edit = false) => {
-    setStep(next);
-    setEditing(edit);
+    const target = next === 'schedule' || next === 'photos' ? 'review' : next;
+    setStep(target);
+    setEditing(target === 'review' ? false : edit);
     setError('');
     setShowErrors(false);
     scroll.current?.scrollTo({ y: 0, animated: false });
@@ -216,16 +215,14 @@ function VehicleRequest({
             quality: 0.8,
           });
       if (result.canceled) return;
-      const photos = result.assets
-        .slice(0, remaining)
-        .map((asset, index) =>
-          retainDraftPhoto(ownerId, {
-            localId: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
-            uri: asset.uri,
-            fileName: asset.fileName ?? undefined,
-            mimeType: asset.mimeType ?? 'image/jpeg',
-          }),
-        );
+      const photos = result.assets.slice(0, remaining).map((asset, index) =>
+        retainDraftPhoto(ownerId, {
+          localId: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+          uri: asset.uri,
+          fileName: asset.fileName ?? undefined,
+          mimeType: asset.mimeType ?? 'image/jpeg',
+        }),
+      );
       patch({ photos: [...draftRef.current.photos, ...photos] });
     } catch {
       setError('vehicleRequest.photoFailed');
@@ -299,7 +296,7 @@ function VehicleRequest({
     </View>
   );
   const card = (target: VehicleStep, children: React.ReactNode) => (
-    <View style={styles.card}>
+    <View style={[styles.card, target === 'vehicle' && styles.vehicleSummary]}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>
           {t(`vehicleRequest.step.${target}`)}
@@ -312,7 +309,9 @@ function VehicleRequest({
   const issueList = (
     <>
       {draft.condition.issues.map((issue) => (
-        <Text key={issue} style={styles.body}>{t(`vehicleRequest.issue.${issue}`)}</Text>
+        <Text key={issue} style={styles.body}>
+          {t(`vehicleRequest.issue.${issue}`)}
+        </Text>
       ))}
     </>
   );
@@ -332,17 +331,20 @@ function VehicleRequest({
       <View
         accessibilityLabel={t('vehicleRequest.progress', {
           current: STAGE[step],
-          total: 5,
+          total: 4,
         })}
         style={styles.progress}
       >
-        {[1, 2, 3, 4, 5].map((number) => (
+        {[1, 2, 3, 4].map((number) => (
           <View
             key={number}
             style={[styles.stage, number <= STAGE[step] && styles.activeStage]}
           >
             <Text
-              style={[styles.body, number <= STAGE[step] && styles.activeStageText]}
+              style={[
+                styles.body,
+                number <= STAGE[step] && styles.activeStageText,
+              ]}
             >
               {number}
             </Text>
@@ -357,7 +359,10 @@ function VehicleRequest({
           ref={scroll}
           keyboardShouldPersistTaps="handled"
           style={styles.flex}
-          contentContainerStyle={[styles.content, isAddressStep && styles.mapContent]}
+          contentContainerStyle={[
+            styles.content,
+            isAddressStep && styles.mapContent,
+          ]}
         >
           <Text style={styles.title}>{t(`vehicleRequest.step.${step}`)}</Text>
           {storageError ? (
@@ -414,7 +419,9 @@ function VehicleRequest({
                         patch({ condition: { ...draft.condition, mobility } })
                       }
                     >
-                      <Text style={styles.body}>{t(`vehicleRequest.mobility.${mobility}`)}</Text>
+                      <Text style={styles.body}>
+                        {t(`vehicleRequest.mobility.${mobility}`)}
+                      </Text>
                     </Pressable>
                   ),
                 )}
@@ -477,57 +484,6 @@ function VehicleRequest({
                 invalid={showErrors && stepErrors.length > 0}
               />
             ) : null}
-            {step === 'schedule' ? (
-              <ScheduleEditor
-                value={draft.schedule}
-                onChange={(schedule) => patch({ schedule })}
-                invalid={showErrors && stepErrors.length > 0}
-              />
-            ) : null}
-            {step === 'photos' ? (
-              <View style={styles.card}>
-                <Text style={styles.body}>
-                  {t(
-                    draft.condition.issues.length ||
-                      draft.condition.mobility !== 'RUNNING'
-                      ? 'vehicleRequest.specialPhotos'
-                      : 'vehicleRequest.optionalPhotos',
-                  )}
-                </Text>
-                <Text style={[styles.body, { writingDirection: 'ltr' }]}>
-                  {t('vehicleRequest.photoCount', {
-                    count: draft.photos.length,
-                    max: 8,
-                  })}
-                </Text>
-                {photoGrid(true)}
-                <View style={styles.cardHeader}>
-                  <Pressable
-                    disabled={draft.photos.length >= 8}
-                    onPress={() => void addPhotos(true)}
-                  >
-                    <Text style={styles.link}>
-                      {t('vehicleRequest.camera')}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={draft.photos.length >= 8}
-                    onPress={() => void addPhotos(false)}
-                  >
-                    <Text style={styles.link}>
-                      {t('vehicleRequest.gallery')}
-                    </Text>
-                  </Pressable>
-                </View>
-                {!draft.photos.length ? (
-                  <Pressable onPress={next}>
-                    <Text style={styles.link}>
-                      {t('vehicleRequest.withoutPhotos')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
             {step === 'review' ? (
               <View style={styles.section}>
                 {card(
@@ -563,9 +519,37 @@ function VehicleRequest({
                     ) : null}
                   </>,
                 )}
-                {card('pickup', <Text style={styles.body}>{draft.pickup?.address}</Text>)}
-                {card('dropoff', <Text style={styles.body}>{draft.dropoff?.address}</Text>)}
                 <View style={styles.card}>
+                  {(['pickup', 'dropoff'] as const).map((target, index) => (
+                    <View key={target} style={styles.routeRow}>
+                      <View
+                        style={[
+                          styles.routeDot,
+                          index === 1 && styles.destinationDot,
+                        ]}
+                      >
+                        <Text
+                          style={
+                            index === 1
+                              ? styles.destinationNumber
+                              : styles.routeNumber
+                          }
+                        >
+                          {index + 1}
+                        </Text>
+                      </View>
+                      <View style={styles.flex}>
+                        <Text style={styles.routeLabel}>
+                          {t(`vehicleRequest.step.${target}`)}
+                        </Text>
+                        <Text style={styles.body}>
+                          {draft[target]?.address}
+                        </Text>
+                      </View>
+                      {edit(target)}
+                    </View>
+                  ))}
+                  <View style={styles.divider} />
                   <Text style={styles.cardTitle}>
                     {t('vehicleRequest.distance')}
                   </Text>
@@ -584,24 +568,60 @@ function VehicleRequest({
                         )}
                   </Text>
                 </View>
-                {card(
-                  'schedule',
+                <ScheduleEditor
+                  value={draft.schedule}
+                  onChange={(schedule) => patch({ schedule })}
+                  invalid={errors.some((issue) => issue.step === 'schedule')}
+                />
+                <View style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardTitle}>
+                      {t('vehicleRequest.step.photos')}
+                    </Text>
+                    <Text style={styles.badge}>
+                      {t('vehicleRequest.photoCount', {
+                        count: draft.photos.length,
+                        max: 8,
+                      })}
+                    </Text>
+                  </View>
                   <Text style={styles.body}>
-                    {draft.schedule.immediate
-                      ? t('vehicleRequest.immediate')
-                      : scheduleLabel(draft.schedule, i18n.language)}
-                  </Text>,
-                )}
-                {card(
-                  'photos',
-                  <>
-                    {draft.photos.length ? (
-                      photoGrid(false)
-                    ) : (
-                      <Text style={styles.body}>{t('vehicleRequest.noPhotos')}</Text>
+                    {t(
+                      draft.condition.issues.length ||
+                        draft.condition.mobility !== 'RUNNING'
+                        ? 'vehicleRequest.specialPhotos'
+                        : 'vehicleRequest.optionalPhotos',
                     )}
-                  </>,
-                )}
+                  </Text>
+                  {photoGrid(true)}
+                  <View style={styles.cardHeader}>
+                    <Pressable
+                      disabled={draft.photos.length >= 8}
+                      onPress={() => void addPhotos(true)}
+                      style={[
+                        styles.photoAction,
+                        draft.photos.length >= 8 && styles.disabled,
+                      ]}
+                    >
+                      <Text style={styles.link}>
+                        {t('vehicleRequest.camera')}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={draft.photos.length >= 8}
+                      onPress={() => void addPhotos(false)}
+                      style={[
+                        styles.photoAction,
+                        styles.goldAction,
+                        draft.photos.length >= 8 && styles.disabled,
+                      ]}
+                    >
+                      <Text style={styles.link}>
+                        {t('vehicleRequest.gallery')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
               </View>
             ) : null}
           </View>
@@ -681,7 +701,47 @@ const styles = StyleSheet.create({
   activeStageText: { color: '#111827', fontWeight: '700' },
   content: { padding: 20, gap: 18, paddingBottom: 32 },
   title: { fontSize: 24, lineHeight: 32, fontWeight: '800', color: '#111827' },
-  section: { gap: 14 },
+  section: { gap: 20 },
+  vehicleSummary: { borderTopWidth: 4, borderTopColor: '#FFC548' },
+  badge: {
+    color: '#111827',
+    backgroundColor: '#FFC548',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    fontWeight: '700',
+    writingDirection: 'ltr',
+  },
+  photoAction: {
+    flex: 1,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#D9DFE8',
+    paddingHorizontal: 8,
+  },
+  goldAction: { backgroundColor: '#FFC548', borderColor: '#FFC548' },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  routeDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFC548',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  destinationDot: { backgroundColor: '#111827' },
+  routeNumber: { color: '#111827', fontWeight: '700' },
+  destinationNumber: { color: '#FFF', fontWeight: '700' },
+  routeLabel: {
+    color: '#68768A',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  divider: { height: 1, backgroundColor: '#E5E8EF' },
   card: {
     backgroundColor: '#FFF',
     borderRadius: 22,
@@ -701,7 +761,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: '#111827', flexShrink: 1 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    flexShrink: 1,
+  },
   vehicleTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
   link: { color: '#111827', fontWeight: '600', paddingVertical: 10 },
   option: {
