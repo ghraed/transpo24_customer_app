@@ -1884,7 +1884,7 @@ export default function RequestStatusScreen() {
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
           <View style={styles.actionStack}>
-            <Pressable style={styles.statusActionButton} onPress={() => void loadStatus(false)}>
+            <Pressable accessibilityRole="button" style={({ pressed }) => [styles.statusActionButton, pressed && styles.disabledButton]} onPress={() => void loadStatus(false)}>
               <Text style={styles.statusActionButtonText}>
                 {isRefreshing ? appI18n.t('Refreshing…') : appI18n.t('Request Status')}
               </Text>
@@ -1900,6 +1900,8 @@ export default function RequestStatusScreen() {
               </Pressable>
             ) : canDeleteCurrentRequest ? (
               <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.deleteRequestButton, pressed && styles.disabledButton]}
                 onPress={() => {
                   Alert.alert(appI18n.t("Delete request?"), appI18n.t("This will permanently delete the request."), [
                     { text: 'Cancel', style: 'cancel' },
@@ -1922,7 +1924,7 @@ export default function RequestStatusScreen() {
                   ]);
                 }}
               >
-                <Text style={styles.cancelActionText}>{appI18n.t("Delete Request")}</Text>
+                <Text style={styles.deleteRequestButtonText}>{appI18n.t("Delete Request")}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -2760,10 +2762,25 @@ const styles = StyleSheet.create({
   statusActionButton: {
     minHeight: 58,
     borderRadius: 20,
-    backgroundColor: '#3F7AE8',
+    backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+  },
+  deleteRequestButton: {
+    minHeight: 58,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F4C7C3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  deleteRequestButtonText: {
+    color: '#C0392B',
+    fontSize: 16,
+    fontWeight: '700',
   },
   statusActionButtonText: {
     color: '#FFFFFF',
