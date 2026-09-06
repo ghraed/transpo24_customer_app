@@ -13,10 +13,12 @@ import { newVehicleDraft } from './vehicle-draft';
 import { readVehicleDraft, writeVehicleDraft } from './vehicle-draft-storage';
 import { AddressEditor } from './address-editor';
 import { ScheduleEditor } from './schedule-editor';
+import { submitVehicleDraft } from './submit-vehicle-draft';
+const mockReplace = jest.fn();
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ serviceId: 'vehicle-service' }),
-  useRouter: () => ({ back: jest.fn(), replace: jest.fn() }),
+  useRouter: () => ({ back: jest.fn(), replace: mockReplace }),
   Stack: { Screen: () => null },
 }));
 jest.mock('@/lib/auth-token', () => ({
@@ -59,6 +61,8 @@ function button(tree, text) {
 describe('vehicle review editing', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    mockReplace.mockClear();
+    submitVehicleDraft.mockReset();
     const draft = newVehicleDraft('customer', 'vehicle-service');
     readVehicleDraft.mockReturnValue({
       ...draft,
@@ -101,6 +105,22 @@ describe('vehicle review editing', () => {
         button(tree, `vehicleRequest.${label}`).props.onPress();
       });
     }
+    expect(tree.root.findByType(ScheduleEditor)).toBeDefined();
+    expect(button(tree, 'vehicleRequest.camera')).toBeDefined();
+    expect(button(tree, 'vehicleRequest.gallery')).toBeDefined();
+    expect(button(tree, 'vehicleRequest.submit')).toBeUndefined();
+    expect(tree.root.findAll(node => node.props.accessibilityLabel === 'vehicleRequest.edit vehicleRequest.step.vehicle')).toHaveLength(0);
+    const at = new Date(Date.now() + 172800000).toISOString();
+    await act(async () => {
+      tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at });
+    });
+    await act(async () => button(tree, 'vehicleRequest.continue').props.onPress());
+    expect(tree.root.findAllByType(ScheduleEditor)).toHaveLength(0);
+    expect(button(tree, 'vehicleRequest.camera')).toBeUndefined();
+    expect(button(tree, 'vehicleRequest.submit')).toBeDefined();
+    for (const section of ['vehicle', 'condition', 'pickup', 'dropoff', 'schedule', 'photos']) {
+      expect(tree.root.findAll(node => node.props.accessibilityLabel === `vehicleRequest.edit vehicleRequest.step.${section}`).length).toBeGreaterThan(0);
+    }
     const edit = async (step) =>
       act(async () => {
         tree.root
@@ -124,27 +144,30 @@ describe('vehicle review editing', () => {
     await act(async () => {
       button(tree, 'vehicleRequest.confirmPickup').props.onPress();
     });
-    expect(button(tree, 'vehicleRequest.camera')).toBeDefined();
-    expect(button(tree, 'vehicleRequest.gallery')).toBeDefined();
-    expect(button(tree, 'vehicleRequest.submit')).toBeDefined();
-    const at = new Date(Date.now() + 172800000).toISOString();
-    await act(async () => {
-      tree.root
-        .findByType(ScheduleEditor)
-        .props.onChange({ immediate: false, at });
-    });
-    expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
+    await edit('schedule');
+    expect(tree.root.findByType(ScheduleEditor).props.value.at).toBe(at);
     await act(async () => {
       tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at: new Date(Date.now() - 1000).toISOString() });
     });
-    expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(true);
+    await act(async () => button(tree, 'vehicleRequest.save').props.onPress());
+    expect(tree.root.findByType(ScheduleEditor)).toBeDefined();
+    expect(button(tree, 'vehicleRequest.submit')).toBeUndefined();
     await act(async () => {
       tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at });
     });
-    await act(async () => button(tree, 'vehicleRequest.back').props.onPress());
-    expect(tree.root.findByType(AddressEditor).props.value.address).toBe('Zurich');
-    await act(async () => button(tree, 'vehicleRequest.confirmDropoff').props.onPress());
+    await act(async () => button(tree, 'vehicleRequest.save').props.onPress());
+    expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
+    await edit('photos');
     expect(tree.root.findByType(ScheduleEditor).props.value.at).toBe(at);
+    expect(button(tree, 'vehicleRequest.camera')).toBeDefined();
+    expect(button(tree, 'vehicleRequest.removePhoto')).toBeDefined();
+    await act(async () => button(tree, 'vehicleRequest.save').props.onPress());
+    expect(button(tree, 'vehicleRequest.removePhoto')).toBeUndefined();
+    expect(JSON.stringify(tree.toJSON())).toContain(at);
+    await act(async () => button(tree, 'vehicleRequest.back').props.onPress());
+    expect(tree.root.findByType(ScheduleEditor).props.value.at).toBe(at);
+    await act(async () => button(tree, 'vehicleRequest.continue').props.onPress());
+    expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
     const saved = writeVehicleDraft.mock.calls.at(-1)[0];
     expect(saved.pickup.address).toBe('Bern');
     expect(saved.dropoff.address).toBe('Zurich');
@@ -156,4 +179,33 @@ describe('vehicle review editing', () => {
     );
     await act(async () => tree.unmount());
   });
+  it.each(['success', 'failure'])('keeps the native form parent stable during submission %s', async outcome => {
+    let tree;
+    await act(async () => { tree = create(<VehicleRequestRoute />); });
+    for (const label of ['continue', 'continue', 'confirmPickup', 'confirmDropoff', 'continue']) {
+      await act(async () => button(tree, `vehicleRequest.${label}`).props.onPress());
+    }
+    const form = () => tree.root.findAll(node => node.props.collapsable === false && node.props.pointerEvents)[0];
+    const parent = form();
+    let finish, fail;
+    submitVehicleDraft.mockImplementationOnce(() => new Promise((resolve, reject) => { finish = resolve; fail = reject; }));
+    await act(async () => button(tree, 'vehicleRequest.submit').props.onPress());
+    expect(form()).toBe(parent);
+    expect(form().props.pointerEvents).toBe('none');
+    await act(async () => {
+      if (outcome === 'success') finish('request-123');
+      else fail(new Error('offline'));
+    });
+    expect(form()).toBe(parent);
+    if (outcome === 'success') {
+      expect(mockReplace).toHaveBeenCalledWith({ pathname: '/request-status', params: { requestId: 'request-123' } });
+      expect(form().props.pointerEvents).toBe('none');
+    } else {
+      expect(mockReplace).not.toHaveBeenCalled();
+      expect(form().props.pointerEvents).toBe('auto');
+      expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
+    }
+    await act(async () => tree.unmount());
+  });
+
 });

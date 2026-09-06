@@ -212,12 +212,37 @@ export async function getAccountCountryCenter(countryCode: string): Promise<{ la
   return response.ok && point ? { latitude: point.lat, longitude: point.lng } : null;
 }
 
-export async function getDrivingDistance(pickup: { latitude: number; longitude: number }, dropoff: { latitude: number; longitude: number }, signal?: AbortSignal): Promise<number> {
-  if (!GOOGLE_MAPS_API_KEY) throw new Error('vehicleRequest.distanceUnavailable');
-  const params = new URLSearchParams({ origin: `${pickup.latitude},${pickup.longitude}`, destination: `${dropoff.latitude},${dropoff.longitude}`, mode: 'driving', key: GOOGLE_MAPS_API_KEY });
+export async function getDrivingDistance(
+  pickup: { latitude: number; longitude: number },
+  dropoff: { latitude: number; longitude: number },
+  signal?: AbortSignal,
+): Promise<number> {
+  const unavailable = () => new Error('vehicleRequest.distanceUnavailable');
+  if (!GOOGLE_MAPS_API_KEY) throw unavailable();
+  for (const point of [pickup, dropoff]) {
+    if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude) ||
+        Math.abs(point.latitude) > 90 || Math.abs(point.longitude) > 180) throw unavailable();
+  }
+  const params = new URLSearchParams({
+    origin: `${pickup.latitude},${pickup.longitude}`,
+    destination: `${dropoff.latitude},${dropoff.longitude}`,
+    mode: 'driving',
+    key: GOOGLE_MAPS_API_KEY,
+  });
   const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?${params}`, { signal });
-  const data = await response.json() as { routes?: { legs: { distance?: { value: number } }[] }[] };
+  const data = await response.json() as {
+    status?: string;
+    routes?: { legs?: { distance?: { value?: number } }[] }[];
+  };
   const legs = data.routes?.[0]?.legs;
-  if (!response.ok || !legs?.length || legs.some(leg => !leg.distance)) throw new Error('vehicleRequest.distanceUnavailable');
-  return legs.reduce((sum, leg) => sum + leg.distance!.value, 0) / 1000;
+  if (!response.ok || data.status !== 'OK' || !legs?.length) throw unavailable();
+  let meters = 0;
+  for (const leg of legs) {
+    const value = leg.distance?.value;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) throw unavailable();
+    meters += value;
+  }
+  // A zero-length route must not be shown for two different selected pins.
+  if (meters === 0 && (pickup.latitude !== dropoff.latitude || pickup.longitude !== dropoff.longitude)) throw unavailable();
+  return meters / 1000;
 }
