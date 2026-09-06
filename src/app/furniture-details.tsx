@@ -521,6 +521,7 @@ export default function FurnitureDetailsScreen() {
 
           {showDatePicker ? (
             <DateTimePicker
+          display="spinner"
               value={form.movingDate}
               mode="date"
               minimumDate={minimumMovingDate}
@@ -539,6 +540,7 @@ export default function FurnitureDetailsScreen() {
 
           {showTimePicker ? (
             <DateTimePicker
+          display="spinner"
               value={form.movingDate}
               mode="time"
               is24Hour={true}

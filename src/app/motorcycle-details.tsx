@@ -664,6 +664,7 @@ export default function MotorcycleDetailsScreen() {
 
       {showDatePicker ? (
         <DateTimePicker
+          display="spinner"
           value={form.scheduledPickupAt}
           mode="date"
           minimumDate={new Date()}
@@ -680,6 +681,7 @@ export default function MotorcycleDetailsScreen() {
 
         {showTimePicker ? (
           <DateTimePicker
+          display="spinner"
             value={form.scheduledPickupAt}
             mode="time"
             is24Hour={true}

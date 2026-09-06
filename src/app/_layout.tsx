@@ -103,7 +103,7 @@ if (__DEV__) {
 function RootNavigator() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
-  const { ready: localizationReady } = useAppLanguage();
+  const { ready: localizationReady, isRTL } = useAppLanguage();
   const authSession = useAuthSession();
   const authReady = authSession.status !== 'initializing';
   const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
@@ -157,10 +157,11 @@ function RootNavigator() {
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
           <EnvironmentBanner />
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
             <Stack>
+          <Stack.Screen name="vehicle-request" options={{ headerShown: false }} />
           <Stack.Screen
             name="index"
             options={{

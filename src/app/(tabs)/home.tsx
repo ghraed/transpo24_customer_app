@@ -505,12 +505,12 @@ export default function HomeTabScreen() {
 
       const detailRoutes: Record<
         string,
-        | "/vehicle-details"
+        | "/vehicle-request"
         | "/motorcycle-details"
         | "/goods-details"
         | "/furniture-details"
       > = {
-        VEHICLE_TRANSPORT: "/vehicle-details",
+        VEHICLE_TRANSPORT: "/vehicle-request",
         MOTORCYCLE_TRANSPORT: "/motorcycle-details",
         GOODS_TRANSPORT: "/goods-details",
         FURNITURE_TRANSPORT: "/furniture-details",

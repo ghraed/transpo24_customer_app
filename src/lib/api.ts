@@ -634,7 +634,7 @@ export async function updateDropoffLocation(
 
 export async function updateScheduleAndItemDetails(
   requestId: string,
-  payload: UpdateScheduleAndItemDetailsPayload,
+  payload: UpdateScheduleAndItemDetailsPayload | (Omit<UpdateScheduleAndItemDetailsPayload, "itemTitle" | "itemType"> & { vehicleMobility: string; vehicleIssues: string[]; vehicleTransmission: string }),
 ): Promise<CustomerRequest> {
   const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/schedule-and-item-details`;
   const response = await fetchWithNetworkError(endpoint, {
@@ -746,7 +746,9 @@ export async function decodeVehicleVin(
     query.set('swissRegistrationNumber', options.swissRegistrationNumber);
   }
   const queryString = query.toString();
-  const endpoint = `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(normalizedVin)}${queryString ? `?${queryString}` : ''}`;
+  const endpoint = !normalizedVin && options.swissRegistrationNumber
+    ? `${getApiBaseUrl()}/vehicles/decode-registration/${encodeURIComponent(options.swissRegistrationNumber)}`
+    : `${getApiBaseUrl()}/vehicles/decode-vin/${encodeURIComponent(normalizedVin)}${queryString ? `?${queryString}` : ''}`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'GET',
     headers: getAuthHeaders(),
@@ -764,7 +766,7 @@ export async function decodeVehicleVin(
       ? (payload.data ?? {})
       : (payload as Partial<DecodedVinResult>);
   return {
-    vin: normalizedVin,
+    vin: data.vin ?? normalizedVin,
     make: data.make ?? data.brand,
     brand: data.brand ?? data.make,
     model: data.model,

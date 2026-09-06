@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -136,7 +137,7 @@ function IconSymbol({
   return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
-export default function DateTimeScreen() {
+function DateTimeScreen() {
   const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const params = useLocalSearchParams<DateTimeRouteParams>();
@@ -746,6 +747,7 @@ export default function DateTimeScreen() {
 
       {showDatePicker ? (
         <DateTimePicker
+          display="spinner"
           value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="date"
           minimumDate={new Date()}
@@ -762,6 +764,7 @@ export default function DateTimeScreen() {
 
       {showTimePicker ? (
         <DateTimePicker
+          display="spinner"
           value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="time"
           is24Hour={true}
@@ -1081,3 +1084,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
+
+export default function ServiceRoute() {
+  const route = useLocalSearchParams<{ serviceId?: string; serviceKey?: string }>();
+  if (route.serviceKey === 'VEHICLE_TRANSPORT') return <Redirect href={{ pathname: '/vehicle-request', params: { serviceId: route.serviceId ?? '' } }} />;
+  return <DateTimeScreen />;
+}

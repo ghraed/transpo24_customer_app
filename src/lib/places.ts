@@ -10,6 +10,7 @@ type PlacesAutocompleteResponse = {
   predictions?: {
     description: string;
     place_id: string;
+    distance_meters?: number;
   }[];
   status?: string;
   error_message?: string;
@@ -45,6 +46,7 @@ type GeocodeResponse = {
 export type PlaceAutocompleteSuggestion = {
   description: string;
   placeId: string;
+  distanceMeters?: number;
 };
 
 export type ResolvedPlaceLocation = {
@@ -56,6 +58,7 @@ export type ResolvedPlaceLocation = {
 
 export async function searchPlacesAutocomplete(
   input: string,
+  options: { location?: { latitude: number; longitude: number }; sessionToken?: string; signal?: AbortSignal } = {},
 ): Promise<PlaceAutocompleteSuggestion[]> {
   const query = input.trim();
 
@@ -69,10 +72,18 @@ export async function searchPlacesAutocomplete(
 
   const params = new URLSearchParams({
     input: query,
+    language: appI18n.language,
     key: GOOGLE_MAPS_API_KEY,
   });
 
-  const response = await fetch(`${PLACES_AUTOCOMPLETE_ENDPOINT}?${params.toString()}`);
+  if (options.location) {
+    const point = `${options.location.latitude},${options.location.longitude}`;
+    params.set("location", point);
+    params.set("origin", point);
+    params.set("radius", "50000");
+  }
+  if (options.sessionToken) params.set("sessiontoken", options.sessionToken);
+  const response = await fetch(`${PLACES_AUTOCOMPLETE_ENDPOINT}?${params.toString()}`, { signal: options.signal });
   const payload = (await response.json()) as PlacesAutocompleteResponse;
 
   if (!response.ok) {
@@ -88,10 +99,11 @@ export async function searchPlacesAutocomplete(
   return predictions.map((prediction) => ({
     description: prediction.description,
     placeId: prediction.place_id,
-  }));
+    distanceMeters: prediction.distance_meters,
+  })).sort((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity));
 }
 
-export async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceLocation> {
+export async function fetchPlaceDetails(placeId: string, sessionToken?: string): Promise<ResolvedPlaceLocation> {
   if (!GOOGLE_MAPS_API_KEY) {
     throw new Error(appI18n.t("Google Maps API key is missing."));
   }
@@ -99,9 +111,11 @@ export async function fetchPlaceDetails(placeId: string): Promise<ResolvedPlaceL
   const params = new URLSearchParams({
     place_id: placeId,
     fields: 'formatted_address,geometry',
+    language: appI18n.language,
     key: GOOGLE_MAPS_API_KEY,
   });
 
+  if (sessionToken) params.set("sessiontoken", sessionToken);
   const response = await fetch(`${PLACE_DETAILS_ENDPOINT}?${params.toString()}`);
   const payload = (await response.json()) as PlaceDetailsResponse;
 
@@ -187,4 +201,23 @@ export async function reverseGeocodeCoordinates(
     address,
     placeId: firstResult?.place_id ?? '',
   };
+}
+
+export async function getAccountCountryCenter(countryCode: string): Promise<{ latitude: number; longitude: number } | null> {
+  if (!GOOGLE_MAPS_API_KEY || !/^[A-Z]{2}$/i.test(countryCode)) return null;
+  const params = new URLSearchParams({ components: `country:${countryCode}`, key: GOOGLE_MAPS_API_KEY });
+  const response = await fetch(`${GEOCODE_ENDPOINT}?${params}`);
+  const data = await response.json() as { results?: { geometry?: { location?: { lat: number; lng: number } } }[] };
+  const point = data.results?.[0]?.geometry?.location;
+  return response.ok && point ? { latitude: point.lat, longitude: point.lng } : null;
+}
+
+export async function getDrivingDistance(pickup: { latitude: number; longitude: number }, dropoff: { latitude: number; longitude: number }, signal?: AbortSignal): Promise<number> {
+  if (!GOOGLE_MAPS_API_KEY) throw new Error('vehicleRequest.distanceUnavailable');
+  const params = new URLSearchParams({ origin: `${pickup.latitude},${pickup.longitude}`, destination: `${dropoff.latitude},${dropoff.longitude}`, mode: 'driving', key: GOOGLE_MAPS_API_KEY });
+  const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?${params}`, { signal });
+  const data = await response.json() as { routes?: { legs: { distance?: { value: number } }[] }[] };
+  const legs = data.routes?.[0]?.legs;
+  if (!response.ok || !legs?.length || legs.some(leg => !leg.distance)) throw new Error('vehicleRequest.distanceUnavailable');
+  return legs.reduce((sum, leg) => sum + leg.distance!.value, 0) / 1000;
 }

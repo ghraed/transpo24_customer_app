@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -34,7 +35,7 @@ const VEHICLE_CONDITION_OPTIONS: VehicleConditionOption[] = [
   { value: 'MISSING_WHEELS', label: 'Missing wheels', description: 'Tires are missing or damaged' },
 ];
 
-export default function VehicleConditionScreen() {
+function VehicleConditionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<RouteParams>();
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId : '';
@@ -315,3 +316,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+export default function ServiceRoute() {
+  const route = useLocalSearchParams<{ serviceId?: string; serviceKey?: string }>();
+  if (route.serviceKey === 'VEHICLE_TRANSPORT') return <Redirect href={{ pathname: '/vehicle-request', params: { serviceId: route.serviceId ?? '' } }} />;
+  return <VehicleConditionScreen />;
+}

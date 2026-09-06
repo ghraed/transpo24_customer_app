@@ -682,6 +682,7 @@ export default function GoodsDetailsScreen() {
 
           {showDatePicker ? (
             <DateTimePicker
+          display="spinner"
               value={form.scheduledPickupAt}
               mode="date"
               minimumDate={new Date()}
@@ -698,6 +699,7 @@ export default function GoodsDetailsScreen() {
 
           {showTimePicker ? (
             <DateTimePicker
+          display="spinner"
               value={form.scheduledPickupAt}
               mode="time"
               is24Hour={true}

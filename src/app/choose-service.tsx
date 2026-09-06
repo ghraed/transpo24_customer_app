@@ -170,7 +170,7 @@ export default function ChooseServiceScreen() {
 
     router.push({
       pathname: isVehicleService
-        ? '/vehicle-details'
+        ? '/vehicle-request'
         : isMotorcycleService
           ? '/motorcycle-details'
           : isGoodsService

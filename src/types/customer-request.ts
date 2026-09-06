@@ -14,6 +14,7 @@ export interface LocationData {
 export type PickupLocation = LocationData;
 
 export interface CreateCustomerRequestPayload {
+  clientDraftId?: string;
   serviceId: string;
   vehicleVin?: string;
   vehicleBrand?: string;

@@ -1,3 +1,4 @@
+import { reloadAppAsync } from 'expo';
 import { getLocales } from 'expo-localization';
 import React, {
   createContext,
@@ -8,7 +9,7 @@ import React, {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { Alert, DevSettings, I18nManager, Platform } from 'react-native';
+import { I18nManager, Platform } from 'react-native';
 
 import i18n, { initializeI18n } from '@/localization/i18n';
 import {
@@ -39,16 +40,18 @@ function getInitialDeviceLanguage(): AppLanguage {
 
 function syncRTL(language: AppLanguage): boolean {
   if (Platform.OS === 'web') {
+    if (typeof document !== 'undefined') {
+      document.documentElement.dir = isRTLLanguage(language) ? 'rtl' : 'ltr';
+      document.documentElement.lang = language;
+    }
     return false;
   }
 
   const nextRTL = isRTLLanguage(language);
   const directionChanged = I18nManager.isRTL !== nextRTL;
 
-  if (directionChanged) {
-    I18nManager.allowRTL(nextRTL);
-    I18nManager.forceRTL(nextRTL);
-  }
+  I18nManager.allowRTL(nextRTL);
+  I18nManager.forceRTL(nextRTL);
 
   return directionChanged;
 }
@@ -67,7 +70,11 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
       const storedLanguage = await getStoredLanguage();
       const resolvedLanguage = storedLanguage ?? getInitialDeviceLanguage();
 
-      syncRTL(resolvedLanguage);
+      const directionChanged = syncRTL(resolvedLanguage);
+      if (directionChanged) {
+        await reloadAppAsync();
+        return;
+      }
       await i18n.changeLanguage(resolvedLanguage);
 
       if (!active) {
@@ -99,11 +106,7 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
       setLanguageState(nextLanguage);
 
       if (rtlChanged && Platform.OS !== 'web') {
-        Alert.alert(
-          i18n.t('Language updated'),
-          i18n.t('The app will reload to apply right-to-left layout.'),
-        );
-        DevSettings.reload();
+        await reloadAppAsync();
         return;
       }
     } finally {

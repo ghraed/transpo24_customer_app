@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import * as Location from 'expo-location';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -177,7 +178,7 @@ function IconSymbol({
   return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
-export default function PickupLocationScreen() {
+function PickupLocationScreen() {
   const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const params = useLocalSearchParams<PickupLocationRouteParams>();
@@ -1103,3 +1104,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
+
+export default function ServiceRoute() {
+  const route = useLocalSearchParams<{ serviceId?: string; serviceKey?: string }>();
+  if (route.serviceKey === 'VEHICLE_TRANSPORT') return <Redirect href={{ pathname: '/vehicle-request', params: { serviceId: route.serviceId ?? '' } }} />;
+  return <PickupLocationScreen />;
+}

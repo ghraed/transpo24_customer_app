@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useMemo, useRef, useState } from 'react';
@@ -313,7 +314,7 @@ function IconSymbol({
   return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
-export default function SubmitRequestScreen() {
+function SubmitRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const scrollViewRef = useRef<ScrollView | null>(null);
@@ -1345,3 +1346,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
+
+export default function ServiceRoute() {
+  const route = useLocalSearchParams<{ serviceId?: string; serviceKey?: string }>();
+  if (route.serviceKey === 'VEHICLE_TRANSPORT') return <Redirect href={{ pathname: '/vehicle-request', params: { serviceId: route.serviceId ?? '' } }} />;
+  return <SubmitRequestScreen />;
+}
