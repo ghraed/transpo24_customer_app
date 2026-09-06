@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
@@ -17,15 +18,17 @@ import {
   NativeMarker,
   PROVIDER_GOOGLE,
   isNativeMapRuntimeAvailable,
+  type MapPressEvent,
+  type Region,
 } from '@/components/native-maps';
 import {
   fetchPlaceDetails,
   getAccountCountryCenter,
-  reverseGeocodeCoordinates,
   searchPlacesAutocomplete,
   type PlaceAutocompleteSuggestion,
 } from '@/lib/places';
 import type { Address } from './vehicle-draft';
+import { resolveCurrentAddress } from './resolve-current-address';
 
 export function AddressEditor({
   value,
@@ -33,16 +36,23 @@ export function AddressEditor({
   countryCode,
   label,
   invalid,
+  fillHeight = false,
 }: {
   value?: Address;
-  onChange: (address: Address) => void;
+  onChange: (address: Address | undefined) => void;
   countryCode?: string | null;
   label: string;
   invalid: boolean;
+  fillHeight?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  // Camera state is independent of the selected pin, as in the original page.
+  const [region, setRegion] = useState<Region>(() => value
+    ? { latitude: value.latitude, longitude: value.longitude, latitudeDelta: 0.012, longitudeDelta: 0.012 }
+    : { latitude: 0, longitude: 0, latitudeDelta: 120, longitudeDelta: 300 });
+  const mapInteracted = useRef(false);
   const [center, setCenter] = useState<{
     latitude: number;
     longitude: number;
@@ -54,6 +64,21 @@ export function AddressEditor({
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState('');
   const session = useRef('');
+  const selectionId = useRef(0);
+  const [pendingPin, setPendingPin] = useState<{
+    latitude: number;
+    longitude: number;
+  }>();
+  useEffect(() => () => { selectionId.current += 1; }, []);
+  useEffect(() => {
+    if (center && !value && selectionId.current === 0 && !mapInteracted.current) {
+      setRegion({ ...center, latitudeDelta: 0.2, longitudeDelta: 0.2 });
+    }
+  }, [center, value]);
+  const focusAddress = (address: Address) => {
+    setRegion({ latitude: address.latitude, longitude: address.longitude,
+      latitudeDelta: 0.012, longitudeDelta: 0.012 });
+  };
 
   useEffect(() => {
     let active = true;
@@ -117,10 +142,12 @@ export function AddressEditor({
   }, [query, center, open, i18n.language]);
 
   const locate = async () => {
+    const id = ++selectionId.current;
     setResolving(true);
     setError('');
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
+      if (id !== selectionId.current) return;
       if (!permission.granted) {
         setError('vehicleRequest.locationPermission');
         return;
@@ -128,58 +155,86 @@ export function AddressEditor({
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
+      if (id !== selectionId.current) return;
       setCenter(position.coords);
-      const address = await reverseGeocodeCoordinates(
+      const address = await resolveCurrentAddress(
         position.coords.latitude,
         position.coords.longitude,
       );
+      if (id !== selectionId.current) return;
       if (!address) throw new Error();
+      setPendingPin(undefined);
+      focusAddress(address);
       onChange(address);
       setOpen(false);
     } catch {
-      setError('vehicleRequest.locationUnavailable');
+      if (id === selectionId.current) setError('vehicleRequest.locationUnavailable');
     } finally {
-      setResolving(false);
+      if (id === selectionId.current) setResolving(false);
     }
   };
   const select = async (suggestion: PlaceAutocompleteSuggestion) => {
+    const id = ++selectionId.current;
     setResolving(true);
     setError('');
     try {
-      onChange(await fetchPlaceDetails(suggestion.placeId, session.current));
+      const address = await fetchPlaceDetails(suggestion.placeId, session.current);
+      if (id !== selectionId.current) return;
+      setPendingPin(undefined);
+      focusAddress(address);
+      onChange(address);
       setOpen(false);
     } catch {
-      setError('vehicleRequest.searchUnavailable');
+      if (id === selectionId.current) setError('vehicleRequest.searchUnavailable');
     } finally {
-      setResolving(false);
+      if (id === selectionId.current) setResolving(false);
     }
   };
-  const map = (point?: { latitude: number; longitude: number }) =>
+  const movePin = async ({ nativeEvent: { coordinate } }: MapPressEvent) => {
+    const id = ++selectionId.current;
+    Keyboard.dismiss();
+    setOpen(false);
+    setPendingPin(coordinate);
+    mapInteracted.current = true;
+    setError('');
+    setResolving(true);
+    // The previous address must not be confirmed while the new pin is resolving.
+    onChange(undefined);
+    try {
+      const address = await resolveCurrentAddress(coordinate.latitude, coordinate.longitude);
+      if (id !== selectionId.current) return;
+      if (!address) throw new Error();
+      onChange({ ...address, ...coordinate });
+      setPendingPin(undefined);
+    } catch {
+      if (id === selectionId.current) setError('vehicleRequest.locationUnavailable');
+    } finally {
+      if (id === selectionId.current) setResolving(false);
+    }
+  };
+  const map = (expanded = false) =>
     isNativeMapRuntimeAvailable ? (
-      <NativeMapView
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        region={
-          point
-            ? {
-                ...point,
-                latitudeDelta: value ? 0.012 : 0.2,
-                longitudeDelta: value ? 0.012 : 0.2,
-              }
-            : {
-                latitude: 0,
-                longitude: 0,
-                latitudeDelta: 120,
-                longitudeDelta: 300,
-              }
-        }
-      >
-        {value ? <NativeMarker coordinate={value} /> : null}
-      </NativeMapView>
+      <View style={[styles.map, expanded && styles.expandedMap]}>
+        <NativeMapView
+          provider={PROVIDER_GOOGLE}
+          onPress={(event: MapPressEvent) => void movePin(event)}
+          onPanDrag={() => { mapInteracted.current = true; }}
+          onRegionChangeComplete={setRegion}
+          style={StyleSheet.absoluteFill}
+          region={region}
+        >
+          {pendingPin || value ? <NativeMarker coordinate={pendingPin ?? value} /> : null}
+        </NativeMapView>
+        {resolving ? (
+          <View pointerEvents="none" style={styles.mapLoading}>
+            <ActivityIndicator color="#111827" />
+          </View>
+        ) : null}
+      </View>
     ) : null;
 
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, fillHeight && styles.fill]}>
       <View style={[styles.search, invalid && styles.invalid]}>
         <Pressable
           style={styles.searchText}
@@ -206,14 +261,12 @@ export function AddressEditor({
           <Text style={styles.locationIcon}>⌖</Text>
         </Pressable>
       </View>
-      {resolving ? <ActivityIndicator color="#111827" /> : null}
       {error && !open ? (
         <Text accessibilityRole="alert" style={styles.error}>
           {t(error)}
         </Text>
       ) : null}
-      {map(value ?? center)}
-      {value ? <Text style={styles.address}>{value.address}</Text> : null}
+      {map(fillHeight)}
       <Modal
         visible={open}
         animationType="slide"
@@ -240,14 +293,6 @@ export function AddressEditor({
               }}
               style={styles.searchText}
             />
-            <Pressable
-              accessibilityLabel={t('vehicleRequest.currentLocation')}
-              disabled={resolving}
-              onPress={() => void locate()}
-              style={styles.location}
-            >
-              <Text style={styles.locationIcon}>⌖</Text>
-            </Pressable>
           </View>
           {busy || resolving ? <ActivityIndicator color="#111827" /> : null}
           {error ? (
@@ -259,6 +304,19 @@ export function AddressEditor({
             keyboardShouldPersistTaps="handled"
             style={styles.results}
           >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('vehicleRequest.currentLocation')}
+              accessibilityState={{ disabled: resolving, busy: resolving }}
+              disabled={resolving}
+              onPress={() => void locate()}
+              style={styles.currentLocation}
+            >
+              <Text style={styles.locationIcon}>⌖</Text>
+              <Text style={styles.currentLocationText}>
+                {t('vehicleRequest.currentLocation')}
+              </Text>
+            </Pressable>
             {suggestions.map((suggestion) => (
               <Pressable
                 key={suggestion.placeId}
@@ -284,7 +342,7 @@ export function AddressEditor({
               <Text style={styles.body}>{t('vehicleRequest.noPlaces')}</Text>
             ) : null}
           </ScrollView>
-          {map(center)}
+          {map()}
         </SafeAreaView>
       </Modal>
     </View>
@@ -293,6 +351,18 @@ export function AddressEditor({
 const styles = StyleSheet.create({
   body: { color: '#111827', fontSize: 14, lineHeight: 20 },
   section: { gap: 16 },
+  fill: { flex: 1 },
+  expandedMap: { flex: 1, height: undefined, minHeight: 190 },
+  currentLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 14,
+    backgroundColor: '#FFC548',
+  },
+  currentLocationText: { flex: 1, color: '#111827', fontWeight: '600' },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,7 +376,11 @@ const styles = StyleSheet.create({
   location: { padding: 12 },
   locationIcon: { fontSize: 26, color: '#111827' },
   invalid: { borderColor: '#C0392B', borderWidth: 2 },
-  map: { height: 190, borderRadius: 14 },
+  map: { height: 190, borderRadius: 14, overflow: 'hidden' },
+  mapLoading: {
+    position: 'absolute', top: 12, right: 12, padding: 10,
+    backgroundColor: '#FFF', borderRadius: 20,
+  },
   address: { fontSize: 16, lineHeight: 24, color: '#111827' },
   modal: { flex: 1, padding: 20, gap: 16, backgroundColor: '#FFF' },
   header: {

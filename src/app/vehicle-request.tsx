@@ -101,6 +101,7 @@ function VehicleRequest({
   const draftRef = useRef(draft);
   const scroll = useRef<ScrollView>(null);
   const [step, setStep] = useState<VehicleStep>('vehicle');
+  const isAddressStep = step === 'pickup' || step === 'dropoff';
   const [editing, setEditing] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -355,7 +356,8 @@ function VehicleRequest({
         <ScrollView
           ref={scroll}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.content}
+          style={styles.flex}
+          contentContainerStyle={[styles.content, isAddressStep && styles.mapContent]}
         >
           <Text style={styles.title}>{t(`vehicleRequest.step.${step}`)}</Text>
           {storageError ? (
@@ -377,7 +379,10 @@ function VehicleRequest({
               ))}
             </View>
           ) : null}
-          <View pointerEvents={busy ? 'none' : 'auto'}>
+          <View
+            pointerEvents={busy ? 'none' : 'auto'}
+            style={isAddressStep ? styles.flex : undefined}
+          >
             {step === 'vehicle' ? (
               <VehicleEditor
                 value={draft.vehicle}
@@ -464,6 +469,7 @@ function VehicleRequest({
             {step === 'pickup' || step === 'dropoff' ? (
               <AddressEditor
                 key={step}
+                fillHeight
                 label={t(`vehicleRequest.step.${step}`)}
                 countryCode={countryCode}
                 value={draft[step]}
@@ -648,6 +654,7 @@ const styles = StyleSheet.create({
   body: { color: '#111827', fontSize: 14, lineHeight: 20 },
   screen: { flex: 1, backgroundColor: '#FAFAFA' },
   flex: { flex: 1 },
+  mapContent: { flexGrow: 1, paddingBottom: 16 },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 14,
