@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { EnvironmentBanner } from '@/components/environment-banner';
+import { OtaUpdateBanner } from '@/components/ota-update-banner';
 import { clientTheme } from '@/components/tracking-ui';
 import { hydrateAuthSession, useAuthSession } from '@/lib/auth-token';
 import { LocalizationProvider, useAppLanguage } from '@/localization/provider';
@@ -159,6 +160,7 @@ function RootNavigator() {
         <AnimatedSplashOverlay />
         <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
           <EnvironmentBanner />
+          <OtaUpdateBanner />
           <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
             <Stack>
           <Stack.Screen name="vehicle-request" options={{ headerShown: false }} />

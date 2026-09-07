@@ -1051,5 +1051,17 @@
   "vehicleRequest.photoPermission": "Please allow photo access, or continue without photos.",
   "vehicleRequest.photoFailed": "Unable to save these photos. Please try again or continue without photos.",
   "vehicleRequest.submitFailed": "Your request could not be sent. Your draft is saved; please try again.",
-  "vehicleRequest.storageFailed": "Your changes are kept while this screen is open, but could not be saved on this device. Please keep the app open."
+  "vehicleRequest.storageFailed": "Your changes are kept while this screen is open, but could not be saved on this device. Please keep the app open.",
+  "Restarting to apply update…": "Restarting to apply update…",
+  "Downloading update…": "Downloading update…",
+  "Downloading update… {{percent}}%": "Downloading update… {{percent}}%",
+  "Could not restart. Close and reopen the app to apply the update.": "Could not restart. Close and reopen the app to apply the update.",
+  "Update ready. Restart when convenient to apply it.": "Update ready. Restart when convenient to apply it.",
+  "Checking for updates…": "Checking for updates…",
+  "Update could not start. Using the previous app version.": "Update could not start. Using the previous app version.",
+  "Update unavailable. We’ll try again next time you open the app.": "Update unavailable. We’ll try again next time you open the app.",
+  "Update applied. You’re running the downloaded version.": "Update applied. You’re running the downloaded version.",
+  "Restart now": "Restart now",
+  "Dismiss": "Dismiss",
+  "Update download": "Update download"
 }
