@@ -80,6 +80,7 @@ export default ({ config }: ConfigContext) => {
       },
     },
     plugins: [
+      'expo-sharing',
       ...pluginsWithoutManagedOverrides,
       'expo-secure-store',
       [

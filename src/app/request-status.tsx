@@ -1,3 +1,4 @@
+import { RequestDocuments } from '@/components/request-documents';
 import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -1484,6 +1485,7 @@ export default function RequestStatusScreen() {
             </View>
           </View>
 
+          {requestData.service?.key === 'VEHICLE_TRANSPORT' ? <RequestDocuments requestId={requestData.id} customer /> : null}
           {successMessage ? <View style={styles.successBanner}><Text style={styles.successBannerText}>{successMessage}</Text></View> : null}
           {errorMessage ? <View style={styles.errorBanner}><Text style={styles.errorBannerText}>{errorMessage}</Text></View> : null}
           {nearDeliveryMessage ? (

@@ -1,3 +1,4 @@
+import { ChatAttachment, ChatAttachmentButton } from '@/components/chat-attachment';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -518,7 +519,7 @@ export default function ChatScreen() {
   }, [draft, room]);
 
   const translateIncomingMessage = useCallback(async (message: ChatMessage): Promise<void> => {
-    const body = message.body?.trim() ?? '';
+    const body = message.type === 'FILE' ? '' : message.body?.trim() ?? '';
     if (!body || message.senderRole !== 'DRIVER') {
       return;
     }
@@ -689,7 +690,7 @@ export default function ChatScreen() {
                   normalizeComparableText(translatedText) !== normalizeComparableText(item.body),
                 );
                 const isTranslating = Boolean(translatingMessageIds[item.id]);
-                const displayedBody = isShowingTranslation ? translatedText : item.body;
+                const displayedBody = item.type === 'FILE' ? null : isShowingTranslation ? translatedText : item.body;
 
                 return (
                   <View
@@ -712,7 +713,8 @@ export default function ChatScreen() {
                           : 'Long press to report this message.'
                       }
                     >
-                      {displayedBody ? (
+                      {item.type === 'FILE' && item.attachmentUrl ? <ChatAttachment url={item.attachmentUrl} name={item.body ?? 'document.pdf'} /> : null}
+          {displayedBody ? (
                         <Text
                           style={[
                             styles.messageText,
@@ -796,6 +798,7 @@ export default function ChatScreen() {
                 </Text>
               ) : null}
               <View style={styles.inputRow}>
+                {room ? <ChatAttachmentButton roomId={room.id} disabled={isSending || !room.canSendMessages} onSent={message => setMessages(previous => upsertMessages(previous, [message]))} /> : null}
                 <TextInput
                   value={draft}
                   onChangeText={setDraft}
