@@ -54,7 +54,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "node ./scripts/local-expo.js start",
     "adb:reverse": "node ./scripts/setup-adb-reverse.js",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "node ./scripts/run-android.js",

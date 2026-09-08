@@ -4,6 +4,50 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Get started
 
+### Android phone: development alongside Google Play
+
+Keep the Play Store **Transpo24** installed. Connect your phone with USB debugging
+enabled, start the local backend, then run:
+
+```bash
+npm run android:usb
+```
+
+This builds and opens **Transpo24 Dev** (`com.transpo24.app.dev`). It uses the
+`transpo24-dev` link scheme and does not download production OTA updates.
+The script regenerates the ignored Android project when switching identities,
+backing up native sources to a printed temporary directory first.
+
+Local commands read `.env` with Expo's development overrides (`.env.local`,
+`.env.development`, `.env.development.local`); they do not load EAS production
+variables. Local public variables take precedence over inherited shell values.
+For USB, set these in your local env file:
+
+```dotenv
+EXPO_PUBLIC_API_URL=http://localhost:3001
+EXPO_PUBLIC_SOCKET_URL=http://localhost:3001
+EXPO_PUBLIC_ANDROID_API_URL=http://127.0.0.1:3001
+EXPO_PUBLIC_ANDROID_SOCKET_URL=http://127.0.0.1:3001
+```
+
+Keep your local Stripe test key and Maps keys in the same file. After the first
+installation, ordinary JavaScript changes refresh through Metro; `npm start`
+also selects Dev and the local env. Rerun `npm run android:usb` for native/config
+changes or after reconnecting USB.
+
+For push notifications in Dev, register an Android app with package
+`com.transpo24.app.dev` in Firebase, download its configuration to
+`google-services.dev.json`, and set
+`EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE=./google-services.dev.json` locally.
+Without this optional file, Dev builds without Firebase push configuration.
+For a restricted Google Maps Android key, authorize the Dev package and its debug
+signing SHA-1 in Google Cloud as well. Rebuild after changing native service keys.
+
+Store builds keep `com.transpo24.app` and their existing EAS production settings.
+The EAS development profile uses EAS's development environment; the USB workflow
+above uses files on your laptop. Update the original app through Google Play to
+compare a published release against Dev.
+
 1. Install dependencies
 
    ```bash

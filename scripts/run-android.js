@@ -3,6 +3,8 @@
 const net = require('node:net');
 const { spawn, spawnSync } = require('node:child_process');
 const { reversePort } = require('./setup-adb-reverse');
+const { loadLocalEnv } = require('./local-env');
+const { prepareAndroid } = require('./prepare-android');
 
 const BACKEND_PORT = 3001;
 const DEFAULT_METRO_PORT = 8081;
@@ -121,6 +123,7 @@ function stopLocalPortListeners(port) {
 }
 
 async function main() {
+  loadLocalEnv();
   const metroPort = getMetroPort(forwardedArgs);
   const nativeRunArgs = stripMetroArgs(forwardedArgs);
   const clearMetroCache = shouldClearMetroCache(forwardedArgs);
@@ -131,6 +134,7 @@ async function main() {
     if (metroPort !== BACKEND_PORT) {
       reversePort(metroPort);
     }
+    prepareAndroid();
   } catch (error) {
     failWithMessage(error);
   }
@@ -186,7 +190,7 @@ async function main() {
 
   const expoRunAndroid = spawnSync(
     'npx',
-    ['expo', 'run:android', '--no-bundler', ...nativeRunArgs],
+    ['expo', 'run:android', '--no-bundler', '--app-id', 'com.transpo24.app.dev', ...nativeRunArgs],
     { stdio: 'inherit' },
   );
 

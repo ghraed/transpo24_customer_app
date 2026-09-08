@@ -34,6 +34,7 @@ transpo-24-firebase-adminsdk-fbsvc-087c183b0a.json
 # local env files
 .env
 .env*.local
+google-services.dev.json
 
 # typescript
 *.tsbuildinfo
