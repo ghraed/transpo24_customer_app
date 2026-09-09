@@ -19,7 +19,7 @@ const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ serviceId: 'vehicle-service' }),
   useRouter: () => ({ back: jest.fn(), replace: mockReplace }),
-  Stack: { Screen: () => null },
+  Stack: { Screen: ({ options }) => options?.header?.() ?? null },
 }));
 jest.mock('@/lib/auth-token', () => ({
   useAuthSession: () => ({ user: { id: 'customer', countryCode: 'CH' } }),
@@ -55,7 +55,7 @@ function button(tree, text) {
   return tree.root
     .findAll((node) => typeof node.props.onPress === 'function')
     .find(
-      (node) => node.findAll((child) => child.props.children === text).length,
+      (node) => node.props.accessibilityLabel === text || node.findAll((child) => child.props.children === text).length,
     );
 }
 describe('vehicle review editing', () => {

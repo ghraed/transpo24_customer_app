@@ -1,3 +1,4 @@
+import { ServiceHeader, SERVICE_HEADER_OPTIONS } from '@/requests/service-header';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -321,38 +322,13 @@ function VehicleRequest({
   return (
     <SafeAreaView
       style={[styles.screen, { direction: i18n.dir() }]}
-      edges={['top', 'left', 'right']}
+      edges={['left', 'right']}
     >
-      <Stack.Screen options={{ headerShown: false, gestureEnabled: !busy }} />
-      <View style={styles.header}>
-        <Pressable disabled={busy} onPress={back}>
-          <Text style={styles.link}>{t('vehicleRequest.back')}</Text>
-        </Pressable>
-        <Text style={styles.service}>{t('vehicleRequest.title')}</Text>
-      </View>
-      <View
-        accessibilityLabel={t('vehicleRequest.progress', {
-          current: STAGE[step],
-          total: 5,
-        })}
-        style={styles.progress}
-      >
-        {[1, 2, 3, 4, 5].map((number) => (
-          <View
-            key={number}
-            style={[styles.stage, number <= STAGE[step] && styles.activeStage]}
-          >
-            <Text
-              style={[
-                styles.body,
-                number <= STAGE[step] && styles.activeStageText,
-              ]}
-            >
-              {number}
-            </Text>
-          </View>
-        ))}
-      </View>
+      <Stack.Screen options={{
+        ...SERVICE_HEADER_OPTIONS,
+        gestureEnabled: !busy,
+        header: () => <ServiceHeader title={t('vehicleRequest.title')} onBack={back} disabled={busy} />,
+      }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
@@ -366,6 +342,29 @@ function VehicleRequest({
             isAddressStep && styles.mapContent,
           ]}
         >
+          <View
+            accessibilityLabel={t('vehicleRequest.progress', {
+              current: STAGE[step],
+              total: 5,
+            })}
+            style={styles.progress}
+          >
+            {[1, 2, 3, 4, 5].map((number) => (
+              <View
+                key={number}
+                style={[styles.stage, number <= STAGE[step] && styles.activeStage]}
+              >
+                <Text
+                  style={[
+                    styles.body,
+                    number <= STAGE[step] && styles.activeStageText,
+                  ]}
+                >
+                  {number}
+                </Text>
+              </View>
+            ))}
+          </View>
           <Text style={styles.title}>
             {step === 'schedule'
               ? `${t('vehicleRequest.step.schedule')} · ${t('vehicleRequest.step.photos')}`
@@ -741,7 +740,7 @@ const styles = StyleSheet.create({
   progress: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 4,
     paddingVertical: 10,
   },
   stage: {

@@ -1,3 +1,4 @@
+import { RequestProgress } from '@/requests/request-progress';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -9,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -18,7 +18,7 @@ import {
   View,
   type ColorValue,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import type {
@@ -243,7 +243,6 @@ export default function GoodsDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<GoodsDetailsRouteParams>();
   const keyboardInset = useAndroidKeyboardInset();
-  const insets = useSafeAreaInsets();
 
   const serviceId = typeof params.serviceId === 'string' ? params.serviceId.trim() : '';
   const serviceKey = typeof params.serviceKey === 'string' ? params.serviceKey.trim() : '';
@@ -400,7 +399,7 @@ export default function GoodsDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -410,16 +409,17 @@ export default function GoodsDetailsScreen() {
           contentContainerStyle={[
             styles.container,
             {
-              paddingTop: Math.max(insets.top, 10),
+              paddingTop: 12,
               paddingBottom: keyboardInset > 0 ? keyboardInset + 32 : 44,
             },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <RequestProgress current={1} total={4} />
           <View style={styles.heroCard}>
             <View style={styles.heroIconWrap}>
-              <IconSymbol name="shippingbox.fill" size={22} color="#111827" />
+              <IconSymbol name={{ ios: 'shippingbox.fill', android: 'inventory_2', web: 'inventory_2' }} size={22} color="#111827" />
             </View>
             <Text style={styles.title}>{appI18n.t("Describe the shipment")}</Text>
             <Text style={styles.subtitle}>

@@ -1,3 +1,4 @@
+import { serviceHeaderOptions } from '@/requests/service-header';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import React, { useEffect } from 'react';
@@ -163,7 +164,7 @@ function RootNavigator() {
           <OtaUpdateBanner />
           <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
             <Stack>
-          <Stack.Screen name="vehicle-request" options={{ headerShown: false }} />
+          <Stack.Screen name="vehicle-request" options={serviceHeaderOptions(t('vehicleRequest.title'))} />
           <Stack.Screen
             name="index"
             options={{
@@ -204,7 +205,7 @@ function RootNavigator() {
           <Stack.Screen
             name="choose-service"
             options={{
-              title: t('Choose Service'),
+              ...serviceHeaderOptions(t('Choose Service')),
               headerStyle: { backgroundColor: '#FAFAFA' },
               headerTintColor: '#111827',
               headerTitleStyle: { color: '#111827' },
@@ -214,7 +215,7 @@ function RootNavigator() {
           <Stack.Screen
             name="vehicle-details"
             options={{
-              title: t('Vehicle Details'),
+              ...serviceHeaderOptions(t('Vehicle Details')),
               headerStyle: { backgroundColor: '#FAFAFA' },
               headerTintColor: '#111827',
               headerTitleStyle: { color: '#111827' },
@@ -224,7 +225,7 @@ function RootNavigator() {
           <Stack.Screen
             name="motorcycle-details"
             options={{
-              title: t('Motorcycle & Bicycle'),
+              ...serviceHeaderOptions(t('Motorcycle & Bicycle')),
               headerStyle: { backgroundColor: '#FAFAFA' },
               headerTintColor: '#111827',
               headerTitleStyle: { color: '#111827' },
@@ -234,7 +235,7 @@ function RootNavigator() {
           <Stack.Screen
             name="goods-details"
             options={{
-              title: t('Goods Details'),
+              ...serviceHeaderOptions(t('Goods Details')),
               headerStyle: { backgroundColor: '#FAFAFA' },
               headerTintColor: '#111827',
               headerTitleStyle: { color: '#111827' },
@@ -244,7 +245,7 @@ function RootNavigator() {
           <Stack.Screen
             name="furniture-details"
             options={{
-              title: t('Furniture Details'),
+              ...serviceHeaderOptions(t('Furniture Details')),
               headerStyle: { backgroundColor: '#FAFAFA' },
               headerTintColor: '#111827',
               headerTitleStyle: { color: '#111827' },
@@ -254,17 +255,17 @@ function RootNavigator() {
           <Stack.Screen
             name="vehicle-condition"
             options={{
-              title: t('Vehicle Condition'),
+              ...serviceHeaderOptions(t('Vehicle Condition')),
               headerStyle: { backgroundColor: '#FAFAFA' },
               headerTintColor: '#111827',
               headerTitleStyle: { color: '#111827' },
               headerShadowVisible: false,
             }}
           />
-          <Stack.Screen name="pickup-location" options={{ title: t('Pickup Location') }} />
-          <Stack.Screen name="dropoff-location" options={{ title: t('Dropoff Location') }} />
-          <Stack.Screen name="date-time" options={{ title: t('Date & Item Details') }} />
-          <Stack.Screen name="submit-request" options={{ title: t('Submit Request') }} />
+          <Stack.Screen name="pickup-location" options={serviceHeaderOptions(t('Pickup Location'))} />
+          <Stack.Screen name="dropoff-location" options={serviceHeaderOptions(t('Dropoff Location'))} />
+          <Stack.Screen name="date-time" options={serviceHeaderOptions(t('Date & Item Details'))} />
+          <Stack.Screen name="submit-request" options={serviceHeaderOptions(t('Submit Request'))} />
           <Stack.Screen name="request-status" options={{ title: t('Request Status') }} />
           <Stack.Screen name="request-payment" options={{ title: t('Pay Now') }} />
           <Stack.Screen name="payment-method" options={{ title: t('Payment Method') }} />

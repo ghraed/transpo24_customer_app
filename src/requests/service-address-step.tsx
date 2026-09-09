@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthSession } from '@/lib/auth-token';
 import { getDrivingDistance } from '@/lib/places';
 import { AddressEditor } from './address-editor';
-import { MotorcycleProgress } from './motorcycle-progress';
+import { RequestProgress } from './request-progress';
 import type { Address } from './vehicle-draft';
 
 const DETAIL_KEYS: Record<string, string> = {
@@ -105,7 +105,10 @@ export function ServiceAddressStep({ kind }: { kind: 'pickup' | 'dropoff' }) {
   };
   return (
     <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.screen}>
-      {params.serviceKey === 'MOTORCYCLE_TRANSPORT' ? <MotorcycleProgress current={kind === 'pickup' ? 4 : 5} /> : null}
+      <RequestProgress
+        current={params.serviceKey === 'MOTORCYCLE_TRANSPORT' ? (kind === 'pickup' ? 4 : 5) : (kind === 'pickup' ? 2 : 3)}
+        total={params.serviceKey === 'MOTORCYCLE_TRANSPORT' ? 6 : 4}
+      />
       <Text style={styles.title}>{t(`vehicleRequest.step.${kind}`)}</Text>
       <View style={styles.editor}>
         <AddressEditor

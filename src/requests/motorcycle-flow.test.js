@@ -12,7 +12,7 @@ let mockParams = {};
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
-  Stack: { Screen: () => null },
+  Stack: { Screen: ({ options }) => options?.header?.() ?? null },
 }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key) => key, i18n: { language: 'en' } }) }));
 jest.mock('expo-symbols', () => ({ SymbolView: () => null }));
@@ -33,7 +33,7 @@ jest.mock('@/lib/api', () => ({
 }));
 function press(tree, label) {
   const target = tree.root.findAll((node) => typeof node.props.onPress === 'function')
-    .find((node) => node.findAll((child) => child.props.children === label).length);
+    .find((node) => node.props.accessibilityLabel === label || node.findAll((child) => child.props.children === label).length);
   expect(target).toBeDefined();
   return act(async () => { await target.props.onPress(); });
 }
@@ -77,7 +77,7 @@ test('switching from motorcycle to bicycle removes a stale VIN from the outgoing
   }) };
   await act(async () => { tree = create(<MotorcycleDetails />); });
   expect(visible(tree, 'VIN / Chassis')).toBe(true);
-  await press(tree, 'Back');
+  await press(tree, 'vehicleRequest.back');
   await press(tree, 'Bicycle');
   await press(tree, 'Select bicycle type');
   await press(tree, 'City bike');

@@ -1,4 +1,4 @@
-import { MotorcycleProgress } from '@/requests/motorcycle-progress';
+import { RequestProgress } from '@/requests/request-progress';
 import { Redirect } from 'expo-router';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -877,14 +877,16 @@ function SubmitRequestScreen() {
           contentContainerStyle={[
             styles.content,
             {
-              paddingTop: Math.max(insets.top, 18),
+              paddingTop: 18,
               paddingBottom: Math.max(insets.bottom + 32, 42) + keyboardInset,
             },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        {serviceKey === 'MOTORCYCLE_TRANSPORT' ? <MotorcycleProgress current={6} /> : null}
+        {isMotorcycleTransport || isGoodsTransport || isFurnitureTransport ? (
+          <RequestProgress current={isMotorcycleTransport ? 6 : 4} total={isMotorcycleTransport ? 6 : 4} />
+        ) : null}
       <View style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View style={styles.heroBadge}>

@@ -1,3 +1,4 @@
+import { ServiceHeader, SERVICE_HEADER_OPTIONS } from '@/requests/service-header';
 import { MotorcycleProgress } from '@/requests/motorcycle-progress';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,7 +12,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -20,7 +20,7 @@ import {
   View,
   type ColorValue,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { decodeVehicleVin } from '@/lib/api';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
@@ -452,8 +452,17 @@ export default function MotorcycleDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <Stack.Screen options={{ title: appI18n.t(step === 'choice' ? 'Motorcycle & Bicycle' : isBicycle ? 'Bicycle Details' : 'Motorcycle Details') }} />
+    <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
+      <Stack.Screen options={{
+        ...SERVICE_HEADER_OPTIONS,
+        header: () => <ServiceHeader
+          title={appI18n.t(step === 'choice' ? 'Motorcycle & Bicycle' : isBicycle ? 'Bicycle Details' : 'Motorcycle Details')}
+          onBack={() => {
+            if (step === 'choice') router.back();
+            else { setStep(step === 'schedule' ? 'details' : 'choice'); setErrorMessage(''); }
+          }}
+        />,
+      }} />
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -463,7 +472,7 @@ export default function MotorcycleDetailsScreen() {
         contentContainerStyle={[
           styles.container,
           {
-            paddingTop: Math.max(10, insets.top + 4),
+            paddingTop: 12,
             paddingBottom: Math.max(30, insets.bottom + 18) + keyboardInset,
           },
         ]}
@@ -474,9 +483,6 @@ export default function MotorcycleDetailsScreen() {
       <View style={styles.heroBlock}>
         <Text style={styles.title}>{appI18n.t(step === 'choice' ? 'Choose Motorcycle or Bicycle' : step === 'schedule' ? 'Date & Time' : isBicycle ? 'Bicycle Details' : 'Motorcycle Details')}</Text>
       </View>
-      {step !== 'choice' ? <Pressable onPress={() => { setStep(step === 'schedule' ? 'details' : 'choice'); setErrorMessage(''); }}>
-        <Text style={styles.label}>{appI18n.t('Back')}</Text>
-      </Pressable> : null}
       {step === 'choice' ? <View style={styles.toggleRow}>
         {(['MOTORCYCLE', 'BICYCLE'] as const).map((kind) => <Pressable
           key={kind} accessibilityRole="button" style={styles.optionChip}
