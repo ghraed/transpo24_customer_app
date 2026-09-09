@@ -1,8 +1,10 @@
+import { MotorcycleProgress } from '@/requests/motorcycle-progress';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
@@ -48,6 +50,16 @@ const MOTORCYCLE_TYPE_OPTIONS: { value: MotorcycleType; label: string }[] = [
   { value: 'CRUISER', label: 'Cruiser' },
   { value: 'ELECTRIC_MOTORCYCLE', label: 'Electric motorcycle' },
   { value: 'SCOOTER', label: 'Scooter' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+const BICYCLE_TYPE_OPTIONS = [
+  { value: 'CITY_BIKE', label: 'City bike' },
+  { value: 'MOUNTAIN_BIKE', label: 'Mountain bike' },
+  { value: 'ROAD_BIKE', label: 'Road bike' },
+  { value: 'E_BIKE', label: 'E-bike' },
+  { value: 'CARGO_BIKE', label: 'Cargo bike' },
+  { value: 'CHILDRENS_BIKE', label: "Children's bike" },
   { value: 'OTHER', label: 'Other' },
 ];
 
@@ -122,18 +134,22 @@ function IconSymbol({
 }
 
 function formatValidationMessage(form: MotorcycleTransportFormData): string | null {
-  if (form.chassisNumber.trim()) {
+  if (form.transportKind !== 'BICYCLE' && form.chassisNumber.trim()) {
     const vinError = getVinValidationMessage(form.chassisNumber);
     if (vinError) {
       return vinError;
     }
   }
 
-  if (!form.motorcycleType) {
+  if (form.transportKind === 'BICYCLE' && !form.bicycleType) {
+    return appI18n.t('Please select the bicycle type.');
+  }
+
+  if (form.transportKind !== 'BICYCLE' && !form.motorcycleType) {
     return appI18n.t("Please select the motorcycle type.");
   }
 
-  if (!form.motorcycleCondition) {
+  if (form.transportKind !== 'BICYCLE' && !form.motorcycleCondition) {
     return appI18n.t("Please select the motorcycle condition.");
   }
 
@@ -229,6 +245,7 @@ function resolveMotorcycleType(decoded: DecodedVinResult): MotorcycleType | '' {
 }
 
 export default function MotorcycleDetailsScreen() {
+  const { i18n } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<MotorcycleDetailsRouteParams>();
   const keyboardInset = useAndroidKeyboardInset();
@@ -246,6 +263,11 @@ export default function MotorcycleDetailsScreen() {
   );
 
   const [form, setForm] = useState<MotorcycleTransportFormData>(() => ({
+    transportKind: pendingMotorcycleDetails?.transportKind ?? 'MOTORCYCLE',
+    bicycleType: pendingMotorcycleDetails?.bicycleType ?? '',
+    brand: pendingMotorcycleDetails?.brand ?? '',
+    model: pendingMotorcycleDetails?.model ?? '',
+    additionalNotes: pendingMotorcycleDetails?.additionalNotes ?? '',
     motorcycleType: pendingMotorcycleDetails?.motorcycleType ?? '',
     chassisNumber: pendingMotorcycleDetails?.chassisNumber ?? '',
     motorcycleCondition: pendingMotorcycleDetails?.motorcycleCondition ?? '',
@@ -254,6 +276,9 @@ export default function MotorcycleDetailsScreen() {
     isImmediate: pendingMotorcycleDetails?.isImmediate ?? false,
     scheduledPickupAt: buildDefaultScheduledPickupAt(pendingMotorcycleDetails?.scheduledPickupAt),
   }));
+  const [step, setStep] = useState<'choice' | 'details' | 'schedule'>(pendingMotorcycleDetails ? 'details' : 'choice');
+  const isBicycle = form.transportKind === 'BICYCLE';
+  const vehicleTypes = isBicycle ? BICYCLE_TYPE_OPTIONS : MOTORCYCLE_TYPE_OPTIONS;
   const [selectedPhotos, setSelectedPhotos] = useState<LocalPhotoAsset[]>(pendingMotorcyclePhotoAssets);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [vinMessage, setVinMessage] = useState<string>('');
@@ -266,7 +291,7 @@ export default function MotorcycleDetailsScreen() {
   const [conditionSearch, setConditionSearch] = useState<string>('');
   const [openDropdown, setOpenDropdown] = useState<'type' | 'condition' | null>(null);
 
-  const validationMessage = useMemo(() => formatValidationMessage(form), [form]);
+  const validationMessage = formatValidationMessage(form);
   const normalizedVin = useMemo(() => sanitizeVin(form.chassisNumber), [form.chassisNumber]);
   const vinValidationMessage = useMemo(
     () => (normalizedVin ? getVinValidationMessage(normalizedVin) : null),
@@ -274,20 +299,12 @@ export default function MotorcycleDetailsScreen() {
   );
   const canDecodeVin = normalizedVin.length > 0 && !vinValidationMessage && !isDecodingVin;
   const canContinue = serviceId.length > 0;
-  const typeOptions = useMemo(
-    () =>
-      MOTORCYCLE_TYPE_OPTIONS.filter((option) =>
-        option.label.toLowerCase().includes(typeSearch.trim().toLowerCase()),
-      ).map((option) => ({ id: option.value, label: option.label })),
-    [typeSearch],
-  );
-  const conditionOptions = useMemo(
-    () =>
-      MOTORCYCLE_CONDITION_OPTIONS.filter((option) =>
-        option.label.toLowerCase().includes(conditionSearch.trim().toLowerCase()),
-      ).map((option) => ({ id: option.value, label: option.label })),
-    [conditionSearch],
-  );
+  const typeOptions = vehicleTypes.filter((option) =>
+    appI18n.t(option.label).toLowerCase().includes(typeSearch.trim().toLowerCase()),
+  ).map((option) => ({ id: option.value, label: option.label }));
+  const conditionOptions = MOTORCYCLE_CONDITION_OPTIONS.filter((option) =>
+    appI18n.t(option.label).toLowerCase().includes(conditionSearch.trim().toLowerCase()),
+  ).map((option) => ({ id: option.value, label: option.label }));
 
   const decodeVin = async (): Promise<void> => {
     const vin = sanitizeVin(form.chassisNumber);
@@ -348,11 +365,16 @@ export default function MotorcycleDetailsScreen() {
         serviceId,
         serviceKey,
         pendingMotorcycleDetails: JSON.stringify({
-          motorcycleType: form.motorcycleType,
-          chassisNumber: normalizedVin || undefined,
-          motorcycleCondition: form.motorcycleCondition,
-          requiresSpecialWrapping: form.requiresSpecialWrapping,
-          requiresDedicatedCarrier: form.requiresDedicatedCarrier,
+          transportKind: form.transportKind,
+          bicycleType: isBicycle ? form.bicycleType : undefined,
+          brand: isBicycle ? form.brand?.trim() : undefined,
+          model: isBicycle ? form.model?.trim() : undefined,
+          additionalNotes: form.additionalNotes?.trim(),
+          motorcycleType: isBicycle ? 'OTHER' : form.motorcycleType,
+          chassisNumber: isBicycle ? undefined : normalizedVin || undefined,
+          motorcycleCondition: isBicycle ? 'UNKNOWN' : form.motorcycleCondition,
+          requiresSpecialWrapping: false,
+          requiresDedicatedCarrier: false,
           isImmediate: form.isImmediate,
           scheduledPickupAt:
             form.isImmediate || !form.scheduledPickupAt
@@ -431,6 +453,7 @@ export default function MotorcycleDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <Stack.Screen options={{ title: appI18n.t(step === 'choice' ? 'Motorcycle & Bicycle' : isBicycle ? 'Bicycle Details' : 'Motorcycle Details') }} />
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -447,31 +470,40 @@ export default function MotorcycleDetailsScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+      <MotorcycleProgress current={step === 'choice' ? 1 : step === 'details' ? 2 : 3} />
       <View style={styles.heroBlock}>
-        <Text style={styles.title}>{appI18n.t("Tell us about the motorcycle")}</Text>
-        <Text style={styles.subtitle}>
-          {appI18n.t("Add the motorcycle details, pickup timing and photos before choosing the route.")}</Text>
+        <Text style={styles.title}>{appI18n.t(step === 'choice' ? 'Choose Motorcycle or Bicycle' : step === 'schedule' ? 'Date & Time' : isBicycle ? 'Bicycle Details' : 'Motorcycle Details')}</Text>
       </View>
-
+      {step !== 'choice' ? <Pressable onPress={() => { setStep(step === 'schedule' ? 'details' : 'choice'); setErrorMessage(''); }}>
+        <Text style={styles.label}>{appI18n.t('Back')}</Text>
+      </Pressable> : null}
+      {step === 'choice' ? <View style={styles.toggleRow}>
+        {(['MOTORCYCLE', 'BICYCLE'] as const).map((kind) => <Pressable
+          key={kind} accessibilityRole="button" style={styles.optionChip}
+          onPress={() => { setForm((prev) => ({ ...prev, transportKind: kind })); setOpenDropdown(null); setTypeSearch(''); setVinMessage(''); setStep('details'); }}>
+          <Text style={styles.optionChipText}>{appI18n.t(kind === 'BICYCLE' ? 'Bicycle' : 'Motorcycle')}</Text>
+        </Pressable>)}
+      </View> : null}
+      {step === 'details' ? <>
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>{appI18n.t("Manual Motorcycle Selection")}</Text>
       <SearchableDropdown
-        label={appI18n.t("Motorcycle Type")}
-        placeholder={appI18n.t("Select motorcycle type")}
+        label={appI18n.t(isBicycle ? "Bicycle Type" : "Motorcycle Type")}
+        placeholder={appI18n.t(isBicycle ? "Select bicycle type" : "Select motorcycle type")}
         options={typeOptions}
-        valueLabel={appI18n.t(MOTORCYCLE_TYPE_OPTIONS.find((option) => option.value === form.motorcycleType)?.label ?? '')}
+        valueLabel={appI18n.t(vehicleTypes.find((option) => option.value === (isBicycle ? form.bicycleType : form.motorcycleType))?.label ?? '')}
         isOpen={openDropdown === 'type'}
         searchText={typeSearch}
         onToggle={() => setOpenDropdown((prev) => (prev === 'type' ? null : 'type'))}
         onSearchChange={setTypeSearch}
         onSelect={(option) => {
-          setForm((prev) => ({ ...prev, motorcycleType: option.id as MotorcycleType }));
+          setForm((prev) => isBicycle ? ({ ...prev, bicycleType: option.id }) : ({ ...prev, motorcycleType: option.id as MotorcycleType }));
           setOpenDropdown(null);
           setErrorMessage('');
         }}
       />
       </View>
 
+      {!isBicycle ? <>
       <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>{appI18n.t("VIN / Chassis")}</Text>
       <Text style={styles.sectionHint}>{appI18n.t("Use VIN decode if you want us to prefill the details automatically.")}</Text>
@@ -536,52 +568,23 @@ export default function MotorcycleDetailsScreen() {
       />
       </View>
 
+      </> : <View style={styles.sectionCard}>
+        <Text style={styles.label}>{appI18n.t('Brand (optional)')}</Text>
+        <TextInput accessibilityLabel={appI18n.t('Brand (optional)')} style={styles.input} value={form.brand} onChangeText={(brand) => setForm((prev) => ({ ...prev, brand }))} />
+        <Text style={styles.label}>{appI18n.t('Model (optional)')}</Text>
+        <TextInput accessibilityLabel={appI18n.t('Model (optional)')} style={styles.input} value={form.model} onChangeText={(model) => setForm((prev) => ({ ...prev, model }))} />
+      </View>}
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>{appI18n.t("Transport Requirements")}</Text>
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>{appI18n.t("Requires special wrapping")}</Text>
-        <Pressable
-          style={[styles.switchChip, form.requiresSpecialWrapping && styles.switchChipActive]}
-          onPress={() =>
-            setForm((prev) => ({
-              ...prev,
-              requiresSpecialWrapping: !prev.requiresSpecialWrapping,
-            }))
-          }
-        >
-          <Text
-            style={[
-              styles.switchChipText,
-              form.requiresSpecialWrapping && styles.switchChipTextActive,
-            ]}
-          >
-            {form.requiresSpecialWrapping ? appI18n.t('Yes') : appI18n.t('No')}
-          </Text>
-        </Pressable>
+        <Text style={styles.label}>{appI18n.t('Additional Notes (optional)')}</Text>
+        <TextInput accessibilityLabel={appI18n.t('Additional Notes (optional)')} multiline style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} value={form.additionalNotes} onChangeText={(additionalNotes) => setForm((prev) => ({ ...prev, additionalNotes }))} />
       </View>
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>{appI18n.t("Requires dedicated carrier")}</Text>
-        <Pressable
-          style={[styles.switchChip, form.requiresDedicatedCarrier && styles.switchChipActive]}
-          onPress={() =>
-            setForm((prev) => ({
-              ...prev,
-              requiresDedicatedCarrier: !prev.requiresDedicatedCarrier,
-            }))
-          }
-        >
-          <Text
-            style={[
-              styles.switchChipText,
-              form.requiresDedicatedCarrier && styles.switchChipTextActive,
-            ]}
-          >
-            {form.requiresDedicatedCarrier ? appI18n.t('Yes') : appI18n.t('No')}
-          </Text>
-        </Pressable>
-      </View>
-      </View>
-
+      <Pressable style={styles.continueButton} onPress={() => {
+        const error = formatValidationMessage({ ...form, isImmediate: true });
+        if (error) { setErrorMessage(error); return; }
+        setErrorMessage(''); setStep('schedule');
+      }}><Text style={styles.continueText}>{appI18n.t('Continue')}</Text></Pressable>
+      </> : null}
+      {step === 'schedule' ? <>
       <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
       <View style={styles.toggleRow}>
@@ -606,13 +609,13 @@ export default function MotorcycleDetailsScreen() {
           <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
             <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Date")}</Text>
             <Text style={styles.pickerButtonValue}>
-              {form.scheduledPickupAt.toLocaleDateString()}
+              {form.scheduledPickupAt.toLocaleDateString(i18n.language)}
             </Text>
           </Pressable>
           <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
             <Text style={styles.pickerButtonLabel}>{appI18n.t("Pickup Time")}</Text>
             <Text style={styles.pickerButtonValue}>
-              {form.scheduledPickupAt.toLocaleTimeString([], {
+              {form.scheduledPickupAt.toLocaleTimeString(i18n.language, {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false,
@@ -624,7 +627,7 @@ export default function MotorcycleDetailsScreen() {
       </View>
 
       <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>{appI18n.t("Upload Photos")}</Text>
+      <Text style={styles.sectionTitle}>{appI18n.t("Photos (optional)")}</Text>
       <Text style={styles.photoCounter}>{selectedPhotos.length} / {MAX_PHOTOS}</Text>
       <View style={styles.actionsRow}>
         <Pressable style={[styles.secondaryButton, styles.flexButton]} onPress={() => void pickFromLibrary()}>
@@ -647,8 +650,6 @@ export default function MotorcycleDetailsScreen() {
       </View>
       </View>
 
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-
       <Pressable
         style={[styles.continueButton, !canContinue && styles.continueDisabled]}
         onPress={onContinue}
@@ -661,6 +662,9 @@ export default function MotorcycleDetailsScreen() {
           size={18}
         />
       </Pressable>
+
+      </> : null}
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
       {showDatePicker ? (
         <DateTimePicker

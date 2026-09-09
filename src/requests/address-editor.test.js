@@ -1,6 +1,8 @@
+import { TextInput } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import React from 'react';
 import { beforeEach, expect, it, jest } from '@jest/globals';
+import { fetchPlaceDetails, searchPlacesAutocomplete } from '@/lib/places';
 import { AddressEditor } from './address-editor';
 import { resolveCurrentAddress } from './resolve-current-address';
 
@@ -12,24 +14,26 @@ jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(async () => ({ granted: false })),
 }));
 jest.mock('@/components/native-maps', () => ({
-  NativeMapView: 'TestMap', NativeMarker: 'TestMarker', isNativeMapRuntimeAvailable: true,
+  NativeMapView: 'TestMap', NativeMarker: 'TestMarker', NativeMapViewDirections: 'TestDirections', isNativeMapRuntimeAvailable: true,
 }));
+jest.mock('@/config/maps', () => ({ GOOGLE_MAPS_API_KEY: 'test-key' }));
 jest.mock('@/lib/places', () => ({
   fetchPlaceDetails: jest.fn(), getAccountCountryCenter: jest.fn(), searchPlacesAutocomplete: jest.fn(),
 }));
 jest.mock('./resolve-current-address', () => ({ resolveCurrentAddress: jest.fn() }));
 
+const mockAnimateToRegion = jest.fn();
 beforeEach(() => jest.clearAllMocks());
-async function render(label = 'Pickup') {
+async function render(label = 'Pickup', options = {}) {
   let tree;
   const onChange = jest.fn();
   function Harness() {
     const [value, setValue] = React.useState({ latitude: 47, longitude: 8, address: 'Old address' });
-    return <AddressEditor label={label} invalid={false} value={value}
+    return <AddressEditor label={label} invalid={false} value={value} {...options}
       onChange={address => { onChange(address); setValue(address); }} />;
   }
   await act(async () => {
-    tree = create(<Harness />);
+    tree = create(<Harness />, { createNodeMock: (element) => element.type === 'TestMap' ? { animateToRegion: mockAnimateToRegion } : null });
   });
   const tap = coordinate => tree.root.findAllByType('TestMap')[0].props.onPress({ nativeEvent: { coordinate } });
   return { tree, onChange, tap };
@@ -82,5 +86,96 @@ it('preserves map position and zoom during pin lookup and after the address upda
   expect(tree.root.findAllByType('TestMap')[0]).toBe(mapBefore);
   expect(mapBefore.props.region).toEqual(camera);
   expect(tree.root.findAllByType('TestMarker')[0].props.coordinate).toEqual({ ...point, address: 'New pin address' });
+  await act(async () => tree.unmount());
+});
+
+it('shows a red pickup pin without a route on the pickup step', async () => {
+  const { tree } = await render();
+  expect(tree.root.findAllByType('TestMarker')[0].props.pinColor).toBe('#DC2626');
+  expect(tree.root.findAllByType('TestDirections')).toHaveLength(0);
+  await act(async () => tree.unmount());
+});
+
+it('shows the red pickup, blue dropoff, and driving route and updates it when the dropoff moves', async () => {
+  const pickup = { latitude: 46, longitude: 7, address: 'Pickup address' };
+  const { tree, tap } = await render('Delivery', { locationKind: 'dropoff', pickupLocation: pickup });
+  const markers = tree.root.findAllByType('TestMarker');
+  expect(markers[0].props).toMatchObject({ coordinate: pickup, pinColor: '#DC2626' });
+  expect(markers[1].props).toMatchObject({ coordinate: { latitude: 47, longitude: 8 }, pinColor: '#2563EB' });
+  expect(tree.root.findAllByType('TestDirections')[0].props).toMatchObject({
+    origin: pickup, destination: { latitude: 47, longitude: 8 }, mode: 'DRIVING', strokeColor: '#2563EB',
+  });
+  const point = { latitude: 48, longitude: 9 };
+  resolveCurrentAddress.mockResolvedValue({ ...point, address: 'New destination' });
+  await act(async () => tap(point));
+  expect(tree.root.findAllByType('TestDirections')[0].props.destination).toMatchObject(point);
+  expect(tree.root.findAllByType('TestMarker')[0].props.coordinate).toEqual(pickup);
+  expect(tree.root.findAllByType('TestMarker')[1].props.pinColor).toBe('#2563EB');
+  await act(async () => tree.unmount());
+});
+
+it('centers the dropoff map on pickup until a destination is selected', async () => {
+  const pickup = { latitude: 46, longitude: 7, address: 'Pickup address' };
+  const { tree } = await render('Delivery', { locationKind: 'dropoff', pickupLocation: pickup, value: undefined });
+  expect(tree.root.findAllByType('TestMap')[0].props.region).toMatchObject({ latitude: 46, longitude: 7 });
+  expect(tree.root.findAllByType('TestMarker')[0].props).toMatchObject({ coordinate: pickup, pinColor: '#DC2626' });
+  expect(tree.root.findAllByType('TestDirections')).toHaveLength(0);
+  await act(async () => tree.unmount());
+});
+
+it('opens the search popup at street zoom and keeps its zoom independent of the route map', async () => {
+  const pickup = { latitude: 40, longitude: 2, address: 'Far away pickup' };
+  const { tree } = await render('Delivery', { locationKind: 'dropoff', pickupLocation: pickup });
+  const mainMap = tree.root.findAllByType('TestMap')[0];
+  const routeRegion = mainMap.props.region;
+  const openSearch = tree.root.findAll(node => node.props.accessibilityLabel === 'Delivery' && typeof node.props.onPress === 'function')[0];
+  await act(async () => openSearch.props.onPress());
+  const popup = tree.root.findAllByType('TestMap')[1];
+  expect(popup.props.region).toEqual({ latitude: 47, longitude: 8, latitudeDelta: 0.012, longitudeDelta: 0.012 });
+  expect(popup.props.zoomEnabled).toBe(true);
+  expect(popup.props.scrollEnabled).toBe(true);
+  const zoomed = { latitude: 47.01, longitude: 8.01, latitudeDelta: 0.004, longitudeDelta: 0.004 };
+  await act(async () => popup.props.onRegionChangeComplete(zoomed, { isGesture: true }));
+  expect(popup.props.region).toEqual(zoomed);
+  expect(mainMap.props.region).toEqual(routeRegion);
+  await act(async () => tree.unmount());
+});
+
+it('does not display a world map when no location or address is available', async () => {
+  const { tree } = await render('Pickup', { value: undefined });
+  const openSearch = tree.root.findAll(node => node.props.accessibilityLabel === 'Pickup' && typeof node.props.onPress === 'function')[0];
+  await act(async () => openSearch.props.onPress());
+  expect(tree.root.findAllByType('TestMap')).toHaveLength(0);
+  expect(tree.root.findAll(node => node.props.accessibilityLabel === 'vehicleRequest.currentLocation').length).toBeGreaterThan(0);
+  await act(async () => tree.unmount());
+});
+
+it.each(['pickup', 'dropoff'])('centers the %s map on the new pin after submitting an address search', async locationKind => {
+  const pickup = { latitude: 46, longitude: 7, address: 'Pickup address' };
+  const { tree, onChange } = await render('Address', {
+    locationKind, pickupLocation: locationKind === 'dropoff' ? pickup : undefined,
+  });
+  const openSearch = tree.root.findAll(node => node.props.accessibilityLabel === 'Address' && typeof node.props.onPress === 'function')[0];
+  await act(async () => openSearch.props.onPress());
+  const newAddress = { latitude: 50, longitude: 12, address: 'New searched address', placeId: 'new-place' };
+  searchPlacesAutocomplete.mockResolvedValue([{ placeId: 'new-place', description: newAddress.address }]);
+  fetchPlaceDetails.mockResolvedValue(newAddress);
+  const input = tree.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'vehicleRequest.searchAddress');
+  await act(async () => input.props.onChangeText('New searched address'));
+  await act(async () => input.props.onSubmitEditing());
+  expect(onChange).toHaveBeenLastCalledWith(newAddress);
+  expect(mockAnimateToRegion).toHaveBeenLastCalledWith({
+    latitude: 50, longitude: 12, latitudeDelta: 0.012, longitudeDelta: 0.012,
+  }, 300);
+  // A late native callback from the previous viewport must not undo the search.
+  await act(async () => tree.root.findAllByType('TestMap')[0].props.onRegionChangeComplete({
+    latitude: 47, longitude: 8, latitudeDelta: 0.2, longitudeDelta: 0.2,
+  }, { isGesture: false }));
+  expect(tree.root.findAllByType('TestMap')[0].props.region).toEqual({
+    latitude: 50, longitude: 12, latitudeDelta: 0.012, longitudeDelta: 0.012,
+  });
+  if (locationKind === 'dropoff') {
+    expect(tree.root.findAllByType('TestDirections')[0].props.destination).toEqual(newAddress);
+  }
   await act(async () => tree.unmount());
 });

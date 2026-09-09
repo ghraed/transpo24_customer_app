@@ -85,6 +85,12 @@ export interface CreateGoodsTransportRequestPayload {
 }
 
 export interface PendingMotorcycleDetailsPayload {
+  transportKind?: 'MOTORCYCLE' | 'BICYCLE';
+  bicycleType?: string;
+  brand?: string;
+  model?: string;
+  additionalNotes?: string;
+
   motorcycleType: MotorcycleType;
   chassisNumber?: string;
   motorcycleCondition: MotorcycleCondition;
@@ -136,6 +142,12 @@ export interface PendingFurnitureDetailsPayload {
 }
 
 export interface MotorcycleTransportFormData {
+  transportKind?: 'MOTORCYCLE' | 'BICYCLE';
+  bicycleType?: string;
+  brand?: string;
+  model?: string;
+  additionalNotes?: string;
+
   motorcycleType: MotorcycleType | '';
   chassisNumber: string;
   motorcycleCondition: MotorcycleCondition | '';

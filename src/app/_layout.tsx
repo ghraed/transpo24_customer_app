@@ -224,7 +224,7 @@ function RootNavigator() {
           <Stack.Screen
             name="motorcycle-details"
             options={{
-              title: t('Motorcycle Details'),
+              title: t('Motorcycle & Bicycle'),
               headerStyle: { backgroundColor: '#FAFAFA' },
               headerTintColor: '#111827',
               headerTitleStyle: { color: '#111827' },

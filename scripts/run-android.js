@@ -88,7 +88,7 @@ function getLocalPortListenerPids(port) {
     return [];
   }
 
-  const lookup = spawnSync('lsof', ['-ti', `tcp:${port}`], {
+  const lookup = spawnSync('lsof', ['-nP', '-t', `-iTCP:${port}`, '-sTCP:LISTEN'], {
     encoding: 'utf8',
   });
 
@@ -102,7 +102,7 @@ function getLocalPortListenerPids(port) {
     .filter((value) => Number.isFinite(value) && value > 0);
 }
 
-function stopLocalPortListeners(port) {
+async function stopLocalPortListeners(port) {
   const pids = getLocalPortListenerPids(port);
 
   if (pids.length === 0) {
@@ -119,6 +119,13 @@ function stopLocalPortListeners(port) {
         }`,
       );
     }
+  }
+
+  // SIGTERM is asynchronous: allow Metro time to release its listening socket.
+  const deadline = Date.now() + 10000;
+  while (await isLocalPortOpen(port)) {
+    if (Date.now() >= deadline) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 
@@ -144,7 +151,7 @@ async function main() {
 
   if (metroAlreadyRunning && restartMetro) {
     console.log(`Stopping the existing Metro server on port ${metroPort}...`);
-    stopLocalPortListeners(metroPort);
+    await stopLocalPortListeners(metroPort);
     metroAlreadyRunning = await isLocalPortOpen(metroPort);
 
     if (metroAlreadyRunning) {

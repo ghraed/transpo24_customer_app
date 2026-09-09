@@ -1,3 +1,4 @@
+import { MotorcycleProgress } from '@/requests/motorcycle-progress';
 import { Redirect } from 'expo-router';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -208,6 +209,12 @@ function formatEnumLabel(value: string): string {
     NEEDS_WINCH: 'Needs winch',
     NEEDS_CRANE: 'Needs crane',
     MISSING_WHEELS: 'Missing wheels',
+    CITY_BIKE: 'City bike',
+    MOUNTAIN_BIKE: 'Mountain bike',
+    ROAD_BIKE: 'Road bike',
+    E_BIKE: 'E-bike',
+    CARGO_BIKE: 'Cargo bike',
+    CHILDRENS_BIKE: "Children's bike",
     SPORT_BIKE: 'Sport bike',
     CRUISER: 'Cruiser',
     ELECTRIC_MOTORCYCLE: 'Electric motorcycle',
@@ -413,6 +420,9 @@ function SubmitRequestScreen() {
     if (!pickupLocation) errors.push('Pickup location is missing.');
     if (!dropoffLocation) errors.push('Dropoff location is missing.');
     if (isMotorcycleTransport) {
+      if (pendingMotorcycleDetails?.transportKind === 'BICYCLE' && !pendingMotorcycleDetails.bicycleType) {
+        errors.push(appI18n.t('Please select the bicycle type.'));
+      }
       if (!pendingMotorcycleDetails?.motorcycleType) {
         errors.push('Motorcycle type is missing.');
       }
@@ -656,11 +666,11 @@ function SubmitRequestScreen() {
     try {
       if (isMotorcycleTransport && pickupLocation && dropoffLocation && pendingMotorcycleDetails) {
         const payload: CreateMotorcycleTransportRequestPayload = {
-          motorcycleType: pendingMotorcycleDetails.motorcycleType,
-          chassisNumber: pendingMotorcycleDetails.chassisNumber?.trim() || undefined,
+          motorcycleType: pendingMotorcycleDetails.transportKind === 'BICYCLE' ? 'OTHER' : pendingMotorcycleDetails.motorcycleType,
+          chassisNumber: pendingMotorcycleDetails.transportKind === 'BICYCLE' ? undefined : pendingMotorcycleDetails.chassisNumber?.trim() || undefined,
           motorcycleCondition: pendingMotorcycleDetails.motorcycleCondition,
-          requiresSpecialWrapping: pendingMotorcycleDetails.requiresSpecialWrapping,
-          requiresDedicatedCarrier: pendingMotorcycleDetails.requiresDedicatedCarrier,
+          requiresSpecialWrapping: false,
+          requiresDedicatedCarrier: false,
           isImmediate: pendingMotorcycleDetails.isImmediate ?? true,
           scheduledPickupAt:
             pendingMotorcycleDetails.isImmediate === false
@@ -681,13 +691,27 @@ function SubmitRequestScreen() {
         };
 
         const created = await createMotorcycleTransportRequest(payload);
+        const bicycle = pendingMotorcycleDetails.transportKind === 'BICYCLE';
+        // The current API uses one service for both. Preserve the bicycle subtype
+        // in the item title/description and the optional fields in their native columns.
+        await updateScheduleAndItemDetails(created.id, {
+          isImmediate: payload.isImmediate ?? true,
+          scheduledPickupAt: payload.scheduledPickupAt,
+          itemType: bicycle ? 'OTHER' : 'MOTORCYCLE',
+          itemTitle: `${appI18n.t(bicycle ? 'Bicycle' : 'Motorcycle')} — ${formatEnumLabel(bicycle ? pendingMotorcycleDetails.bicycleType! : pendingMotorcycleDetails.motorcycleType)}`,
+          itemDescription: bicycle ? formatEnumLabel(pendingMotorcycleDetails.bicycleType!) : undefined,
+          itemBrand: bicycle ? pendingMotorcycleDetails.brand?.trim() || undefined : undefined,
+          itemModel: bicycle ? pendingMotorcycleDetails.model?.trim() || undefined : undefined,
+          specialInstructions: pendingMotorcycleDetails.additionalNotes?.trim() || undefined,
+          requiresLoadingHelp: false,
+        });
 
         if (pendingMotorcyclePhotoAssets.length > 0) {
           await uploadRequestPhotos(created.id, pendingMotorcyclePhotoAssets);
         }
 
         const submitted = await submitCustomerRequest(created.id, {
-          customerNote: customerNote.trim() || undefined,
+          customerNote: (isMotorcycleTransport ? pendingMotorcycleDetails?.additionalNotes : customerNote)?.trim() || undefined,
         });
 
         setSuccessMessage('Request submitted successfully.');
@@ -860,7 +884,8 @@ function SubmitRequestScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <View style={styles.heroCard}>
+        {serviceKey === 'MOTORCYCLE_TRANSPORT' ? <MotorcycleProgress current={6} /> : null}
+      <View style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View style={styles.heroBadge}>
               <IconSymbol name={{ ios: 'paperplane.fill', android: 'send', web: 'send' }} color="#111827" size={20} />
@@ -961,22 +986,18 @@ function SubmitRequestScreen() {
         {isMotorcycleTransport && pendingMotorcycleDetails ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{appI18n.t("Motorcycle Details")}</Text>
+              <Text style={styles.sectionTitle}>{appI18n.t(pendingMotorcycleDetails.transportKind === "BICYCLE" ? "Bicycle Details" : "Motorcycle Details")}</Text>
               <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
-            <Text style={styles.value}>{appI18n.t("Type:")} {formatEnumLabel(pendingMotorcycleDetails.motorcycleType)}</Text>
-            <Text style={styles.value}>
-              {appI18n.t("Condition:")} {formatEnumLabel(pendingMotorcycleDetails.motorcycleCondition)}
-            </Text>
-            <Text style={styles.value}>
-              {appI18n.t("Chassis number:")} {pendingMotorcycleDetails.chassisNumber?.trim() || appI18n.t("Not provided")}
-            </Text>
-            <Text style={styles.value}>
-              {appI18n.t("Special wrapping:")} {pendingMotorcycleDetails.requiresSpecialWrapping ? appI18n.t('Yes') : appI18n.t('No')}
-            </Text>
-            <Text style={styles.value}>
-              {appI18n.t("Dedicated carrier:")} {pendingMotorcycleDetails.requiresDedicatedCarrier ? appI18n.t('Yes') : appI18n.t('No')}
-            </Text>
+            <Text style={styles.value}>{appI18n.t('Type:')} {formatEnumLabel(pendingMotorcycleDetails.transportKind === 'BICYCLE' ? pendingMotorcycleDetails.bicycleType ?? 'OTHER' : pendingMotorcycleDetails.motorcycleType)}</Text>
+            {pendingMotorcycleDetails.transportKind === 'BICYCLE' ? <>
+              <Text style={styles.value}>{appI18n.t('Brand (optional)')}: {pendingMotorcycleDetails.brand || appI18n.t('Not provided')}</Text>
+              <Text style={styles.value}>{appI18n.t('Model (optional)')}: {pendingMotorcycleDetails.model || appI18n.t('Not provided')}</Text>
+            </> : <>
+              <Text style={styles.value}>{appI18n.t('Condition:')} {formatEnumLabel(pendingMotorcycleDetails.motorcycleCondition)}</Text>
+              <Text style={styles.value}>{appI18n.t('Chassis number:')} {pendingMotorcycleDetails.chassisNumber || appI18n.t('Not provided')}</Text>
+            </>}
+            <Text style={styles.value}>{appI18n.t('Additional Notes (optional)')}: {pendingMotorcycleDetails.additionalNotes || appI18n.t('Not provided')}</Text>
           </View>
         ) : null}
 
@@ -1150,7 +1171,7 @@ function SubmitRequestScreen() {
           </>
         ) : null}
 
-        {isMotorcycleTransport || isGoodsTransport || isFurnitureTransport ? (
+        {isGoodsTransport || isFurnitureTransport ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{appI18n.t("Optional Note")}</Text>
             <TextInput

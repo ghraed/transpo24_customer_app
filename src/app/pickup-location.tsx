@@ -1,3 +1,5 @@
+import { MotorcycleProgress } from '@/requests/motorcycle-progress';
+import { useInitialMapCenter, WORLD_REGION } from '@/requests/use-initial-map-center';
 import { Redirect } from 'expo-router';
 import * as Location from 'expo-location';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -82,12 +84,7 @@ type ProviderState = {
   locationServicesEnabled: boolean;
 };
 
-const DEFAULT_REGION: Region = {
-  latitude: 33.8938,
-  longitude: 35.5018,
-  latitudeDelta: 0.08,
-  longitudeDelta: 0.08,
-};
+const DEFAULT_REGION = WORLD_REGION;
 
 function formatAddressFromReverseGeocode(
   reverseGeocodeResult: Location.LocationGeocodedAddress | undefined,
@@ -230,6 +227,7 @@ function PickupLocationScreen() {
   const [shouldRetryLocationOnAppFocus, setShouldRetryLocationOnAppFocus] = useState<boolean>(false);
   const suppressAutocompleteRef = useRef<boolean>(false);
   const mapRef = useRef<any>(null);
+  const stopInitialMapCenter = useInitialMapCenter(setRegion, selectedLocation !== null);
 
   const hasValidServiceId = serviceId.trim().length > 0;
 
@@ -556,7 +554,7 @@ function PickupLocationScreen() {
       if (serviceKey === 'MOTORCYCLE_TRANSPORT') {
         const pendingMotorcycleDetails = parsePendingMotorcycleDetails(pendingMotorcycleDetailsRaw);
         if (!pendingMotorcycleDetails) {
-          setErrorMessage(appI18n.t("Motorcycle details are missing. Please go back and complete them first."));
+          setErrorMessage(appI18n.t("Transport details are missing. Please go back and complete them first."));
           return;
         }
 
@@ -748,6 +746,7 @@ function PickupLocationScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+      {serviceKey === 'MOTORCYCLE_TRANSPORT' ? <MotorcycleProgress current={4} /> : null}
       <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View style={styles.heroBadge}>
@@ -774,11 +773,7 @@ function PickupLocationScreen() {
           style={styles.searchInput}
           returnKeyType="search"
         />
-        <Text style={styles.searchHint}>
-          {HAS_GOOGLE_MAPS_API_KEY
-            ? 'Google Places API key is configured.'
-            : 'Google Places API key is not configured yet.'}
-        </Text>
+
         <Text style={styles.searchHint}>
           {appI18n.t("Start typing and tap a suggestion to pin the pickup location.")}</Text>
         {placeSuggestions.length > 0 ? (
@@ -823,6 +818,7 @@ function PickupLocationScreen() {
             initialRegion={region}
             region={region}
             showsUserLocation
+            onPanDrag={stopInitialMapCenter}
             onRegionChangeComplete={setRegion}
             onPress={onMapPress}
           >
@@ -869,7 +865,7 @@ function PickupLocationScreen() {
           onPress={() => void onContinue()}
           disabled={!canContinue}
         >
-          {isSaving ? <ActivityIndicator size="small" color="#111827" /> : <Text style={styles.continueText}>{appI18n.t("Continue")}</Text>}
+          {isSaving ? <ActivityIndicator size="small" color="#111827" /> : <Text style={styles.continueText}>{appI18n.t("Confirm pickup address")}</Text>}
         </Pressable>
       </View>
     </KeyboardAvoidingView>

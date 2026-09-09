@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
   NativeMapView,
+  NativeMapViewDirections,
   NativeMarker,
   PROVIDER_GOOGLE,
   isNativeMapRuntimeAvailable,
@@ -27,8 +28,23 @@ import {
   searchPlacesAutocomplete,
   type PlaceAutocompleteSuggestion,
 } from '@/lib/places';
+import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import type { Address } from './vehicle-draft';
 import { resolveCurrentAddress } from './resolve-current-address';
+
+function addressRegion(address?: Address, pickup?: Address): Region | undefined {
+  const point = address ?? pickup;
+  if (!point) return undefined;
+  if (address && pickup) {
+    return {
+      latitude: (address.latitude + pickup.latitude) / 2,
+      longitude: (address.longitude + pickup.longitude) / 2,
+      latitudeDelta: Math.max(0.012, Math.abs(address.latitude - pickup.latitude) * 1.4),
+      longitudeDelta: Math.max(0.012, Math.abs(address.longitude - pickup.longitude) * 1.4),
+    };
+  }
+  return { latitude: point.latitude, longitude: point.longitude, latitudeDelta: 0.012, longitudeDelta: 0.012 };
+}
 
 export function AddressEditor({
   value,
@@ -37,6 +53,8 @@ export function AddressEditor({
   label,
   invalid,
   fillHeight = false,
+  locationKind = 'pickup',
+  pickupLocation,
 }: {
   value?: Address;
   onChange: (address: Address | undefined) => void;
@@ -44,14 +62,30 @@ export function AddressEditor({
   label: string;
   invalid: boolean;
   fillHeight?: boolean;
+  locationKind?: 'pickup' | 'dropoff';
+  pickupLocation?: Address;
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   // Camera state is independent of the selected pin, as in the original page.
-  const [region, setRegion] = useState<Region>(() => value
-    ? { latitude: value.latitude, longitude: value.longitude, latitudeDelta: 0.012, longitudeDelta: 0.012 }
-    : { latitude: 0, longitude: 0, latitudeDelta: 120, longitudeDelta: 300 });
+  const routeOrigin = locationKind === 'dropoff' ? pickupLocation : undefined;
+  const [region, setRegion] = useState<Region | undefined>(() => addressRegion(value, routeOrigin));
+  const [searchRegion, setSearchRegion] = useState<Region>();
+  const mainMapRef = useRef<{ animateToRegion: (region: Region, duration: number) => void } | null>(null);
+  const attachMainMap = useCallback((instance: { animateToRegion: (region: Region, duration: number) => void } | null) => {
+    mainMapRef.current = instance;
+  }, []);
+  const [cameraTarget, setCameraTarget] = useState<Region>();
+  useEffect(() => {
+    if (!open && cameraTarget) {
+      mainMapRef.current?.animateToRegion(cameraTarget, 300);
+    }
+  }, [open, cameraTarget]);
+  const focusMainMap = useCallback(() => {
+    if (!open && cameraTarget) mainMapRef.current?.animateToRegion(cameraTarget, 300);
+  }, [open, cameraTarget]);
+  const searchMapInteracted = useRef(false);
   const mapInteracted = useRef(false);
   const [center, setCenter] = useState<{
     latitude: number;
@@ -71,13 +105,20 @@ export function AddressEditor({
   }>();
   useEffect(() => () => { selectionId.current += 1; }, []);
   useEffect(() => {
-    if (center && !value && selectionId.current === 0 && !mapInteracted.current) {
-      setRegion({ ...center, latitudeDelta: 0.2, longitudeDelta: 0.2 });
+    if (center && !value && !routeOrigin && selectionId.current === 0 && !mapInteracted.current) {
+      setRegion({ ...center, latitudeDelta: 0.03, longitudeDelta: 0.03 });
     }
-  }, [center, value]);
+  }, [center, value, routeOrigin]);
+  useEffect(() => {
+    if (open && !searchRegion && center && !searchMapInteracted.current) {
+      setSearchRegion({ ...center, latitudeDelta: 0.03, longitudeDelta: 0.03 });
+    }
+  }, [open, searchRegion, center]);
   const focusAddress = (address: Address) => {
-    setRegion({ latitude: address.latitude, longitude: address.longitude,
-      latitudeDelta: 0.012, longitudeDelta: 0.012 });
+    const nextRegion = addressRegion(address);
+    setCameraTarget(nextRegion);
+    setRegion(nextRegion);
+    setSearchRegion(nextRegion);
   };
 
   useEffect(() => {
@@ -173,12 +214,22 @@ export function AddressEditor({
       if (id === selectionId.current) setResolving(false);
     }
   };
-  const select = async (suggestion: PlaceAutocompleteSuggestion) => {
+  const select = async (suggestion?: PlaceAutocompleteSuggestion) => {
+    if (!suggestion && !query.trim()) return;
     const id = ++selectionId.current;
     setResolving(true);
     setError('');
     try {
-      const address = await fetchPlaceDetails(suggestion.placeId, session.current);
+      const match = suggestion ?? (await searchPlacesAutocomplete(query.trim(), {
+        location: center,
+        sessionToken: session.current,
+      }))[0];
+      if (id !== selectionId.current) return;
+      if (!match) {
+        setError('vehicleRequest.noPlaces');
+        return;
+      }
+      const address = await fetchPlaceDetails(match.placeId, session.current);
       if (id !== selectionId.current) return;
       setPendingPin(undefined);
       focusAddress(address);
@@ -212,18 +263,75 @@ export function AddressEditor({
       if (id === selectionId.current) setResolving(false);
     }
   };
-  const map = (expanded = false) =>
-    isNativeMapRuntimeAvailable ? (
+  const map = (expanded = false, searching = false) => {
+    const camera = searching ? searchRegion : region;
+    if (!isNativeMapRuntimeAvailable) return null;
+    // A map without an address/location opens at the native world's default zoom.
+    // Keep search available until we have a meaningful center instead.
+    if (!camera) return <View style={[styles.map, styles.mapPlaceholder]}>
+      <Text style={styles.body}>{t('vehicleRequest.searchAddress')}</Text>
+    </View>;
+    return (
       <View style={[styles.map, expanded && styles.expandedMap]}>
         <NativeMapView
+          ref={searching ? undefined : attachMainMap}
+          onMapReady={searching ? undefined : focusMainMap}
           provider={PROVIDER_GOOGLE}
           onPress={(event: MapPressEvent) => void movePin(event)}
-          onPanDrag={() => { mapInteracted.current = true; }}
-          onRegionChangeComplete={setRegion}
+          zoomEnabled
+          scrollEnabled
+          onPanDrag={() => {
+            if (searching) searchMapInteracted.current = true;
+            else {
+              mapInteracted.current = true;
+              setCameraTarget(undefined);
+            }
+          }}
+          onRegionChangeComplete={(next: Region, details?: { isGesture?: boolean }) => {
+            if (searching) {
+              if (details?.isGesture) searchMapInteracted.current = true;
+              setSearchRegion(next);
+            } else {
+              if (details?.isGesture) {
+                mapInteracted.current = true;
+                setCameraTarget(undefined);
+              } else if (cameraTarget) {
+                // Ignore old camera callbacks while the popup closes and the
+                // native main map moves to the newly selected address.
+                if (Math.abs(next.latitude - cameraTarget.latitude) > 0.0001 ||
+                    Math.abs(next.longitude - cameraTarget.longitude) > 0.0001) return;
+                setCameraTarget(undefined);
+              }
+              setRegion(next);
+            }
+          }}
           style={StyleSheet.absoluteFill}
-          region={region}
+          initialRegion={camera}
+          region={camera}
         >
-          {pendingPin || value ? <NativeMarker coordinate={pendingPin ?? value} /> : null}
+          {routeOrigin ? <NativeMarker
+            coordinate={routeOrigin}
+            title={t('vehicleRequest.step.pickup')}
+            description={routeOrigin.address}
+            pinColor="#DC2626"
+          /> : null}
+          {routeOrigin && (pendingPin || value) && GOOGLE_MAPS_API_KEY ? (
+            <NativeMapViewDirections
+              key={`${routeOrigin.latitude},${routeOrigin.longitude}:${(pendingPin ?? value)!.latitude},${(pendingPin ?? value)!.longitude}`}
+              origin={routeOrigin}
+              destination={pendingPin ?? value}
+              apikey={GOOGLE_MAPS_API_KEY}
+              mode="DRIVING"
+              strokeWidth={4}
+              strokeColor="#2563EB"
+            />
+          ) : null}
+          {pendingPin || value ? <NativeMarker
+            coordinate={pendingPin ?? value}
+            title={t(`vehicleRequest.step.${locationKind}`)}
+            description={pendingPin ? undefined : value?.address}
+            pinColor={locationKind === 'dropoff' ? '#2563EB' : '#DC2626'}
+          /> : null}
         </NativeMapView>
         {resolving ? (
           <View pointerEvents="none" style={styles.mapLoading}>
@@ -231,7 +339,8 @@ export function AddressEditor({
           </View>
         ) : null}
       </View>
-    ) : null;
+    );
+  };
 
   return (
     <View style={[styles.section, fillHeight && styles.fill]}>
@@ -246,6 +355,12 @@ export function AddressEditor({
             setSuggestions([]);
             setBusy(false);
             setError('');
+            searchMapInteracted.current = false;
+            const point = pendingPin ?? value ?? routeOrigin ?? center ?? region;
+            setSearchRegion(point ? {
+              latitude: point.latitude, longitude: point.longitude,
+              latitudeDelta: 0.012, longitudeDelta: 0.012,
+            } : undefined);
             setOpen(true);
           }}
         >
@@ -270,6 +385,9 @@ export function AddressEditor({
       <Modal
         visible={open}
         animationType="slide"
+        onDismiss={() => {
+          if (cameraTarget) mainMapRef.current?.animateToRegion(cameraTarget, 300);
+        }}
         onRequestClose={() => setOpen(false)}
       >
         <SafeAreaView style={[styles.modal, { direction: i18n.dir() }]}>
@@ -282,6 +400,8 @@ export function AddressEditor({
           <View style={styles.search}>
             <TextInput
               autoFocus
+              returnKeyType="search"
+              onSubmitEditing={() => { if (!resolving) void select(); }}
               accessibilityLabel={t('vehicleRequest.searchAddress')}
               placeholder={t('vehicleRequest.searchAddress')}
               placeholderTextColor="#98A2B3"
@@ -342,7 +462,7 @@ export function AddressEditor({
               <Text style={styles.body}>{t('vehicleRequest.noPlaces')}</Text>
             ) : null}
           </ScrollView>
-          {map()}
+          {open ? map(false, true) : null}
         </SafeAreaView>
       </Modal>
     </View>
@@ -377,6 +497,7 @@ const styles = StyleSheet.create({
   locationIcon: { fontSize: 26, color: '#111827' },
   invalid: { borderColor: '#C0392B', borderWidth: 2 },
   map: { height: 190, borderRadius: 14, overflow: 'hidden' },
+  mapPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   mapLoading: {
     position: 'absolute', top: 12, right: 12, padding: 10,
     backgroundColor: '#FFF', borderRadius: 20,

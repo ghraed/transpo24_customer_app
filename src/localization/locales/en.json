@@ -1080,5 +1080,22 @@
   "documents.type.PICKUP_AUTHORIZATION": "Pickup authorization",
   "documents.type.INSURANCE": "Insurance document",
   "documents.type.PURCHASE_PROOF": "Proof of purchase",
-  "documents.type.OTHER": "Other document"
+  "documents.type.OTHER": "Other document",
+  "Choose Motorcycle or Bicycle": "Choose Motorcycle or Bicycle",
+  "Bicycle": "Bicycle",
+  "Bicycle Details": "Bicycle Details",
+  "Bicycle Type": "Bicycle Type",
+  "Select bicycle type": "Select bicycle type",
+  "Please select the bicycle type.": "Please select the bicycle type.",
+  "City bike": "City bike",
+  "Mountain bike": "Mountain bike",
+  "Road bike": "Road bike",
+  "E-bike": "E-bike",
+  "Cargo bike": "Cargo bike",
+  "Children's bike": "Children's bike",
+  "Additional Notes (optional)": "Additional Notes (optional)",
+  "Photos (optional)": "Photos (optional)",
+  "Confirm pickup address": "Confirm pickup address",
+  "Confirm delivery address": "Confirm delivery address",
+  "Transport details are missing. Please go back and complete them first.": "Transport details are missing. Please go back and complete them first."
 }

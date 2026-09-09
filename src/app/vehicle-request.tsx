@@ -485,6 +485,8 @@ function VehicleRequest({
             {step === 'pickup' || step === 'dropoff' ? (
               <AddressEditor
                 key={step}
+                locationKind={step}
+                pickupLocation={step === 'dropoff' ? draft.pickup : undefined}
                 fillHeight
                 label={t(`vehicleRequest.step.${step}`)}
                 countryCode={countryCode}
