@@ -1,3 +1,4 @@
+import { ServiceAddressStep, usesSharedAddressStep } from '@/requests/service-address-step';
 import { MotorcycleProgress } from '@/requests/motorcycle-progress';
 import { useInitialMapCenter, WORLD_REGION } from '@/requests/use-initial-map-center';
 import { Redirect } from 'expo-router';
@@ -1104,5 +1105,6 @@ const styles = StyleSheet.create({
 export default function ServiceRoute() {
   const route = useLocalSearchParams<{ serviceId?: string; serviceKey?: string }>();
   if (route.serviceKey === 'VEHICLE_TRANSPORT') return <Redirect href={{ pathname: '/vehicle-request', params: { serviceId: route.serviceId ?? '' } }} />;
+  if (usesSharedAddressStep(route.serviceKey)) return <ServiceAddressStep kind="pickup" />;
   return <PickupLocationScreen />;
 }
