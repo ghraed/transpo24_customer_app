@@ -1102,5 +1102,20 @@
   "Open device settings manually, or email privacy@transpo24.ch for privacy requests.": "افتح إعدادات الجهاز يدوياً أو راسل privacy@transpo24.ch لطلبات الخصوصية.",
   "Agree to Terms of Service": "الموافقة على شروط الخدمة",
   "Please accept the Terms of Service to create an account.": "يرجى قبول شروط الخدمة لإنشاء حساب.",
-  "Read our": "اقرأ"
+  "Read our": "اقرأ",
+  "chat.options": "خيارات المحادثة",
+  "documents.viewAll": "عرض جميع المرفقات ({{count}})",
+  "documents.close": "إغلاق",
+  "documents.selected": "{{count}} مرفقات",
+  "documents.sendSelected": "إرسال {{count}} مرفقات",
+  "documents.sendingBatch": "جارٍ الإرسال {{completed}} / {{total}}…",
+  "documents.partialFailure": "تعذر إرسال {{count}} ملفات. بقيت محددة لتتمكن من إعادة المحاولة.",
+  "documents.remove": "إزالة {{name}}",
+  "documents.confirmDownload": "هل تريد تنزيل هذا المرفق؟",
+  "documents.download": "تنزيل",
+  "documents.saved": "تم حفظ الملف في المجلد المحدد.",
+  "documents.openFailed": "تعذر فتح الملف. تأكد من تثبيت تطبيق لعرض ملفات PDF أو الصور. يمكنك أيضًا تنزيله.",
+  "Translated to {{language}}": "تمت الترجمة إلى {{language}}",
+  "chat.privateRoom": "محادثة خاصة لطلب النقل الخاص بك.",
+  "chat.connectionNotice": "انقطع الاتصال. ستتم إعادة الاتصال بالمحادثة تلقائيًا."
 }

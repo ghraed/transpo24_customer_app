@@ -1,9 +1,10 @@
 {
-  "reviewedOn": "2026-09-09",
+  "reviewedOn": "2026-09-10",
   "scope": "Direct dependencies reviewed for optional analytics and advertising integrations; not certification of providers or transitive SDK behavior.",
   "reviewedDependencies": [
     "@expo/ui",
     "@react-native-community/datetimepicker",
+    "@react-native-documents/viewer",
     "@stripe/stripe-react-native",
     "axios",
     "expo",
@@ -40,6 +41,7 @@
     "react-native-reanimated",
     "react-native-safe-area-context",
     "react-native-screens",
+    "react-native-svg",
     "react-native-web",
     "react-native-worklets",
     "socket.io-client"

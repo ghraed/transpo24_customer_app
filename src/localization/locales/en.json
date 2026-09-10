@@ -1107,5 +1107,20 @@
   "Open device settings manually, or email privacy@transpo24.ch for privacy requests.": "Open device settings manually, or email privacy@transpo24.ch for privacy requests.",
   "Agree to Terms of Service": "Agree to Terms of Service",
   "Please accept the Terms of Service to create an account.": "Please accept the Terms of Service to create an account.",
-  "Read our": "Read our"
+  "Read our": "Read our",
+  "chat.options": "Chat options",
+  "documents.viewAll": "View all {{count}} attachments",
+  "documents.close": "Close",
+  "documents.selected": "{{count}} attachments",
+  "documents.sendSelected": "Send {{count}} attachments",
+  "documents.sendingBatch": "Sending {{completed}} / {{total}}…",
+  "documents.partialFailure": "{{count}} files could not be sent. They remain selected so you can retry.",
+  "documents.remove": "Remove {{name}}",
+  "documents.confirmDownload": "Do you want to download this attachment?",
+  "documents.download": "Download",
+  "documents.saved": "File saved to the selected folder.",
+  "documents.openFailed": "Unable to open this file. Make sure a compatible PDF or image viewer is installed. You can also download it.",
+  "Translated to {{language}}": "Translated to {{language}}",
+  "chat.privateRoom": "Private chat for your transport request.",
+  "chat.connectionNotice": "Connection interrupted. Messages will reconnect automatically."
 }

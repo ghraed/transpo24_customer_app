@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo/ui": "~56.0.26",
     "@react-native-community/datetimepicker": "^9.1.0",
+    "@react-native-documents/viewer": "4.0.1",
     "@stripe/stripe-react-native": "0.64.0",
     "axios": "^1.16.1",
     "expo": "~56.0.20",
@@ -41,6 +42,7 @@
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.8.3",
     "socket.io-client": "^4.8.3"

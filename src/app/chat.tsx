@@ -1,10 +1,18 @@
 import { ChatAttachment, ChatAttachmentButton } from '@/components/chat-attachment';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import { ChatAttachmentGroup } from '@/components/chat-attachment-group';
+import { ChatWallpaper } from '@/components/chat-wallpaper';
+import { ChatIcon } from '@/components/chat-icon';
+import { groupChatAttachments, type ChatMessageRow } from '@/lib/chat-attachment-groups';
+import { useChatAutoScroll } from '@/hooks/use-chat-auto-scroll';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard,
+  StatusBar,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -18,7 +26,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clientTheme } from '@/components/tracking-ui';
-import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import {
   blockChatParticipant,
   getChatRoomByTransportRequestId,
@@ -63,7 +70,6 @@ type TranslatedMessage = {
 };
 
 const INITIAL_PAGE_LIMIT = 100;
-const CHAT_INPUT_BOTTOM_PADDING = 12;
 const REPORT_REASONS: { value: ChatReportReason; label: string }[] = [
   { value: 'HARASSMENT', label: 'Harassment or bullying' },
   { value: 'HATE_SPEECH', label: 'Hate speech' },
@@ -188,9 +194,9 @@ async function loadAllRoomMessages(roomId: string): Promise<ChatRoomMessagesResp
 }
 
 export default function ChatScreen() {
-  const flatListRef = useRef<FlatList<ChatMessage> | null>(null);
+  const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<RouteParams>();
-  const keyboardInset = useAndroidKeyboardInset();
   const { language } = useAppLanguage();
   const initialRoomId =
     typeof params.chatRoomId === 'string' ? params.chatRoomId.trim() : '';
@@ -198,6 +204,26 @@ export default function ChatScreen() {
     typeof params.transportRequestId === 'string' ? params.transportRequestId.trim() : '';
 
   const [room, setRoom] = useState<ChatRoom | null>(null);
+  const {
+    listRef, onInputFocus, onInputBlur, scrollAfterLayout, onScrollBeginDrag, onScrollEnd,
+  } = useChatAutoScroll<ChatMessageRow>(room?.id);
+  const chatContainerRef = useRef<View>(null);
+  const [keyboardVerticalOffset, setKeyboardVerticalOffset] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(() => Keyboard.isVisible());
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const shown = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+    return () => { shown.remove(); hidden.remove(); };
+  }, []);
+  const measureChatOffset = useCallback(() => {
+    // Android window measurements exclude the status bar, while keyboard
+    // coordinates include it. Also account for banners above the navigator.
+    chatContainerRef.current?.measureInWindow((_x, y) => {
+      setKeyboardVerticalOffset(y + (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0));
+    });
+  }, []);
+  const [showChatOptions, setShowChatOptions] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -581,250 +607,202 @@ export default function ChatScreen() {
     [messages],
   );
 
-  const scrollToLatestMessage = useCallback((animated: boolean) => {
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToEnd({ animated });
-    });
-  }, []);
+  const messageRows = useMemo(() => groupChatAttachments(sortedMessages), [sortedMessages]);
+  const renderMessage = ({ item, index }: { item: ChatMessageRow; index: number }) => {
+    const previousRow = messageRows[index - 1];
+    const previousMessage = previousRow?.attachments?.[previousRow.attachments.length - 1] ?? previousRow;
+    const messageDate = new Date(item.createdAt);
+    const showDate = !previousMessage || new Date(previousMessage.createdAt).toDateString() !== messageDate.toDateString();
+    const startsGroup = showDate || previousMessage.senderId !== item.senderId || messageDate.getTime() - new Date(previousMessage.createdAt).getTime() > 5 * 60 * 1000;
+    const isOutgoing =
+      item.senderRole === 'CLIENT';
+    const translatedMessage = translatedMessages[item.id];
+    const translatedText = translatedMessage?.language === language ? translatedMessage.text : undefined;
+    const isShowingTranslation = Boolean(
+      !isOutgoing &&
+      translatedText &&
+      item.body &&
+      normalizeComparableText(translatedText) !== normalizeComparableText(item.body),
+    );
+    const isTranslating = Boolean(translatingMessageIds[item.id]);
+    const isAttachment = item.type === 'FILE' && Boolean(item.attachmentUrl);
+    const metadata = (
+      <View style={styles.messageMetadata}>
+        <Text style={[styles.messageTime, isAttachment && styles.mediaTime]}>{formatTime(item.attachments?.[item.attachments.length - 1]?.createdAt ?? item.createdAt)}</Text>
 
-  useEffect(() => {
-    if (sortedMessages.length === 0) {
-      return;
-    }
+      </View>
+    );
+    const displayedBody = item.type === 'FILE' ? null : isShowingTranslation ? translatedText : item.body;
 
-    scrollToLatestMessage(false);
-  }, [scrollToLatestMessage, sortedMessages.length]);
+    return (
+      <View>
+        {showDate ? (
+          <View style={styles.dateDivider}>
+            <Text style={styles.dateText}>{messageDate.toLocaleDateString(language, { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+          </View>
+        ) : null}
+        <View style={[styles.messageRow, startsGroup && styles.groupStart, isOutgoing ? styles.messageRowRight : styles.messageRowLeft]}>
+          <Pressable
+            style={[styles.messageBubble, isAttachment ? styles.attachmentBubble : isOutgoing ? styles.outgoingBubble : styles.incomingBubble, startsGroup && !isAttachment && (isOutgoing ? styles.outgoingBubbleStart : styles.incomingBubbleStart)]}
+            onLongPress={isOutgoing || item.attachments ? undefined : () => openReportModal(item.id)}
+            accessibilityHint={isOutgoing ? undefined : t('Long press to report this message.')}
+          >
+            {startsGroup && !isAttachment ? <View style={[styles.bubbleTail, isOutgoing ? styles.outgoingTail : styles.incomingTail]} /> : null}
+            {item.attachments ? <ChatAttachmentGroup messages={item.attachments} metadata={metadata} onReport={isOutgoing ? undefined : id => openReportModal(id)} /> : item.type === 'FILE' && item.attachmentUrl ? <ChatAttachment url={item.attachmentUrl} name={item.body ?? 'document.pdf'} metadata={metadata} /> : null}
+            {displayedBody ? (
+              <Text style={[styles.messageText, isOutgoing && styles.outgoingMessageText]}>{displayedBody}</Text>
+            ) : null}
+            {isTranslating ? (
+              <Text style={[styles.translationHint, isOutgoing && styles.outgoingTranslationHint]}>
+                {t('Translating...')}
+              </Text>
+            ) : null}
+            {isShowingTranslation ? (
+              <View style={[styles.translationBlock, isOutgoing && styles.outgoingTranslationBlock]}>
+                <Text style={[styles.translationLabel, isOutgoing && styles.outgoingTranslationLabel]}>
+                  {t('Translated to {{language}}', {
+                    language: LANGUAGE_CONFIGS[language].nativeLabel,
+                  })}
+                </Text>
+                {item.body ? (
+                  <Text style={[styles.translationText, isOutgoing && styles.outgoingTranslationText]}>
+                    {item.body}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+            {!isAttachment ? metadata : null}
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
 
-  useEffect(() => {
-    if (keyboardInset > 0) {
-      scrollToLatestMessage(true);
-    }
-  }, [keyboardInset, scrollToLatestMessage]);
+  const canSend = Boolean(room?.canSendMessages && draft.trim()) && !isSending;
+  const chatNotice = effectiveSocketStatusText && effectiveSocketStatusText !== 'Realtime connected'
+    ? t('chat.connectionNotice') : '';
+
+  if (isLoading || errorMessage || !room) {
+    return (
+      <SafeAreaView style={styles.centeredState}>
+        <Stack.Screen options={{ headerShown: true }} />
+        {isLoading ? <>
+          <ActivityIndicator size="large" color={clientTheme.accent} />
+          <Text style={styles.stateText}>{t('Loading messages…')}</Text>
+        </> : <>
+          <Text style={styles.errorText}>{errorMessage || t('No chat room is available for this transport request yet.')}</Text>
+          <Pressable style={styles.retryButton} onPress={() => void loadConversation()}>
+            <Text style={styles.retryButtonText}>{t('Retry')}</Text>
+          </Pressable>
+        </>}
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView ref={chatContainerRef} style={styles.container} onLayout={measureChatOffset}>
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
+        enabled={Platform.OS !== 'android' || isKeyboardVisible}
+        keyboardVerticalOffset={keyboardVerticalOffset}
       >
-        <View style={styles.headerCard}>
-          <Text style={styles.title}>{appI18n.t("Chat with driver")}</Text>
-          <Text style={styles.subtitle}>
-            {room
-              ? `Transport request #${room.transportRequestId}`
-              : 'Messages are only available after the backend creates the chat room.'}
-          </Text>
-          {room ? (
-            <Text style={styles.statusPill}>
-              {appI18n.t("Chat active")}</Text>
-          ) : null}
-          {room ? (
-            <View style={styles.safetyActions}>
-              <Pressable
-                style={styles.safetyButton}
-                onPress={() => openReportModal()}
-                disabled={isSubmittingSafetyAction}
-                accessibilityRole="button"
-                accessibilityLabel="Report driver"
-              >
-                <Text style={styles.safetyButtonText}>Report driver</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.safetyButton, room.isBlockedByCurrentUser && styles.unblockButton]}
-                onPress={confirmBlockChange}
-                disabled={isSubmittingSafetyAction}
-                accessibilityRole="button"
-              >
-                <Text style={styles.safetyButtonText}>
-                  {room.isBlockedByCurrentUser ? 'Unblock driver' : 'Block driver'}
-                </Text>
-              </Pressable>
+        <ChatWallpaper />
+        <View style={styles.header}>
+          <View style={styles.headerIdentity}>
+            <Pressable
+              style={({ pressed }) => [styles.backButton, pressed && styles.controlPressed]}
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/requests')}
+              accessibilityRole="button"
+              accessibilityLabel={t('Back')}
+            >
+              <ChatIcon name="arrow-back" size={22} color="#334155" />
+            </Pressable>
+            <View style={styles.avatar}><ChatIcon name="profile" size={25} color="#926B12" /></View>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>{t('Chat with driver')}</Text>
+              <Text style={styles.subtitle} numberOfLines={1}>{t('chat.privateRoom')}</Text>
             </View>
-          ) : null}
-          {room && !room.canSendMessages ? (
+            <Pressable style={styles.optionsButton} onPress={() => setShowChatOptions(value => !value)} accessibilityRole="button" accessibilityLabel={t('chat.options')} accessibilityState={{ expanded: showChatOptions }}>
+              <ChatIcon name="more" size={24} color="#334155" />
+            </Pressable>
+          </View>
+          {room.canSendMessages === false ? (
             <Text style={styles.blockedNotice}>
               {room.isBlockedByCurrentUser
-                ? 'You blocked this driver. Messaging is paused.'
-                : 'Messaging is unavailable for this conversation.'}
+                ? t('You blocked this driver. Messaging is paused.')
+                : t('Messaging is unavailable for this conversation.')}
             </Text>
-          ) : null}
-          {effectiveSocketStatusText ? (
-            <Text style={styles.socketText}>{effectiveSocketStatusText}</Text>
           ) : null}
         </View>
 
-        {isLoading ? (
-          <View style={styles.centeredContainer}>
-            <ActivityIndicator size="large" color="#1D4ED8" />
-            <Text style={styles.mutedText}>{appI18n.t("Loading messages…")}</Text>
-          </View>
-        ) : errorMessage ? (
-          <View style={styles.centeredContainer}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
-            <Pressable style={styles.retryButton} onPress={() => void loadConversation()}>
-              <Text style={styles.retryButtonText}>{appI18n.t("Retry")}</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <>
-            <FlatList
-              ref={flatListRef}
-              data={sortedMessages}
-              keyExtractor={(item) => item.id}
-              keyboardShouldPersistTaps="handled"
-              onContentSizeChange={() => scrollToLatestMessage(false)}
-              contentContainerStyle={[
-                styles.messagesContent,
-                sortedMessages.length === 0 ? styles.messagesContentEmpty : undefined,
-              ]}
-              renderItem={({ item }) => {
-                const isClientMessage = item.senderRole === 'CLIENT';
-                const translatedMessage = translatedMessages[item.id];
-                const translatedText = translatedMessage?.language === language
-                  ? translatedMessage.text
-                  : undefined;
-                const isShowingTranslation = Boolean(
-                  !isClientMessage &&
-                  translatedText &&
-                  item.body &&
-                  normalizeComparableText(translatedText) !== normalizeComparableText(item.body),
-                );
-                const isTranslating = Boolean(translatingMessageIds[item.id]);
-                const displayedBody = item.type === 'FILE' ? null : isShowingTranslation ? translatedText : item.body;
-
-                return (
-                  <View
-                    style={[
-                      styles.messageRow,
-                      isClientMessage ? styles.messageRowClient : styles.messageRowDriver,
-                    ]}
-                  >
-                    <Pressable
-                      style={[
-                        styles.messageBubble,
-                        isClientMessage ? styles.clientBubble : styles.driverBubble,
-                      ]}
-                      onLongPress={
-                        isClientMessage ? undefined : () => openReportModal(item.id)
-                      }
-                      accessibilityHint={
-                        isClientMessage
-                          ? undefined
-                          : 'Long press to report this message.'
-                      }
-                    >
-                      {item.type === 'FILE' && item.attachmentUrl ? <ChatAttachment url={item.attachmentUrl} name={item.body ?? 'document.pdf'} /> : null}
-          {displayedBody ? (
-                        <Text
-                          style={[
-                            styles.messageText,
-                            isClientMessage ? styles.clientMessageText : undefined,
-                          ]}
-                        >
-                          {displayedBody}
-                        </Text>
-                      ) : null}
-                      {isTranslating ? (
-                        <Text
-                          style={[
-                            styles.translationHint,
-                            isClientMessage ? styles.clientTranslationHint : undefined,
-                          ]}
-                        >
-                          {appI18n.t("Translating...")}</Text>
-                      ) : null}
-                      {isShowingTranslation ? (
-                        <View
-                          style={[
-                            styles.translationBlock,
-                            isClientMessage ? styles.clientTranslationBlock : undefined,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.translationLabel,
-                              isClientMessage ? styles.clientTranslationLabel : undefined,
-                            ]}
-                          >
-                            {`Translated to ${LANGUAGE_CONFIGS[language].nativeLabel}`}
-                          </Text>
-                          {item.body ? (
-                            <Text
-                              style={[
-                                styles.translationText,
-                                isClientMessage ? styles.clientTranslationText : undefined,
-                              ]}
-                            >
-                              {item.body}
-                            </Text>
-                          ) : null}
-                        </View>
-                      ) : null}
-                      <Text
-                        style={[
-                          styles.messageTime,
-                          isClientMessage ? styles.clientMessageTime : undefined,
-                        ]}
-                      >
-                        {formatTime(item.createdAt)}
-                      </Text>
-                    </Pressable>
-                  </View>
-                );
-              }}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>{appI18n.t("No messages yet")}</Text>
-                  <Text style={styles.mutedText}>
-                    {appI18n.t("Start the conversation once your driver is ready.")}</Text>
-                </View>
-              }
-            />
-
-            <View
-              style={[
-                styles.inputPanel,
-                keyboardInset > 0
-                  ? { paddingBottom: CHAT_INPUT_BOTTOM_PADDING + keyboardInset }
-                  : undefined,
-              ]}
-            >
-              {sendErrorMessage ? <Text style={styles.errorText}>{sendErrorMessage}</Text> : null}
-              {room && !room.canSendMessages ? (
-                <Text style={styles.closedText}>
-                  {room.isBlockedByCurrentUser
-                    ? 'Unblock the driver to continue this conversation.'
-                    : 'Messages cannot be sent in this conversation.'}
-                </Text>
-              ) : null}
-              <View style={styles.inputRow}>
-                {room ? <ChatAttachmentButton roomId={room.id} disabled={isSending || !room.canSendMessages} onSent={message => setMessages(previous => upsertMessages(previous, [message]))} /> : null}
-                <TextInput
-                  value={draft}
-                  onChangeText={setDraft}
-                  onFocus={() => scrollToLatestMessage(true)}
-                  placeholder={appI18n.t("Type a message")}
-                  style={styles.input}
-                  multiline
-                  editable={!isSending && Boolean(room?.canSendMessages)}
-                />
-                <Pressable
-                  style={[
-                    styles.sendButton,
-                    (isSending || !draft.trim() || !room?.canSendMessages) &&
-                      styles.sendButtonDisabled,
-                  ]}
-                  onPress={() => void onSend()}
-                  disabled={isSending || !draft.trim() || !room?.canSendMessages}
-                >
-                  <Text style={styles.sendButtonText}>
-                    {isSending ? appI18n.t('Sending…') : appI18n.t('Send')}
-                  </Text>
-                </Pressable>
-              </View>
+          {showChatOptions ? (
+            <View style={styles.optionsMenu}>
+              <Pressable style={styles.optionItem} disabled={isSubmittingSafetyAction} accessibilityRole="button" onPress={() => { setShowChatOptions(false); openReportModal(); }}>
+                <Text style={styles.optionText}>{t('Report driver')}</Text>
+              </Pressable>
+              <Pressable style={styles.optionItem} disabled={isSubmittingSafetyAction} accessibilityRole="button" onPress={() => { setShowChatOptions(false); confirmBlockChange(); }}>
+                <Text style={styles.optionText}>{room.isBlockedByCurrentUser ? t('Unblock driver') : t('Block driver')}</Text>
+              </Pressable>
             </View>
-          </>
-        )}
+          ) : null}
+        {showChatOptions ? <Pressable style={styles.optionsDismiss} onPress={() => setShowChatOptions(false)} accessibilityRole="button" accessibilityLabel={t('Cancel')} /> : null}
+        {chatNotice ? <Text style={styles.warningText}>{chatNotice}</Text> : null}
+        <View style={styles.conversation}>
+          <FlatList
+            ref={listRef}
+            onLayout={scrollAfterLayout}
+            onContentSizeChange={scrollAfterLayout}
+            onScrollBeginDrag={onScrollBeginDrag}
+            onScrollEndDrag={onScrollEnd}
+            onMomentumScrollEnd={onScrollEnd}
+            data={messageRows}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            keyExtractor={(item) => item.id}
+            renderItem={renderMessage}
+            contentContainerStyle={[styles.messagesContent, messages.length === 0 && styles.emptyMessagesContent]}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}><ChatIcon name="chat" size={32} color="#947320" /></View>
+                <Text style={styles.stateText}>{t('No messages yet')}</Text>
+                <Text style={styles.emptyHint}>{t('Start the conversation once your driver is ready.')}</Text>
+              </View>
+            }
+          />
+        </View>
+
+        {sendErrorMessage ? <Text style={styles.errorText}>{sendErrorMessage}</Text> : null}
+
+        <View style={styles.inputRow} onLayout={scrollAfterLayout}>
+          <View style={styles.composerPill}>
+            <TextInput
+              style={styles.input}
+              placeholder={t('Type a message')}
+              placeholderTextColor="#94A3B8"
+              accessibilityLabel={t('Type a message')}
+              value={draft}
+              onChangeText={setDraft}
+              onFocus={onInputFocus}
+              onBlur={onInputBlur}
+              editable={!isSending && room.canSendMessages !== false}
+              multiline
+              maxLength={1000}
+            />
+            <ChatAttachmentButton roomId={room.id} disabled={isSending || room.canSendMessages === false} onSent={message => setMessages(previous => upsertMessages(previous, [message]))} />
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.sendButton, !canSend && styles.sendButtonDisabled, pressed && styles.controlPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={isSending ? t('Sending...') : t('Send')}
+            onPress={() => void onSend()}
+            disabled={!canSend}
+          >
+            {isSending ? <ActivityIndicator color="#263449" /> : <ChatIcon name="send" size={23} color={canSend ? "#263449" : "#9CA3AF"} />}
+          </Pressable>
+        </View>
       </KeyboardAvoidingView>
 
       <Modal
@@ -900,42 +878,171 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
+  conversation: { flex: 1, overflow: 'hidden' },
+  optionsDismiss: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
+  optionText: {
+    fontSize: 15,
+    color: '#111B21',
+  },
+  optionItem: {
+    minHeight: 48,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  optionsMenu: {
+    position: 'absolute',
+    top: 52,
+    end: 8,
+    width: 220,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 6,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#E0E5E2',
+    zIndex: 4,
+  },
+  optionsButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaTime: {
+    color: '#FFFFFF',
+  },
+  messageMetadata: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    alignSelf: 'flex-end',
+    marginTop: 2,
+  },
+  incomingTail: {
+    start: -6,
+    borderStartWidth: 7,
+    borderStartColor: 'transparent',
+    borderTopColor: '#FFFFFF',
+  },
+  outgoingTail: {
+    end: -6,
+    borderEndWidth: 7,
+    borderEndColor: 'transparent',
+    borderTopColor: clientTheme.accentSoft,
+  },
+  bubbleTail: {
+    position: 'absolute',
+    top: 0,
+    width: 0,
+    height: 0,
+    borderTopWidth: 10,
+    borderBottomWidth: 0,
+  },
+  incomingBubbleStart: {
+    borderTopStartRadius: 0,
+  },
+  outgoingBubbleStart: {
+    borderTopEndRadius: 0,
+  },
+  groupStart: {
+    marginTop: 7,
+  },
+  composerPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    paddingEnd: 4,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginStart: -10,
+  },
+  emptyIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: clientTheme.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  dateText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#54656F',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 7,
+    overflow: 'hidden',
+  },
+  dateLine: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#DCE3EC',
+    flex: 1,
+  },
+  dateDivider: {
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  controlPressed: {
+    opacity: 0.72,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF5D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  headerIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   container: {
     flex: 1,
-    backgroundColor: clientTheme.background,
+    backgroundColor: '#FFFFFF',
   },
   keyboardContainer: {
     flex: 1,
+    backgroundColor: '#F5F7FA',
   },
-  headerCard: {
-    backgroundColor: clientTheme.surface,
-    borderBottomWidth: 1,
-    borderColor: clientTheme.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 6,
+  header: {
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 8,
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    zIndex: 3,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: clientTheme.text,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1E293B',
   },
   subtitle: {
-    fontSize: 13,
-    color: clientTheme.textMuted,
-  },
-  statusPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: clientTheme.accentSoft,
-    color: clientTheme.accentStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontWeight: '600',
-  },
-  socketText: {
     fontSize: 12,
-    color: clientTheme.textMuted,
+    lineHeight: 16,
+    color: '#7B8798',
   },
   safetyActions: {
     flexDirection: 'row',
@@ -946,188 +1053,237 @@ const styles = StyleSheet.create({
     minHeight: 36,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: clientTheme.danger,
-    borderRadius: 9,
-    paddingHorizontal: 12,
+    borderColor: '#E6EBF1',
+    backgroundColor: '#FAFBFC',
+    borderRadius: 18,
+    paddingHorizontal: 14,
   },
   unblockButton: {
-    borderColor: clientTheme.accentStrong,
+    borderColor: '#9A6500',
   },
   safetyButtonText: {
-    color: clientTheme.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  blockedNotice: {
-    color: clientTheme.danger,
-    fontSize: 13,
+    color: '#69768A',
+    fontSize: 12,
     fontWeight: '600',
   },
-  centeredContainer: {
+  blockedNotice: {
+    fontSize: 12,
+    color: '#92400E',
+    paddingHorizontal: 8,
+  },
+  centeredState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
     gap: 12,
+    paddingHorizontal: 24,
+    backgroundColor: '#F7F8F9',
   },
-  mutedText: {
-    color: clientTheme.textMuted,
-    fontSize: 14,
+  stateText: {
+    fontSize: 16,
+    color: '#505A6A',
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontSize: 13,
+    lineHeight: 21,
+    color: '#8B97A8',
+    textAlign: 'center',
+  },
+  warningText: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    color: '#92400E',
+    fontSize: 13,
+  },
+  translationBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    color: '#707A8C',
+    fontSize: 13,
+  },
+  errorText: {
+    marginHorizontal: 16,
+    color: '#B91C1C',
+    fontSize: 13,
     textAlign: 'center',
   },
   retryButton: {
-    minHeight: 42,
-    minWidth: 120,
+    minHeight: 44,
     borderRadius: 10,
     backgroundColor: clientTheme.accent,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
   },
   retryButtonText: {
-    color: clientTheme.text,
+    color: '#171717',
+    fontSize: 15,
     fontWeight: '700',
+  },
+  closedBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#FEF3C7',
+  },
+  closedBannerText: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '600',
   },
   messagesContent: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 10,
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 3,
   },
-  messagesContentEmpty: {
+  emptyMessagesContent: {
     flexGrow: 1,
     justifyContent: 'center',
-  },
-  messageRow: {
-    flexDirection: 'row',
-  },
-  messageRowClient: {
-    justifyContent: 'flex-end',
-  },
-  messageRowDriver: {
-    justifyContent: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '82%',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  clientBubble: {
-    backgroundColor: clientTheme.accent,
-    borderBottomRightRadius: 4,
-  },
-  driverBubble: {
-    backgroundColor: clientTheme.surface,
-    borderWidth: 1,
-    borderColor: clientTheme.border,
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 15,
-    color: clientTheme.text,
-  },
-  clientMessageText: {
-    color: clientTheme.text,
-  },
-  translationHint: {
-    fontSize: 12,
-    color: clientTheme.textMuted,
-  },
-  clientTranslationHint: {
-    color: clientTheme.textMuted,
-  },
-  translationBlock: {
-    borderTopWidth: 1,
-    borderTopColor: clientTheme.border,
-    marginTop: 2,
-    paddingTop: 6,
-    gap: 4,
-  },
-  clientTranslationBlock: {
-    borderTopColor: 'rgba(17, 24, 39, 0.12)',
-  },
-  translationLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: clientTheme.textMuted,
-  },
-  clientTranslationLabel: {
-    color: clientTheme.textMuted,
-  },
-  translationText: {
-    fontSize: 14,
-    color: clientTheme.text,
-  },
-  clientTranslationText: {
-    color: clientTheme.text,
-  },
-  messageTime: {
-    fontSize: 11,
-    color: clientTheme.textMuted,
-  },
-  clientMessageTime: {
-    color: 'rgba(17, 24, 39, 0.68)',
   },
   emptyState: {
     alignItems: 'center',
     gap: 8,
+    paddingHorizontal: 28,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: clientTheme.text,
+  messageRow: {
+    width: '100%',
   },
-  inputPanel: {
+  messageRowLeft: {
+    alignItems: 'flex-start',
+  },
+  messageRowRight: {
+    alignItems: 'flex-end',
+  },
+  messageBubble: {
+    maxWidth: '84%',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingTop: 7,
+    paddingBottom: 4,
+    gap: 2,
+  },
+  attachmentBubble: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  incomingBubble: {
+    backgroundColor: '#FFFFFF',
+  },
+  outgoingBubble: {
+    backgroundColor: clientTheme.accentSoft,
+  },
+  messageText: {
+    color: '#111B21',
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  translationHint: {
+    color: '#707A8C',
+    fontSize: 12,
+  },
+  outgoingTranslationHint: {
+    color: '#8A6200',
+  },
+  translationBlock: {
+    marginTop: 2,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderColor: clientTheme.border,
-    backgroundColor: clientTheme.surface,
+    borderTopColor: '#CBD5E1',
+    gap: 4,
+  },
+  outgoingTranslationBlock: {
+    borderTopColor: '#F1D46B',
+  },
+  translationLabel: {
+    color: '#505A6A',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  outgoingTranslationLabel: {
+    color: '#8A6200',
+  },
+  translationText: {
+    color: '#202020',
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  outgoingTranslationText: {
+    color: '#171717',
+  },
+  outgoingMessageText: {
+    color: '#171717',
+  },
+  messageTime: {
+    color: '#667781',
+    fontSize: 10,
+  },
+  outgoingMessageTime: {
+    color: '#9B8652',
+  },
+  loadMoreButton: {
+    alignSelf: 'center',
+    marginBottom: 16,
+    borderRadius: 20,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: CHAT_INPUT_BOTTOM_PADDING,
-    gap: 8,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E3E8EF',
+    backgroundColor: '#FFFFFF',
+  },
+  loadMoreButtonDisabled: {
+    opacity: 0.7,
+  },
+  loadMoreButtonText: {
+    color: '#505A6A',
+    fontSize: 13,
+    fontWeight: '600',
   },
   inputRow: {
+    paddingHorizontal: 6,
+    paddingTop: 5,
+    paddingBottom: 6,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 10,
+    gap: 6,
+    backgroundColor: 'transparent',
   },
   input: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 120,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: clientTheme.border,
-    backgroundColor: clientTheme.surfaceMuted,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: clientTheme.text,
+    minHeight: 48,
+    maxHeight: 124,
+    paddingStart: 16,
+    paddingEnd: 2,
+    paddingTop: 13,
+    paddingBottom: 11,
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#111B21',
+  },
+  inputDisabled: {
+    backgroundColor: '#F1F5F9',
+    color: '#707A8C',
   },
   sendButton: {
-    minHeight: 44,
-    borderRadius: 10,
-    backgroundColor: clientTheme.accent,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    backgroundColor: clientTheme.accent,
   },
   sendButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: '#E5E7EB',
   },
   sendButtonText: {
-    color: clientTheme.text,
-    fontWeight: '700',
+    color: '#171717',
     fontSize: 14,
-  },
-  errorText: {
-    color: clientTheme.danger,
-    textAlign: 'center',
-  },
-  closedText: {
-    color: clientTheme.textMuted,
-    fontSize: 13,
-    textAlign: 'center',
+    fontWeight: '700',
   },
   modalBackdrop: {
     flex: 1,
