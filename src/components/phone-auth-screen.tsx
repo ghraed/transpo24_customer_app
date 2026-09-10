@@ -90,7 +90,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
     if (isLoading) return;
 
     if (mode === 'register' && !hasAcceptedLegal) {
-      setError(t('Please accept the Terms of Service and Privacy Policy to create an account.'));
+      setError(t('Please accept the Terms of Service to create an account.'));
       return;
     }
 
@@ -307,7 +307,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                       <Pressable
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: hasAcceptedLegal }}
-                        accessibilityLabel={t('Agree to Terms of Service and Privacy Policy')}
+                        accessibilityLabel={t('Agree to Terms of Service')}
                         style={[styles.checkbox, hasAcceptedLegal && styles.checkboxChecked]}
                         onPress={() => {
                           setError('');
@@ -326,7 +326,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                         >
                           <Text style={[styles.legalLink, isRTL && styles.rtl]}>{t('Terms of Service')}</Text>
                         </Pressable>
-                        <Text style={[styles.legalText, isRTL && styles.rtl]}>{t('and')}</Text>
+                        <Text style={[styles.legalText, isRTL && styles.rtl]}>{t('Read our')}</Text>
                         <Pressable
                           accessibilityRole="link"
                           onPress={() => router.push('/legal?document=privacy' as never)}

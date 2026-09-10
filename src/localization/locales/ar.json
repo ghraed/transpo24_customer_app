@@ -1092,5 +1092,15 @@
   "Photos (optional)": "صور (اختياري)",
   "Confirm pickup address": "تأكيد عنوان الاستلام",
   "Confirm delivery address": "تأكيد عنوان التسليم",
-  "Transport details are missing. Please go back and complete them first.": "تفاصيل النقل مفقودة. يرجى الرجوع وإكمالها أولاً."
+  "Transport details are missing. Please go back and complete them first.": "تفاصيل النقل مفقودة. يرجى الرجوع وإكمالها أولاً.",
+  "Your privacy controls": "إعدادات الخصوصية",
+  "No advertising or optional audience analytics are integrated in this app. Accepting the terms does not give consent to optional tracking.": "لا يتضمن هذا التطبيق إعلانات أو تحليلات اختيارية للجمهور. قبول الشروط لا يعني الموافقة على التتبع الاختياري.",
+  "Manage location, camera, photos and notifications in device settings. Changing a permission affects only the related feature; it does not cancel a booking.": "يمكنك إدارة الموقع والكاميرا والصور والإشعارات من إعدادات الجهاز. تغيير الإذن يؤثر فقط على الميزة المرتبطة به ولا يلغي الحجز.",
+  "Manage device permissions": "إدارة أذونات الجهاز",
+  "Request access, correction or deletion": "طلب الوصول إلى البيانات أو تصحيحها أو حذفها",
+  "Use your browser site settings to manage permissions.": "استخدم إعدادات الموقع في متصفحك لإدارة الأذونات.",
+  "Open device settings manually, or email privacy@transpo24.ch for privacy requests.": "افتح إعدادات الجهاز يدوياً أو راسل privacy@transpo24.ch لطلبات الخصوصية.",
+  "Agree to Terms of Service": "الموافقة على شروط الخدمة",
+  "Please accept the Terms of Service to create an account.": "يرجى قبول شروط الخدمة لإنشاء حساب.",
+  "Read our": "اقرأ"
 }

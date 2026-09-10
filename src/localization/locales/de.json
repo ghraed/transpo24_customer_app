@@ -1092,5 +1092,15 @@
   "Photos (optional)": "Fotos (optional)",
   "Confirm pickup address": "Abholadresse bestätigen",
   "Confirm delivery address": "Lieferadresse bestätigen",
-  "Transport details are missing. Please go back and complete them first.": "Transportdetails fehlen. Bitte gehen Sie zurück und vervollständigen Sie diese."
+  "Transport details are missing. Please go back and complete them first.": "Transportdetails fehlen. Bitte gehen Sie zurück und vervollständigen Sie diese.",
+  "Your privacy controls": "Ihre Datenschutzeinstellungen",
+  "No advertising or optional audience analytics are integrated in this app. Accepting the terms does not give consent to optional tracking.": "Diese App enthält keine Werbung oder optionale Reichweitenanalyse. Die Zustimmung zu den Bedingungen ist keine Einwilligung in optionales Tracking.",
+  "Manage location, camera, photos and notifications in device settings. Changing a permission affects only the related feature; it does not cancel a booking.": "Verwalten Sie Standort, Kamera, Fotos und Mitteilungen in den Geräteeinstellungen. Eine geänderte Berechtigung betrifft nur die zugehörige Funktion und storniert keine Buchung.",
+  "Manage device permissions": "Geräteberechtigungen verwalten",
+  "Request access, correction or deletion": "Auskunft, Berichtigung oder Löschung anfordern",
+  "Use your browser site settings to manage permissions.": "Verwalten Sie Berechtigungen in den Website-Einstellungen Ihres Browsers.",
+  "Open device settings manually, or email privacy@transpo24.ch for privacy requests.": "Öffnen Sie die Geräteeinstellungen manuell oder senden Sie Datenschutzanfragen an privacy@transpo24.ch.",
+  "Agree to Terms of Service": "Den Nutzungsbedingungen zustimmen",
+  "Please accept the Terms of Service to create an account.": "Bitte stimmen Sie den Nutzungsbedingungen zu, um ein Konto zu erstellen.",
+  "Read our": "Lesen Sie unsere"
 }

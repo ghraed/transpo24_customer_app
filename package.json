@@ -63,7 +63,9 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "privacy:check": "node scripts/check-privacy.mjs",
+    "pretypecheck": "npm run privacy:check"
   },
   "jest": {
     "preset": "jest-expo"
