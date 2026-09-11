@@ -1,4 +1,4 @@
-import { Redirect, Tabs, useRouter } from 'expo-router';
+import { Redirect, Tabs, usePathname, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,6 +62,7 @@ export default function CustomerTabsLayout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const authSession = useAuthSession();
+  const pathname = usePathname();
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function CustomerTabsLayout() {
 
     let isMounted = true;
 
-    getCustomerHome()
+    const refreshAlerts = () => getCustomerHome()
       .then((home) => {
         if (isMounted) {
           setUnreadAlertsCount(home.notifications?.unreadCount ?? 0);
@@ -83,10 +84,14 @@ export default function CustomerTabsLayout() {
         }
       });
 
+    void refreshAlerts();
+    const timer = setInterval(refreshAlerts, 30000);
+
     return () => {
+      clearInterval(timer);
       isMounted = false;
     };
-  }, [authSession.status]);
+  }, [authSession.status, pathname]);
 
   if (authSession.status !== 'authenticated') {
     return <Redirect href="/" />;

@@ -1522,3 +1522,34 @@ export async function confirmCustomerDelivery(tripId: string): Promise<void> {
   });
   if (!response.ok) throw await parseError(response, 'Failed to confirm delivery. Please try again.');
 }
+
+export interface CustomerNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+}
+export interface CustomerNotificationPage {
+  items: CustomerNotification[];
+  unreadCount: number;
+  nextCursor: string | null;
+}
+export async function getCustomerNotifications(cursor?: string, since?: string): Promise<CustomerNotificationPage> {
+  const query = new URLSearchParams();
+  if (cursor) query.set('cursor', cursor);
+  if (since) query.set('since', since);
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/notifications${query.toString() ? `?${query.toString()}` : ''}`, {
+    method: 'GET', headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw await parseError(response, 'Failed to load notifications.');
+  return parseJsonBody<CustomerNotificationPage>(response, 'Failed to load notifications.');
+}
+export async function markCustomerNotificationRead(id: string): Promise<void> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/notifications/${encodeURIComponent(id)}/read`, {
+    method: 'POST', headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw await parseError(response, 'Failed to mark notification as read.');
+}
