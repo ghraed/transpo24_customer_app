@@ -75,7 +75,13 @@
           "microphonePermission": false
         }
       ],
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "transport_jobs",
+          "color": "#2563EB"
+        }
+      ],
       "expo-font",
       "expo-image",
       "expo-status-bar",

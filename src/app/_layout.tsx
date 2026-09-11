@@ -13,8 +13,8 @@ import { hydrateAuthSession, useAuthSession } from '@/lib/auth-token';
 import { LocalizationProvider, useAppLanguage } from '@/localization/provider';
 import {
   initializeNotifications,
-  registerCustomerPushNotifications,
 } from '@/notifications/registerPushNotifications';
+import { usePushRegistration } from '@/notifications/usePushRegistration';
 import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
 
 if (__DEV__) {
@@ -126,15 +126,7 @@ function RootNavigator() {
     initializeNotifications();
   }, []);
 
-  useEffect(() => {
-    if (!authReady || authSession.status !== 'authenticated') {
-      return;
-    }
-
-    void registerCustomerPushNotifications().catch((error) => {
-      console.warn('Customer push registration failed during app bootstrap.', error);
-    });
-  }, [authReady, authSession.status]);
+  usePushRegistration(authSession.status === 'authenticated' ? authSession.user?.id ?? null : null);
 
   if (!authReady || !localizationReady) {
     return (

@@ -60,13 +60,14 @@ async function ensureAndroidChannel(): Promise<void> {
   await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
     name: 'Transport Jobs',
     importance: Notifications.AndroidImportance.MAX,
+    sound: 'default',
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#2563EB',
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
   });
 }
 
-async function requestNotificationPermissions(): Promise<boolean> {
+async function requestNotificationPermissions(requestPermission: boolean): Promise<boolean> {
   // Android 13+ will not show the notification permission dialog until a
   // channel exists.  Do this here (and await it) instead of relying on the
   // fire-and-forget setup in initializeNotifications().
@@ -76,6 +77,8 @@ async function requestNotificationPermissions(): Promise<boolean> {
   if (existingPermissions.granted) {
     return true;
   }
+
+  if (!requestPermission || !existingPermissions.canAskAgain) return false;
 
   const requestedPermissions = await Notifications.requestPermissionsAsync();
   return requestedPermissions.granted;
@@ -101,7 +104,9 @@ export function initializeNotifications(): void {
   });
 }
 
-export async function registerCustomerPushNotifications(): Promise<string> {
+export function registerCustomerPushNotifications(): Promise<string>;
+export function registerCustomerPushNotifications(requestPermission: boolean): Promise<string | null>;
+export async function registerCustomerPushNotifications(requestPermission = true): Promise<string | null> {
   initializeNotifications();
 
   if (!Device.isDevice) {
@@ -113,8 +118,9 @@ export async function registerCustomerPushNotifications(): Promise<string> {
   try {
     assertPushEnvironmentSupported();
 
-    const hasPermission = await requestNotificationPermissions();
+    const hasPermission = await requestNotificationPermissions(requestPermission);
     if (!hasPermission) {
+      if (!requestPermission) return null;
       throw new Error(appI18n.t("Notification permission was not granted."));
     }
 
