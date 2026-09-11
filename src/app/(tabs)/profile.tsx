@@ -1,3 +1,4 @@
+import { TestNotificationButton } from '@/components/test-notification-button';
 import { useRouter } from "expo-router";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -437,6 +438,8 @@ export default function ProfileTabScreen() {
                 : t("Register Push Notifications")}
             </Text>
           </Pressable>
+
+          <TestNotificationButton />
 
           {pushStatus ? (
             <Text style={styles.statusText}>{pushStatus}</Text>

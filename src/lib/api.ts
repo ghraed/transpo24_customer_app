@@ -1488,3 +1488,15 @@ export async function cancelCollectedTrip(
     request.send('{}');
   });
 }
+
+export async function sendTestNotification(token: string): Promise<void> {
+  const endpoint = `${getApiBaseUrl()}/push-tokens/test`;
+  const response = await authenticatedFetch(endpoint, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ token, app: 'CUSTOMER' }),
+  });
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to send test notification.');
+  }
+}
