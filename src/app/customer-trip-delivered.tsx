@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Pressable,
@@ -22,7 +23,7 @@ import {
   TrackingScreenCard,
   TrackingScrollable,
 } from '@/components/tracking-ui';
-import { getRequestTracking } from '@/lib/api';
+import { confirmCustomerDelivery, getRequestTracking } from '@/lib/api';
 import type { RequestTracking } from '@/types/customer-request';
 import appI18n from '@/localization/i18n';
 
@@ -57,6 +58,8 @@ export default function CustomerTripDeliveredScreen() {
   const [tracking, setTracking] = useState<RequestTracking | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(tripId !== 'N/A');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const [expandedPhotoUrl, setExpandedPhotoUrl] = useState('');
 
   useEffect(() => {
@@ -81,6 +84,24 @@ export default function CustomerTripDeliveredScreen() {
   const onRateDriver = useCallback((): void => {
     router.push((`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href);
   }, [router, tripId]);
+
+  const onConfirmDelivery = () => Alert.alert(
+    appI18n.t('Confirm successful delivery'),
+    appI18n.t('Confirm only if the service was delivered successfully. This authorizes release of the driver’s payment.'),
+    [
+      { text: appI18n.t('Cancel'), style: 'cancel' },
+      { text: appI18n.t('Confirm and release payment'), onPress: async () => {
+        setIsConfirming(true);
+        setErrorMessage('');
+        try {
+          await confirmCustomerDelivery(tripId);
+          setConfirmed(true);
+        } catch (error) {
+          setErrorMessage(error instanceof Error ? error.message : appI18n.t('Failed to confirm delivery. Please try again.'));
+        } finally { setIsConfirming(false); }
+      } },
+    ],
+  );
 
   const deliveredAt = tracking?.deliveredAt ?? deliveredAtParam;
   const proofPhotos = tracking?.deliveryProofPhotos ?? [];
@@ -149,11 +170,27 @@ export default function CustomerTripDeliveredScreen() {
           )}
         </TrackingScreenCard>
 
+        {tracking?.currentStatus === 'DELIVERED' ? (
+          <TrackingScreenCard>
+            <Text style={styles.sectionTitle}>{appI18n.t('Delivery confirmation')}</Text>
+            {confirmed || tracking.deliveryConfirmedByCustomerAt ? (
+              <Text style={styles.bodyText}>{appI18n.t('You confirmed successful delivery. The driver’s payment is authorized for release under the payout schedule.')}</Text>
+            ) : (
+              <>
+                <Text style={styles.bodyText}>{appI18n.t('The driver’s payment stays on hold until you confirm the service was delivered successfully. Review the delivery proof before confirming.')}</Text>
+                <Pressable accessibilityRole="button" disabled={isConfirming} style={styles.primaryButton} onPress={onConfirmDelivery}>
+                  {isConfirming ? <ActivityIndicator /> : <Text style={styles.primaryButtonText}>{appI18n.t('Confirm and release payment')}</Text>}
+                </Pressable>
+              </>
+            )}
+          </TrackingScreenCard>
+        ) : null}
+
         {ratingAvailable ? (
           <TrackingScreenCard>
             <Text style={styles.sectionTitle}>{appI18n.t("Next step")}</Text>
             <Text style={styles.bodyText}>
-              {appI18n.t("Final delivery is confirmed. You can now rate the driver.")}</Text>
+              {appI18n.t("You can rate the driver here. Rating does not confirm delivery or release payment.")}</Text>
             <Pressable style={styles.primaryButton} onPress={onRateDriver}>
               <Text style={styles.primaryButtonText}>{appI18n.t("Rate driver")}</Text>
             </Pressable>

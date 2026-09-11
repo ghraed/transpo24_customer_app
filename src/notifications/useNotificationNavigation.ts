@@ -40,8 +40,13 @@ function resolveNotificationRoute(data: PushNotificationData): Href | null {
         ) as Href;
       }
       return null;
+    case 'ITEM_DELIVERED': {
+      const tripId = data.tripId || data.requestId;
+      return typeof tripId === 'string' && tripId.trim()
+        ? (`/customer-trip-delivered?tripId=${encodeURIComponent(tripId)}`) as Href
+        : null;
+    }
     case 'ITEM_PICKED_UP':
-    case 'ITEM_DELIVERED':
     case 'ADDITIONAL_CHARGE_ADDED':
     case 'TRIP_FUNDS_TRANSFERRED':
       if (typeof data.requestId === 'string' && data.requestId.trim()) {

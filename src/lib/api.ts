@@ -1500,3 +1500,25 @@ export async function sendTestNotification(token: string): Promise<void> {
     throw await parseError(response, 'Failed to send test notification.');
   }
 }
+
+export interface PendingDeliveryConfirmation {
+  id: string;
+  pickupAddress: string | null;
+  dropoffAddress: string | null;
+  deliveredAt: string | null;
+}
+
+export async function getPendingDeliveryConfirmations(): Promise<PendingDeliveryConfirmation[]> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/trips/pending-delivery-confirmations`, {
+    method: 'GET', headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw await parseError(response, 'Failed to load delivery confirmations.');
+  return parseJsonBody<PendingDeliveryConfirmation[]>(response, 'Failed to load delivery confirmations.');
+}
+
+export async function confirmCustomerDelivery(tripId: string): Promise<void> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/trips/${encodeURIComponent(tripId)}/confirm-delivery`, {
+    method: 'POST', headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw await parseError(response, 'Failed to confirm delivery. Please try again.');
+}

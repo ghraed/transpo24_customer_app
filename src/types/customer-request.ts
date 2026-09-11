@@ -345,6 +345,7 @@ export interface RequestTracking {
   deliveryProofPhotos: ProofPhoto[];
   nearDeliveryNotifiedAt: string | null;
   deliveredAt: string | null;
+  deliveryConfirmedByCustomerAt: string | null;
   ratingAvailable: boolean;
   updatedAt: string;
 }
