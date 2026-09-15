@@ -1,0 +1,7 @@
+# Client startup logo
+
+Created using the built-in image generation tool with the client launcher icon as a reference. The opaque black background matches the launch screen. The launcher icon remains separate.
+
+## Final prompt
+
+Use case: logo-brand. Edit the supplied client app icon into a clean mobile startup logo. Keep only its central recognizable running courier carrying a stack of three parcels toward the right, with three horizontal speed lines behind. Remove ALL surrounding small vehicle/furniture/appliance symbols. Change the courier and parcels from yellow to flat pure white. Use a fully opaque uniform PURE BLACK #000000 background, edge to edge, no transparency. Below the symbol add exact text "Transpo24" in small clean white medium-weight sans-serif lettering, centered with generous separation. Square canvas. Entire symbol-and-wordmark group centered optically in the middle of the canvas, occupying about 48% of canvas width and 48% of canvas height, leaving generous black margins. Pictogram about 46% canvas width; wordmark about 45% canvas width. Professionally refined smooth edges and balanced silhouettes, clearly separated parcels. Precision flat vector-like style. No gradients, shadows, textures, glow, outline, frame, scattered pixels, yellow, mockup, or extra text. This will display at 280 logical pixels wide on a pure black phone launch screen and must blend seamlessly into it.

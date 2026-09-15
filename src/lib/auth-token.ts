@@ -10,6 +10,7 @@ const USER_STORAGE_KEY = 'transpo24.customer.user';
 const TRUSTED_SESSION_STORAGE_KEY = 'transpo24.customer.trustedSession';
 
 export type CustomerAuthUser = {
+  nickname?: string | null;
   id: string;
   name: string;
   email: string;
@@ -280,15 +281,20 @@ export async function switchCustomerAccountOnDevice(): Promise<void> {
   await clearSession();
 }
 
-export async function markProfileCompleted(name: string, countryCode: string): Promise<void> {
-  if (currentUser) {
-    currentUser = { ...currentUser, name, countryCode };
-    await SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(currentUser));
+export async function markProfileCompleted(name: string, countryCode: string, nickname: string): Promise<void> {
+  await updateCustomerSessionProfile({ name, countryCode, nickname });
+  const trustedSession = await readTrustedSession();
+  if (trustedSession) {
+    await SecureStore.setItemAsync(TRUSTED_SESSION_STORAGE_KEY, JSON.stringify({
+      ...trustedSession,
+      profileCompleted: true,
+    }));
   }
   emit({ status: 'authenticated', user: currentUser });
 }
 
 export async function updateCustomerSessionProfile(input: {
+  nickname?: string;
   name: string;
   countryCode: string;
 }): Promise<void> {
@@ -296,7 +302,7 @@ export async function updateCustomerSessionProfile(input: {
     return;
   }
 
-  currentUser = { ...currentUser, name: input.name, countryCode: input.countryCode };
+  currentUser = { ...currentUser, name: input.name, nickname: input.nickname ?? currentUser.nickname, countryCode: input.countryCode };
 
   const trustedSession = await readTrustedSession();
   const nextTrustedSession = trustedSession
@@ -305,6 +311,7 @@ export async function updateCustomerSessionProfile(input: {
         user: {
           ...trustedSession.user,
           name: input.name,
+          nickname: input.nickname ?? currentUser.nickname,
           countryCode: input.countryCode,
         },
       }

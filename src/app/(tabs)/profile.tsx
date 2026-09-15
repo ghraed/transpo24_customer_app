@@ -24,6 +24,7 @@ import { getCustomerHome } from "@/lib/api";
 import {
   deleteCustomerAccountSession,
   switchCustomerAccountOnDevice,
+  useAuthSession,
 } from "@/lib/auth-token";
 import { getCountryLabel } from "@/lib/country-currency";
 import {
@@ -56,6 +57,7 @@ function IconSymbol({
 
 export default function ProfileTabScreen() {
   const router = useRouter();
+  const auth = useAuthSession();
   const { t } = useTranslation();
   const { language, isChangingLanguage, setLanguage } = useAppLanguage();
   const insets = useSafeAreaInsets();
@@ -221,6 +223,20 @@ export default function ProfileTabScreen() {
             ) : null}
           </View>
         </View>
+
+        <Pressable
+          style={styles.heroCard}
+          accessibilityRole="button"
+          accessibilityLabel={`${t("Nickname")}: ${auth.user?.nickname || t("Edit Profile")}`}
+          onPress={() => router.push("/edit-profile")}
+        >
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroMeta}>{t("Nickname")}</Text>
+            <Text style={styles.sectionTitle}>{auth.user?.nickname || t("Edit Profile")}</Text>
+            <Text style={styles.heroMeta}>{t("Drivers will see your nickname on requests and in chats.")}</Text>
+          </View>
+          <Text style={styles.nicknameEdit}>{t("Edit Profile")}</Text>
+        </Pressable>
 
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
@@ -560,6 +576,12 @@ const styles = StyleSheet.create({
   heroMeta: {
     fontSize: 14,
     color: "#68768A",
+  },
+  nicknameEdit: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+    maxWidth: 90,
   },
   sectionCard: {
     backgroundColor: "#FFFFFF",

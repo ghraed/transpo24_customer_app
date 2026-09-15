@@ -1117,5 +1117,8 @@
   "documents.openFailed": "تعذر فتح الملف. تأكد من تثبيت تطبيق لعرض ملفات PDF أو الصور. يمكنك أيضًا تنزيله.",
   "Translated to {{language}}": "تمت الترجمة إلى {{language}}",
   "chat.privateRoom": "محادثة خاصة لطلب النقل الخاص بك.",
-  "chat.connectionNotice": "انقطع الاتصال. ستتم إعادة الاتصال بالمحادثة تلقائيًا."
+  "chat.connectionNotice": "انقطع الاتصال. ستتم إعادة الاتصال بالمحادثة تلقائيًا.",
+  "Nickname": "الاسم المستعار",
+  "Nickname must be between 2 and 40 characters.": "يجب أن يتراوح الاسم المستعار بين حرفين و40 حرفًا.",
+  "Drivers will see your nickname on requests and in chats.": "سيرى السائقون اسمك المستعار في الطلبات والمحادثات."
 }

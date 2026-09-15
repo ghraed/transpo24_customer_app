@@ -1117,5 +1117,8 @@
   "documents.openFailed": "Die Datei kann nicht geöffnet werden. Installieren Sie eine passende PDF- oder Bildanzeige. Sie können die Datei auch herunterladen.",
   "Translated to {{language}}": "Übersetzt in {{language}}",
   "chat.privateRoom": "Privater Chat für Ihren Transportauftrag.",
-  "chat.connectionNotice": "Verbindung unterbrochen. Der Chat wird automatisch wieder verbunden."
+  "chat.connectionNotice": "Verbindung unterbrochen. Der Chat wird automatisch wieder verbunden.",
+  "Nickname": "Spitzname",
+  "Nickname must be between 2 and 40 characters.": "Der Spitzname muss zwischen 2 und 40 Zeichen lang sein.",
+  "Drivers will see your nickname on requests and in chats.": "Fahrer sehen deinen Spitznamen in Anfragen und Chats."
 }

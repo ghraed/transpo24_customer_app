@@ -53,6 +53,20 @@ describe('customer session persistence', () => {
     expect(auth.getAuthSessionSnapshot().status).toBe('authenticated');
   });
 
+  it('persists the nickname in both session copies after completion and profile edits', async () => {
+    const auth = loadAuth();
+    await auth.setCustomerSession({ ...session, profileCompleted: false });
+    await auth.markProfileCompleted('Private Name', 'LB', 'Road Runner');
+    expect(auth.getAuthSessionSnapshot().user?.nickname).toBe('Road Runner');
+    expect(auth.getAuthSessionSnapshot().status).toBe('authenticated');
+    const trusted = JSON.parse(mockStorage.get('transpo24.customer.trustedSession')!);
+    expect(trusted.user.nickname).toBe('Road Runner');
+    expect(trusted.profileCompleted).toBe(true);
+    await auth.updateCustomerSessionProfile({ name: 'Private Name', countryCode: 'LB', nickname: 'New Nickname' });
+    expect(JSON.parse(mockStorage.get('transpo24.customer.user')!).nickname).toBe('New Nickname');
+    expect(JSON.parse(mockStorage.get('transpo24.customer.trustedSession')!).user.nickname).toBe('New Nickname');
+  });
+
   it('restores a session by rotating the stored refresh token', async () => {
     mockStorage.set('transpo24.customer.refreshToken', 'stored-refresh');
     jest.mocked(globalThis.fetch).mockResolvedValue(response(200, session));

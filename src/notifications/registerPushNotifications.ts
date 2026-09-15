@@ -60,7 +60,7 @@ async function ensureAndroidChannel(): Promise<void> {
   await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
     name: 'Transport Jobs',
     importance: Notifications.AndroidImportance.MAX,
-    sound: 'default',
+    // Omit sound to use Android's default; SDK 56 treats a string as a custom filename.
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#2563EB',
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,

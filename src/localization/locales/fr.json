@@ -1117,5 +1117,8 @@
   "documents.openFailed": "Impossible d’ouvrir ce fichier. Installez une application compatible avec les PDF ou les images. Vous pouvez aussi le télécharger.",
   "Translated to {{language}}": "Traduit en {{language}}",
   "chat.privateRoom": "Discussion privée pour votre demande de transport.",
-  "chat.connectionNotice": "Connexion interrompue. La discussion se reconnectera automatiquement."
+  "chat.connectionNotice": "Connexion interrompue. La discussion se reconnectera automatiquement.",
+  "Nickname": "Pseudo",
+  "Nickname must be between 2 and 40 characters.": "Le pseudo doit contenir entre 2 et 40 caractères.",
+  "Drivers will see your nickname on requests and in chats.": "Les chauffeurs verront votre pseudo dans les demandes et les discussions."
 }

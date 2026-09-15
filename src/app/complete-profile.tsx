@@ -2,7 +2,7 @@ import { Redirect, useRouter } from 'expo-router';
 import type { CountryCode } from 'libphonenumber-js';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CountryPicker } from '@/components/country-picker';
@@ -16,6 +16,7 @@ export default function CompleteProfileScreen() {
   const { t } = useTranslation();
   const auth = useAuthSession();
   const [name, setName] = useState('');
+  const [nickname, setNickname] = useState('');
   const [countryCode, setCountryCode] = useState<CountryCode>('LB');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,11 +30,15 @@ export default function CompleteProfileScreen() {
       if (!loading) setError(t('Enter your full name.'));
       return;
     }
+    if (nickname.trim().length < 2 || nickname.trim().length > 40) {
+      setError(t('Nickname must be between 2 and 40 characters.'));
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      const result = await completeCustomerProfile(name.trim(), normalizedCountryCode);
-      await markProfileCompleted(result.name, result.countryCode);
+      const result = await completeCustomerProfile(name.trim(), normalizedCountryCode, nickname.trim());
+      await markProfileCompleted(result.name, result.countryCode, result.nickname);
       router.dismissAll();
       router.replace('/(tabs)/home');
     } catch (requestError) {
@@ -45,7 +50,8 @@ export default function CompleteProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>{t('Complete your profile')}</Text>
         <Text style={styles.subtitle}>{t('Tell us your name before creating your first request.')}</Text>
         <View style={styles.countryField}>
@@ -55,24 +61,31 @@ export default function CompleteProfileScreen() {
           </View>
         </View>
         <TextInput accessibilityLabel={t('Full name')} style={styles.input} placeholder={t('Full name')} value={name} onChangeText={setName} autoCapitalize="words" />
+        <Text style={styles.nicknameLabel}>{t('Nickname')}</Text>
+        <TextInput accessibilityLabel={t('Nickname')} style={styles.input} placeholder={t('Nickname')} value={nickname} onChangeText={setNickname} maxLength={40} autoCorrect={false} />
+        <Text style={styles.nicknameHint}>{t('Drivers will see your nickname on requests and in chats.')}</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Pressable style={[styles.button, loading && styles.disabled]} disabled={loading} onPress={() => void submit()}>
           {loading ? <ActivityIndicator color="#111827" /> : <Text style={styles.buttonText}>{t('Continue')}</Text>}
         </Pressable>
-      </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
+  flex: { flex: 1 },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   title: { fontSize: 28, fontWeight: '800', color: clientTheme.text },
   subtitle: { marginTop: 8, marginBottom: 24, fontSize: 15, lineHeight: 22, color: clientTheme.textMuted },
   countryField: { marginBottom: 16 },
   countryLabel: { marginBottom: 8, fontSize: 13, fontWeight: '700', color: '#374151' },
   countryPickerWrap: { minHeight: 56, borderWidth: 1, borderColor: clientTheme.border, borderRadius: 16, justifyContent: 'center' },
   input: { minHeight: 56, borderWidth: 1, borderColor: clientTheme.border, borderRadius: 16, paddingHorizontal: 16, fontSize: 16, color: clientTheme.text },
+  nicknameLabel: { marginTop: 16, marginBottom: 8, fontSize: 13, fontWeight: '700', color: '#374151' },
+  nicknameHint: { marginTop: 8, fontSize: 13, color: clientTheme.textMuted },
   error: { marginTop: 10, color: '#C62828' },
   button: { minHeight: 54, borderRadius: 16, backgroundColor: clientTheme.accent, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
   disabled: { opacity: 0.6 }, buttonText: { fontSize: 16, fontWeight: '800', color: '#111827' },

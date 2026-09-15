@@ -2,7 +2,7 @@ import { jest, test, expect, beforeEach, afterEach } from '@jest/globals';
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { FlatList } from 'react-native';
-import NotificationsScreen from './notifications';
+import NotificationsScreen from '@/app/(tabs)/notifications';
 import { getCustomerNotifications, getPendingDeliveryConfirmations, markCustomerNotificationRead } from '@/lib/api';
 
 const mockPush = jest.fn();

@@ -1122,5 +1122,8 @@
   "documents.openFailed": "Unable to open this file. Make sure a compatible PDF or image viewer is installed. You can also download it.",
   "Translated to {{language}}": "Translated to {{language}}",
   "chat.privateRoom": "Private chat for your transport request.",
-  "chat.connectionNotice": "Connection interrupted. Messages will reconnect automatically."
+  "chat.connectionNotice": "Connection interrupted. Messages will reconnect automatically.",
+  "Nickname": "Nickname",
+  "Nickname must be between 2 and 40 characters.": "Nickname must be between 2 and 40 characters.",
+  "Drivers will see your nickname on requests and in chats.": "Drivers will see your nickname on requests and in chats."
 }

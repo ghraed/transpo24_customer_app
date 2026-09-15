@@ -325,15 +325,16 @@ export async function verifyPhoneVerificationCode(
 export async function completeCustomerProfile(
   name: string,
   countryCode: string,
-): Promise<{ name: string; countryCode: string }> {
+  nickname: string,
+): Promise<{ name: string; nickname: string; countryCode: string }> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/complete-profile`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ name, countryCode }),
+    body: JSON.stringify({ name, countryCode, nickname }),
   });
   if (!response.ok) throw await parseError(response, 'Unable to complete your profile.');
-  return parseJsonBody<{ success: true; name: string; countryCode: string }>(
+  return parseJsonBody<{ success: true; name: string; nickname: string; countryCode: string }>(
     response,
     'Invalid profile response.',
   );
@@ -342,17 +343,18 @@ export async function completeCustomerProfile(
 export async function updateCustomerProfile(
   name: string,
   countryCode: string,
-): Promise<{ name: string; countryCode: string }> {
+  nickname: string,
+): Promise<{ name: string; nickname: string; countryCode: string }> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/update-profile`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ name, countryCode }),
+    body: JSON.stringify({ name, countryCode, nickname }),
   });
   if (!response.ok) {
     throw await parseError(response, 'Unable to update your profile.');
   }
-  return parseJsonBody<{ success: true; name: string; countryCode: string }>(
+  return parseJsonBody<{ success: true; name: string; nickname: string; countryCode: string }>(
     response,
     'Invalid profile response.',
   );

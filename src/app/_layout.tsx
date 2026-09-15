@@ -16,8 +16,9 @@ import {
 import { usePushRegistration } from '@/notifications/usePushRegistration';
 import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
 
-// Keep the app icon visible until session and language initialization finish.
+// Keep the startup branding visible until session and language initialization finish.
 void SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({ fade: true, duration: 200 });
 
 if (__DEV__) {
   const globalState = globalThis as typeof globalThis & {
@@ -143,10 +144,10 @@ function RootNavigator() {
         merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
       >
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000000' }}>
             <Image
-              source={require('@/assets/images/icon.png')}
-              style={{ width: 180, height: 180 }}
+              source={require('@/assets/images/client-startup-logo.png')}
+              style={{ width: 250, height: 250 }}
               resizeMode="contain"
               accessibilityLabel="Transpo24"
             />
