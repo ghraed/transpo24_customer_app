@@ -1120,5 +1120,6 @@
   "chat.connectionNotice": "انقطع الاتصال. ستتم إعادة الاتصال بالمحادثة تلقائيًا.",
   "Nickname": "الاسم المستعار",
   "Nickname must be between 2 and 40 characters.": "يجب أن يتراوح الاسم المستعار بين حرفين و40 حرفًا.",
-  "Drivers will see your nickname on requests and in chats.": "سيرى السائقون اسمك المستعار في الطلبات والمحادثات."
+  "Drivers will see your nickname on requests and in chats.": "سيرى السائقون اسمك المستعار في الطلبات والمحادثات.",
+  "Chat with {{nickname}}": "محادثة مع {{nickname}}"
 }

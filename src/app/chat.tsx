@@ -721,7 +721,7 @@ export default function ChatScreen() {
             </Pressable>
             <View style={styles.avatar}><ChatIcon name="profile" size={25} color="#926B12" /></View>
             <View style={styles.headerCopy}>
-              <Text style={styles.title}>{t('Chat with driver')}</Text>
+              <Text style={styles.title}>{room.driverNickname || t('Driver')}</Text>
               <Text style={styles.subtitle} numberOfLines={1}>{t('chat.privateRoom')}</Text>
             </View>
             <Pressable style={styles.optionsButton} onPress={() => setShowChatOptions(value => !value)} accessibilityRole="button" accessibilityLabel={t('chat.options')} accessibilityState={{ expanded: showChatOptions }}>

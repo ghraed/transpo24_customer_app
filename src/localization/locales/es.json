@@ -1120,5 +1120,6 @@
   "chat.connectionNotice": "Conexión interrumpida. El chat se volverá a conectar automáticamente.",
   "Nickname": "Apodo",
   "Nickname must be between 2 and 40 characters.": "El apodo debe tener entre 2 y 40 caracteres.",
-  "Drivers will see your nickname on requests and in chats.": "Los conductores verán tu apodo en las solicitudes y los chats."
+  "Drivers will see your nickname on requests and in chats.": "Los conductores verán tu apodo en las solicitudes y los chats.",
+  "Chat with {{nickname}}": "Chatear con {{nickname}}"
 }

@@ -1125,5 +1125,6 @@
   "chat.connectionNotice": "Connection interrupted. Messages will reconnect automatically.",
   "Nickname": "Nickname",
   "Nickname must be between 2 and 40 characters.": "Nickname must be between 2 and 40 characters.",
-  "Drivers will see your nickname on requests and in chats.": "Drivers will see your nickname on requests and in chats."
+  "Drivers will see your nickname on requests and in chats.": "Drivers will see your nickname on requests and in chats.",
+  "Chat with {{nickname}}": "Chat with {{nickname}}"
 }

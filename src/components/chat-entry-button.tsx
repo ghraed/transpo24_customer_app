@@ -59,7 +59,7 @@ export function ChatEntryButton({
 
   return (
     <Pressable style={styles.button} onPress={openChat}>
-      <Text style={styles.buttonText}>{label || t('Chat with driver')}</Text>
+      <Text style={styles.buttonText}>{label || (room.driverNickname ? t('Chat with {{nickname}}', { nickname: room.driverNickname }) : t('Chat with driver'))}</Text>
       {(room.unreadCount ?? 0) > 0 ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{room.unreadCount}</Text>

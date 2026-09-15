@@ -1120,5 +1120,6 @@
   "chat.connectionNotice": "Verbindung unterbrochen. Der Chat wird automatisch wieder verbunden.",
   "Nickname": "Spitzname",
   "Nickname must be between 2 and 40 characters.": "Der Spitzname muss zwischen 2 und 40 Zeichen lang sein.",
-  "Drivers will see your nickname on requests and in chats.": "Fahrer sehen deinen Spitznamen in Anfragen und Chats."
+  "Drivers will see your nickname on requests and in chats.": "Fahrer sehen deinen Spitznamen in Anfragen und Chats.",
+  "Chat with {{nickname}}": "Chat mit {{nickname}}"
 }

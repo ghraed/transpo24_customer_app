@@ -1124,5 +1124,6 @@
   "chat.connectionNotice": "Connessione interrotta. La chat si riconnetterà automaticamente.",
   "Nickname": "Soprannome",
   "Nickname must be between 2 and 40 characters.": "Il soprannome deve contenere da 2 a 40 caratteri.",
-  "Drivers will see your nickname on requests and in chats.": "Gli autisti vedranno il tuo soprannome nelle richieste e nelle chat."
+  "Drivers will see your nickname on requests and in chats.": "Gli autisti vedranno il tuo soprannome nelle richieste e nelle chat.",
+  "Chat with {{nickname}}": "Chat con {{nickname}}"
 }
