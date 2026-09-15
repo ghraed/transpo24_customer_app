@@ -1,14 +1,13 @@
 import { serviceHeaderOptions } from '@/requests/service-header';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, View, useColorScheme } from 'react-native';
+import { Image, View, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { EnvironmentBanner } from '@/components/environment-banner';
 import { OtaUpdateBanner } from '@/components/ota-update-banner';
-import { clientTheme } from '@/components/tracking-ui';
 import { hydrateAuthSession, useAuthSession } from '@/lib/auth-token';
 import { LocalizationProvider, useAppLanguage } from '@/localization/provider';
 import {
@@ -16,6 +15,9 @@ import {
 } from '@/notifications/registerPushNotifications';
 import { usePushRegistration } from '@/notifications/usePushRegistration';
 import { useNotificationNavigation } from '@/notifications/useNotificationNavigation';
+
+// Keep the app icon visible until session and language initialization finish.
+void SplashScreen.preventAutoHideAsync();
 
 if (__DEV__) {
   const globalState = globalThis as typeof globalThis & {
@@ -128,6 +130,12 @@ function RootNavigator() {
 
   usePushRegistration(authSession.status === 'authenticated' ? authSession.user?.id ?? null : null);
 
+  useEffect(() => {
+    if (authReady && localizationReady) {
+      SplashScreen.hide();
+    }
+  }, [authReady, localizationReady]);
+
   if (!authReady || !localizationReady) {
     return (
       <StripeProvider
@@ -135,9 +143,13 @@ function RootNavigator() {
         merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
       >
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <AnimatedSplashOverlay />
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color={clientTheme.accentStrong} />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={{ width: 180, height: 180 }}
+              resizeMode="contain"
+              accessibilityLabel="Transpo24"
+            />
           </View>
         </ThemeProvider>
       </StripeProvider>
@@ -150,7 +162,6 @@ function RootNavigator() {
       merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AnimatedSplashOverlay />
         <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
           <EnvironmentBanner />
           <OtaUpdateBanner />

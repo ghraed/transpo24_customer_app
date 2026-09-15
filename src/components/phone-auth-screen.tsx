@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +17,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CountryPicker } from '@/components/country-picker';
-import { LoginIntroGate } from '@/components/login-intro-gate';
 import { clientTheme } from '@/components/tracking-ui';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import {
@@ -191,7 +191,8 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   if (auth.status === 'needsProfileCompletion') return <Redirect href={'/complete-profile' as never} />;
 
   return (
-    <LoginIntroGate>
+    <>
+      <StatusBar backgroundColor="#FAFAFA" barStyle="dark-content" translucent={false} />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -384,7 +385,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </LoginIntroGate>
+    </>
   );
 }
 
