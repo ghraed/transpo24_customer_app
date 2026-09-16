@@ -119,7 +119,7 @@ function RootNavigator() {
       ? rawPublishableKey
       : '';
 
-  useNotificationNavigation();
+  useNotificationNavigation(authSession.status === 'authenticated' && localizationReady);
 
   useEffect(() => {
     void hydrateAuthSession();
