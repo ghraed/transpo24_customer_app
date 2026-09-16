@@ -1121,5 +1121,20 @@
   "Nickname": "Apodo",
   "Nickname must be between 2 and 40 characters.": "El apodo debe tener entre 2 y 40 caracteres.",
   "Drivers will see your nickname on requests and in chats.": "Los conductores verán tu apodo en las solicitudes y los chats.",
-  "Chat with {{nickname}}": "Chatear con {{nickname}}"
+  "Chat with {{nickname}}": "Chatear con {{nickname}}",
+  "places.saved": "Lugares guardados",
+  "places.recent": "Direcciones recientes",
+  "places.saveAddress": "Guardar esta dirección",
+  "places.editName": "Editar lugar guardado",
+  "places.loading": "Cargando direcciones",
+  "places.empty": "Selecciona una dirección y guárdala para la próxima vez.",
+  "places.loadError": "No se pudieron cargar las direcciones. Toca para reintentar.",
+  "places.saveError": "No se pudo guardar este lugar. Inténtalo de nuevo.",
+  "places.removeError": "No se pudo eliminar este lugar. Inténtalo de nuevo.",
+  "places.removeNamed": "Eliminar {{name}}",
+  "places.remove": "Eliminar lugar guardado",
+  "places.namePlaceholder": "Casa, Trabajo, Almacén…",
+  "places.name": "Nombre del lugar",
+  "places.cancel": "Cancelar",
+  "places.save": "Guardar"
 }

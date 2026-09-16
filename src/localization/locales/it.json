@@ -1125,5 +1125,20 @@
   "Nickname": "Soprannome",
   "Nickname must be between 2 and 40 characters.": "Il soprannome deve contenere da 2 a 40 caratteri.",
   "Drivers will see your nickname on requests and in chats.": "Gli autisti vedranno il tuo soprannome nelle richieste e nelle chat.",
-  "Chat with {{nickname}}": "Chat con {{nickname}}"
+  "Chat with {{nickname}}": "Chat con {{nickname}}",
+  "places.saved": "Luoghi salvati",
+  "places.recent": "Indirizzi recenti",
+  "places.saveAddress": "Salva questo indirizzo",
+  "places.editName": "Modifica luogo salvato",
+  "places.loading": "Caricamento indirizzi",
+  "places.empty": "Seleziona un indirizzo e salvalo per la prossima volta.",
+  "places.loadError": "Impossibile caricare gli indirizzi. Tocca per riprovare.",
+  "places.saveError": "Impossibile salvare questo luogo. Riprova.",
+  "places.removeError": "Impossibile rimuovere questo luogo. Riprova.",
+  "places.removeNamed": "Rimuovi {{name}}",
+  "places.remove": "Rimuovi luogo salvato",
+  "places.namePlaceholder": "Casa, Lavoro, Magazzino…",
+  "places.name": "Nome del luogo",
+  "places.cancel": "Annulla",
+  "places.save": "Salva"
 }

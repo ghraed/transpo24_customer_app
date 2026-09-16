@@ -1121,5 +1121,20 @@
   "Nickname": "Spitzname",
   "Nickname must be between 2 and 40 characters.": "Der Spitzname muss zwischen 2 und 40 Zeichen lang sein.",
   "Drivers will see your nickname on requests and in chats.": "Fahrer sehen deinen Spitznamen in Anfragen und Chats.",
-  "Chat with {{nickname}}": "Chat mit {{nickname}}"
+  "Chat with {{nickname}}": "Chat mit {{nickname}}",
+  "places.saved": "Gespeicherte Orte",
+  "places.recent": "Letzte Adressen",
+  "places.saveAddress": "Diese Adresse speichern",
+  "places.editName": "Gespeicherten Ort bearbeiten",
+  "places.loading": "Adressen werden geladen",
+  "places.empty": "Wählen Sie eine Adresse und speichern Sie sie für das nächste Mal.",
+  "places.loadError": "Adressen konnten nicht geladen werden. Zum Wiederholen tippen.",
+  "places.saveError": "Ort konnte nicht gespeichert werden. Bitte erneut versuchen.",
+  "places.removeError": "Ort konnte nicht entfernt werden. Bitte erneut versuchen.",
+  "places.removeNamed": "{{name}} entfernen",
+  "places.remove": "Gespeicherten Ort entfernen",
+  "places.namePlaceholder": "Zuhause, Arbeit, Lager…",
+  "places.name": "Name des Ortes",
+  "places.cancel": "Abbrechen",
+  "places.save": "Speichern"
 }

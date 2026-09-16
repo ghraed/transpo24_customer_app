@@ -31,6 +31,7 @@ import {
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import type { Address } from './vehicle-draft';
 import { resolveCurrentAddress } from './resolve-current-address';
+import { AddressPlaces } from './address-places';
 
 function addressRegion(address?: Address, pickup?: Address): Region | undefined {
   const point = address ?? pickup;
@@ -381,6 +382,16 @@ export function AddressEditor({
           {t(error)}
         </Text>
       ) : null}
+      <AddressPlaces value={resolving ? undefined : value} locationKind={locationKind} onSelect={(address) => {
+        selectionId.current += 1;
+        setResolving(false);
+        setPendingPin(undefined);
+        setError('');
+        Keyboard.dismiss();
+        focusAddress(address);
+        onChange(address);
+        setOpen(false);
+      }} />
       {map(fillHeight)}
       <Modal
         visible={open}
@@ -472,7 +483,7 @@ const styles = StyleSheet.create({
   body: { color: '#111827', fontSize: 14, lineHeight: 20 },
   section: { gap: 16 },
   fill: { flex: 1 },
-  expandedMap: { flex: 1, height: undefined, minHeight: 190 },
+  expandedMap: { flex: 1, height: undefined, minHeight: 100 },
   currentLocation: {
     flexDirection: 'row',
     alignItems: 'center',

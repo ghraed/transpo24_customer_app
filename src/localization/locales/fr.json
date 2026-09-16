@@ -1121,5 +1121,20 @@
   "Nickname": "Pseudo",
   "Nickname must be between 2 and 40 characters.": "Le pseudo doit contenir entre 2 et 40 caractères.",
   "Drivers will see your nickname on requests and in chats.": "Les chauffeurs verront votre pseudo dans les demandes et les discussions.",
-  "Chat with {{nickname}}": "Discuter avec {{nickname}}"
+  "Chat with {{nickname}}": "Discuter avec {{nickname}}",
+  "places.saved": "Lieux enregistrés",
+  "places.recent": "Adresses récentes",
+  "places.saveAddress": "Enregistrer cette adresse",
+  "places.editName": "Modifier le lieu",
+  "places.loading": "Chargement des adresses",
+  "places.empty": "Sélectionnez une adresse et enregistrez-la pour la prochaine fois.",
+  "places.loadError": "Impossible de charger les adresses. Appuyez pour réessayer.",
+  "places.saveError": "Impossible d’enregistrer ce lieu. Réessayez.",
+  "places.removeError": "Impossible de supprimer ce lieu. Réessayez.",
+  "places.removeNamed": "Supprimer {{name}}",
+  "places.remove": "Supprimer le lieu",
+  "places.namePlaceholder": "Domicile, Travail, Entrepôt…",
+  "places.name": "Nom du lieu",
+  "places.cancel": "Annuler",
+  "places.save": "Enregistrer"
 }

@@ -1126,5 +1126,20 @@
   "Nickname": "Nickname",
   "Nickname must be between 2 and 40 characters.": "Nickname must be between 2 and 40 characters.",
   "Drivers will see your nickname on requests and in chats.": "Drivers will see your nickname on requests and in chats.",
-  "Chat with {{nickname}}": "Chat with {{nickname}}"
+  "Chat with {{nickname}}": "Chat with {{nickname}}",
+  "places.saved": "Saved places",
+  "places.recent": "Recent addresses",
+  "places.saveAddress": "Save this address",
+  "places.editName": "Edit saved place",
+  "places.loading": "Loading addresses",
+  "places.empty": "Select an address, then save it for next time.",
+  "places.loadError": "Could not load addresses. Tap to retry.",
+  "places.saveError": "Could not save this place. Please try again.",
+  "places.removeError": "Could not remove this place. Please try again.",
+  "places.removeNamed": "Remove {{name}}",
+  "places.remove": "Remove saved place",
+  "places.namePlaceholder": "Home, Work, Warehouse…",
+  "places.name": "Place name",
+  "places.cancel": "Cancel",
+  "places.save": "Save"
 }

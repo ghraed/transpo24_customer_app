@@ -1121,5 +1121,20 @@
   "Nickname": "الاسم المستعار",
   "Nickname must be between 2 and 40 characters.": "يجب أن يتراوح الاسم المستعار بين حرفين و40 حرفًا.",
   "Drivers will see your nickname on requests and in chats.": "سيرى السائقون اسمك المستعار في الطلبات والمحادثات.",
-  "Chat with {{nickname}}": "محادثة مع {{nickname}}"
+  "Chat with {{nickname}}": "محادثة مع {{nickname}}",
+  "places.saved": "الأماكن المحفوظة",
+  "places.recent": "العناوين الأخيرة",
+  "places.saveAddress": "حفظ هذا العنوان",
+  "places.editName": "تعديل المكان المحفوظ",
+  "places.loading": "جارٍ تحميل العناوين",
+  "places.empty": "اختر عنوانًا ثم احفظه لاستخدامه لاحقًا.",
+  "places.loadError": "تعذّر تحميل العناوين. اضغط لإعادة المحاولة.",
+  "places.saveError": "تعذّر حفظ هذا المكان. حاول مجددًا.",
+  "places.removeError": "تعذّر حذف هذا المكان. حاول مجددًا.",
+  "places.removeNamed": "حذف {{name}}",
+  "places.remove": "حذف المكان المحفوظ",
+  "places.namePlaceholder": "المنزل، العمل، المستودع…",
+  "places.name": "اسم المكان",
+  "places.cancel": "إلغاء",
+  "places.save": "حفظ"
 }

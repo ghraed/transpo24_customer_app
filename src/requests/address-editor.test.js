@@ -4,7 +4,9 @@ import React from 'react';
 import { beforeEach, expect, it, jest } from '@jest/globals';
 import { fetchPlaceDetails, searchPlacesAutocomplete } from '@/lib/places';
 import { AddressEditor } from './address-editor';
+import { AddressPlaces } from './address-places';
 import { resolveCurrentAddress } from './resolve-current-address';
+jest.mock('./address-places', () => ({ AddressPlaces: () => null }));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: key => key, i18n: { dir: () => 'ltr', language: 'en' } }),
@@ -177,5 +179,19 @@ it.each(['pickup', 'dropoff'])('centers the %s map on the new pin after submitti
   if (locationKind === 'dropoff') {
     expect(tree.root.findAllByType('TestDirections')[0].props.destination).toEqual(newAddress);
   }
+  await act(async () => tree.unmount());
+});
+
+it.each(['pickup', 'dropoff'])('selects a stored %s address and ignores an older in-flight map lookup', async locationKind => {
+  const { tree, tap, onChange } = await render('Address', { locationKind });
+  let finish;
+  resolveCurrentAddress.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  await act(async () => tap({ latitude: 48, longitude: 9 }));
+  const saved = { latitude: 50, longitude: 12, address: 'Warehouse', placeId: 'warehouse' };
+  await act(async () => tree.root.findByType(AddressPlaces).props.onSelect(saved));
+  await act(async () => finish({ latitude: 48, longitude: 9, address: 'Stale address' }));
+  expect(onChange).toHaveBeenLastCalledWith(saved);
+  expect(tree.root.findAllByType('TestMarker')[0].props.coordinate).toEqual(saved);
+  expect(mockAnimateToRegion).toHaveBeenLastCalledWith({ latitude: 50, longitude: 12, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 300);
   await act(async () => tree.unmount());
 });
