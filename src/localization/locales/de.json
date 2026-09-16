@@ -1146,5 +1146,20 @@
   "repeat.loadError": "Routen konnten nicht geladen werden. Bitte erneut versuchen.",
   "repeat.applyError": "Route konnte nicht berechnet werden. Bitte erneut versuchen oder Adressen bearbeiten.",
   "repeat.retry": "Erneut versuchen",
-  "repeat.onlyAddresses": "Nur die Adressen werden übernommen. Ihre aktuellen Anfragedetails bleiben erhalten."
+  "repeat.onlyAddresses": "Nur die Adressen werden übernommen. Ihre aktuellen Anfragedetails bleiben erhalten.",
+  "saved_cards": {
+    "title": "Gespeicherte Karten",
+    "expiry": "Gültig bis {{month}}/{{year}}",
+    "remove": "Entfernen",
+    "remove_label": "Karte mit Endziffern {{last4}} entfernen",
+    "remove_confirm": "Diese Karte aus Ihrem Konto entfernen?",
+    "new_card": "Neue Kredit- oder Debitkarte verwenden",
+    "save": "Karte sicher speichern",
+    "use_card": "Ausgewählte Karte verwenden",
+    "consent": "Mit Speichern erlauben Sie Stripe, diese Karte für zukünftige Zahlungen und von Ihnen genehmigte Zusatzkosten zu speichern. Sie wird Ihre Standardkarte.",
+    "security": "Stripe speichert Ihre Karte sicher. Die App zeigt nur maskierte Daten und speichert niemals die vollständige Kartennummer oder den Sicherheitscode.",
+    "load_failed": "Karten konnten nicht geladen werden. Sie können eine neue Karte eingeben.",
+    "save_failed": "Karte konnte nicht gespeichert werden. Versuchen Sie es erneut und schließen Sie die Bankprüfung ab.",
+    "remove_failed": "Karte konnte nicht entfernt werden. Versuchen Sie es erneut."
+  }
 }

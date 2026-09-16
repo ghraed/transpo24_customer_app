@@ -1,5 +1,4 @@
 import {
-  CardField,
   confirmPayment,
   confirmPlatformPayPayment,
   isPlatformPaySupported,
@@ -37,6 +36,7 @@ import type {
   PaymentSummary,
   RequestStatusResponse,
 } from '@/types/customer-request';
+import { SavedCardPicker, EMPTY_CARD_SELECTION } from '@/components/saved-card-picker';
 import appI18n from '@/localization/i18n';
 
 type PaymentOption = {
@@ -204,7 +204,8 @@ export default function RequestPaymentScreen() {
   const isExpoGo = Constants.appOwnership === 'expo';
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CREDIT_CARD');
-  const [cardComplete, setCardComplete] = useState(false);
+  const [cardSelection, setCardSelection] = useState(EMPTY_CARD_SELECTION);
+  const cardComplete = cardSelection.complete && !cardSelection.busy;
   const [applePaySupported, setApplePaySupported] = useState(false);
   const [googlePaySupported, setGooglePaySupported] = useState(false);
   const [supportCheckComplete, setSupportCheckComplete] = useState(false);
@@ -377,9 +378,11 @@ export default function RequestPaymentScreen() {
       return;
     }
 
-    const result = await confirmPayment(payment.stripeClientSecret, {
-      paymentMethodType: 'Card',
-    });
+    const result = await confirmPayment(payment.stripeClientSecret,
+      cardSelection.paymentMethodId
+        ? { paymentMethodType: 'Card', paymentMethodData: { paymentMethodId: cardSelection.paymentMethodId } }
+        : { paymentMethodType: 'Card' },
+    );
 
     if (result.error) throw new Error(toStripeErrorMessage(result.error.message));
   };
@@ -575,6 +578,7 @@ export default function RequestPaymentScreen() {
               <Pressable
                 key={option.method}
                 style={[styles.methodCard, isSelected && styles.methodCardSelected]}
+                disabled={isSubmitting || cardSelection.busy}
                 onPress={() => setSelectedMethod(option.method)}
               >
                 <View style={styles.methodLeading}>
@@ -621,22 +625,7 @@ export default function RequestPaymentScreen() {
         {needsCardField ? (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>{appI18n.t("Card Details")}</Text>
-            <View style={styles.cardFieldWrap}>
-              <CardField
-                postalCodeEnabled={false}
-                placeholders={{ number: '4242 4242 4242 4242' }}
-                cardStyle={{
-                  backgroundColor: '#F8FAFC',
-                  textColor: '#111827',
-                  borderColor: '#E5E7EB',
-                  borderWidth: 1,
-                  borderRadius: 18,
-                  placeholderColor: '#98A2B3',
-                }}
-                style={styles.cardField}
-                onCardChange={(details) => setCardComplete(Boolean(details.complete))}
-              />
-            </View>
+            <SavedCardPicker disabled={isSubmitting} onChange={setCardSelection} />
             <Text style={styles.helperText}>
               {selectedMethod === 'CREDIT_CARD'
                 ? 'Your credit card will be charged now when you confirm the payment.'

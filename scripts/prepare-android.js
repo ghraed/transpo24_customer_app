@@ -7,6 +7,11 @@ const { projectRoot } = require('./local-env');
 
 function prepareAndroid() {
   const { exp } = getConfig(projectRoot);
+  if (!exp.android.googleServicesFile) {
+    throw new Error(
+      'Android push configuration is missing. Register com.transpo24.app.dev in Firebase and save its configuration as google-services.dev.json, or set EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE in .env.local, then rebuild.',
+    );
+  }
   const androidDir = path.join(projectRoot, 'android');
   const autolinkingPath = path.join(androidDir, 'build/generated/autolinking/autolinking.json');
   if (fs.existsSync(autolinkingPath)) {
@@ -22,7 +27,7 @@ function prepareAndroid() {
   const gradlePath = path.join(androidDir, 'app/build.gradle');
   const gradle = fs.existsSync(gradlePath) ? fs.readFileSync(gradlePath, 'utf8') : '';
   const existingPackage = gradle.match(/applicationId\s+["']([^"']+)["']/)?.[1];
-  const hasFirebase = gradle.includes('apply plugin: "com.google.gms.google-services"');
+  const hasFirebase = /apply\s+plugin:\s*["']com\.google\.gms\.google-services["']/.test(gradle);
   const needsClean = fs.existsSync(androidDir) &&
     (existingPackage !== exp.android.package || hasFirebase !== Boolean(exp.android.googleServicesFile));
 

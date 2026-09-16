@@ -8,6 +8,7 @@
     "@stripe/stripe-react-native",
     "axios",
     "expo",
+    "expo-application",
     "expo-constants",
     "expo-device",
     "expo-document-picker",

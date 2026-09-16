@@ -14,11 +14,16 @@ import { readVehicleDraft, writeVehicleDraft } from './vehicle-draft-storage';
 import { AddressEditor } from './address-editor';
 import { ScheduleEditor } from './schedule-editor';
 import { submitVehicleDraft } from './submit-vehicle-draft';
+import { serviceHeaderOptions } from './service-header';
 const mockReplace = jest.fn();
+const mockBack = jest.fn();
+let mockServiceId = 'vehicle-service';
+let mockCanGoBack = false;
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ serviceId: 'vehicle-service' }),
-  useRouter: () => ({ back: jest.fn(), replace: mockReplace }),
+  useLocalSearchParams: () => ({ serviceId: mockServiceId }),
+  useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => mockCanGoBack }),
+  router: { replace: (...args) => mockReplace(...args) },
   Stack: { Screen: ({ options }) => options?.header?.() ?? null },
 }));
 jest.mock('@/lib/auth-token', () => ({
@@ -59,9 +64,47 @@ function button(tree, text) {
     );
 }
 describe('vehicle review editing', () => {
+  it.each([false, true])('handles the shared header with navigation history: %s', (hasHistory) => {
+    const goBack = jest.fn();
+    serviceHeaderOptions('Vehicle transport').header({
+      navigation: { canGoBack: () => hasHistory, goBack },
+    }).props.onBack();
+    if (hasHistory) expect(goBack).toHaveBeenCalledTimes(1);
+    else {
+      expect(goBack).not.toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
+    }
+  });
+  it('shows a light recovery screen and service selection when route parameters are missing', async () => {
+    mockServiceId = undefined;
+    let tree;
+    await act(async () => { tree = create(<VehicleRequestRoute />); });
+    const screen = tree.root.findByType('SafeAreaView');
+    expect(screen.props.style).toEqual(expect.arrayContaining([expect.objectContaining({ backgroundColor: '#FAFAFA', flex: 1 })]));
+    await act(async () => button(tree, 'Choose Service').props.onPress());
+    expect(mockReplace).toHaveBeenCalledWith('/choose-service');
+    await act(async () => tree.unmount());
+  });
+
+  it.each([false, true])('handles first-step Back with navigation history: %s', async (hasHistory) => {
+    mockCanGoBack = hasHistory;
+    let tree;
+    await act(async () => { tree = create(<VehicleRequestRoute />); });
+    await act(async () => button(tree, 'vehicleRequest.back').props.onPress());
+    if (hasHistory) expect(mockBack).toHaveBeenCalledTimes(1);
+    else {
+      expect(mockBack).not.toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith('/choose-service');
+    }
+    await act(async () => tree.unmount());
+  });
+
   beforeEach(() => {
     jest.useFakeTimers();
     mockReplace.mockClear();
+    mockBack.mockClear();
+    mockServiceId = 'vehicle-service';
+    mockCanGoBack = false;
     submitVehicleDraft.mockReset();
     const draft = newVehicleDraft('customer', 'vehicle-service');
     readVehicleDraft.mockReturnValue({

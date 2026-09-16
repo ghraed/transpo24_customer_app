@@ -1,4 +1,3 @@
-import { CardField, createPaymentMethod } from '@stripe/stripe-react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useState } from 'react';
@@ -14,6 +13,8 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { SavedCardPicker, EMPTY_CARD_SELECTION } from '@/components/saved-card-picker';
 
 import { saveDefaultPaymentMethod } from '@/lib/api';
 
@@ -35,11 +36,13 @@ export default function PaymentMethodScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
-  const [cardComplete, setCardComplete] = useState(false);
+  const [cardSelection, setCardSelection] = useState(EMPTY_CARD_SELECTION);
+  const cardComplete = Boolean(cardSelection.paymentMethodId) && !cardSelection.busy;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const onSave = async (): Promise<void> => {
+    if (isSubmitting || cardSelection.busy) return;
     setErrorMessage('');
 
     if (!cardComplete) {
@@ -50,19 +53,7 @@ export default function PaymentMethodScreen() {
     setIsSubmitting(true);
 
     try {
-      const { paymentMethod, error } = await createPaymentMethod({
-        paymentMethodType: 'Card',
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (!paymentMethod?.id) {
-        throw new Error(t('payment_method.create_failed'));
-      }
-
-      await saveDefaultPaymentMethod(paymentMethod.id);
+      await saveDefaultPaymentMethod(cardSelection.paymentMethodId!);
       router.replace(
         (`/request-status?requestId=${encodeURIComponent(requestId)}&refreshTs=${Date.now()}`) as Href,
       );
@@ -104,22 +95,7 @@ export default function PaymentMethodScreen() {
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{t('payment_method.title')}</Text>
-          <View style={styles.cardFieldWrap}>
-            <CardField
-              postalCodeEnabled={false}
-              placeholders={{ number: '4242 4242 4242 4242' }}
-              cardStyle={{
-                backgroundColor: '#F8FAFC',
-                textColor: '#111827',
-                placeholderColor: '#98A2B3',
-                borderColor: '#E5E7EB',
-                borderWidth: 1,
-                borderRadius: 18,
-              }}
-              style={styles.cardField}
-              onCardChange={(details) => setCardComplete(Boolean(details.complete))}
-            />
-          </View>
+          <SavedCardPicker disabled={isSubmitting} onChange={setCardSelection} />
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
         </View>
@@ -132,7 +108,7 @@ export default function PaymentMethodScreen() {
           {isSubmitting ? (
             <ActivityIndicator color="#111827" />
           ) : (
-            <Text style={styles.primaryButtonText}>{t('payment_method.save_button')}</Text>
+            <Text style={styles.primaryButtonText}>{t('saved_cards.use_card')}</Text>
           )}
         </Pressable>
 

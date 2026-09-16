@@ -61,12 +61,20 @@ const STAGE: Record<VehicleStep, number> = {
 
 export default function VehicleRequestRoute() {
   const { serviceId } = useLocalSearchParams<{ serviceId?: string }>();
+  const router = useRouter();
   const auth = useAuthSession();
   const { t } = useTranslation();
+  if (auth.status === 'initializing') {
+    return <SafeAreaView style={[styles.screen, styles.recovery]}><ActivityIndicator color="#111827" /></SafeAreaView>;
+  }
   if (!auth.user?.id || !serviceId)
     return (
-      <SafeAreaView>
+      <SafeAreaView style={[styles.screen, styles.recovery]}>
         <Text style={styles.body}>{t('vehicleRequest.startFromServices')}</Text>
+        <Pressable accessibilityRole="button" style={styles.recoveryButton}
+          onPress={() => router.replace(auth.user?.id ? '/choose-service' : '/')}>
+          <Text style={styles.body}>{t('Choose Service')}</Text>
+        </Pressable>
       </SafeAreaView>
     );
   return (
@@ -142,19 +150,26 @@ function VehicleRequest({
   const back = () => {
     if (busyRef.current) return;
     if (editing) go('review');
-    else if (step === 'vehicle') router.back();
+    else if (step === 'vehicle') {
+      if (router.canGoBack()) router.back();
+      else router.replace('/choose-service');
+    }
     else go(STEPS[STEPS.indexOf(step) - 1]);
   };
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
       if (busyRef.current) return true;
-      if (step === 'vehicle' && !editing) return false;
+      if (step === 'vehicle' && !editing) {
+        if (router.canGoBack()) return false;
+        router.replace('/choose-service');
+        return true;
+      }
       if (editing) go('review');
       else go(STEPS[STEPS.indexOf(step) - 1]);
       return true;
     });
     return () => listener.remove();
-  }, [step, editing]);
+  }, [step, editing, router]);
   useEffect(() => {
     if (!draft.pickup || !draft.dropoff) return;
     const controller = new AbortController();
@@ -731,6 +746,8 @@ function VehicleRequest({
 const styles = StyleSheet.create({
   body: { color: '#111827', fontSize: 14, lineHeight: 20 },
   screen: { flex: 1, backgroundColor: '#FAFAFA' },
+  recovery: { padding: 24, justifyContent: 'center', gap: 20 },
+  recoveryButton: { padding: 16, backgroundColor: '#FFC548', borderRadius: 14, alignItems: 'center' },
   flex: { flex: 1 },
   mapContent: { flexGrow: 1, paddingBottom: 16 },
   header: {

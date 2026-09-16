@@ -13,6 +13,7 @@ export type PushNotificationType =
 
 export interface RegisterPushTokenPayload {
   token: string;
+  applicationId: string;
   platform: 'ios' | 'android';
   app: MobileAppContext;
   deviceName?: string;

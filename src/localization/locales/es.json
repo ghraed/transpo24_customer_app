@@ -1146,5 +1146,20 @@
   "repeat.loadError": "No se pudieron cargar las rutas. Inténtalo de nuevo.",
   "repeat.applyError": "No se pudo calcular la ruta. Inténtalo de nuevo o edita las direcciones.",
   "repeat.retry": "Reintentar",
-  "repeat.onlyAddresses": "Solo se reutilizan las direcciones. Los detalles de tu solicitud actual se conservan."
+  "repeat.onlyAddresses": "Solo se reutilizan las direcciones. Los detalles de tu solicitud actual se conservan.",
+  "saved_cards": {
+    "title": "Tarjetas guardadas",
+    "expiry": "Vence {{month}}/{{year}}",
+    "remove": "Eliminar",
+    "remove_label": "Eliminar tarjeta terminada en {{last4}}",
+    "remove_confirm": "¿Eliminar esta tarjeta de tu cuenta?",
+    "new_card": "Usar una nueva tarjeta de crédito o débito",
+    "save": "Guardar tarjeta de forma segura",
+    "use_card": "Usar la tarjeta seleccionada",
+    "consent": "Al pulsar Guardar, permites que Stripe guarde esta tarjeta para futuros pagos y cargos adicionales que apruebes. Será tu tarjeta predeterminada.",
+    "security": "Stripe guarda tu tarjeta de forma segura. La aplicación solo muestra datos enmascarados y nunca guarda el número completo ni el código de seguridad.",
+    "load_failed": "No se pudieron cargar las tarjetas. Puedes introducir una nueva tarjeta.",
+    "save_failed": "No se pudo guardar la tarjeta. Inténtalo de nuevo y completa la verificación bancaria.",
+    "remove_failed": "No se pudo eliminar la tarjeta. Inténtalo de nuevo."
+  }
 }

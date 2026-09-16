@@ -37,9 +37,17 @@ changes or after reconnecting USB.
 
 For push notifications in Dev, register an Android app with package
 `com.transpo24.app.dev` in Firebase, download its configuration to
-`google-services.dev.json`, and set
-`EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE=./google-services.dev.json` locally.
-Without this optional file, Dev builds without Firebase push configuration.
+`google-services.dev.json`. Local builds automatically use this ignored file.
+For another location, set `EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE` locally.
+The Android build stops with instructions if the configuration is missing;
+it must register `com.transpo24.app.dev`, not the production package.
+Expo also needs FCM V1 sending credentials for the development package. Run
+`APP_VARIANT=development eas credentials --platform android`, select the
+development profile, and assign the `transpo-24` Firebase service account under
+Google Service Account / Push Notifications (FCM V1). Configure the development
+package specifically; production credentials alone do not enable its pushes.
+An `InvalidCredentials` result from **Profile → Test Notification** means this
+server-side credential connection still needs attention. Never commit a service-account key.
 For a restricted Google Maps Android key, authorize the Dev package and its debug
 signing SHA-1 in Google Cloud as well. Rebuild after changing native service keys.
 

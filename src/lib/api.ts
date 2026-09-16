@@ -1,3 +1,4 @@
+import { assertPushBackend } from '@/notifications/assertPushBackend';
 import { createBackendReachabilityError, getApiBaseUrl } from '@/config/backend';
 import {
   authenticatedFetch,
@@ -260,6 +261,9 @@ function isValidCancelTripPaymentResponse(
 export async function registerPushToken(
   payload: RegisterPushTokenPayload,
 ): Promise<{ success: true }> {
+  await assertPushBackend(getApiBaseUrl(), payload.applicationId, (url) =>
+    authenticatedFetch(url, { method: 'GET' }),
+  );
   const response = await authenticatedFetch(`${getApiBaseUrl()}/push-tokens`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -979,6 +983,31 @@ export async function getRequestAdditionalCharges(requestId: string): Promise<Ad
     response,
     'Failed to parse additional charges response.',
   );
+}
+
+// Only provider references and masked summaries cross our API; never PAN or CVC.
+export async function getSavedCards(): Promise<SavedPaymentMethodSummary[]> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/payment-methods`, {
+    method: 'GET', headers: getAuthHeaders(), cache: 'no-store',
+  });
+  if (!response.ok) throw await parseError(response, 'Failed to load saved cards.');
+  return parseJsonBody<SavedPaymentMethodSummary[]>(response, 'Failed to load saved cards.');
+}
+
+export async function createCardSetup(): Promise<{ clientSecret: string }> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/payment-methods/setup`, {
+    method: 'POST', headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw await parseError(response, 'Failed to set up card.');
+  return parseJsonBody<{ clientSecret: string }>(response, 'Failed to set up card.');
+}
+
+export async function removeSavedCard(paymentMethodId: string): Promise<void> {
+  const response = await fetchWithNetworkError(
+    `${getApiBaseUrl()}/customer/payment-methods/${encodeURIComponent(paymentMethodId)}`,
+    { method: 'DELETE', headers: getAuthHeaders() },
+  );
+  if (!response.ok) throw await parseError(response, 'Failed to remove saved card.');
 }
 
 export async function getDefaultPaymentMethod(): Promise<SavedPaymentMethodSummary | null> {

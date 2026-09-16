@@ -38,12 +38,8 @@ if (__DEV__) {
       try {
         return originalJsonParse(text, reviver);
       } catch (error) {
-        const preview = typeof text === 'string' ? text.slice(0, 200) : String(text);
-        console.error('JSON.parse failed in dev runtime.', {
-          preview,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
+        // Never log parsed input: payment responses can contain client secrets.
+        console.error('JSON.parse failed in dev runtime.');
         throw error;
       }
     }) as typeof JSON.parse;
@@ -61,21 +57,7 @@ if (__DEV__) {
       try {
         return await originalResponseJson.apply(this, args);
       } catch (error) {
-        let preview = '';
-
-        try {
-          preview = (await this.clone().text()).slice(0, 200);
-        } catch {
-          preview = '<unavailable>';
-        }
-
-        console.error('Response.json failed in dev runtime.', {
-          url: this.url,
-          status: this.status,
-          preview,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
+        console.error('Response.json failed in dev runtime.', { status: this.status });
         throw error;
       }
     }) as typeof Response.prototype.json;
@@ -142,6 +124,7 @@ function RootNavigator() {
       <StripeProvider
         publishableKey={publishableKey}
         merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
+        urlScheme="transpo24"
       >
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000000' }}>
@@ -161,6 +144,7 @@ function RootNavigator() {
     <StripeProvider
       publishableKey={publishableKey}
       merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
+      urlScheme="transpo24"
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>

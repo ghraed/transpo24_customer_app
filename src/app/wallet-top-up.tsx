@@ -1,4 +1,4 @@
-import { CardField, confirmPayment, confirmPlatformPayPayment, isPlatformPaySupported, PlatformPay } from '@stripe/stripe-react-native';
+import { confirmPayment, confirmPlatformPayPayment, isPlatformPaySupported, PlatformPay } from '@stripe/stripe-react-native';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -23,6 +23,7 @@ import { currencyForCountryCode } from '@/lib/country-currency';
 import { createWalletTopUp, getWalletTopUpStatus } from '@/lib/api';
 import { useAuthSession } from '@/lib/auth-token';
 import type { CustomerWalletTopUpResponse, PaymentMethod } from '@/types/customer-request';
+import { SavedCardPicker, EMPTY_CARD_SELECTION } from '@/components/saved-card-picker';
 import appI18n from '@/localization/i18n';
 
 type PaymentOption = {
@@ -132,7 +133,8 @@ export default function WalletTopUpScreen() {
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CREDIT_CARD');
   const [amountValue, setAmountValue] = useState(amountValueInitial);
-  const [cardComplete, setCardComplete] = useState(false);
+  const [cardSelection, setCardSelection] = useState(EMPTY_CARD_SELECTION);
+  const cardComplete = cardSelection.complete && !cardSelection.busy;
   const [applePaySupported, setApplePaySupported] = useState(false);
   const [googlePaySupported, setGooglePaySupported] = useState(false);
   const [supportCheckComplete, setSupportCheckComplete] = useState(false);
@@ -251,9 +253,11 @@ export default function WalletTopUpScreen() {
       return;
     }
 
-    const result = await confirmPayment(topUp.stripeClientSecret, {
-      paymentMethodType: 'Card',
-    });
+    const result = await confirmPayment(topUp.stripeClientSecret,
+      cardSelection.paymentMethodId
+        ? { paymentMethodType: 'Card', paymentMethodData: { paymentMethodId: cardSelection.paymentMethodId } }
+        : { paymentMethodType: 'Card' },
+    );
 
     if (result.error) {
       throw new Error(toStripeErrorMessage(result.error.message));
@@ -380,6 +384,7 @@ export default function WalletTopUpScreen() {
                 <Pressable
                   key={option.method}
                   style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+                  disabled={isSubmitting || cardSelection.busy}
                   onPress={() => setSelectedMethod(option.method)}
                 >
                   <View style={styles.optionLeading}>
@@ -405,22 +410,7 @@ export default function WalletTopUpScreen() {
           {needsCardField ? (
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>{appI18n.t("Card details")}</Text>
-              <View style={styles.cardFieldWrap}>
-                <CardField
-                  postalCodeEnabled={false}
-                  placeholders={{ number: '4242 4242 4242 4242' }}
-                  cardStyle={{
-                    backgroundColor: '#F8FAFC',
-                    textColor: '#111827',
-                    placeholderColor: '#98A2B3',
-                    borderColor: '#E5E7EB',
-                    borderWidth: 1,
-                    borderRadius: 18,
-                  }}
-                  style={styles.cardField}
-                  onCardChange={(details) => setCardComplete(Boolean(details.complete))}
-                />
-              </View>
+              <SavedCardPicker disabled={isSubmitting} onChange={setCardSelection} />
             </View>
           ) : null}
 
@@ -443,7 +433,7 @@ export default function WalletTopUpScreen() {
           </Pressable>
 
           <Text style={styles.footerText}>
-            {appI18n.t("Saved cards are not used automatically for wallet top-ups in this version.")}</Text>
+            {appI18n.t("saved_cards.security")}</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

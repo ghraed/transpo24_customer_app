@@ -1150,5 +1150,20 @@
   "repeat.loadError": "Impossibile caricare i percorsi. Riprova.",
   "repeat.applyError": "Impossibile calcolare il percorso. Riprova o modifica gli indirizzi.",
   "repeat.retry": "Riprova",
-  "repeat.onlyAddresses": "Vengono riutilizzati solo gli indirizzi. I dettagli della richiesta attuale restano invariati."
+  "repeat.onlyAddresses": "Vengono riutilizzati solo gli indirizzi. I dettagli della richiesta attuale restano invariati.",
+  "saved_cards": {
+    "title": "Carte salvate",
+    "expiry": "Scadenza {{month}}/{{year}}",
+    "remove": "Rimuovi",
+    "remove_label": "Rimuovi la carta che termina con {{last4}}",
+    "remove_confirm": "Rimuovere questa carta dal tuo account?",
+    "new_card": "Usa una nuova carta di credito o debito",
+    "save": "Salva la carta in sicurezza",
+    "use_card": "Usa la carta selezionata",
+    "consent": "Toccando Salva, autorizzi Stripe a salvare questa carta per i pagamenti futuri e i costi aggiuntivi che approvi. Diventerà la tua carta predefinita.",
+    "security": "Stripe conserva la carta in sicurezza. L’app mostra solo dati mascherati e non salva mai il numero completo o il codice di sicurezza.",
+    "load_failed": "Impossibile caricare le carte. Puoi inserire una nuova carta.",
+    "save_failed": "Impossibile salvare la carta. Riprova e completa la verifica bancaria.",
+    "remove_failed": "Impossibile rimuovere la carta. Riprova."
+  }
 }

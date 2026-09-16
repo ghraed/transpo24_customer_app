@@ -1,4 +1,5 @@
 import { SymbolView } from 'expo-symbols';
+import { router } from 'expo-router';
 import { I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -43,8 +44,11 @@ export function serviceHeaderOptions(title: string) {
   return {
     ...SERVICE_HEADER_OPTIONS,
     title,
-    header: ({ navigation }: { navigation: { goBack: () => void } }) => (
-      <ServiceHeader title={title} onBack={() => navigation.goBack()} />
+    header: ({ navigation }: { navigation: { goBack: () => void; canGoBack: () => boolean } }) => (
+      <ServiceHeader title={title} onBack={() => {
+        if (navigation.canGoBack()) navigation.goBack();
+        else router.replace('/(tabs)/home');
+      }} />
     ),
   };
 }

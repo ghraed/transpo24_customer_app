@@ -1,5 +1,5 @@
 import type { ConfigContext } from 'expo/config';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const IS_DEV = process.env.APP_VARIANT === 'development';
 
@@ -43,7 +43,8 @@ export default ({ config }: ConfigContext) => {
   const androidPackage = IS_DEV ? 'com.transpo24.app.dev' : config.android?.package;
   let androidGoogleServicesFile = ANDROID_GOOGLE_SERVICES_FILE;
   if (IS_DEV) {
-    androidGoogleServicesFile = process.env.EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE?.trim() || '';
+    androidGoogleServicesFile = process.env.EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE?.trim() ||
+      (existsSync('./google-services.dev.json') ? './google-services.dev.json' : '');
     if (androidGoogleServicesFile) {
       const services = JSON.parse(readFileSync(androidGoogleServicesFile, 'utf8'));
       if (!services.client?.some((client: { client_info?: { android_client_info?: { package_name?: string } } }) =>
@@ -92,6 +93,7 @@ export default ({ config }: ConfigContext) => {
     } : {}),
     ios: {
       ...config.ios,
+      ...(IS_DEV ? { bundleIdentifier: 'com.transpo24.app.dev' } : {}),
       ...(IOS_GOOGLE_SERVICES_FILE ? { googleServicesFile: IOS_GOOGLE_SERVICES_FILE } : {}),
       config: {
         ...config.ios?.config,

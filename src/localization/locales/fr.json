@@ -1146,5 +1146,20 @@
   "repeat.loadError": "Impossible de charger les trajets. Réessayez.",
   "repeat.applyError": "Impossible de calculer ce trajet. Réessayez ou modifiez les adresses.",
   "repeat.retry": "Réessayer",
-  "repeat.onlyAddresses": "Seules les adresses sont réutilisées. Les détails de votre demande restent inchangés."
+  "repeat.onlyAddresses": "Seules les adresses sont réutilisées. Les détails de votre demande restent inchangés.",
+  "saved_cards": {
+    "title": "Cartes enregistrées",
+    "expiry": "Expire le {{month}}/{{year}}",
+    "remove": "Supprimer",
+    "remove_label": "Supprimer la carte se terminant par {{last4}}",
+    "remove_confirm": "Supprimer cette carte de votre compte ?",
+    "new_card": "Utiliser une nouvelle carte de crédit ou de débit",
+    "save": "Enregistrer la carte en toute sécurité",
+    "use_card": "Utiliser la carte sélectionnée",
+    "consent": "En appuyant sur Enregistrer, vous autorisez Stripe à conserver cette carte pour vos futurs paiements et les frais supplémentaires que vous approuvez. Elle devient votre carte par défaut.",
+    "security": "Stripe conserve votre carte en toute sécurité. L’application affiche uniquement des données masquées et ne conserve jamais le numéro complet ni le code de sécurité.",
+    "load_failed": "Impossible de charger les cartes. Vous pouvez saisir une nouvelle carte.",
+    "save_failed": "Impossible d’enregistrer la carte. Réessayez et terminez la vérification bancaire.",
+    "remove_failed": "Impossible de supprimer la carte. Réessayez."
+  }
 }
