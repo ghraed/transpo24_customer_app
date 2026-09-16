@@ -1136,5 +1136,15 @@
   "places.namePlaceholder": "Casa, Trabajo, Almacén…",
   "places.name": "Nombre del lugar",
   "places.cancel": "Cancelar",
-  "places.save": "Guardar"
+  "places.save": "Guardar",
+  "repeat.title": "Repetir una ruta anterior",
+  "repeat.confirmTitle": "Confirmar ruta",
+  "repeat.use": "Usar esta ruta",
+  "repeat.confirm": "Confirmar ruta",
+  "repeat.edit": "Editar ruta",
+  "repeat.empty": "Tus rutas aparecerán aquí después de enviar una solicitud.",
+  "repeat.loadError": "No se pudieron cargar las rutas. Inténtalo de nuevo.",
+  "repeat.applyError": "No se pudo calcular la ruta. Inténtalo de nuevo o edita las direcciones.",
+  "repeat.retry": "Reintentar",
+  "repeat.onlyAddresses": "Solo se reutilizan las direcciones. Los detalles de tu solicitud actual se conservan."
 }

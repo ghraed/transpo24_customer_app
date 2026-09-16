@@ -1,4 +1,5 @@
 import { RequestProgress } from '@/requests/request-progress';
+import { reviewAddressRoute } from '@/requests/review-address-route';
 import { Redirect } from 'expo-router';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -534,47 +535,11 @@ function SubmitRequestScreen() {
   const canSubmit = validationErrors.length === 0 && !isSubmitting;
 
   const navigateToPickup = (): void => {
-    const route = {
-      pathname: '/pickup-location',
-      params: {
-        requestId,
-        serviceId,
-        serviceKey,
-        vehicleDetails: params.vehicleDetails ?? '',
-        vehicleConditionDetails: params.vehicleConditionDetails ?? '',
-        pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
-        pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
-        pendingGoodsDetails: params.pendingGoodsDetails ?? '',
-        pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
-        pendingFurnitureDetails: params.pendingFurnitureDetails ?? '',
-        pendingFurniturePhotoAssets: params.pendingFurniturePhotoAssets ?? '',
-      },
-    } as unknown as Href;
-    router.push(route);
+    router.push(reviewAddressRoute('pickup', params));
   };
 
   const navigateToDropoff = (): void => {
-    const route = {
-      pathname: '/dropoff-location',
-      params: {
-        requestId,
-        serviceId,
-        serviceKey,
-        vehicleDetails: params.vehicleDetails ?? '',
-        vehicleConditionDetails: params.vehicleConditionDetails ?? '',
-        pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
-        pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
-        pendingGoodsDetails: params.pendingGoodsDetails ?? '',
-        pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
-        pendingFurnitureDetails: params.pendingFurnitureDetails ?? '',
-        pendingFurniturePhotoAssets: params.pendingFurniturePhotoAssets ?? '',
-        pickupLatitude: params.pickupLatitude ?? '',
-        pickupLongitude: params.pickupLongitude ?? '',
-        pickupAddress: params.pickupAddress ?? '',
-        pickupPlaceId: params.pickupPlaceId ?? '',
-      },
-    } as unknown as Href;
-    router.push(route);
+    router.push(reviewAddressRoute('dropoff', params));
   };
 
   const navigateToDateTime = (): void => {

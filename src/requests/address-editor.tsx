@@ -32,6 +32,7 @@ import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import type { Address } from './vehicle-draft';
 import { resolveCurrentAddress } from './resolve-current-address';
 import { AddressPlaces } from './address-places';
+import { RepeatRoute, type RepeatRouteAction } from './repeat-route';
 
 function addressRegion(address?: Address, pickup?: Address): Region | undefined {
   const point = address ?? pickup;
@@ -56,6 +57,7 @@ export function AddressEditor({
   fillHeight = false,
   locationKind = 'pickup',
   pickupLocation,
+  onRepeatRoute,
 }: {
   value?: Address;
   onChange: (address: Address | undefined) => void;
@@ -65,6 +67,7 @@ export function AddressEditor({
   fillHeight?: boolean;
   locationKind?: 'pickup' | 'dropoff';
   pickupLocation?: Address;
+  onRepeatRoute?: RepeatRouteAction;
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -116,7 +119,7 @@ export function AddressEditor({
     }
   }, [open, searchRegion, center]);
   const focusAddress = (address: Address) => {
-    const nextRegion = addressRegion(address);
+    const nextRegion = addressRegion(address, routeOrigin);
     setCameraTarget(nextRegion);
     setRegion(nextRegion);
     setSearchRegion(nextRegion);
@@ -345,6 +348,14 @@ export function AddressEditor({
 
   return (
     <View style={[styles.section, fillHeight && styles.fill]}>
+      {locationKind === 'pickup' && onRepeatRoute ? <RepeatRoute onApply={async (route, confirm) => {
+        selectionId.current += 1;
+        setResolving(false);
+        setPendingPin(undefined);
+        setError('');
+        await onRepeatRoute(route, confirm);
+        if (!confirm) focusAddress(route.pickup);
+      }} /> : null}
       <View style={[styles.search, invalid && styles.invalid]}>
         <Pressable
           style={styles.searchText}

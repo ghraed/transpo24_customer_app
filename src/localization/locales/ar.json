@@ -1136,5 +1136,15 @@
   "places.namePlaceholder": "المنزل، العمل، المستودع…",
   "places.name": "اسم المكان",
   "places.cancel": "إلغاء",
-  "places.save": "حفظ"
+  "places.save": "حفظ",
+  "repeat.title": "تكرار مسار سابق",
+  "repeat.confirmTitle": "تأكيد المسار",
+  "repeat.use": "استخدام هذا المسار",
+  "repeat.confirm": "تأكيد المسار",
+  "repeat.edit": "تعديل المسار",
+  "repeat.empty": "ستظهر مساراتك هنا بعد إرسال طلب.",
+  "repeat.loadError": "تعذّر تحميل المسارات السابقة. حاول مجددًا.",
+  "repeat.applyError": "تعذّر حساب المسار. حاول مجددًا أو عدّل العناوين.",
+  "repeat.retry": "إعادة المحاولة",
+  "repeat.onlyAddresses": "تُستخدم العناوين فقط. تبقى تفاصيل طلبك الحالي كما هي."
 }

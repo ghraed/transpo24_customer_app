@@ -7,6 +7,7 @@ import { AddressEditor } from './address-editor';
 import { AddressPlaces } from './address-places';
 import { resolveCurrentAddress } from './resolve-current-address';
 jest.mock('./address-places', () => ({ AddressPlaces: () => null }));
+jest.mock('./repeat-route', () => ({ RepeatRoute: () => null }));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: key => key, i18n: { dir: () => 'ltr', language: 'en' } }),
@@ -166,16 +167,15 @@ it.each(['pickup', 'dropoff'])('centers the %s map on the new pin after submitti
   await act(async () => input.props.onChangeText('New searched address'));
   await act(async () => input.props.onSubmitEditing());
   expect(onChange).toHaveBeenLastCalledWith(newAddress);
-  expect(mockAnimateToRegion).toHaveBeenLastCalledWith({
-    latitude: 50, longitude: 12, latitudeDelta: 0.012, longitudeDelta: 0.012,
-  }, 300);
+  const expectedRegion = locationKind === 'dropoff'
+    ? { latitude: 48, longitude: 9.5, latitudeDelta: 4 * 1.4, longitudeDelta: 5 * 1.4 }
+    : { latitude: 50, longitude: 12, latitudeDelta: 0.012, longitudeDelta: 0.012 };
+  expect(mockAnimateToRegion).toHaveBeenLastCalledWith(expectedRegion, 300);
   // A late native callback from the previous viewport must not undo the search.
   await act(async () => tree.root.findAllByType('TestMap')[0].props.onRegionChangeComplete({
     latitude: 47, longitude: 8, latitudeDelta: 0.2, longitudeDelta: 0.2,
   }, { isGesture: false }));
-  expect(tree.root.findAllByType('TestMap')[0].props.region).toEqual({
-    latitude: 50, longitude: 12, latitudeDelta: 0.012, longitudeDelta: 0.012,
-  });
+  expect(tree.root.findAllByType('TestMap')[0].props.region).toEqual(expectedRegion);
   if (locationKind === 'dropoff') {
     expect(tree.root.findAllByType('TestDirections')[0].props.destination).toEqual(newAddress);
   }
@@ -193,5 +193,15 @@ it.each(['pickup', 'dropoff'])('selects a stored %s address and ignores an older
   expect(onChange).toHaveBeenLastCalledWith(saved);
   expect(tree.root.findAllByType('TestMarker')[0].props.coordinate).toEqual(saved);
   expect(mockAnimateToRegion).toHaveBeenLastCalledWith({ latitude: 50, longitude: 12, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 300);
+  await act(async () => tree.unmount());
+});
+
+it('restores both pins and the path when opening dropoff from a repeated route review', async () => {
+  const pickup = { latitude: 46, longitude: 7, address: 'Warehouse' };
+  const dropoff = { latitude: 48, longitude: 9, address: 'Shop' };
+  const { tree } = await render('Dropoff', { locationKind: 'dropoff', pickupLocation: pickup, value: dropoff });
+  expect(tree.root.findAllByType('TestMarker').map(marker => marker.props.coordinate)).toEqual([pickup, dropoff]);
+  expect(tree.root.findByType('TestDirections').props).toMatchObject({ origin: pickup, destination: dropoff });
+  expect(tree.root.findByType('TestMap').props.region).toEqual({ latitude: 47, longitude: 8, latitudeDelta: 2 * 1.4, longitudeDelta: 2 * 1.4 });
   await act(async () => tree.unmount());
 });

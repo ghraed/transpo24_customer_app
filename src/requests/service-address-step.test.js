@@ -3,6 +3,7 @@ import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { ServiceAddressStep } from './service-address-step';
 import { AddressEditor } from './address-editor';
+import { reviewAddressRoute } from './review-address-route';
 const mockPush = jest.fn();
 let mockParams;
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => ({ push: mockPush }) }));
@@ -54,4 +55,47 @@ it('restores an address when editing it from review', async () => {
   await act(async () => { tree = create(<ServiceAddressStep kind="dropoff" />); });
   expect(tree.root.findByType(AddressEditor).props.value).toEqual(dropoff);
   expect(confirm().props.disabled).toBe(false);
+});
+
+it.each(services)('%s repeats both addresses and opens summary with current details and fresh distance', async (serviceKey, detailsKey, photosKey) => {
+  mockParams = { serviceId: 'service', serviceKey, [detailsKey]: '{"description":"Current shipment"}', [photosKey]: '[{"uri":"current-photo"}]', routeDistanceKm: '999' };
+  await act(async () => { tree = create(<ServiceAddressStep kind="pickup" />); });
+  await act(async () => tree.root.findByType(AddressEditor).props.onRepeatRoute({ pickup, dropoff }, true));
+  expect(mockPush).toHaveBeenCalledTimes(1);
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/submit-request', params: expect.objectContaining({
+    ...mockParams, pickupLatitude: '48', pickupLongitude: '8', pickupAddress: 'Pickup', pickupPlaceId: 'pickup',
+    dropoffLatitude: '49', dropoffLongitude: '9', dropoffAddress: 'Delivery', dropoffPlaceId: 'delivery', routeDistanceKm: '25',
+  }) });
+});
+it('edit route fills the pair and preserves dropoff when continuing through pickup', async () => {
+  mockParams = { serviceId: 'service', serviceKey: 'GOODS_TRANSPORT', pendingGoodsDetails: '{}' };
+  await act(async () => { tree = create(<ServiceAddressStep kind="pickup" />); });
+  await act(async () => tree.root.findByType(AddressEditor).props.onRepeatRoute({ pickup, dropoff }, false));
+  expect(mockPush).not.toHaveBeenCalled();
+  expect(tree.root.findByType(AddressEditor).props.value).toEqual(pickup);
+  await act(async () => confirm().props.onPress());
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/dropoff-location', params: expect.objectContaining({ pickupLatitude: '48', dropoffLatitude: '49', dropoffAddress: 'Delivery' }) });
+});
+it('does not skip missing shipment details when repeating a route', async () => {
+  mockParams = { serviceId: 'service', serviceKey: 'GOODS_TRANSPORT' };
+  await act(async () => { tree = create(<ServiceAddressStep kind="pickup" />); });
+  await expect(tree.root.findByType(AddressEditor).props.onRepeatRoute({ pickup, dropoff }, true)).rejects.toThrow('Transport details are missing');
+  expect(mockPush).not.toHaveBeenCalled();
+});
+
+it.each(['pickup', 'dropoff'])('review edit restores the %s address and preserves the whole repeated route', async kind => {
+  const reviewParams = { serviceId: 'service', serviceKey: 'GOODS_TRANSPORT', pendingGoodsDetails: '{}', pendingGoodsPhotoAssets: '[{"uri":"current"}]',
+    pickupLatitude: '48', pickupLongitude: '8', pickupAddress: 'Pickup', pickupPlaceId: 'pickup',
+    dropoffLatitude: '49', dropoffLongitude: '9', dropoffAddress: 'Delivery', dropoffPlaceId: 'delivery', routeDistanceKm: '25' };
+  const route = reviewAddressRoute(kind, reviewParams);
+  expect(route.pathname).toBe(`/${kind}-location`);
+  expect(route.params).toEqual(reviewParams);
+  mockParams = route.params;
+  await act(async () => { tree = create(<ServiceAddressStep kind={kind} />); });
+  expect(tree.root.findByType(AddressEditor).props.value).toEqual(kind === 'pickup' ? pickup : dropoff);
+  if (kind === 'dropoff') expect(tree.root.findByType(AddressEditor).props.pickupLocation).toEqual(pickup);
+  // Reusing a router entry with a different route must not retain the old pin.
+  mockParams = { ...mockParams, [`${kind}Latitude`]: '50', [`${kind}Address`]: 'Changed route' };
+  await act(async () => tree.update(<ServiceAddressStep kind={kind} />));
+  expect(tree.root.findByType(AddressEditor).props.value).toMatchObject({ latitude: 50, address: 'Changed route' });
 });

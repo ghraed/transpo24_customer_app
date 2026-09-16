@@ -484,6 +484,10 @@ function VehicleRequest({
             {step === 'pickup' || step === 'dropoff' ? (
               <AddressEditor
                 key={step}
+                onRepeatRoute={step === 'pickup' ? (route, confirm) => {
+                  patch({ pickup: route.pickup, dropoff: route.dropoff });
+                  if (confirm) go('schedule');
+                } : undefined}
                 locationKind={step}
                 pickupLocation={step === 'dropoff' ? draft.pickup : undefined}
                 fillHeight

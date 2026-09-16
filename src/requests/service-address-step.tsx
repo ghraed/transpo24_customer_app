@@ -8,6 +8,7 @@ import { getDrivingDistance } from '@/lib/places';
 import { AddressEditor } from './address-editor';
 import { RequestProgress } from './request-progress';
 import type { Address } from './vehicle-draft';
+import type { PreviousRoute } from './customer-places';
 
 const DETAIL_KEYS: Record<string, string> = {
   MOTORCYCLE_TRANSPORT: 'pendingMotorcycleDetails',
@@ -27,6 +28,11 @@ function readAddress(params: Record<string, string>, kind: 'pickup' | 'dropoff')
   return { ...point, address: params[`${kind}Address`] || '', placeId: params[`${kind}PlaceId`] || undefined };
 }
 
+function addressParams(address: Address, kind: 'pickup' | 'dropoff') {
+  return { [`${kind}Latitude`]: String(address.latitude), [`${kind}Longitude`]: String(address.longitude),
+    [`${kind}Address`]: address.address, [`${kind}PlaceId`]: address.placeId ?? '' };
+}
+
 // All non-car transport drafts use the same address editor and only submit
 // after the existing final review. Carry every detail/photo parameter forward.
 export function ServiceAddressStep({ kind }: { kind: 'pickup' | 'dropoff' }) {
@@ -34,11 +40,20 @@ export function ServiceAddressStep({ kind }: { kind: 'pickup' | 'dropoff' }) {
   const params = Object.fromEntries(Object.entries(rawParams).filter(
     (entry): entry is [string, string] => typeof entry[1] === 'string',
   ));
+  // Router entries may be reused with new draft parameters. Reset address and
+  // camera state together instead of retaining a pin from the previous visit.
+  return <AddressStep key={`${kind}:${JSON.stringify(params)}`} kind={kind} params={params} />;
+}
+
+function AddressStep({ kind, params }: { kind: 'pickup' | 'dropoff'; params: Record<string, string> }) {
   const router = useRouter();
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const [address, setAddress] = useState(() => readAddress(params, kind));
   const pickup = readAddress(params, 'pickup');
+  const [repeatedDropoff, setRepeatedDropoff] = useState<Address>();
+  const lifetime = useRef(0);
+  useEffect(() => () => { lifetime.current += 1; }, []);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const navigating = useRef(false);
@@ -62,6 +77,46 @@ export function ServiceAddressStep({ kind }: { kind: 'pickup' | 'dropoff' }) {
     }).catch(() => { /* Distance is optional; address confirmation remains available. */ });
     return () => abort.abort();
   }, [routeKey, pickupLatitude, pickupLongitude, dropoffLatitude, dropoffLongitude]);
+
+  const repeatRoute = async (route: PreviousRoute, confirmRoute: boolean) => {
+    if (navigating.current) return;
+    if (!confirmRoute) {
+      setAddress(route.pickup);
+      setRepeatedDropoff(route.dropoff);
+      setError('');
+      return;
+    }
+    if (!params.serviceId) throw new Error(t('Missing selected service. Please go back and choose a service first.'));
+    try {
+      const details = JSON.parse(params[DETAIL_KEYS[params.serviceKey]] || 'null');
+      if (!details || typeof details !== 'object' || Array.isArray(details)) throw new Error();
+    } catch {
+      throw new Error(t('Transport details are missing. Please go back and complete them first.'));
+    }
+    if (route.pickup.latitude === route.dropoff.latitude && route.pickup.longitude === route.dropoff.longitude) {
+      throw new Error(t('vehicleRequest.errorSameAddress'));
+    }
+    const version = lifetime.current;
+    navigating.current = true;
+    setBusy(true);
+    try {
+      let km: number;
+      try { km = await getDrivingDistance(route.pickup, route.dropoff); }
+      catch { throw new Error(t('repeat.applyError')); }
+      if (version !== lifetime.current) return;
+      setAddress(route.pickup);
+      setRepeatedDropoff(route.dropoff);
+      router.push({ pathname: '/submit-request', params: {
+        ...params,
+        ...addressParams(route.pickup, 'pickup'),
+        ...addressParams(route.dropoff, 'dropoff'),
+        routeDistanceKm: String(km),
+      } } as Href);
+    } finally {
+      navigating.current = false;
+      if (version === lifetime.current) setBusy(false);
+    }
+  };
 
   const confirm = () => {
     if (!address || navigating.current) return;
@@ -91,6 +146,7 @@ export function ServiceAddressStep({ kind }: { kind: 'pickup' | 'dropoff' }) {
         pathname: kind === 'pickup' ? '/dropoff-location' : '/submit-request',
         params: {
           ...params,
+          ...(kind === 'pickup' && repeatedDropoff ? addressParams(repeatedDropoff, 'dropoff') : {}),
           [`${kind}Latitude`]: String(address.latitude),
           [`${kind}Longitude`]: String(address.longitude),
           [`${kind}Address`]: address.address,
@@ -113,6 +169,7 @@ export function ServiceAddressStep({ kind }: { kind: 'pickup' | 'dropoff' }) {
       <View style={styles.editor}>
         <AddressEditor
           fillHeight
+          onRepeatRoute={kind === 'pickup' ? repeatRoute : undefined}
           locationKind={kind}
           pickupLocation={kind === 'dropoff' ? pickup : undefined}
           value={address}

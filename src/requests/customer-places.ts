@@ -25,3 +25,8 @@ export async function saveCustomerPlace(address: Address, label: string): Promis
 export async function removeCustomerPlace(id: string): Promise<void> {
   await request(`/${encodeURIComponent(id)}`, 'DELETE');
 }
+
+export type PreviousRoute = { pickup: Address; dropoff: Address };
+export async function getPreviousRoutes(): Promise<PreviousRoute[]> {
+  return (await request('/routes', 'GET')).json();
+}

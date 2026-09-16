@@ -1141,5 +1141,15 @@
   "places.namePlaceholder": "Home, Work, Warehouse…",
   "places.name": "Place name",
   "places.cancel": "Cancel",
-  "places.save": "Save"
+  "places.save": "Save",
+  "repeat.title": "Repeat a previous route",
+  "repeat.confirmTitle": "Confirm route",
+  "repeat.use": "Use this route",
+  "repeat.confirm": "Confirm route",
+  "repeat.edit": "Edit route",
+  "repeat.empty": "Your routes will appear here after you submit a request.",
+  "repeat.loadError": "Could not load previous routes. Please try again.",
+  "repeat.applyError": "Could not calculate this route. Please try again or edit the addresses.",
+  "repeat.retry": "Retry",
+  "repeat.onlyAddresses": "Only the addresses are reused. Your current request details stay the same."
 }

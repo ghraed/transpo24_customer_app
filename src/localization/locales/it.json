@@ -1140,5 +1140,15 @@
   "places.namePlaceholder": "Casa, Lavoro, Magazzino…",
   "places.name": "Nome del luogo",
   "places.cancel": "Annulla",
-  "places.save": "Salva"
+  "places.save": "Salva",
+  "repeat.title": "Ripeti un percorso precedente",
+  "repeat.confirmTitle": "Conferma percorso",
+  "repeat.use": "Usa questo percorso",
+  "repeat.confirm": "Conferma percorso",
+  "repeat.edit": "Modifica percorso",
+  "repeat.empty": "I percorsi appariranno qui dopo l’invio di una richiesta.",
+  "repeat.loadError": "Impossibile caricare i percorsi. Riprova.",
+  "repeat.applyError": "Impossibile calcolare il percorso. Riprova o modifica gli indirizzi.",
+  "repeat.retry": "Riprova",
+  "repeat.onlyAddresses": "Vengono riutilizzati solo gli indirizzi. I dettagli della richiesta attuale restano invariati."
 }

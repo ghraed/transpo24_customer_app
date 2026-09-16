@@ -1136,5 +1136,15 @@
   "places.namePlaceholder": "Domicile, Travail, Entrepôt…",
   "places.name": "Nom du lieu",
   "places.cancel": "Annuler",
-  "places.save": "Enregistrer"
+  "places.save": "Enregistrer",
+  "repeat.title": "Réutiliser un trajet",
+  "repeat.confirmTitle": "Confirmer le trajet",
+  "repeat.use": "Utiliser ce trajet",
+  "repeat.confirm": "Confirmer le trajet",
+  "repeat.edit": "Modifier le trajet",
+  "repeat.empty": "Vos trajets apparaîtront ici après l’envoi d’une demande.",
+  "repeat.loadError": "Impossible de charger les trajets. Réessayez.",
+  "repeat.applyError": "Impossible de calculer ce trajet. Réessayez ou modifiez les adresses.",
+  "repeat.retry": "Réessayer",
+  "repeat.onlyAddresses": "Seules les adresses sont réutilisées. Les détails de votre demande restent inchangés."
 }

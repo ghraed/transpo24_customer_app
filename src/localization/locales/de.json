@@ -1136,5 +1136,15 @@
   "places.namePlaceholder": "Zuhause, Arbeit, Lager…",
   "places.name": "Name des Ortes",
   "places.cancel": "Abbrechen",
-  "places.save": "Speichern"
+  "places.save": "Speichern",
+  "repeat.title": "Vorherige Route wiederholen",
+  "repeat.confirmTitle": "Route bestätigen",
+  "repeat.use": "Diese Route verwenden",
+  "repeat.confirm": "Route bestätigen",
+  "repeat.edit": "Route bearbeiten",
+  "repeat.empty": "Ihre Routen erscheinen hier, nachdem Sie eine Anfrage gesendet haben.",
+  "repeat.loadError": "Routen konnten nicht geladen werden. Bitte erneut versuchen.",
+  "repeat.applyError": "Route konnte nicht berechnet werden. Bitte erneut versuchen oder Adressen bearbeiten.",
+  "repeat.retry": "Erneut versuchen",
+  "repeat.onlyAddresses": "Nur die Adressen werden übernommen. Ihre aktuellen Anfragedetails bleiben erhalten."
 }
