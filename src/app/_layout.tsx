@@ -127,10 +127,10 @@ function RootNavigator() {
         urlScheme="transpo24"
       >
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000000' }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
             <Image
               source={require('@/assets/images/client-startup-logo.png')}
-              style={{ width: 250, height: 250 }}
+              style={{ width: 180, height: 180 }}
               resizeMode="contain"
               accessibilityLabel="Transpo24"
             />
