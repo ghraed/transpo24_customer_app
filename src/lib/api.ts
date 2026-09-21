@@ -1,3 +1,5 @@
+import type { EditableRequest } from '@/requests/edit-request';
+import { Platform } from 'react-native';
 import { assertPushBackend } from '@/notifications/assertPushBackend';
 import { createBackendReachabilityError, getApiBaseUrl } from '@/config/backend';
 import {
@@ -59,6 +61,7 @@ import appI18n from '@/localization/i18n';
 
 interface ApiErrorResponse {
   message?: string | string[];
+  code?: string;
 }
 
 type FurnitureLocationFormValue = {
@@ -115,7 +118,7 @@ async function parseError(response: Response, fallback: string): Promise<Error> 
 
     try {
       const errorData = JSON.parse(raw) as ApiErrorResponse;
-      return new Error(toMessage(errorData, fallback));
+      return Object.assign(new Error(toMessage(errorData, fallback)), { code: errorData.code });
     } catch {
       return new Error(appI18n.t("{{value0}} Server returned: {{value1}}", { value0: fallback, value1: raw.slice(0, 200) }));
     }
@@ -522,6 +525,8 @@ export async function createFurnitureTransportRequest(
   formData.append('furnitureDescription', payload.furnitureDescription.trim());
   formData.append('approximateItemCount', String(payload.approximateItemCount));
   formData.append('needsHelpers', String(payload.needsHelpers ?? false));
+  if (payload.isImmediate !== undefined) formData.append('isImmediate', String(payload.isImmediate));
+  if (payload.helpersCount !== undefined) formData.append('helpersCount', String(payload.helpersCount));
   formData.append('movingDate', payload.movingDate);
   formData.append(
     'customerCanHelpLoading',
@@ -1583,4 +1588,40 @@ export async function markCustomerNotificationRead(id: string): Promise<void> {
     method: 'POST', headers: getAuthHeaders(),
   });
   if (!response.ok) throw await parseError(response, 'Failed to mark notification as read.');
+}
+
+export async function getRequestForEdit(requestId: string): Promise<EditableRequest> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/edit`, { method: 'GET', headers: getAuthHeaders() });
+  if (!response.ok) throw await parseError(response, 'Failed to load request.');
+  return parseJsonBody<EditableRequest>(response, 'Failed to load request.');
+}
+
+export async function submitRequestEdit(requestId: string, details: Record<string, unknown>, photos: LocalPhotoAsset[]): Promise<void> {
+  const form = new FormData();
+  form.append('details', JSON.stringify(details));
+  for (const [index, photo] of photos.entries()) {
+    const file = toFormDataFile(photo, index);
+    if (Platform.OS === 'web') {
+      const response = await fetch(photo.uri);
+      form.append('photos', await response.blob(), file.name);
+    } else {
+      form.append('photos', file as unknown as Blob);
+    }
+  }
+  // Use native multipart transport for local file URI parts on Expo 56.
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/edit`);
+    Object.entries(getMultipartAuthHeaders()).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+    xhr.timeout = 120000;
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else {
+        const error = tryParseJsonLenient<ApiErrorResponse>(xhr.responseText);
+        reject(Object.assign(new Error(error ? toMessage(error, 'Failed to save request.') : 'Failed to save request.'), { code: error?.code }));
+      }
+    };
+    xhr.onerror = xhr.ontimeout = xhr.onabort = () => reject(new Error('Failed to save request.'));
+    xhr.send(form);
+  });
 }

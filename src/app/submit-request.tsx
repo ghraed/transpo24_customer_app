@@ -254,48 +254,6 @@ function buildFurnitureLocationPayload(location: LocationData) {
   };
 }
 
-function buildFurnitureCustomerNote(
-  customerNote: string,
-  pendingFurnitureDetails: PendingFurnitureDetailsPayload,
-): string | undefined {
-  const noteParts: string[] = [];
-
-  if (
-    pendingFurnitureDetails.needsHelpers &&
-    typeof pendingFurnitureDetails.helpersCount === 'number' &&
-    pendingFurnitureDetails.helpersCount > 0
-  ) {
-    noteParts.push(`Requested helpers: ${pendingFurnitureDetails.helpersCount}`);
-  }
-
-  if (customerNote.trim()) {
-    noteParts.push(customerNote.trim());
-  }
-
-  return noteParts.length > 0 ? noteParts.join('\n') : undefined;
-}
-
-function buildGoodsCustomerNote(
-  customerNote: string,
-  pendingGoodsDetails: PendingGoodsDetailsPayload,
-): string | undefined {
-  const noteParts: string[] = [];
-
-  if (pendingGoodsDetails.isImmediate === true) {
-    noteParts.push('Requested pickup: Immediate pickup');
-  } else if (pendingGoodsDetails.scheduledPickupAt) {
-    noteParts.push(
-      `Requested pickup: ${formatSchedule(false, pendingGoodsDetails.scheduledPickupAt)}`,
-    );
-  }
-
-  if (customerNote.trim()) {
-    noteParts.push(customerNote.trim());
-  }
-
-  return noteParts.length > 0 ? noteParts.join('\n') : undefined;
-}
-
 function buildFurnitureSchedule(
   pendingFurnitureDetails: PendingFurnitureDetailsPayload,
 ): { isImmediate: boolean; scheduledPickupAt?: string } {
@@ -687,6 +645,8 @@ function SubmitRequestScreen() {
       if (isGoodsTransport && pickupLocation && dropoffLocation && pendingGoodsDetails) {
         const payload: CreateGoodsTransportRequestPayload = {
           shipmentSize: pendingGoodsDetails.shipmentSize,
+          isImmediate: pendingGoodsDetails.isImmediate,
+          scheduledPickupAt: pendingGoodsDetails.isImmediate ? undefined : pendingGoodsDetails.scheduledPickupAt,
           goodsDescription: pendingGoodsDetails.goodsDescription.trim(),
           approximateWeightKg: pendingGoodsDetails.approximateWeightKg,
           numberOfPieces: pendingGoodsDetails.numberOfPieces,
@@ -717,7 +677,7 @@ function SubmitRequestScreen() {
         }
 
         const submitted = await submitCustomerRequest(created.id, {
-          customerNote: buildGoodsCustomerNote(customerNote, pendingGoodsDetails),
+          customerNote: customerNote.trim() || undefined,
         });
 
         setSuccessMessage('Request submitted successfully.');
@@ -735,6 +695,8 @@ function SubmitRequestScreen() {
           furnitureDescription: pendingFurnitureDetails.furnitureDescription.trim(),
           approximateItemCount: pendingFurnitureDetails.approximateItemCount,
           needsHelpers: pendingFurnitureDetails.needsHelpers,
+          helpersCount: pendingFurnitureDetails.needsHelpers ? pendingFurnitureDetails.helpersCount : undefined,
+          isImmediate: pendingFurnitureDetails.isImmediate,
           movingDate:
             pendingFurnitureDetails.isImmediate === true
               ? new Date().toISOString()
@@ -749,10 +711,7 @@ function SubmitRequestScreen() {
         const created = await createFurnitureTransportRequest(payload);
 
         const submitted = await submitCustomerRequest(created.id, {
-          customerNote: buildFurnitureCustomerNote(
-            customerNote,
-            pendingFurnitureDetails,
-          ),
+          customerNote: customerNote.trim() || undefined,
         });
 
         setSuccessMessage('Request submitted successfully.');

@@ -73,6 +73,8 @@ export interface GoodsLocationPayload {
 }
 
 export interface CreateGoodsTransportRequestPayload {
+  isImmediate?: boolean;
+  scheduledPickupAt?: string;
   shipmentSize: GoodsShipmentSize;
   goodsDescription: string;
   approximateWeightKg: number;
@@ -120,6 +122,8 @@ export interface FurnitureLocationPayload {
 }
 
 export interface CreateFurnitureTransportRequestPayload {
+  isImmediate?: boolean;
+  helpersCount?: number;
   furnitureDescription: string;
   approximateItemCount: number;
   needsHelpers?: boolean;
@@ -767,6 +771,7 @@ export interface SubmitRequestRouteParams {
 }
 
 export interface RequestStatusResponse {
+  canEdit?: boolean;
   id: string;
   serviceId: string;
   service?: RequestServiceSummary;

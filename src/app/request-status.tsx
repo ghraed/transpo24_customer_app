@@ -694,6 +694,7 @@ export default function RequestStatusScreen() {
           return {
             ...previousRequestData,
             status: payload.requestStatus,
+            canEdit: false,
             statusLabel: STATUS_LABELS[payload.requestStatus] ?? previousRequestData.statusLabel,
             quotesSummary: {
               count: nextOffers.length,
@@ -1577,6 +1578,12 @@ export default function RequestStatusScreen() {
             </View>
           ) : null}
 
+          {requestData.canEdit && offers.length === 0 && !requestData.quotesSummary.hasOffers ? (
+            <Pressable accessibilityRole="button" style={styles.primaryActionButton}
+              onPress={() => router.push({ pathname: '/edit-request', params: { requestId } } as unknown as Href)}>
+              <Text style={styles.primaryActionButtonText}>{t('editRequest.title')}</Text>
+            </Pressable>
+          ) : null}
           <View style={styles.detailsCard}>
             <View style={styles.detailsHeader}>
               <Text style={styles.cardTitle}>{appI18n.t("Request Summary")}</Text>
