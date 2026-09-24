@@ -70,6 +70,15 @@ type FurnitureLocationFormValue = {
 };
 
 function toMessage(errorData: ApiErrorResponse, fallback: string): string {
+  const messages: Record<string, string> = {
+    ROUTE_BLOCKED: 'Transport on this route is currently unavailable.',
+    TENANT_MISMATCH: 'This account belongs to another Transpo24 market. Choose your home market and try again.',
+    TENANT_INACTIVE: 'This Transpo24 market is currently unavailable.',
+    TENANT_NOT_FOUND: 'Choose a valid Transpo24 market.',
+    MARKET_REQUIRED: 'Choose your Transpo24 market to continue.',
+    TENANT_ASSIGNMENT_REQUIRED: 'This account needs a home market assignment. Contact support.',
+  };
+  if (errorData.code && messages[errorData.code]) return appI18n.t(messages[errorData.code]);
   return Array.isArray(errorData.message)
     ? (errorData.message[0] ?? fallback)
     : (errorData.message ?? fallback);
@@ -283,42 +292,43 @@ export async function registerPushToken(
   );
 }
 
-export async function sendPhoneVerificationCode(phoneNumber: string): Promise<void> {
+export async function sendPhoneVerificationCode(phoneNumber: string, marketCode: string): Promise<void> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/send-code`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phoneNumber }),
+    body: JSON.stringify({ phoneNumber, marketCode }),
   });
   if (!response.ok) {
     throw await parseError(response, 'Unable to send a verification code.');
   }
 }
 
-export async function skipPhoneVerificationForTemporaryTestCustomer(): Promise<CustomerSessionResponse> {
+export async function skipPhoneVerificationForTemporaryTestCustomer(marketCode: string): Promise<CustomerSessionResponse> {
   const endpoint = `${getApiBaseUrl()}/auth/testing/customer-login`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ marketCode }),
   });
   if (!response.ok) {
     throw await parseError(response, 'Unable to sign in to the temporary test account.');
   }
-  return parseJsonBody<CustomerSessionResponse>(
-    response,
-    'Failed to parse the temporary test sign-in response.',
-  );
+  const session = await parseJsonBody<CustomerSessionResponse>(response, 'Failed to parse the temporary test sign-in response.');
+  if (session.user.tenant?.code !== marketCode) throw Object.assign(new Error(toMessage({ code: 'TENANT_MISMATCH' }, '')), { code: 'TENANT_MISMATCH' });
+  return session;
 }
 
 export async function verifyPhoneVerificationCode(
   phoneNumber: string,
   code: string,
+  marketCode: string,
 ): Promise<CustomerSessionResponse> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/verify-code`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phoneNumber, code }),
+    body: JSON.stringify({ phoneNumber, code, marketCode }),
   });
   if (!response.ok) {
     throw await parseError(response, 'Unable to verify the code.');
@@ -385,6 +395,9 @@ function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerReque
   return {
     id: response.id,
     serviceId: response.serviceId,
+    currency: response.currency,
+    pickupCountryCode: response.pickupCountryCode,
+    destinationCountryCode: response.destinationCountryCode,
     status: response.status,
     submittedAt: response.submittedAt ?? null,
     pickupLocation:
@@ -419,6 +432,7 @@ function mapCustomerRequest(response: CustomerRequestApiResponse): CustomerReque
 }
 
 export async function postLogin(payload: {
+  marketCode: string;
   email: string;
   password: string;
 }): Promise<{ accessToken: string; user: { id: string; email: string; name?: string } }> {

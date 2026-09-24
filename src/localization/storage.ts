@@ -11,6 +11,13 @@ const TRANSLATION_CACHE_STORAGE_KEY = 'transpo24.customer.translationCache';
 type TranslationCache = Record<string, string>;
 
 let translationCache: TranslationCache | null = null;
+let cacheGeneration = 0;
+export function getTranslationCacheGeneration() { return cacheGeneration; }
+export async function clearTranslationCache(): Promise<void> {
+  cacheGeneration++;
+  translationCache = {};
+  await SecureStore.deleteItemAsync(TRANSLATION_CACHE_STORAGE_KEY);
+}
 
 export async function getStoredLanguage(): Promise<AppLanguage | null> {
   try {
@@ -36,7 +43,9 @@ async function loadTranslationCache(): Promise<TranslationCache> {
   }
 
   try {
+    const generation = cacheGeneration;
     const raw = await SecureStore.getItemAsync(TRANSLATION_CACHE_STORAGE_KEY);
+    if (generation !== cacheGeneration) return translationCache ?? {};
     translationCache = raw ? (JSON.parse(raw) as TranslationCache) : {};
   } catch (error) {
     console.warn('Failed to restore translation cache.', error);
@@ -60,7 +69,9 @@ export async function getCachedTranslation(key: string): Promise<string | null> 
 }
 
 export async function setCachedTranslation(key: string, value: string): Promise<void> {
+  const generation = cacheGeneration;
   const cache = await loadTranslationCache();
+  if (generation !== cacheGeneration) return;
   cache[key] = value;
   await persistTranslationCache(cache);
 }

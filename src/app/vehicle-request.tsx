@@ -269,8 +269,10 @@ function VehicleRequest({
         pathname: '/request-status',
         params: { requestId: submittedId },
       });
-    } catch {
-      setError('vehicleRequest.submitFailed');
+    } catch (requestError) {
+      setError((requestError as { code?: string })?.code === 'ROUTE_BLOCKED'
+        ? 'Transport on this route is currently unavailable.'
+        : 'vehicleRequest.submitFailed');
       busyRef.current = false;
       setBusy(false);
     }

@@ -30,7 +30,8 @@ function IconSymbol({
 }
 
 function formatMoney(amount: number, currency: string | null | undefined): string {
-  const code = currency?.trim() || 'CHF';
+  const code = currency?.trim();
+  if (!code) return '—';
 
   try {
     return new Intl.NumberFormat(undefined, {

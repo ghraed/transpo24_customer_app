@@ -349,7 +349,8 @@ function buildOffersHelperText(requestData: RequestStatusResponse, offersCount: 
 }
 
 function formatMoney(amount: number, currency: string | null | undefined): string {
-  const code = currency?.trim() || 'USD';
+  const code = currency?.trim();
+  if (!code) return '—';
 
   try {
     return new Intl.NumberFormat(undefined, {

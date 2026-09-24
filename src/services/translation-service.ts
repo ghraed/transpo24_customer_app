@@ -3,6 +3,7 @@ import { getAccessToken } from '@/lib/auth-token';
 import { type AppLanguage, DEFAULT_LANGUAGE } from '@/localization/languages';
 import {
   getCachedTranslation,
+  getTranslationCacheGeneration,
   setCachedTranslation,
 } from '@/localization/storage';
 import appI18n from '@/localization/i18n';
@@ -46,6 +47,7 @@ function buildCacheKey(sourceLanguage: AppLanguage, targetLanguage: AppLanguage,
 }
 
 async function postJson<T>(path: string, payload: unknown): Promise<T> {
+  const generation = getTranslationCacheGeneration();
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: 'POST',
     headers: getHeaders(),
@@ -56,7 +58,9 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
     throw new Error(appI18n.t("Translation request failed with status {{value0}}.", { value0: response.status }));
   }
 
-  return (await response.json()) as T;
+  const result = (await response.json()) as T;
+  if (generation !== getTranslationCacheGeneration()) throw new Error('Session changed.');
+  return result;
 }
 
 function readSingleTranslation(raw: unknown, fallback: string): string {

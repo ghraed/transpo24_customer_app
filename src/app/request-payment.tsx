@@ -108,7 +108,8 @@ function formatDate(value: string | null | undefined): string {
 }
 
 function formatMoney(amount: number, currency: string | null | undefined): string {
-  const code = currency?.trim() || 'USD';
+  const code = currency?.trim();
+  if (!code) return '—';
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
@@ -215,7 +216,7 @@ export default function RequestPaymentScreen() {
   const [showPaymentNotice, setShowPaymentNotice] = useState(false);
 
   const amount = offerData ? offerData.proposedPrice ?? offerData.price : 0;
-  const currency = offerData?.currency ?? 'USD';
+  const currency = offerData?.currency;
 
   useEffect(() => {
     let active = true;

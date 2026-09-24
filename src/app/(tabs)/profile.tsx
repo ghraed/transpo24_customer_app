@@ -216,6 +216,7 @@ export default function ProfileTabScreen() {
             <Text style={styles.heroMeta}>
               {profile?.phone || t("No phone number")}
             </Text>
+            <Text style={styles.heroMeta}>{t("Home market")}: {auth.user?.tenant ? `${auth.user.tenant.name} (${auth.user.tenant.code})` : t("Not assigned")}</Text>
             {profile?.countryCode ? (
               <Text style={styles.heroMeta}>
                 {getCountryLabel(profile.countryCode)}

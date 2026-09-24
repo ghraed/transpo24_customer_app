@@ -26,7 +26,8 @@ const RESEND_SECONDS = 60;
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
-  const { phoneNumber: rawPhoneNumber } = useLocalSearchParams<{ phoneNumber?: string }>();
+  const { phoneNumber: rawPhoneNumber, marketCode: rawMarketCode } = useLocalSearchParams<{ phoneNumber?: string; marketCode?: string }>();
+  const marketCode = typeof rawMarketCode === 'string' ? rawMarketCode : '';
   const phoneNumber = typeof rawPhoneNumber === 'string' ? rawPhoneNumber : '';
   const { t } = useTranslation();
   const { isRTL } = useAppLanguage();
@@ -60,7 +61,7 @@ export default function VerifyPhoneScreen() {
     setIsVerifying(true);
     setError('');
     try {
-      const session = await verifyPhoneVerificationCode(phoneNumber, candidate);
+      const session = await verifyPhoneVerificationCode(phoneNumber, candidate, marketCode);
       await setCustomerSession(session);
       void registerCustomerPushNotifications().catch(() => undefined);
       router.dismissAll();
@@ -72,14 +73,14 @@ export default function VerifyPhoneScreen() {
     } finally {
       setIsVerifying(false);
     }
-  }, [code, isVerifying, phoneNumber, router, t]);
+  }, [marketCode, code, isVerifying, phoneNumber, router, t]);
 
   const resend = useCallback(async () => {
     if (secondsRemaining > 0 || isResending) return;
     setIsResending(true);
     setError('');
     try {
-      await sendPhoneVerificationCode(phoneNumber);
+      await sendPhoneVerificationCode(phoneNumber, marketCode);
       setDeadline(Date.now() + RESEND_SECONDS * 1000);
       setNow(Date.now());
       setCode('');
@@ -89,7 +90,7 @@ export default function VerifyPhoneScreen() {
     } finally {
       setIsResending(false);
     }
-  }, [isResending, phoneNumber, secondsRemaining, t]);
+  }, [marketCode, isResending, phoneNumber, secondsRemaining, t]);
 
   const cells = useMemo(() => Array.from({ length: 6 }, (_, index) => code[index] || ''), [code]);
 
@@ -111,7 +112,7 @@ export default function VerifyPhoneScreen() {
     setTimeout(() => inputRefs.current[nextIndex]?.focus(), 0);
   }, [code, verify]);
 
-  if (!phoneNumber) return <Redirect href="/" />;
+  if (!phoneNumber || !marketCode) return <Redirect href="/" />;
   if (auth.status === 'authenticated') return <Redirect href="/(tabs)/home" />;
 
   return (

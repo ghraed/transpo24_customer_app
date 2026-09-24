@@ -12,6 +12,8 @@ jest.mock('expo-secure-store', () => ({
   }),
 }));
 
+jest.mock('./private-cache', () => ({ clearPrivateCache: jest.fn(async () => undefined) }));
+
 jest.mock('@/config/backend', () => ({ getApiBaseUrl: () => 'http://api.test' }));
 
 const session = {
@@ -160,4 +162,58 @@ describe('customer session persistence', () => {
     });
     expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(session));
   });
+});
+
+
+describe('market and account isolation', () => {
+  beforeEach(() => { mockStorage.clear(); jest.resetModules(); globalThis.fetch = jest.fn<typeof fetch>(); });
+  it('does not restore a trusted customer through another market', async () => {
+    const auth = loadAuth();
+    mockStorage.set('transpo24.customer.trustedSession', JSON.stringify({ ...session, user: { ...session.user, tenant: { code: 'FR' } } }));
+    await expect(auth.restoreTrustedCustomerSession('LB')).resolves.toEqual({ status: 'marketMismatch' });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(auth.getAccessToken()).toBeNull();
+  });
+  it('cannot resurrect a logged-out session with a late refresh response', async () => {
+    const auth = loadAuth();
+    await auth.setCustomerSession(session);
+    let finish!: (value: Response) => void;
+    jest.mocked(globalThis.fetch).mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const refreshing = auth.refreshAccessToken();
+    await auth.clearSession();
+    finish(response(200, session));
+    await expect(refreshing).resolves.toBeNull();
+    expect(auth.getAccessToken()).toBeNull();
+  });
+  it('does not retry the previous account request with the next account token', async () => {
+    const auth = loadAuth();
+    await auth.setCustomerSession(session);
+    let finish!: (value: Response) => void;
+    jest.mocked(globalThis.fetch).mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const request = auth.authenticatedFetch('http://api.test/customer/home', { method: 'GET' });
+    await auth.setCustomerSession({ ...session, user: { ...session.user, id: 'customer-2' } });
+    finish(response(401));
+    await expect(request).rejects.toThrow('Session changed');
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+  it('clears private caches on logout and direct account replacement', async () => {
+    const auth = loadAuth();
+    const { clearPrivateCache } = jest.requireMock('./private-cache') as { clearPrivateCache: ReturnType<typeof jest.fn> };
+    await auth.setCustomerSession(session);
+    await auth.setCustomerSession({ ...session, user: { ...session.user, id: 'customer-2' } });
+    expect(clearPrivateCache).toHaveBeenCalledWith('customer-1');
+    await auth.switchCustomerAccountOnDevice();
+    expect(clearPrivateCache).toHaveBeenCalledWith('customer-2');
+  });
+});
+
+it.each([false, true])('restores unexpired legacy/JWT access tokens (JWT=%s)', async (jwt) => {
+  mockStorage.clear(); jest.resetModules();
+  const payload = globalThis.btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 600 }));
+  const token = jwt ? `header.${payload}.signature` : `${payload}.signature`;
+  mockStorage.set('transpo24.customer.accessToken', token);
+  mockStorage.set('transpo24.customer.user', JSON.stringify(session.user));
+  const auth = loadAuth();
+  await auth.hydrateAuthSession();
+  expect(auth.getAccessToken()).toBe(token);
 });

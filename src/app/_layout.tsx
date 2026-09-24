@@ -151,7 +151,7 @@ function RootNavigator() {
           <EnvironmentBanner />
           <OtaUpdateBanner />
           <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
-            <Stack>
+            <Stack key={authSession.user?.id ?? "signed-out"}>
           <Stack.Screen name="vehicle-request" options={serviceHeaderOptions(t('vehicleRequest.title'))} />
           <Stack.Screen
             name="index"

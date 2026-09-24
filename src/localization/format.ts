@@ -68,7 +68,8 @@ export function formatNumber(value: number): string {
 }
 
 export function formatCurrency(value: number, currency: string | null | undefined): string {
-  const code = currency?.trim() || 'USD';
+  const code = currency?.trim();
+  if (!code) return '—';
 
   try {
     return new Intl.NumberFormat(getActiveLocale(), {

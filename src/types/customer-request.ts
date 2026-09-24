@@ -560,6 +560,9 @@ export interface CancelTripPaymentResponse {
 }
 
 export interface CustomerRequest {
+  currency?: string | null;
+  pickupCountryCode?: string | null;
+  destinationCountryCode?: string | null;
   id: string;
   serviceId: string;
   status: CustomerRequestStatus;
@@ -615,6 +618,9 @@ export interface CustomerRequest {
 }
 
 export interface CustomerRequestApiResponse {
+  currency?: string | null;
+  pickupCountryCode?: string | null;
+  destinationCountryCode?: string | null;
   id: string;
   serviceId: string;
   status: CustomerRequestStatus;
