@@ -27,7 +27,7 @@ const RESEND_SECONDS = 60;
 export default function VerifyPhoneScreen() {
   const router = useRouter();
   const { phoneNumber: rawPhoneNumber, marketCode: rawMarketCode } = useLocalSearchParams<{ phoneNumber?: string; marketCode?: string }>();
-  const marketCode = typeof rawMarketCode === 'string' ? rawMarketCode : '';
+  const marketCode = typeof rawMarketCode === 'string' && rawMarketCode ? rawMarketCode : undefined;
   const phoneNumber = typeof rawPhoneNumber === 'string' ? rawPhoneNumber : '';
   const { t } = useTranslation();
   const { isRTL } = useAppLanguage();
@@ -112,7 +112,7 @@ export default function VerifyPhoneScreen() {
     setTimeout(() => inputRefs.current[nextIndex]?.focus(), 0);
   }, [code, verify]);
 
-  if (!phoneNumber || !marketCode) return <Redirect href="/" />;
+  if (!phoneNumber) return <Redirect href="/" />;
   if (auth.status === 'authenticated') return <Redirect href="/(tabs)/home" />;
 
   return (

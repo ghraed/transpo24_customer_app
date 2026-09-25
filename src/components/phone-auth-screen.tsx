@@ -90,7 +90,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
 
   const sendCode = useCallback(async () => {
     if (isLoading) return;
-    if (!marketCode) { setError(t('Choose your market')); return; }
+    if (mode === 'register' && !marketCode) { setError(t('Choose your market')); return; }
 
     if (mode === 'register' && !hasAcceptedLegal) {
       setError(t('Please accept the Terms of Service to create an account.'));
@@ -106,8 +106,8 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
     setIsLoading(true);
 
     try {
-      await sendPhoneVerificationCode(normalizedPhoneNumber, marketCode);
-      router.push({ pathname: '/verify-phone' as never, params: { phoneNumber: normalizedPhoneNumber, marketCode } });
+      await sendPhoneVerificationCode(normalizedPhoneNumber, mode === 'register' ? marketCode : undefined);
+      router.push({ pathname: '/verify-phone' as never, params: { phoneNumber: normalizedPhoneNumber, ...(mode === 'register' ? { marketCode } : {}) } });
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -124,9 +124,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
 
     setError('');
     setIsRestoringTrustedSession(true);
-    if (!marketCode) { setError(t('Choose your market')); setIsRestoringTrustedSession(false); return; }
-    const result = await restoreTrustedCustomerSession(marketCode);
-    if (result.status === 'marketMismatch') setError(t('This account belongs to another Transpo24 market. Choose your home market and try again.'));
+    const result = await restoreTrustedCustomerSession();
     if (result.status === 'invalid') {
       setTrustedPhoneNumber('');
       setError(t('Unable to continue. Please request a verification code.'));
@@ -134,7 +132,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
       setError(t('Your saved device is still trusted. Check your connection and try again.'));
     }
     setIsRestoringTrustedSession(false);
-  }, [marketCode, hasTrustedCustomer, isRestoringTrustedSession, t]);
+  }, [hasTrustedCustomer, isRestoringTrustedSession, t]);
 
   const useDifferentPhoneNumber = useCallback(() => {
     setError('');
@@ -150,12 +148,11 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
 
   const skipVerification = useCallback(async () => {
     if (isSkippingVerification) return;
-    if (!marketCode) { setError(t('Choose your market')); return; }
 
     setError('');
     setIsSkippingVerification(true);
     try {
-      const session = await skipPhoneVerificationForTemporaryTestCustomer(marketCode);
+      const session = await skipPhoneVerificationForTemporaryTestCustomer();
       await setCustomerSession(session);
       void registerCustomerPushNotifications().catch(() => undefined);
       router.dismissAll();
@@ -169,7 +166,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
     } finally {
       setIsSkippingVerification(false);
     }
-  }, [marketCode, isSkippingVerification, router, t]);
+  }, [isSkippingVerification, router, t]);
 
   const handleCountryChange = useCallback((nextCountry: CountryCode) => {
     setCountry(nextCountry);
@@ -220,7 +217,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
               />
             </View>
             <View style={styles.card}>
-              <MarketSelector value={marketCode} onChange={setMarketCode} disabled={isLoading || isRestoringTrustedSession || isSkippingVerification} />
+              {mode === 'register' && <MarketSelector value={marketCode} onChange={setMarketCode} disabled={isLoading || isRestoringTrustedSession || isSkippingVerification} />}
               {mode === 'login' ? (
                 <Text style={[styles.title, isRTL && styles.rtl]}>
                   {t('Continue with your phone number')}

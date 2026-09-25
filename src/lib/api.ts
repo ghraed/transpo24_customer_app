@@ -75,7 +75,7 @@ function toMessage(errorData: ApiErrorResponse, fallback: string): string {
     TENANT_MISMATCH: 'This account belongs to another Transpo24 market. Choose your home market and try again.',
     TENANT_INACTIVE: 'This Transpo24 market is currently unavailable.',
     TENANT_NOT_FOUND: 'Choose a valid Transpo24 market.',
-    MARKET_REQUIRED: 'Choose your Transpo24 market to continue.',
+    MARKET_REQUIRED: 'Create an account and choose your home market to continue.',
     TENANT_ASSIGNMENT_REQUIRED: 'This account needs a home market assignment. Contact support.',
   };
   if (errorData.code && messages[errorData.code]) return appI18n.t(messages[errorData.code]);
@@ -292,7 +292,7 @@ export async function registerPushToken(
   );
 }
 
-export async function sendPhoneVerificationCode(phoneNumber: string, marketCode: string): Promise<void> {
+export async function sendPhoneVerificationCode(phoneNumber: string, marketCode?: string): Promise<void> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/send-code`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
@@ -304,7 +304,7 @@ export async function sendPhoneVerificationCode(phoneNumber: string, marketCode:
   }
 }
 
-export async function skipPhoneVerificationForTemporaryTestCustomer(marketCode: string): Promise<CustomerSessionResponse> {
+export async function skipPhoneVerificationForTemporaryTestCustomer(marketCode?: string): Promise<CustomerSessionResponse> {
   const endpoint = `${getApiBaseUrl()}/auth/testing/customer-login`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
@@ -315,14 +315,14 @@ export async function skipPhoneVerificationForTemporaryTestCustomer(marketCode: 
     throw await parseError(response, 'Unable to sign in to the temporary test account.');
   }
   const session = await parseJsonBody<CustomerSessionResponse>(response, 'Failed to parse the temporary test sign-in response.');
-  if (session.user.tenant?.code !== marketCode) throw Object.assign(new Error(toMessage({ code: 'TENANT_MISMATCH' }, '')), { code: 'TENANT_MISMATCH' });
+  if (marketCode && session.user.tenant?.code !== marketCode) throw Object.assign(new Error(toMessage({ code: 'TENANT_MISMATCH' }, '')), { code: 'TENANT_MISMATCH' });
   return session;
 }
 
 export async function verifyPhoneVerificationCode(
   phoneNumber: string,
   code: string,
-  marketCode: string,
+  marketCode?: string,
 ): Promise<CustomerSessionResponse> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/verify-code`;
   const response = await fetchWithNetworkError(endpoint, {
