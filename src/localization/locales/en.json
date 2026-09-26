@@ -1219,5 +1219,8 @@
   "Item details": "Item details",
   "Service details": "Service details",
   "Vehicle issues": "Vehicle issues",
-  "Add photos": "Add photos"
+  "Add photos": "Add photos",
+  "Deleting your account permanently removes or anonymizes your personal details and signs you out on all devices. This cannot be undone. Complete or cancel any active transport request first.": "Deleting your account permanently removes or anonymizes your personal details and signs you out on all devices. This cannot be undone. Complete or cancel any active transport request first.",
+  "Type {{confirmation}} to confirm.": "Type {{confirmation}} to confirm.",
+  "Account deletion confirmation": "Account deletion confirmation"
 }

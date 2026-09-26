@@ -1,4 +1,4 @@
-import { TestNotificationButton } from '@/components/test-notification-button';
+import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 import { useRouter } from "expo-router";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -65,6 +65,7 @@ export default function ProfileTabScreen() {
   const [pushStatus, setPushStatus] = useState("");
   const [isRegisteringPush, setIsRegisteringPush] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [pendingLanguage, setPendingLanguage] = useState<AppLanguage | null>(
     null,
@@ -112,31 +113,21 @@ export default function ProfileTabScreen() {
     router.replace("/");
   };
 
-  const onDeleteAccount = (): void => {
+  const onDeleteAccount = async (): Promise<void> => {
     if (isDeletingAccount) return;
-    Alert.alert(
-      t("Delete account?"),
-      t("This permanently deletes your account, signs you out on all devices, and cannot be undone. If you have an active transport request, complete or cancel it before deleting your account."),
-      [
-        { text: t("Cancel"), style: "cancel" },
-        {
-          text: t("Delete account"),
-          style: "destructive",
-          onPress: () => {
-            setIsDeletingAccount(true);
-            void deleteCustomerAccountSession()
-              .then(() => router.replace("/"))
-              .catch((error) => {
-                Alert.alert(
-                  t("Unable to delete account"),
-                  error instanceof Error ? error.message : t("Please try again."),
-                );
-              })
-              .finally(() => setIsDeletingAccount(false));
-          },
-        },
-      ],
-    );
+    setIsDeletingAccount(true);
+    try {
+      await deleteCustomerAccountSession();
+      setIsDeleteAccountOpen(false);
+      router.replace("/");
+    } catch (error) {
+      Alert.alert(
+        t("Unable to delete account"),
+        error instanceof Error ? error.message : t("Please try again."),
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   const onRegisterPush = useCallback(async (): Promise<void> => {
@@ -456,15 +447,13 @@ export default function ProfileTabScreen() {
             </Text>
           </Pressable>
 
-          <TestNotificationButton />
-
           {pushStatus ? (
             <Text style={styles.statusText}>{pushStatus}</Text>
           ) : null}
 
           <Pressable
             style={[styles.actionRow, styles.deleteAccountRow]}
-            onPress={onDeleteAccount}
+            onPress={() => setIsDeleteAccountOpen(true)}
             disabled={isDeletingAccount}
           >
             <Text style={styles.deleteAccountText}>
@@ -477,6 +466,14 @@ export default function ProfileTabScreen() {
           <Text style={styles.logoutButtonText}>{t("Logout")}</Text>
         </Pressable>
       </ScrollView>
+
+      {isDeleteAccountOpen ? (
+        <DeleteAccountDialog
+          isDeleting={isDeletingAccount}
+          onCancel={() => setIsDeleteAccountOpen(false)}
+          onConfirm={() => void onDeleteAccount()}
+        />
+      ) : null}
 
       <Modal
         visible={pendingLanguage !== null}

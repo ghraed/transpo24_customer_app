@@ -1214,5 +1214,8 @@
   "Item details": "تفاصيل العنصر",
   "Service details": "تفاصيل الخدمة",
   "Vehicle issues": "مشكلات المركبة",
-  "Add photos": "أضف صورًا"
+  "Add photos": "أضف صورًا",
+  "Deleting your account permanently removes or anonymizes your personal details and signs you out on all devices. This cannot be undone. Complete or cancel any active transport request first.": "حذف حسابك يزيل بياناتك الشخصية أو يجعلها مجهولة الهوية بشكل دائم ويسجّل خروجك من جميع الأجهزة. لا يمكن التراجع عن هذا الإجراء. أكمل أو ألغِ أي طلب نقل نشط أولاً.",
+  "Type {{confirmation}} to confirm.": "اكتب {{confirmation}} للتأكيد.",
+  "Account deletion confirmation": "تأكيد حذف الحساب"
 }
