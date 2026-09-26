@@ -1,6 +1,6 @@
 import React from "react";
 import { act, create } from "react-test-renderer";
-import { Alert, Text, TextInput } from "react-native";
+import { Alert, Text, TextInput, View } from "react-native";
 import { beforeEach, expect, it, jest } from "@jest/globals";
 import EditRequestScreen from "@/app/edit-request";
 import { getCustomerRequestStatus, getRequestForEdit, getServices, submitRequestEdit } from "@/lib/api";
@@ -83,8 +83,9 @@ function button(tree, label) {
   )[0];
 }
 async function confirmSubmission(tree) {
+  const previousCalls = submitRequestEdit.mock.calls.length;
   await act(async () => button(tree, "editRequest.submit").props.onPress());
-  expect(submitRequestEdit).not.toHaveBeenCalled();
+  expect(submitRequestEdit).toHaveBeenCalledTimes(previousCalls);
   await act(async () => button(tree, "Confirm").props.onPress());
 }
 
@@ -368,5 +369,28 @@ it("returns to request status after confirmation without a success alert", async
   expect(submitRequestEdit).toHaveBeenCalledTimes(1);
   expect(mockReplace).toHaveBeenCalled();
   expect(Alert.alert).not.toHaveBeenCalled();
+  await act(async () => tree.unmount());
+});
+
+it("keeps the native form parent stable while saving a note and retrying a failed save", async () => {
+  let rejectSave;
+  submitRequestEdit.mockReturnValueOnce(new Promise((_, reject) => { rejectSave = reject; }));
+  const tree = await render();
+  const form = () => tree.root.findAllByType(View).find(node => node.props.pointerEvents != null);
+  const originalForm = form();
+  expect(originalForm.props.collapsable).toBe(false);
+  const note = tree.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === "Optional Note");
+  await act(async () => note.props.onChangeText("Updated note"));
+  await confirmSubmission(tree);
+  expect(form()).toBe(originalForm);
+  expect(form().props.pointerEvents).toBe("none");
+  expect(form().props.collapsable).toBe(false);
+  await act(async () => rejectSave(new Error("Connection failed")));
+  expect(form()).toBe(originalForm);
+  expect(form().props.pointerEvents).toBe("auto");
+  expect(form().props.collapsable).toBe(false);
+  await confirmSubmission(tree);
+  expect(submitRequestEdit).toHaveBeenLastCalledWith("request", expect.objectContaining({ customerNote: "Updated note" }), []);
+  expect(mockReplace).toHaveBeenCalled();
   await act(async () => tree.unmount());
 });

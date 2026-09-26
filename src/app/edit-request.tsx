@@ -346,6 +346,8 @@ export default function EditRequestScreen() {
           >
             {draft && !locked ? (
               <View
+                // Keep the native parent stable when pointerEvents changes during saving.
+                collapsable={false}
                 pointerEvents={busy ? "none" : "auto"}
                 style={styles.content}
               >
