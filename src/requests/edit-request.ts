@@ -376,6 +376,14 @@ export function prepareRequestForEdit(
 
 export function editRequestPayload(draft: EditableRequest) {
   const { photos: _photos, ...payload } = draft;
+  const requestLocation = ({ latitude, longitude, address, placeId }: Address): Address => ({
+    latitude,
+    longitude,
+    address,
+    ...(placeId != null ? { placeId } : {}),
+  });
+  payload.pickupLocation = requestLocation(draft.pickupLocation);
+  payload.dropoffLocation = requestLocation(draft.dropoffLocation);
   for (const field of Object.values(editFields).flat()) {
     if (field.kind === "number") {
       const raw = payload[field.key];

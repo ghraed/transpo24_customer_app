@@ -188,6 +188,38 @@ it("preserves explicit clearing and rejects invalid numeric input", () => {
   ).toThrow("editRequest.invalidNumber");
 });
 
+it("sends only API location fields when editing with saved places", () => {
+  const savedPlace = {
+    id: "saved-place",
+    customerId: "customer",
+    label: "Home",
+    locationKey: "47.000000,8.000000",
+    createdAt: "2026-09-16T10:00:00.000Z",
+    updatedAt: "2026-09-17T10:00:00.000Z",
+    latitude: 47,
+    longitude: 8,
+    address: "Home street",
+    placeId: "google-place",
+  };
+  const payload = editRequestPayload({
+    ...fixture(),
+    pickupLocation: savedPlace,
+    dropoffLocation: { ...savedPlace, latitude: 48, longitude: 9, placeId: null },
+  });
+
+  expect(payload.pickupLocation).toEqual({
+    latitude: 47,
+    longitude: 8,
+    address: "Home street",
+    placeId: "google-place",
+  });
+  expect(payload.dropoffLocation).toEqual({
+    latitude: 48,
+    longitude: 9,
+    address: "Home street",
+  });
+});
+
 it.each([
   [
     "GOODS_TRANSPORT",
