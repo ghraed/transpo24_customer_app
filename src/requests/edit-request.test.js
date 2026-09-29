@@ -160,16 +160,21 @@ it('locks all fields and dismisses confirmation when a driver sends an offer', a
   expect(mockUnsubscribe).toHaveBeenCalled();
 });
 it('locks an open form when polling detects an offer missed by realtime', async () => {
-  jest.useFakeTimers();
+  let poll;
+  const interval = jest.spyOn(global, 'setInterval').mockImplementation(callback => {
+    poll = callback;
+    return 0;
+  });
   const tree = await render();
   try {
+    expect(interval).toHaveBeenCalledWith(expect.any(Function), 10000);
     getCustomerRequestStatus.mockResolvedValue({ canEdit: false });
-    await act(async () => jest.advanceTimersByTime(10000));
+    await act(async () => poll());
     expect(button(tree, 'editRequest.submit')).toBeUndefined();
     expect(tree.root.findAllByType(TextInput)).toHaveLength(0);
   } finally {
     await act(async () => tree.unmount());
-    jest.useRealTimers();
+    interval.mockRestore();
   }
 });
 it("does not display a form for a request that can no longer be edited", async () => {
