@@ -992,9 +992,11 @@ function SubmitRequestScreen() {
             typeof pendingFurnitureDetails.helpersCount === 'number' ? (
               <Text style={styles.value}>{appI18n.t("Number of helpers:")} {pendingFurnitureDetails.helpersCount}</Text>
             ) : null}
-            <Text style={styles.value}>
-              {appI18n.t("Moving date:")} {new Date(pendingFurnitureDetails.movingDate).toLocaleString(undefined, { hour12: false })}
-            </Text>
+            {!pendingFurnitureDetails.isImmediate ? (
+              <Text style={styles.value}>
+                {appI18n.t("Moving date:")} {new Date(pendingFurnitureDetails.movingDate).toLocaleString(undefined, { hour12: false })}
+              </Text>
+            ) : null}
             <Text style={styles.value}>
               {appI18n.t("Can help loading:")} {pendingFurnitureDetails.customerCanHelpLoading ? appI18n.t('Yes') : appI18n.t('No')}
             </Text>
