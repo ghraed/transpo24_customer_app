@@ -28,6 +28,11 @@ export const clientTheme = {
   overlay: 'rgba(17, 24, 39, 0.24)',
 } as const;
 
+export function formatTrackingOrderEyebrow(tripId: string): string {
+  const compact = tripId && tripId !== 'N/A' ? tripId.replace(/-/g, '').slice(0, 8).toUpperCase() : '';
+  return appI18n.t('Order #{{reference}}', { reference: compact ? `TRP-${compact}` : 'N/A' });
+}
+
 export type TrackingStageValue = 1 | 2 | 3 | 4 | 5;
 
 const TRACKING_STAGES: { value: TrackingStageValue; label: string }[] = [
@@ -50,19 +55,19 @@ function IconSymbol({
   return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
-export function TrackingProgress({ currentStage }: { currentStage: TrackingStageValue }) {
+export function TrackingProgress({ currentStage, disabled = false }: { currentStage: TrackingStageValue; disabled?: boolean }) {
   return (
     <View style={styles.progressCard}>
       <View style={styles.progressTrack}>
         <View
           style={[
             styles.progressTrackFill,
-            { width: `${((currentStage - 1) / (TRACKING_STAGES.length - 1)) * 100}%` },
+            { width: disabled ? '0%' : `${((currentStage - 1) / (TRACKING_STAGES.length - 1)) * 100}%` },
           ]}
         />
         {TRACKING_STAGES.map((stage, index) => {
-          const isComplete = stage.value < currentStage;
-          const isCurrent = stage.value === currentStage;
+          const isComplete = !disabled && stage.value < currentStage;
+          const isCurrent = !disabled && stage.value === currentStage;
 
           return (
             <React.Fragment key={stage.value}>
@@ -301,6 +306,11 @@ const styles = StyleSheet.create({
     borderColor: clientTheme.border,
     paddingHorizontal: 16,
     paddingVertical: 18,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
   },
   progressTrack: {
     flexDirection: 'row',
@@ -373,9 +383,9 @@ const styles = StyleSheet.create({
     padding: 18,
     shadowColor: '#111827',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.07,
     shadowRadius: 18,
-    elevation: 3,
+    elevation: 4,
     gap: 12,
   },
   mapCard: {
@@ -481,6 +491,9 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     gap: 4,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F5',
   },
   metaLabel: {
     color: clientTheme.textMuted,

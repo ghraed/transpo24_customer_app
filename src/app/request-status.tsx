@@ -1,4 +1,5 @@
 import { RequestDocuments } from '@/components/request-documents';
+import { TrackingHero, TrackingProgress, type TrackingStageValue } from '@/components/tracking-ui';
 import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -85,11 +86,6 @@ import {
 } from '@/utils/pickupValidation';
 import appI18n from '@/localization/i18n';
 
-interface OrderProgressStep {
-  id: number;
-  label: string;
-}
-
 type SocketState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error' | 'unavailable';
 
 const STATUS_LABELS: Partial<Record<CustomerRequestStatus, string>> = {
@@ -106,14 +102,6 @@ const STATUS_LABELS: Partial<Record<CustomerRequestStatus, string>> = {
   DELIVERED: 'Delivered',
   COMPLETED: 'Delivered',
 };
-
-const ORDER_PROGRESS_STEPS: OrderProgressStep[] = [
-  { id: 1, label: 'Submitted' },
-  { id: 2, label: 'Driver Found' },
-  { id: 3, label: 'Picked Up' },
-  { id: 4, label: 'In Transit' },
-  { id: 5, label: 'Delivered' },
-];
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return 'N/A';
@@ -823,9 +811,7 @@ export default function RequestStatusScreen() {
       );
       setSuccessMessage('Delivery confirmed. Proof photos are now available.');
 
-      if (validated.ratingAvailable) {
-        router.replace((`/customer-rate-driver?tripId=${encodeURIComponent(requestId)}`) as Href);
-      }
+      router.replace({ pathname: '/customer-trip-delivered', params: { tripId: requestId } });
     });
 
     const unsubNearDelivery = onDriverNearDelivery((payload) => {
@@ -1434,71 +1420,30 @@ export default function RequestStatusScreen() {
               />
             </Pressable>
             <View style={styles.topBarTitleWrap}>
-              <Text style={styles.topBarTitle}>{appI18n.t('Order #{{reference}}', { reference: requestReference })}</Text>
+              <Text style={styles.topBarTitle}>{appI18n.t('Request Status')}</Text>
               <Text style={styles.topBarSubtitle}>
                 {requestData.service?.nameEn || requestData.service?.key || requestData.serviceId}
               </Text>
             </View>
             <Pressable style={styles.topBarButton} onPress={() => void loadStatus(true)}>
               <IconSymbol
-                name={{ ios: 'ellipsis', android: 'more_horiz', web: 'more_horiz' }}
+                name={{ ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' }}
                 color="#111827"
                 size={22}
               />
             </Pressable>
           </View>
 
-          <View style={styles.progressSection}>
-            <View style={styles.progressRail} />
-            <View style={styles.progressRow}>
-              {ORDER_PROGRESS_STEPS.map((step) => {
-                const isDone = currentOrderStep > step.id;
-                const isCurrent = currentOrderStep === step.id;
+          <TrackingHero
+            eyebrow={appI18n.t('Order #{{reference}}', { reference: requestReference })}
+            title={liveStatusLabel}
+            description={helperText}
+          />
+          <TrackingProgress
+            currentStage={Math.max(1, currentOrderStep) as TrackingStageValue}
+            disabled={requestData.status === 'CANCELLED'}
+          />
 
-                return (
-                  <View key={step.id} style={styles.progressStep}>
-                    <View
-                      style={[
-                        styles.progressCircle,
-                        isDone ? styles.progressCircleDone : null,
-                        isCurrent ? styles.progressCircleCurrent : null,
-                        requestData.status === 'CANCELLED' ? styles.progressCircleDisabled : null,
-                      ]}
-                    >
-                      {isDone ? (
-                        <IconSymbol
-                          name={{ ios: 'checkmark', android: 'check', web: 'check' }}
-                          color="#111827"
-                          size={18}
-                        />
-                      ) : (
-                        <Text
-                          style={[
-                            styles.progressCircleText,
-                            isCurrent ? styles.progressCircleTextActive : null,
-                            requestData.status === 'CANCELLED' ? styles.progressCircleTextDisabled : null,
-                          ]}
-                        >
-                          {step.id}
-                        </Text>
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.progressLabel,
-                        isDone || isCurrent ? styles.progressLabelActive : null,
-                        requestData.status === 'CANCELLED' ? styles.progressLabelDisabled : null,
-                      ]}
-                    >
-                      {appI18n.t(step.label)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
-          {requestData.service?.key === 'VEHICLE_TRANSPORT' ? <RequestDocuments requestId={requestData.id} customer /> : null}
           {successMessage ? <View style={styles.successBanner}><Text style={styles.successBannerText}>{successMessage}</Text></View> : null}
           {errorMessage ? <View style={styles.errorBanner}><Text style={styles.errorBannerText}>{errorMessage}</Text></View> : null}
           {nearDeliveryMessage ? (
@@ -1513,12 +1458,6 @@ export default function RequestStatusScreen() {
                 {cancellationReason || appI18n.t("This request has been cancelled.")}
               </Text>
               {cancelTripDebugMessage ? <Text style={styles.mutedCaption}>{cancelTripDebugMessage}</Text> : null}
-            </View>
-          ) : null}
-
-          {shouldShowTrackingMap ? (
-            <View style={styles.mapCard}>
-              {renderTrackingMap(false)}
             </View>
           ) : null}
 
@@ -1551,6 +1490,9 @@ export default function RequestStatusScreen() {
                   <Text style={styles.socketBadgeText}>{getSocketStateLabel(socketState)}</Text>
                 </View>
               </View>
+              {socketMessage && (socketState === 'error' || socketState === 'disconnected') ? (
+                <Text style={styles.mutedCaption}>{socketMessage}</Text>
+              ) : null}
 
               <Pressable
                 style={[styles.primaryActionButton, !canRenderInlineMap && styles.disabledButton]}
@@ -1590,6 +1532,13 @@ export default function RequestStatusScreen() {
             </View>
           ) : null}
 
+          {requestData.service?.key === 'VEHICLE_TRANSPORT' ? <RequestDocuments requestId={requestData.id} customer /> : null}
+          {shouldShowTrackingMap ? (
+            <View style={styles.mapCard}>
+              {renderTrackingMap(false)}
+            </View>
+          ) : null}
+
           {requestData.canEdit && offers.length === 0 && !requestData.quotesSummary.hasOffers ? (
             <Pressable accessibilityRole="button" style={styles.primaryActionButton}
               onPress={() => router.push({ pathname: '/edit-request', params: { requestId } } as unknown as Href)}>
@@ -1599,11 +1548,8 @@ export default function RequestStatusScreen() {
           <View style={styles.detailsCard}>
             <View style={styles.detailsHeader}>
               <Text style={styles.cardTitle}>{appI18n.t("Request Summary")}</Text>
-              <Text style={styles.inlineStatusPill}>{liveStatusLabel}</Text>
             </View>
             <Text style={styles.detailsMetaText}>{appI18n.t("Submitted:")} {formatDate(requestData.submittedAt)}</Text>
-            <Text style={styles.detailsMetaText}>{helperText}</Text>
-            {socketMessage ? <Text style={styles.mutedCaption}>{socketMessage}</Text> : null}
             <View style={styles.detailsGrid}>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>{appI18n.t("Pickup")}</Text>
@@ -1631,15 +1577,6 @@ export default function RequestStatusScreen() {
             {requestData.itemDetails.description ? (
               <Text style={styles.supportingText}>{requestData.itemDetails.description}</Text>
             ) : null}
-            {latestDriverLocation ? (
-              <Text style={styles.mutedCaption}>
-                {appI18n.t('Latest driver update: {{latitude}}, {{longitude}} • {{time}}', {
-                  latitude: latestDriverLocation.latitude.toFixed(5),
-                  longitude: latestDriverLocation.longitude.toFixed(5),
-                  time: formatDate(latestDriverLocation.recordedAt),
-                })}
-              </Text>
-            ) : null}
             {refundPreview && requestData.status !== 'CANCELLED' ? (
               <Text style={styles.mutedCaption}>
                 {appI18n.t('Cancel now: refund {{refund}} and keep fee {{fee}}.', {
@@ -1650,18 +1587,17 @@ export default function RequestStatusScreen() {
             ) : null}
           </View>
 
+          {(canChooseOffer || acceptedOffer) ? (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{appI18n.t("Driver Offers")}</Text>
-            {offers.length === 0 ? (
+            <Text style={styles.cardTitle}>{appI18n.t(canChooseOffer ? 'Driver Offers' : 'Accepted Offer')}</Text>
+            {canChooseOffer && offers.length === 0 ? (
               <View style={styles.emptyState}>
                 <ActivityIndicator size="small" color="#2563EB" />
                 <Text style={styles.rowValue}>{appI18n.t("Waiting for offers…")}</Text>
               </View>
-            ) : (
-              <Text style={styles.rowValue}>{helperText}</Text>
-            )}
+            ) : null}
 
-            {selectedOffer ? (
+            {canChooseOffer && selectedOffer ? (
               <View style={styles.selectedOfferBanner}>
                 <Text style={styles.selectedOfferLabel}>{appI18n.t("Selected offer")}</Text>
                 <Text style={styles.selectedOfferValue}>
@@ -1673,7 +1609,6 @@ export default function RequestStatusScreen() {
 
             {acceptedOffer ? (
               <View style={styles.offerCardAccepted}>
-                <Text style={[styles.offerCardTitle, styles.offerTextOnDark]}>{appI18n.t("Accepted Offer")}</Text>
                 <Text style={[styles.offerPrimaryValue, styles.offerTextOnDark]}>
                   {acceptedOffer.driverName || 'Driver'} •{' '}
                   {formatMoney(acceptedOffer.proposedPrice ?? acceptedOffer.price, acceptedOffer.currency)}
@@ -1684,7 +1619,7 @@ export default function RequestStatusScreen() {
               </View>
             ) : null}
 
-            {offers.map((offer) => {
+            {canChooseOffer ? offers.map((offer) => {
               const offerKey = offer.offerId || offer.id;
               const isPending = (offer.offerStatus ?? offer.status) === 'PENDING';
               const isSelected = effectiveSelectedOfferId === offerKey;
@@ -1769,13 +1704,15 @@ export default function RequestStatusScreen() {
                   ) : null}
                 </Pressable>
               );
-            })}
+            }) : null}
 
             {offers.length > 0 && pendingOffers.length === 0 && !acceptedOffer ? (
               <Text style={styles.rowValue}>{appI18n.t("All offers are no longer pending.")}</Text>
             ) : null}
           </View>
+          ) : null}
 
+          {currentOrderStep >= 3 || Boolean(trackingData?.pickupProofPhotos?.length) ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{appI18n.t("Pickup Proof Photos")}</Text>
             {trackingData?.pickupProofPhotos?.length ? (
@@ -1794,7 +1731,9 @@ export default function RequestStatusScreen() {
               <Text style={styles.rowValue}>{appI18n.t("Pickup proof photos will appear after pickup is completed.")}</Text>
             )}
           </View>
+          ) : null}
 
+          {currentOrderStep >= 5 || Boolean(trackingData?.deliveryProofPhotos?.length) ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{appI18n.t("Delivery Proof Photos")}</Text>
             {trackingData?.deliveryProofPhotos?.length ? (
@@ -1813,16 +1752,15 @@ export default function RequestStatusScreen() {
               <Text style={styles.rowValue}>{appI18n.t("Delivery proof photos will appear after final delivery.")}</Text>
             )}
           </View>
+          ) : null}
 
+          {additionalCharges.length > 0 ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{appI18n.t("Additional Charges")}</Text>
             <Text style={styles.rowValue}>
               {t('extra_expense.saved_card_notice')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
             </Text>
-            {additionalCharges.length === 0 ? (
-              <Text style={styles.rowValue}>{appI18n.t("No additional charges yet.")}</Text>
-            ) : (
-              additionalCharges.map((charge) => (
+            {additionalCharges.map((charge) => (
                 <View key={charge.id} style={styles.additionalChargeCard}>
                   <Text style={styles.offerPrimaryValue}>
                     {formatMoney(charge.totalChargeAmount, charge.currency)}
@@ -1867,16 +1805,14 @@ export default function RequestStatusScreen() {
                     </Pressable>
                   ) : null}
                 </View>
-              ))
-            )}
+              ))}
           </View>
+          ) : null}
 
+          {requestData.photos.length > 0 ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{appI18n.t("Photos")}</Text>
-            {requestData.photos.length === 0 ? (
-              <Text style={styles.rowValue}>{appI18n.t("No photos added.")}</Text>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
                 {requestData.photos.map((photo) => (
                   <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
                     <Image
@@ -1887,14 +1823,30 @@ export default function RequestStatusScreen() {
                   </Pressable>
                 ))}
               </ScrollView>
-            )}
           </View>
+          ) : null}
+
+          {(effectiveTrackingStatus === 'DELIVERED' || effectiveTrackingStatus === 'COMPLETED') && !trackingData?.deliveryConfirmedByCustomerAt ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{appI18n.t('Confirm delivery')}</Text>
+              <Text style={styles.rowValue}>
+                {appI18n.t('Review the delivery proof and confirm successful delivery to authorize release of the driver’s payment.')}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.primaryButton}
+                onPress={() => router.push({ pathname: '/customer-trip-delivered', params: { tripId: requestId } })}
+              >
+                <Text style={styles.primaryButtonText}>{appI18n.t('Review and release payment')}</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {ratingAvailable ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>{appI18n.t("Rate Service")}</Text>
               <Text style={styles.rowValue}>
-                {appI18n.t("Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.")}</Text>
+                {appI18n.t("You can rate the driver after delivery. Rating does not confirm delivery or release payment.")}</Text>
               <Pressable style={styles.primaryButton} onPress={onRateDriver}>
                 <Text style={styles.primaryButtonText}>{appI18n.t("Rate driver")}</Text>
               </Pressable>
@@ -1904,17 +1856,8 @@ export default function RequestStatusScreen() {
           {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
+          {(canCancelCurrentTrip || canDeleteCurrentRequest) ? (
           <View style={styles.actionStack}>
-            <Pressable accessibilityRole="button" style={({ pressed }) => [styles.statusActionButton, pressed && styles.disabledButton]} onPress={() => void loadStatus(false)}>
-              <Text style={styles.statusActionButtonText}>
-                {isRefreshing ? appI18n.t('Refreshing…') : appI18n.t('Request Status')}
-              </Text>
-            </Pressable>
-            {ratingAvailable ? (
-              <Pressable style={styles.rateActionButton} onPress={onRateDriver}>
-                <Text style={styles.rateActionButtonText}>{appI18n.t("Rate Driver")}</Text>
-              </Pressable>
-            ) : null}
             {canCancelCurrentTrip ? (
               <Pressable onPress={onCancelTrip}>
                 <Text style={styles.cancelActionText}>{isCancellingTrip ? appI18n.t('Cancelling…') : appI18n.t('Cancel Order')}</Text>
@@ -1949,6 +1892,7 @@ export default function RequestStatusScreen() {
               </Pressable>
             ) : null}
           </View>
+          ) : null}
           <Modal visible={isMapExpanded} animationType="slide" onRequestClose={() => setIsMapExpanded(false)}>
             <SafeAreaView style={styles.mapExpandedScreen}>
               <View style={styles.expandedMapHeader}>
@@ -2206,10 +2150,10 @@ const styles = StyleSheet.create({
     borderColor: '#E5E8EF',
     gap: 8,
     shadowColor: '#111827',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
   },
   title: {
     fontSize: 24,
@@ -2254,73 +2198,6 @@ const styles = StyleSheet.create({
   topBarSubtitle: {
     fontSize: 13,
     color: '#76869B',
-  },
-  progressSection: {
-    paddingTop: 2,
-    paddingBottom: 4,
-    position: 'relative',
-  },
-  progressRail: {
-    position: 'absolute',
-    top: 27,
-    left: 36,
-    right: 36,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: '#E5E7EB',
-  },
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  progressStep: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-  progressCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  progressCircleDone: {
-    backgroundColor: '#F9C30B',
-  },
-  progressCircleCurrent: {
-    backgroundColor: '#F9C30B',
-  },
-  progressCircleDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-  progressCircleText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#9CA3AF',
-  },
-  progressCircleTextActive: {
-    color: '#111827',
-  },
-  progressCircleTextDisabled: {
-    color: '#9CA3AF',
-  },
-  progressLabel: {
-    fontSize: 12,
-    lineHeight: 16,
-    textAlign: 'center',
-    color: '#98A2B3',
-    maxWidth: 72,
-  },
-  progressLabelActive: {
-    color: '#374151',
-    fontWeight: '600',
-  },
-  progressLabelDisabled: {
-    color: '#B8C0CC',
   },
   successBanner: {
     borderRadius: 16,
@@ -2375,7 +2252,14 @@ const styles = StyleSheet.create({
   },
   mapCard: {
     borderRadius: 24,
-    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    elevation: 4,
   },
   mapFrame: {
     borderRadius: 24,
@@ -2472,10 +2356,10 @@ const styles = StyleSheet.create({
     borderColor: '#E5E8EF',
     gap: 14,
     shadowColor: '#111827',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
   },
   driverRow: {
     flexDirection: 'row',
@@ -2580,11 +2464,16 @@ const styles = StyleSheet.create({
   },
   detailsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 24,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#E5E8EF',
-    gap: 10,
+    gap: 12,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    elevation: 4,
   },
   detailsHeader: {
     flexDirection: 'row',
@@ -2597,15 +2486,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  inlineStatusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: '#F3F4F6',
-    color: '#111827',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   detailsMetaText: {
     fontSize: 13,
     color: '#627287',
@@ -2615,6 +2495,9 @@ const styles = StyleSheet.create({
   },
   detailItem: {
     gap: 4,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F5',
   },
   detailLabel: {
     fontSize: 12,
@@ -2648,9 +2531,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: '#FFF8E6',
+    backgroundColor: '#F6F7FB',
     borderWidth: 1,
-    borderColor: '#FFC548',
+    borderColor: '#E5E8EF',
   },
   selectedOfferLabel: {
     fontSize: 12,
@@ -2665,11 +2548,12 @@ const styles = StyleSheet.create({
   },
   offerCardAccepted: {
     marginTop: 10,
-    borderRadius: 14,
-    padding: 12,
-    backgroundColor: '#FFC548',
-    borderColor: '#FFC548',
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: '#F6F7FB',
+    borderColor: '#E5E8EF',
     borderWidth: 1,
+    gap: 5,
   },
   offerCard: {
     marginTop: 12,
@@ -2681,8 +2565,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   offerCardSelected: {
-    borderColor: '#FFC548',
-    backgroundColor: '#FFF8E6',
+    borderColor: '#D89A1A',
+    borderWidth: 2,
+    backgroundColor: '#FFFFFF',
   },
   offerTopRow: {
     flexDirection: 'row',
@@ -2780,14 +2665,6 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingTop: 6,
   },
-  statusActionButton: {
-    minHeight: 58,
-    borderRadius: 20,
-    backgroundColor: '#111827',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
   deleteRequestButton: {
     minHeight: 58,
     borderRadius: 20,
@@ -2800,11 +2677,6 @@ const styles = StyleSheet.create({
   },
   deleteRequestButtonText: {
     color: '#C0392B',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  statusActionButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },

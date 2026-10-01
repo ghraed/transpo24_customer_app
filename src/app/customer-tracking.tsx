@@ -11,6 +11,7 @@ import {
 } from '@/components/native-maps';
 import {
   clientTheme,
+  formatTrackingOrderEyebrow,
   TrackingHero,
   TrackingInfoPill,
   TrackingMapModal,
@@ -317,7 +318,7 @@ export default function CustomerTrackingScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <TrackingScrollable>
         <TrackingHero
-          eyebrow={`Order #${tripId || 'N/A'}`}
+          eyebrow={formatTrackingOrderEyebrow(tripId)}
           title={appI18n.t("Driver on the way")}
           description="Live location updates appear here as the driver heads to the pickup point."
         />
@@ -340,16 +341,6 @@ export default function CustomerTrackingScreen() {
           <Text style={styles.cardTitle}>{statusText}</Text>
           <Text style={styles.cardBody}>
             {appI18n.t("The app will move automatically to the next step once the driver arrives at pickup.")}</Text>
-          <TrackingMetaRow
-            label={appI18n.t("Pickup address")}
-            value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
-          />
-          <TrackingMetaRow
-            label={appI18n.t("Dropoff address")}
-            value={
-              dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
-            }
-          />
           <TrackingMetaRow label={appI18n.t("Current distance")} value={distanceText} />
           {!driverLocation ? (
             <View style={styles.inlineRow}>
@@ -371,6 +362,18 @@ export default function CustomerTrackingScreen() {
           ) : null}
           {routeError ? <Text style={styles.errorText}>{routeError}</Text> : null}
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        </TrackingScreenCard>
+
+        <TrackingScreenCard>
+          <Text style={styles.cardTitle}>{appI18n.t('Pickup')} → {appI18n.t('Dropoff')}</Text>
+          <TrackingMetaRow
+            label={appI18n.t("Pickup address")}
+            value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
+          />
+          <TrackingMetaRow
+            label={appI18n.t("Dropoff address")}
+            value={dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`}
+          />
         </TrackingScreenCard>
       </TrackingScrollable>
 

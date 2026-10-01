@@ -11,6 +11,7 @@ import {
 } from '@/components/native-maps';
 import {
   clientTheme,
+  formatTrackingOrderEyebrow,
   TrackingHero,
   TrackingInfoPill,
   TrackingMapModal,
@@ -173,10 +174,6 @@ export default function CustomerDeliveryTrackingScreen() {
       const validated = validateItemDeliveredPayload(payload);
       if (!validated || validated.tripId !== tripId) return;
       setStatusText('Item delivered');
-      if (validated.ratingAvailable) {
-        router.replace((`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href);
-        return;
-      }
       router.replace(
         buildDeliveredRoute(
           tripId,
@@ -317,7 +314,7 @@ export default function CustomerDeliveryTrackingScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <TrackingScrollable>
         <TrackingHero
-          eyebrow={`Order #${tripId || 'N/A'}`}
+          eyebrow={formatTrackingOrderEyebrow(tripId)}
           title={appI18n.t("Delivery in progress")}
           description="The delivery map updates live while the driver heads to the dropoff address."
         />
@@ -346,12 +343,6 @@ export default function CustomerDeliveryTrackingScreen() {
               <Text style={styles.successText}>{nearDeliveryBanner}</Text>
             </View>
           ) : null}
-          <TrackingMetaRow
-            label={appI18n.t("Dropoff address")}
-            value={
-              dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
-            }
-          />
           <TrackingMetaRow label={appI18n.t("Distance to dropoff")} value={distanceText} />
           {!driverLocation ? (
             <View style={styles.inlineRow}>
@@ -373,6 +364,14 @@ export default function CustomerDeliveryTrackingScreen() {
           ) : null}
           {routeError ? <Text style={styles.errorText}>{routeError}</Text> : null}
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        </TrackingScreenCard>
+
+        <TrackingScreenCard>
+          <Text style={styles.cardTitle}>{appI18n.t('Dropoff')}</Text>
+          <TrackingMetaRow
+            label={appI18n.t("Dropoff address")}
+            value={dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`}
+          />
         </TrackingScreenCard>
       </TrackingScrollable>
 

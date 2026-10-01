@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getApiBaseUrl } from '@/config/backend';
 import {
   clientTheme,
+  formatTrackingOrderEyebrow,
   TrackingHero,
   TrackingInfoPill,
   TrackingMetaRow,
@@ -111,7 +112,7 @@ export default function CustomerTripDeliveredScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <TrackingScrollable>
         <TrackingHero
-          eyebrow={`Order #${tripId}`}
+          eyebrow={formatTrackingOrderEyebrow(tripId)}
           title={appI18n.t("Delivery completed")}
           description="Your request has been delivered. Delivery proof and final details are shown below."
         />

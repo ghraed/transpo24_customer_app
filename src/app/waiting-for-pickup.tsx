@@ -11,6 +11,7 @@ import {
 } from '@/components/native-maps';
 import {
   clientTheme,
+  formatTrackingOrderEyebrow,
   TrackingHero,
   TrackingInfoPill,
   TrackingMapModal,
@@ -250,12 +251,14 @@ export default function WaitingForPickupScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <TrackingScrollable>
         <TrackingHero
-          eyebrow={`Order #${tripId || 'N/A'}`}
-          title={appI18n.t("Waiting at pickup")}
-          description="The driver has arrived. This screen stays active until the pickup is confirmed."
+          eyebrow={formatTrackingOrderEyebrow(tripId)}
+          title={isWaiting ? appI18n.t("Waiting at pickup") : appI18n.t("Pickup confirmed")}
+          description={isWaiting
+            ? "The driver has arrived. This screen stays active until the pickup is confirmed."
+            : "Pickup is confirmed. Delivery tracking will open shortly."}
         />
 
-        <TrackingProgress currentStage={2} />
+        <TrackingProgress currentStage={isWaiting ? 2 : 3} />
 
         <TrackingMapShell
           title={appI18n.t("Pickup map")}
@@ -268,18 +271,11 @@ export default function WaitingForPickupScreen() {
         <TrackingScreenCard>
           <TrackingInfoPill label={isWaiting ? appI18n.t('Waiting for confirmation') : appI18n.t('Pickup confirmed')} tone="accent" />
           <Text style={styles.cardTitle}>{appI18n.t("Pickup stage")}</Text>
-          <Text style={styles.cardBody}>
-            {appI18n.t("The driver confirms item pickup from their app. Once that happens, this flow moves to the delivery tracking screen.")}</Text>
-          <TrackingMetaRow
-            label={appI18n.t("Pickup address")}
-            value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
-          />
-          <TrackingMetaRow
-            label={appI18n.t("Dropoff address")}
-            value={
-              dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`
-            }
-          />
+          {isWaiting ? (
+            <Text style={styles.cardBody}>
+              {appI18n.t("The driver confirms item pickup from their app. Once that happens, this flow moves to the delivery tracking screen.")}
+            </Text>
+          ) : null}
           {latestAdditionalCharge ? (
             <View style={styles.noticeCard}>
               <Text style={styles.noticeTitle}>{appI18n.t("Additional charge added")}</Text>
@@ -312,6 +308,22 @@ export default function WaitingForPickupScreen() {
               </Text>
             </View>
           ) : null}
+        </TrackingScreenCard>
+
+        <TrackingScreenCard>
+          <Text style={styles.cardTitle}>{appI18n.t('Pickup')} → {appI18n.t('Dropoff')}</Text>
+          <TrackingMetaRow
+            label={appI18n.t("Pickup address")}
+            value={pickupLocation.address || `${pickupLocation.latitude}, ${pickupLocation.longitude}`}
+          />
+          <TrackingMetaRow
+            label={appI18n.t("Dropoff address")}
+            value={dropoffLocation.address || `${dropoffLocation.latitude}, ${dropoffLocation.longitude}`}
+          />
+        </TrackingScreenCard>
+
+        <TrackingScreenCard>
+          <Text style={styles.cardTitle}>{appI18n.t('Next step')}</Text>
           <ChatEntryButton transportRequestId={tripId} />
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           <Pressable
