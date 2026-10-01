@@ -229,6 +229,8 @@ function sortOffers(offers: CustomerRequestOfferSummary[]): CustomerRequestOffer
     CANCELLED: 4,
   };
 
+  const singleCurrency =
+    offers.length > 0 && offers.every((offer) => offer.currency === offers[0].currency);
   return [...offers].sort((left, right) => {
     const leftRank = statusRank[left.offerStatus ?? left.status] ?? 99;
     const rightRank = statusRank[right.offerStatus ?? right.status] ?? 99;
@@ -236,10 +238,12 @@ function sortOffers(offers: CustomerRequestOfferSummary[]): CustomerRequestOffer
       return leftRank - rightRank;
     }
 
-    const leftPrice = left.proposedPrice ?? left.price;
-    const rightPrice = right.proposedPrice ?? right.price;
-    if (leftPrice !== rightPrice) {
-      return leftPrice - rightPrice;
+    if (singleCurrency) {
+      const leftPrice = left.proposedPrice ?? left.price;
+      const rightPrice = right.proposedPrice ?? right.price;
+      if (leftPrice !== rightPrice) {
+        return leftPrice - rightPrice;
+      }
     }
 
     return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
@@ -685,12 +689,19 @@ export default function RequestStatusScreen() {
         setRequestData((previousRequestData) => {
           if (!previousRequestData) return previousRequestData;
 
-          const lowestOffer = nextOffers.reduce<CustomerRequestOfferSummary | null>((lowest, offer) => {
-            if (!lowest) return offer;
-            const offerPrice = offer.proposedPrice ?? offer.price;
-            const lowestPrice = lowest.proposedPrice ?? lowest.price;
-            return offerPrice < lowestPrice ? offer : lowest;
-          }, null);
+          const singleCurrency =
+            nextOffers.length > 0 &&
+            nextOffers.every((offer) => offer.currency === nextOffers[0].currency)
+              ? nextOffers[0].currency
+              : null;
+          const lowestOffer = singleCurrency
+            ? nextOffers.reduce<CustomerRequestOfferSummary | null>((lowest, offer) => {
+                if (!lowest) return offer;
+                const offerPrice = offer.proposedPrice ?? offer.price;
+                const lowestPrice = lowest.proposedPrice ?? lowest.price;
+                return offerPrice < lowestPrice ? offer : lowest;
+              }, null)
+            : null;
 
           return {
             ...previousRequestData,
@@ -700,7 +711,7 @@ export default function RequestStatusScreen() {
             quotesSummary: {
               count: nextOffers.length,
               lowestPrice: lowestOffer ? lowestOffer.proposedPrice ?? lowestOffer.price : null,
-              currency: lowestOffer?.currency ?? previousRequestData.quotesSummary.currency,
+              currency: singleCurrency,
               hasOffers: nextOffers.length > 0,
             },
           };

@@ -1,4 +1,5 @@
 {
+  "You will be charged {{amount}}. If your card uses another currency, your bank may convert it and charge a foreign exchange fee. The driver's offer is unchanged.": "Se le cobrará {{amount}}. Si su tarjeta usa otra moneda, su banco puede convertir el importe y cobrar una comisión de cambio. La oferta del conductor no cambia.",
   "Login": "Iniciar sesión",
   "Continue with your phone number": "Continuar con tu número de teléfono",
   "We will send a six-digit verification code by SMS.": "Te enviaremos un código de verificación de seis dígitos por SMS.",

@@ -27,6 +27,7 @@ import {
   confirmDriverOffer,
   finalizeAcceptedOfferPayment,
   getCustomerRequestStatus,
+  getCustomerWallet,
   getRequestPaymentStatus,
 } from '@/lib/api';
 import type {
@@ -217,6 +218,24 @@ export default function RequestPaymentScreen() {
 
   const amount = offerData ? offerData.proposedPrice ?? offerData.price : 0;
   const currency = offerData?.currency;
+  const [walletCurrency, setWalletCurrency] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getCustomerWallet()
+      .then((wallet) => {
+        if (active) setWalletCurrency(wallet.currency);
+      })
+      .catch(() => {
+        if (active) setWalletCurrency(null);
+      });
+    return () => { active = false; };
+  }, []);
+  const availablePaymentOptions = useMemo(
+    () => PAYMENT_OPTIONS.filter((option) =>
+      option.method !== 'APP_WALLET' || (currency && walletCurrency === currency),
+    ),
+    [currency, walletCurrency],
+  );
 
   useEffect(() => {
     let active = true;
@@ -563,11 +582,18 @@ export default function RequestPaymentScreen() {
           </View>
           <Text style={styles.helperText}>
             {appI18n.t("This payment is collected now and held in the platform until the trip outcome is resolved.")}</Text>
+          {needsStripe ? (
+            <Text style={styles.helperText}>
+              {appI18n.t("You will be charged {{amount}}. If your card uses another currency, your bank may convert it and charge a foreign exchange fee. The driver's offer is unchanged.", {
+                amount: formatMoney(amount, currency),
+              })}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{appI18n.t("Choose Payment Method")}</Text>
-          {PAYMENT_OPTIONS.map((option) => {
+          {availablePaymentOptions.map((option) => {
             const isSelected = option.method === selectedMethod;
             const isUnavailableInExpoGo =
               isExpoGo && (option.method === 'APPLE_PAY' || option.method === 'GOOGLE_PAY');
