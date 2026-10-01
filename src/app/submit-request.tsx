@@ -280,6 +280,31 @@ function IconSymbol({
   return <SymbolView name={name} tintColor={color} size={size} resizeMode="scaleAspectFit" />;
 }
 
+function GoodsDetailRow({
+  label,
+  value,
+  isLast = false,
+  isBoolean = false,
+}: {
+  label: string;
+  value: string;
+  isLast?: boolean;
+  isBoolean?: boolean;
+}) {
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${label} ${value}`}
+      style={[styles.goodsDetailRow, isLast && styles.goodsDetailRowLast]}
+    >
+      <Text style={styles.goodsDetailLabel}>{label}</Text>
+      <View style={isBoolean ? styles.goodsBooleanValue : styles.goodsPlainValue}>
+        <Text style={[styles.goodsDetailValue, isBoolean && styles.goodsBooleanText]}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 function SubmitRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -898,7 +923,7 @@ function SubmitRequestScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>
               {formatSchedule(
@@ -913,7 +938,7 @@ function SubmitRequestScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{appI18n.t(pendingMotorcycleDetails.transportKind === "BICYCLE" ? "Bicycle Details" : "Motorcycle Details")}</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>{appI18n.t('Type:')} {formatEnumLabel(pendingMotorcycleDetails.transportKind === 'BICYCLE' ? pendingMotorcycleDetails.bicycleType ?? 'OTHER' : pendingMotorcycleDetails.motorcycleType)}</Text>
             {pendingMotorcycleDetails.transportKind === 'BICYCLE' ? <>
@@ -931,7 +956,7 @@ function SubmitRequestScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>
               {formatSchedule(
@@ -946,21 +971,31 @@ function SubmitRequestScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{appI18n.t("Goods Details")}</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
-            <Text style={styles.value}>{appI18n.t("Shipment size:")} {pendingGoodsDetails.shipmentSize}</Text>
-            <Text style={styles.value}>{appI18n.t("Description:")} {pendingGoodsDetails.goodsDescription}</Text>
-            <Text style={styles.value}>{appI18n.t("Approximate weight:")} {pendingGoodsDetails.approximateWeightKg} kg</Text>
-            <Text style={styles.value}>{appI18n.t("Number of pieces:")} {pendingGoodsDetails.numberOfPieces}</Text>
-            <Text style={styles.value}>{appI18n.t("Fragile:")} {pendingGoodsDetails.isFragile ? appI18n.t('Yes') : appI18n.t('No')}</Text>
-            <Text style={styles.value}>
-              {appI18n.t("Refrigeration:")} {pendingGoodsDetails.requiresRefrigeration ? appI18n.t('Yes') : appI18n.t('No')}
-            </Text>
-            {pendingGoodsDetails.approximateWeightKg >= 50 ? (
-              <Text style={styles.value}>
-                {appI18n.t("Heavy shipment:")} {formatHeavyShipmentType(pendingGoodsDetails.heavyShipmentType)}
-              </Text>
-            ) : null}
+            <View style={styles.goodsDescriptionCard}>
+              <Text style={styles.goodsDescriptionLabel}>{appI18n.t("Description:")}</Text>
+              <Text style={styles.goodsDescriptionText}>{pendingGoodsDetails.goodsDescription}</Text>
+            </View>
+            <View style={styles.goodsDetailsList}>
+              <GoodsDetailRow label={appI18n.t("Shipment size:")} value={pendingGoodsDetails.shipmentSize} />
+              <GoodsDetailRow label={appI18n.t("Approximate weight:")} value={`${pendingGoodsDetails.approximateWeightKg} kg`} />
+              <GoodsDetailRow label={appI18n.t("Number of pieces:")} value={String(pendingGoodsDetails.numberOfPieces)} />
+              <GoodsDetailRow label={appI18n.t("Fragile:")} value={pendingGoodsDetails.isFragile ? appI18n.t('Yes') : appI18n.t('No')} isBoolean />
+              <GoodsDetailRow
+                label={appI18n.t("Refrigeration:")}
+                value={pendingGoodsDetails.requiresRefrigeration ? appI18n.t('Yes') : appI18n.t('No')}
+                isBoolean
+                isLast={pendingGoodsDetails.approximateWeightKg < 50}
+              />
+              {pendingGoodsDetails.approximateWeightKg >= 50 ? (
+                <GoodsDetailRow
+                  label={appI18n.t("Heavy shipment:")}
+                  value={formatHeavyShipmentType(pendingGoodsDetails.heavyShipmentType)}
+                  isLast
+                />
+              ) : null}
+            </View>
           </View>
         ) : null}
 
@@ -968,7 +1003,7 @@ function SubmitRequestScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>
               {(() => {
@@ -983,7 +1018,7 @@ function SubmitRequestScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{appI18n.t("Furniture Details")}</Text>
-              <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
             </View>
             <Text style={styles.value}>{appI18n.t("Description:")} {pendingFurnitureDetails.furnitureDescription}</Text>
             <Text style={styles.value}>{appI18n.t("Approximate item count:")} {pendingFurnitureDetails.approximateItemCount}</Text>
@@ -1006,7 +1041,7 @@ function SubmitRequestScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{appI18n.t("Pickup Location")}</Text>
-            <Pressable onPress={navigateToPickup}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={navigateToPickup} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
           </View>
           <Text style={styles.value}>{formatLocation(pickupLocation)}</Text>
         </View>
@@ -1014,7 +1049,7 @@ function SubmitRequestScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{appI18n.t("Dropoff Location")}</Text>
-            <Pressable onPress={navigateToDropoff}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={navigateToDropoff} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
           </View>
           <Text style={styles.value}>{formatLocation(dropoffLocation)}</Text>
           {routeDistanceKm !== null ? (
@@ -1027,7 +1062,7 @@ function SubmitRequestScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{appI18n.t("Date & Time")}</Text>
-                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+                <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
               </View>
               <Text style={styles.value}>{formatSchedule(isImmediate, scheduledPickupAt)}</Text>
             </View>
@@ -1035,7 +1070,7 @@ function SubmitRequestScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{appI18n.t("Item Details")}</Text>
-                <Pressable onPress={navigateToDateTime}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
+                <Pressable accessibilityRole="button" onPress={navigateToDateTime} style={styles.editButton}><Text style={styles.editText}>{appI18n.t("Edit")}</Text></Pressable>
               </View>
               <Text style={styles.value}>{appI18n.t("Title:")} {itemDetails?.title ?? 'N/A'}</Text>
               <Text style={styles.value}>{appI18n.t("Type:")} {formatItemType(itemDetails?.type ?? undefined)}</Text>
@@ -1212,14 +1247,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: '#111827',
+    flexShrink: 1,
+  },
+  editButton: {
+    minHeight: 32,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#FFF4D6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editText: {
-    color: '#D89A1A',
+    color: '#8A6100',
     fontWeight: '800',
     fontSize: 13,
   },
@@ -1227,6 +1272,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#68768A',
     lineHeight: 20,
+  },
+  goodsDescriptionCard: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    gap: 5,
+  },
+  goodsDescriptionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#68768A',
+  },
+  goodsDescriptionText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#111827',
+  },
+  goodsDetailsList: {
+    marginTop: 4,
+  },
+  goodsDetailRow: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E8EF',
+  },
+  goodsDetailRowLast: {
+    borderBottomWidth: 0,
+  },
+  goodsDetailLabel: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#68768A',
+  },
+  goodsPlainValue: {
+    flexShrink: 1,
+    maxWidth: '58%',
+  },
+  goodsDetailValue: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'right',
+  },
+  goodsBooleanValue: {
+    flexShrink: 1,
+    minWidth: 48,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: '#FFF4D6',
+  },
+  goodsBooleanText: {
+    color: '#8A6100',
+    textAlign: 'center',
   },
   photosRow: {
     gap: 10,
