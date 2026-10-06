@@ -24,7 +24,7 @@ export interface CreateCustomerRequestPayload {
   vehicleManufactureYear?: number;
   vehicleEstimatedWeightKg?: number;
   vehicleBodyType?: string;
-  vehicleDataSource?: 'VIN_API' | 'MANUAL';
+  vehicleDataSource?: 'VIN_API' | 'MANUAL' | 'REGISTRATION_CARD';
   vehicleCondition?: VehicleCondition;
   vehicleConditionNotes?: string;
 }
@@ -229,7 +229,7 @@ export interface UpdateScheduleAndItemDetailsPayload {
   vehicleManufactureYear?: number;
   vehicleEstimatedWeightKg?: number;
   vehicleBodyType?: string;
-  vehicleDataSource?: 'VIN_API' | 'MANUAL';
+  vehicleDataSource?: 'VIN_API' | 'MANUAL' | 'REGISTRATION_CARD';
   itemCondition?: ItemCondition;
   itemWeightKg?: number;
   itemLengthCm?: number;

@@ -5,6 +5,8 @@ import { createBackendReachabilityError, getApiBaseUrl } from '@/config/backend'
 import {
   authenticatedFetch,
   getAccessToken,
+  getAuthSessionSnapshot,
+  refreshAccessToken,
   type CustomerSessionResponse,
 } from './auth-token';
 import type { RegisterPushTokenPayload } from '@/notifications/types';
@@ -58,6 +60,63 @@ import type {
 } from '@/types/vehicle';
 import { sanitizeVin } from '@/utils/vin';
 import appI18n from '@/localization/i18n';
+import { isRegistrationExtraction, type RegistrationExtraction } from '@/types/registration';
+
+export async function extractRegistrationCard(
+  photos: LocalPhotoAsset[],
+  options: { signal: AbortSignal; onProgress?: (progress: number) => void },
+): Promise<RegistrationExtraction> {
+  const ownerId = getAuthSessionSnapshot().user?.id;
+  const deadline = Date.now() + 90000;
+  const failure = (code: string) => Object.assign(new Error(code), { code });
+  const send = async (): Promise<RegistrationExtraction> => {
+    if (options.signal.aborted || !ownerId || getAuthSessionSnapshot().user?.id !== ownerId) throw failure('REGISTRATION_CANCELLED');
+    const form = new FormData();
+    for (const [index, photo] of photos.entries()) {
+      const file = toFormDataFile(photo, index);
+      if (Platform.OS === 'web') {
+        const response = await fetch(photo.uri, { signal: options.signal });
+        form.append('images', await response.blob(), file.name);
+      } else form.append('images', file as unknown as Blob);
+    }
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const abort = () => xhr.abort();
+      const cleanup = () => options.signal.removeEventListener('abort', abort);
+      xhr.open('POST', `${getApiBaseUrl()}/vehicles/extract-registration`);
+      Object.entries(getMultipartAuthHeaders()).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+      xhr.timeout = Math.max(1, deadline - Date.now());
+      xhr.upload.onprogress = event => { if (event.lengthComputable) options.onProgress?.(event.loaded / event.total); };
+      xhr.upload.onload = () => options.onProgress?.(1);
+      xhr.onload = () => {
+        cleanup();
+        if (options.signal.aborted || getAuthSessionSnapshot().user?.id !== ownerId) { reject(failure('REGISTRATION_CANCELLED')); return; }
+        if (xhr.status < 200 || xhr.status >= 300) {
+          let code = xhr.status === 401 ? 'REGISTRATION_AUTH_REQUIRED' : xhr.status === 413 ? 'REGISTRATION_INVALID_UPLOAD' : 'REGISTRATION_UNAVAILABLE';
+          try { const parsed = JSON.parse(xhr.responseText) as ApiErrorResponse; if (parsed.code?.startsWith('REGISTRATION_')) code = parsed.code; } catch { /* Safe localized fallback. */ }
+          reject(failure(code)); return;
+        }
+        try {
+          const value: unknown = JSON.parse(xhr.responseText);
+          if (!isRegistrationExtraction(value)) throw new Error();
+          resolve(value);
+        } catch { reject(failure('REGISTRATION_INVALID_OUTPUT')); }
+      };
+      xhr.onerror = () => { cleanup(); reject(failure('REGISTRATION_UNAVAILABLE')); };
+      xhr.ontimeout = () => { cleanup(); reject(failure('REGISTRATION_TIMEOUT')); };
+      xhr.onabort = () => { cleanup(); reject(failure('REGISTRATION_CANCELLED')); };
+      options.signal.addEventListener('abort', abort, { once: true });
+      if (options.signal.aborted) { cleanup(); reject(failure('REGISTRATION_CANCELLED')); return; }
+      xhr.send(form);
+    });
+  };
+  try { return await send(); } catch (error) {
+    if ((error as { code?: string }).code !== 'REGISTRATION_AUTH_REQUIRED' || options.signal.aborted || getAuthSessionSnapshot().user?.id !== ownerId) throw error;
+    const token = await refreshAccessToken();
+    if (!token || options.signal.aborted || getAuthSessionSnapshot().user?.id !== ownerId || Date.now() >= deadline) throw error;
+    return send();
+  }
+}
 
 interface ApiErrorResponse {
   message?: string | string[];

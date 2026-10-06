@@ -1,5 +1,41 @@
 # Welcome to your Expo app 👋
 
+## Registration-card scanning
+
+The vehicle transport form now starts with **Scan registration card**, while
+retaining manual entry and VIN/Swiss lookup. Capture or choose one image and an
+optional reverse side, review the previews, then explicitly upload for extraction.
+The screen explains external AI processing before upload. Review/edit extracted
+values and confirm which fields to apply; replacing existing values requires an
+explicit selection. Unknown make/model values require catalog selection or
+manual-entry confirmation. Scanning never submits the transport request.
+
+This feature adds `expo-image-manipulator` for Expo SDK 56; install with
+`npm install` and rebuild the development/native app using `npm run android:usb`
+or `npm run ios`. An existing native binary must include the new module before
+using the feature. The camera/gallery integration reuses `expo-image-picker`
+without microphone access. Use a physical device for camera verification.
+
+Configure `QWEN_API_KEY`, `QWEN_BASE_URL`, and optionally `QWEN_MODEL` on the API
+server only. Never add Qwen credentials to this app, `.env` public variables,
+or committed configuration. See the API README's Registration-card extraction
+section for the regional endpoint, response/error contract and server setup.
+
+To test a real card, sign in, open Vehicle transport, scan a sharp full-card
+photo without glare, then compare every extracted value with the original.
+Check replacement consent, missing weight fallback, and manual entry before
+continuing through normal request submission. Scan images and review evidence
+are temporary and are excluded from saved drafts and transport request photos.
+Only confirmed form values and minimal local provenance enter the draft.
+All six languages are supported, including Arabic RTL. Automated tests use
+mocked pickers/Qwen responses; they do not certify live OCR accuracy or hardware.
+
+```bash
+npm test -- --runTestsByPath src/requests/registration-scan.test.js src/requests/registration-mapping.test.ts src/lib/registration-api.test.js
+npm run typecheck
+npm run lint
+```
+
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
 ## Get started
@@ -12,6 +48,18 @@ enabled, start the local backend, then run:
 ```bash
 npm run android:usb
 ```
+
+On Ubuntu, `adb devices` must show the phone with status `device`. If it reports
+`no permissions`, install the Android USB rules, then unplug and reconnect:
+
+```bash
+sudo apt-get install android-sdk-platform-tools-common
+sudo udevadm control --reload-rules
+```
+
+Your user must also belong to `plugdev` (`id -nG`). If missing, run
+`sudo usermod -aG plugdev "$USER"` and log out and back in. If the phone is
+`unauthorized`, unlock it and accept the USB debugging prompt.
 
 This builds and opens **Transpo24 Dev** (`com.transpo24.app.dev`). It uses the
 `transpo24-dev` link scheme and does not download production OTA updates.

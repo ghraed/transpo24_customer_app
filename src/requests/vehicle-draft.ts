@@ -48,7 +48,9 @@ export type VehicleDraft = {
     weight: string;
     bodyType: string;
     transmission: string;
-    source: 'MANUAL' | 'VIN_API';
+    source: 'MANUAL' | 'VIN_API' | 'REGISTRATION_CARD';
+    registrationScanApplied?: boolean;
+    fieldSources?: Partial<Record<'vin' | 'registration' | 'brand' | 'model' | 'year' | 'weight' | 'bodyType' | 'transmission', 'MANUAL' | 'VIN_API' | 'REGISTRATION_CARD'>>;
     manual: boolean;
   };
   condition: { mobility: Mobility | ''; issues: VehicleIssue[]; notes: string };

@@ -22,6 +22,8 @@ import {
   normalizeTransmission,
   type VehicleDraft,
 } from './vehicle-draft';
+import { RegistrationScan } from './registration-scan';
+import { SCAN_FORM_FIELDS, sameVehicle } from './registration-mapping';
 
 export const BODY_TYPES = [
   'SEDAN',
@@ -138,8 +140,13 @@ export function VehicleEditor({
   useEffect(() => {
     latest.current = value;
   }, [value]);
-  const patch = (change: Partial<VehicleDraft['vehicle']>) =>
-    onChange({ ...latest.current, ...change });
+  const patch = (change: Partial<VehicleDraft['vehicle']>) => {
+    const next = { ...latest.current, ...change, fieldSources: { ...latest.current.fieldSources } };
+    for (const name of SCAN_FORM_FIELDS) if (name in change) next.fieldSources[name] = 'MANUAL';
+    if (SCAN_FORM_FIELDS.some(name => name in change)) next.source = 'MANUAL';
+    latest.current = next;
+    onChange(next);
+  };
   useEffect(() => {
     let active = true;
     void getVehicleBrands()
@@ -190,18 +197,20 @@ export function VehicleEditor({
       : undefined;
     const searchedVin = value.vin;
     const searchedRegistration = value.registration;
+    const searchedVehicle = { ...latest.current };
     try {
       const result = await decodeVehicleVin(vin, { swissRegistrationNumber });
       if (
         latest.current.vin !== searchedVin ||
         latest.current.registration !== searchedRegistration
+        || !sameVehicle(latest.current, searchedVehicle)
       )
         return;
       if (!result.brand && !result.model) {
         setMessage('vehicleRequest.lookupUnavailable');
         return;
       }
-      patch({
+      const providerChange: Partial<VehicleDraft['vehicle']> = {
         brand: result.brand ?? '',
         model: result.model ?? '',
         brandId: '',
@@ -217,7 +226,30 @@ export function VehicleEditor({
         ...(result.vin && /^[A-HJ-NPR-Z0-9]{17}$/.test(result.vin)
           ? { vin: result.vin }
           : {}),
-      });
+      };
+      const sources = { ...latest.current.fieldSources };
+      const preserveExisting = latest.current.registrationScanApplied;
+      // Provider fallback fills gaps after a card scan without replacing confirmed details.
+      for (const name of SCAN_FORM_FIELDS) {
+        if (name in providerChange) {
+          if (preserveExisting && latest.current[name]) delete providerChange[name];
+          else sources[name] = 'VIN_API';
+        }
+      }
+      if (preserveExisting && latest.current.brand && latest.current.model) {
+        delete providerChange.brandId; delete providerChange.modelId; delete providerChange.manual;
+      }
+      if (preserveExisting && latest.current.brand) {
+        delete providerChange.brandId;
+        // A provider model for a different make cannot fill this dependent selector.
+        if (result.brand?.trim().toLocaleLowerCase() !== latest.current.brand.trim().toLocaleLowerCase()) {
+          delete providerChange.model; delete providerChange.modelId; delete providerChange.manual;
+        }
+      }
+      if (!SCAN_FORM_FIELDS.some(name => name in providerChange && providerChange[name])) delete providerChange.source;
+      const next = { ...latest.current, ...providerChange, fieldSources: sources };
+      latest.current = next;
+      onChange(next);
       setMessage('vehicleRequest.checkLookup');
     } catch {
       setMessage('vehicleRequest.lookupUnavailable');
@@ -256,6 +288,7 @@ export function VehicleEditor({
   );
   return (
     <View style={styles.section}>
+      <RegistrationScan value={value} brands={brands} onApply={(next) => { latest.current = next; onChange(next); }} />
       <View style={styles.card}>
         <View style={styles.row}>
           {(['vin', 'registration'] as const).map((mode) => (

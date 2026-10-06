@@ -10,6 +10,7 @@ jest.mock('@/lib/api', () => ({
   getVehicleBrands: jest.fn(async () => []),
   getVehicleModels: jest.fn(async () => []),
 }));
+jest.mock('./registration-scan', () => ({ RegistrationScan: () => null }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: key => key, i18n: { dir: () => 'ltr' } }),
 }));
@@ -60,4 +61,16 @@ it('supports a VIN without a Swiss registration', async () => {
 it('rejects an invalid VIN in VIN mode', async () => {
   await renderAndLookup({ vin: 'INVALID', registration: '' });
   expect(decodeVehicleVin).not.toHaveBeenCalled();
+});
+
+it('fills missing provider weight after scanning without replacing confirmed or manual details', async () => {
+  decodeVehicleVin.mockResolvedValue({ brand: 'Different brand', model: 'Different model', manufactureYear: 2020, estimatedWeightKg: 1600 });
+  const onChange = await renderAndLookup({ vin: 'WDD1770511N100321', registration: '', brand: 'Volkswagen', model: 'Golf', year: '2019', weight: '', registrationScanApplied: true, fieldSources: { brand: 'REGISTRATION_CARD', model: 'MANUAL', year: 'MANUAL' } });
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ brand: 'Volkswagen', model: 'Golf', year: '2019', weight: '1600' }));
+});
+
+it('keeps a missing model editable when provider make conflicts with the confirmed make', async () => {
+  decodeVehicleVin.mockResolvedValue({ brand: 'Different brand', model: 'Different model', estimatedWeightKg: 1600 });
+  const onChange = await renderAndLookup({ vin: 'WDD1770511N100321', registration: '', brand: 'Volkswagen', brandId: 'vw', model: '', registrationScanApplied: true });
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ brand: 'Volkswagen', brandId: 'vw', model: '', weight: '1600' }));
 });

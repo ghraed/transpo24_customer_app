@@ -73,7 +73,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow Transpo24 to use your camera to photograph the items you need transported.",
+          "cameraPermission": "Allow Transpo24 to use your camera to photograph items and vehicle registration cards for your transport request.",
           "photosPermission": "Allow Transpo24 to access photos you choose for your transport request.",
           "microphonePermission": false
         }

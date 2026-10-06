@@ -16,6 +16,7 @@
     "expo-font",
     "expo-glass-effect",
     "expo-image",
+    "expo-image-manipulator",
     "expo-image-picker",
     "expo-linking",
     "expo-localization",
