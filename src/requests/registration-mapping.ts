@@ -31,15 +31,42 @@ export function exactCatalogMatch<T extends { name: string }>(
   );
   return matches.length === 1 ? matches[0] : undefined;
 }
-export function scanValues(result: RegistrationExtraction): ScanValues {
+export function scanValues(
+  result: RegistrationExtraction,
+  brands: VehicleCatalogBrand[] = [],
+): ScanValues {
   const f = result.fields;
   const value = (name: keyof typeof f) =>
-    f[name].value === null ? '' : String(f[name].value);
+    f[name].status !== 'extracted' || f[name].value === null ? '' : String(f[name].value);
+  let brand = value('brand');
+  let model = value('model');
+  // Recover a combined printed make/model only using an unambiguous catalog make.
+  if (brand && normalizeName(brand) === normalizeName(model)) {
+    const prefixes = brands
+      .filter((item) =>
+        normalizeName(brand).startsWith(`${normalizeName(item.name)} `),
+      )
+      .sort((a, b) => b.name.length - a.name.length);
+    if (
+      prefixes.length &&
+      (prefixes.length === 1 ||
+        prefixes[0].name.length > prefixes[1].name.length)
+    ) {
+      const combined = brand.trim().replace(/\s+/g, ' ');
+      brand = prefixes[0].name;
+      model = combined.slice(brand.length).trim();
+    } else {
+      model = '';
+    }
+  }
+  const prefix = brand.trim().replace(/\s+/g, ' ');
+  if (prefix && normalizeName(model).startsWith(`${normalizeName(prefix)} `))
+    model = model.trim().replace(/\s+/g, ' ').slice(prefix.length).trim();
   return {
     vin: value('vin'),
     registration: value('swissRegistrationNumber'),
-    brand: value('brand'),
-    model: value('model'),
+    brand,
+    model,
     year: value('manufactureYear'),
     weight: value('emptyWeightKg'),
     bodyType: normalizeBodyType(value('bodyType')),
@@ -67,6 +94,11 @@ export function sameVehicle(a: FormVehicle, b: FormVehicle): boolean {
 }
 export function invalidScanField(name: ScanFormField, value: string): boolean {
   if (!value.trim()) return true;
+  if (name === 'brand' || name === 'model') {
+    const printed = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+    if (/^(?:fahr(?:gestell|getell)(?:nummer|\s*[-.]?\s*(?:nummer|nr\.?))|vin|chassis(?:\s*[-.]?\s*(?:number|no\.?|nr\.?))?|(?:n[°ºo.]?\s*(?:(?:de|du)\s*)?)?ch[âa]ssis|marke(?:\s*(?:und|[/&])\s*typ)?|marque(?:\s*(?:et|[/&])\s*type)?|make|brand|model|modell|mod[èe]le|type|typ|karosserie|carrosserie|carrozzeria|fourgon|fourgonnette|furg[oó]n|furgone|lieferwagen|kastenwagen|panel van|van)\s*[:.]?$/i.test(printed) || /^[A-HJ-NPR-Z0-9]{17}$/i.test(printed))
+      return true;
+  }
   if (name === 'vin') return !/^[A-HJ-NPR-Z0-9]{17}$/.test(value);
   if (name === 'registration') return !/^\d{9}$/.test(value);
   if (name === 'year')
@@ -151,4 +183,43 @@ export function applyRegistrationReview(
       : 'REGISTRATION_CARD';
   }
   return next;
+}
+
+/** Fill readable fields directly, preserving edits made while a scan was in flight. */
+export function applyRegistrationExtraction(
+  current: FormVehicle,
+  values: ScanValues,
+  brands: VehicleCatalogBrand[],
+  models: VehicleCatalogModel[],
+  beforeScan: FormVehicle = current,
+): FormVehicle {
+  const selected = Object.fromEntries(
+    SCAN_FORM_FIELDS.map((name) => [
+      name,
+      current[name] === beforeScan[name] &&
+        !invalidScanField(name, values[name]),
+    ]),
+  ) as ScanSelection;
+  // Make and model share catalog IDs; never combine a new make with an old model.
+  if (
+    current.brand !== beforeScan.brand ||
+    current.model !== beforeScan.model ||
+    current.brandId !== beforeScan.brandId ||
+    current.modelId !== beforeScan.modelId
+  ) {
+    selected.brand = selected.model = false;
+  }
+  const base =
+    selected.brand && values.brand !== current.brand && !selected.model
+      ? { ...current, model: '', modelId: '' }
+      : current;
+  return applyRegistrationReview(
+    base,
+    values,
+    selected,
+    brands,
+    models,
+    true,
+    values,
+  );
 }

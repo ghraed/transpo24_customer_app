@@ -1222,7 +1222,7 @@
   "Add photos": "Add photos",
   "vehicleRequest.scan.title": "Scan registration card",
   "vehicleRequest.scan.intro": "Photograph your registration card to fill vehicle details.",
-  "vehicleRequest.scan.disclosure": "When you tap Extract details, these images are sent to an external AI service to read vehicle information. Review all values before applying them.",
+  "vehicleRequest.scan.disclosure": "When you tap Extract details, these images are sent to an external AI service. Readable values fill the vehicle fields automatically. Review them before continuing.",
   "vehicleRequest.scan.instructions": "Keep the whole card visible, sharp and free of glare. Add the reverse side only if needed.",
   "vehicleRequest.scan.front": "First image",
   "vehicleRequest.scan.back": "Reverse side (optional)",
@@ -1268,7 +1268,7 @@
   "vehicleRequest.scan.REGISTRATION_UNAVAILABLE": "Scanning is temporarily unavailable. Retry or enter details manually.",
   "vehicleRequest.scan.REGISTRATION_INVALID_OUTPUT": "The scan returned unusable details. Retry with a clearer photo or enter manually.",
   "vehicleRequest.scan.REGISTRATION_AUTH_REQUIRED": "Sign in again to scan, or keep entering details manually.",
-  "vehicleRequest.scan.success": "Vehicle details found. Review them before applying.",
-  "vehicleRequest.scan.partialSuccess": "Some vehicle details were found. Review them and fill in anything missing.",
+  "vehicleRequest.scan.success": "Vehicle details filled in. Review the fields before continuing.",
+  "vehicleRequest.scan.partialSuccess": "Available vehicle details filled in. Review the fields and complete anything missing.",
   "vehicleRequest.scan.noDetails": "No vehicle details were found. Try a clearer photo or enter details manually."
 }

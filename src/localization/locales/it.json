@@ -1221,7 +1221,7 @@
   "Add photos": "Aggiungi foto",
   "vehicleRequest.scan.title": "Scansiona la carta di circolazione",
   "vehicleRequest.scan.intro": "Fotografa la carta di circolazione per compilare i dati del veicolo.",
-  "vehicleRequest.scan.disclosure": "Premendo Estrai dati, le immagini vengono inviate a un servizio di IA esterno. Controlla i valori prima di applicarli.",
+  "vehicleRequest.scan.disclosure": "Premendo Estrai dati, le immagini vengono inviate a un servizio di IA esterno. I valori leggibili compilano automaticamente i campi. Controllali prima di continuare.",
   "vehicleRequest.scan.instructions": "Inquadra tutta la carta, nitida e senza riflessi. Aggiungi il retro solo se necessario.",
   "vehicleRequest.scan.front": "Prima immagine",
   "vehicleRequest.scan.back": "Retro (facoltativo)",
@@ -1267,7 +1267,7 @@
   "vehicleRequest.scan.REGISTRATION_UNAVAILABLE": "La scansione è temporaneamente indisponibile. Riprova o inserisci i dati manualmente.",
   "vehicleRequest.scan.REGISTRATION_INVALID_OUTPUT": "La scansione ha restituito dati inutilizzabili. Prova una foto più nitida o inserisci manualmente.",
   "vehicleRequest.scan.REGISTRATION_AUTH_REQUIRED": "Accedi di nuovo per scansionare o continua a inserire i dati manualmente.",
-  "vehicleRequest.scan.success": "Dati del veicolo trovati. Controllali prima di applicarli.",
-  "vehicleRequest.scan.partialSuccess": "Sono stati trovati alcuni dati del veicolo. Controllali e completa quelli mancanti.",
+  "vehicleRequest.scan.success": "Dati del veicolo inseriti. Controlla i campi prima di continuare.",
+  "vehicleRequest.scan.partialSuccess": "Dati disponibili inseriti. Controlla i campi e completa quelli mancanti.",
   "vehicleRequest.scan.noDetails": "Nessun dato del veicolo trovato. Prova con una foto più nitida o inserisci i dati manualmente."
 }

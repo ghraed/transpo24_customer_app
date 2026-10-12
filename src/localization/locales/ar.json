@@ -1217,7 +1217,7 @@
   "Add photos": "أضف صورًا",
   "vehicleRequest.scan.title": "مسح بطاقة تسجيل المركبة",
   "vehicleRequest.scan.intro": "صوّر بطاقة تسجيل مركبتك لتعبئة بياناتها.",
-  "vehicleRequest.scan.disclosure": "عند الضغط على استخراج البيانات، تُرسل هذه الصور إلى خدمة ذكاء اصطناعي خارجية لقراءة بيانات المركبة. راجع جميع القيم قبل تطبيقها.",
+  "vehicleRequest.scan.disclosure": "عند الضغط على استخراج البيانات، تُرسل الصور إلى خدمة ذكاء اصطناعي خارجية. تُملأ حقول المركبة تلقائياً بالقيم المقروءة. راجعها قبل المتابعة.",
   "vehicleRequest.scan.instructions": "احرص على ظهور البطاقة كاملة بوضوح دون انعكاسات. أضف الوجه الخلفي عند الحاجة.",
   "vehicleRequest.scan.front": "الصورة الأولى",
   "vehicleRequest.scan.back": "الوجه الخلفي (اختياري)",
@@ -1263,7 +1263,7 @@
   "vehicleRequest.scan.REGISTRATION_UNAVAILABLE": "خدمة المسح غير متاحة مؤقتاً. أعد المحاولة أو أدخل البيانات يدوياً.",
   "vehicleRequest.scan.REGISTRATION_INVALID_OUTPUT": "أعاد المسح بيانات غير صالحة. جرّب صورة أوضح أو أدخل البيانات يدوياً.",
   "vehicleRequest.scan.REGISTRATION_AUTH_REQUIRED": "سجّل الدخول مجدداً للمسح أو تابع إدخال البيانات يدوياً.",
-  "vehicleRequest.scan.success": "تم العثور على بيانات المركبة. راجعها قبل تطبيقها.",
-  "vehicleRequest.scan.partialSuccess": "تم العثور على بعض بيانات المركبة. راجعها وأكمل المعلومات الناقصة.",
+  "vehicleRequest.scan.success": "تم ملء بيانات المركبة. راجع الحقول قبل المتابعة.",
+  "vehicleRequest.scan.partialSuccess": "تم ملء بيانات المركبة المتاحة. راجع الحقول وأكمل المعلومات الناقصة.",
   "vehicleRequest.scan.noDetails": "لم يتم العثور على بيانات المركبة. جرّب صورة أوضح أو أدخل البيانات يدويًا."
 }

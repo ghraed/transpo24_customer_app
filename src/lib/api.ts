@@ -83,6 +83,7 @@ export async function extractRegistrationCard(
       const xhr = new XMLHttpRequest();
       const abort = () => xhr.abort();
       const cleanup = () => options.signal.removeEventListener('abort', abort);
+      if (__DEV__) console.info('[RegistrationScan] Sending scan', { apiOrigin: new URL(getApiBaseUrl()).origin });
       xhr.open('POST', `${getApiBaseUrl()}/vehicles/extract-registration`);
       Object.entries(getMultipartAuthHeaders()).forEach(([key, value]) => xhr.setRequestHeader(key, value));
       xhr.timeout = Math.max(1, deadline - Date.now());
@@ -94,13 +95,17 @@ export async function extractRegistrationCard(
         if (xhr.status < 200 || xhr.status >= 300) {
           let code = xhr.status === 401 ? 'REGISTRATION_AUTH_REQUIRED' : xhr.status === 413 ? 'REGISTRATION_INVALID_UPLOAD' : 'REGISTRATION_UNAVAILABLE';
           try { const parsed = JSON.parse(xhr.responseText) as ApiErrorResponse; if (parsed.code?.startsWith('REGISTRATION_')) code = parsed.code; } catch { /* Safe localized fallback. */ }
+          if (__DEV__) console.warn('[RegistrationScan] API error', { status: xhr.status, invalidOutput: code === 'REGISTRATION_INVALID_OUTPUT' });
           reject(failure(code)); return;
         }
         try {
           const value: unknown = JSON.parse(xhr.responseText);
           if (!isRegistrationExtraction(value)) throw new Error();
           resolve(value);
-        } catch { reject(failure('REGISTRATION_INVALID_OUTPUT')); }
+        } catch {
+          if (__DEV__) console.warn('[RegistrationScan] Invalid API response', { status: xhr.status, chars: xhr.responseText.length });
+          reject(failure('REGISTRATION_INVALID_OUTPUT'));
+        }
       };
       xhr.onerror = () => { cleanup(); reject(failure('REGISTRATION_UNAVAILABLE')); };
       xhr.ontimeout = () => { cleanup(); reject(failure('REGISTRATION_TIMEOUT')); };

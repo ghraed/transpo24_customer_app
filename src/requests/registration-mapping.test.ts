@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import {
   applyRegistrationReview,
+  applyRegistrationExtraction,
   defaultScanSelection,
   exactCatalogMatch,
   invalidScanField,
@@ -185,4 +186,102 @@ describe('registration review mapping', () => {
     expect(invalidScanField('year', '01/01/2019')).toBe(true);
     expect(invalidScanField('weight', 'NaN')).toBe(true);
   });
+});
+
+describe('automatic registration field mapping', () => {
+  it('preserves missing values and clears the previous model when only a new make is readable', () => {
+    const v = {
+      ...current(),
+      brand: 'Old make',
+      model: 'Old model',
+      modelId: 'old',
+      weight: '1700',
+    };
+    const next = applyRegistrationExtraction(
+      v,
+      { ...values, model: '', weight: '' },
+      brands,
+      models,
+    );
+    expect(next).toMatchObject({
+      brand: 'Volkswagen',
+      model: '',
+      modelId: '',
+      weight: '1700',
+      manual: true,
+    });
+  });
+  it('does not apply invalid fields or overwrite a make/model pair edited during extraction', () => {
+    const before = current();
+    const v = {
+      ...before,
+      brand: 'Ford',
+      model: 'Transit Courier',
+      weight: '1700',
+    };
+    const next = applyRegistrationExtraction(
+      v,
+      { ...values, vin: 'INVALID', weight: '0' },
+      brands,
+      models,
+      before,
+    );
+    expect(next).toMatchObject({
+      brand: 'Ford',
+      model: 'Transit Courier',
+      weight: '1700',
+      vin: '',
+    });
+  });
+});
+
+it('splits duplicated combined make/model using the catalog and preserves multi-word model names', () => {
+  const result: RegistrationExtraction = {
+    status: 'partial',
+    fields: Object.fromEntries(
+      REGISTRATION_FIELDS.map((name) => [
+        name,
+        { value: null, status: 'missing', evidence: [] },
+      ]),
+    ) as unknown as RegistrationExtraction['fields'],
+    missingFields: [],
+    warnings: [],
+  };
+  result.fields.brand = result.fields.model = {
+    value: 'Ford Transit Courier',
+    status: 'extracted',
+    evidence: [],
+  };
+  expect(scanValues(result, [{ id: 'ford', name: 'Ford' }])).toMatchObject({
+    brand: 'Ford',
+    model: 'Transit Courier',
+  });
+  result.fields.brand = result.fields.model = {
+    value: 'Ford',
+    status: 'extracted',
+    evidence: [],
+  };
+  expect(scanValues(result, [{ id: 'ford', name: 'Ford' }])).toMatchObject({
+    brand: 'Ford',
+    model: '',
+  });
+});
+
+it.each(['Fahrgestell-Nr.', 'fahrgetell-Nr', 'Fourgon', 'Carrosserie', 'Marque et type'])('does not apply a row heading or body description as identity: %s', (text) => {
+  const next = applyRegistrationExtraction(current(), { ...values, brand: text, model: text, vin: 'WF0WXXTACWKJ75955', weight: '1349' }, brands, models);
+  expect(next.brand).toBe('');
+  expect(next.model).toBe('');
+  expect(next.vin).toBe('WF0WXXTACWKJ75955');
+  expect(next.weight).toBe('1349');
+});
+
+it('ignores unconfirmed identity values and maps a confirmed Fourgon body description to VAN', () => {
+  const result: RegistrationExtraction = {
+    status: 'partial', fields: Object.fromEntries(REGISTRATION_FIELDS.map((name) => [name, { value: null, status: 'missing', evidence: [] }])) as unknown as RegistrationExtraction['fields'],
+    missingFields: [], warnings: [],
+  };
+  result.fields.brand = { value: 'Fahrgestell-Nr.', status: 'invalid', evidence: [] };
+  result.fields.model = { value: 'Fourgon', status: 'ambiguous', evidence: [] };
+  result.fields.bodyType = { value: 'Fourgon', status: 'extracted', evidence: [] };
+  expect(scanValues(result)).toMatchObject({ brand: '', model: '', bodyType: 'VAN' });
 });

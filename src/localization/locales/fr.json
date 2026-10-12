@@ -1217,7 +1217,7 @@
   "Add photos": "Ajouter des photos",
   "vehicleRequest.scan.title": "Scanner la carte grise",
   "vehicleRequest.scan.intro": "Photographiez votre carte grise pour remplir les détails du véhicule.",
-  "vehicleRequest.scan.disclosure": "En appuyant sur Extraire les détails, ces images sont envoyées à un service d’IA externe. Vérifiez les valeurs avant de les appliquer.",
+  "vehicleRequest.scan.disclosure": "En appuyant sur Extraire les détails, les images sont envoyées à un service d’IA externe. Les valeurs lisibles remplissent automatiquement les champs. Vérifiez-les avant de continuer.",
   "vehicleRequest.scan.instructions": "Gardez toute la carte visible, nette et sans reflets. Ajoutez le verso si nécessaire.",
   "vehicleRequest.scan.front": "Première image",
   "vehicleRequest.scan.back": "Verso (facultatif)",
@@ -1263,7 +1263,7 @@
   "vehicleRequest.scan.REGISTRATION_UNAVAILABLE": "Le scan est temporairement indisponible. Réessayez ou saisissez manuellement.",
   "vehicleRequest.scan.REGISTRATION_INVALID_OUTPUT": "Le scan a renvoyé des données inutilisables. Essayez une photo plus nette ou saisissez manuellement.",
   "vehicleRequest.scan.REGISTRATION_AUTH_REQUIRED": "Reconnectez-vous pour scanner ou continuez la saisie manuelle.",
-  "vehicleRequest.scan.success": "Des informations sur le véhicule ont été trouvées. Vérifiez-les avant de les appliquer.",
-  "vehicleRequest.scan.partialSuccess": "Certaines informations ont été trouvées. Vérifiez-les et complétez les données manquantes.",
+  "vehicleRequest.scan.success": "Les informations du véhicule ont été renseignées. Vérifiez les champs avant de continuer.",
+  "vehicleRequest.scan.partialSuccess": "Les informations disponibles ont été renseignées. Vérifiez les champs et complétez les données manquantes.",
   "vehicleRequest.scan.noDetails": "Aucune information sur le véhicule trouvée. Essayez une photo plus nette ou saisissez les données manuellement."
 }

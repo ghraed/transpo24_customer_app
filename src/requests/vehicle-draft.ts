@@ -215,7 +215,7 @@ export function vehiclePayload(draft: VehicleDraft) {
 
 export function normalizeBodyType(value?: string): string {
   if (!value) return '';
-  if (/van|mpv|minibus|transporter/i.test(value)) return 'VAN';
+  if (/van|mpv|minibus|transporter|fourgon|furg[oó]n|furgone|kastenwagen|lieferwagen/i.test(value)) return 'VAN';
   if (/suv|sport utility/i.test(value)) return 'SUV';
   if (/pickup|pick-up/i.test(value)) return 'PICKUP';
   if (/estate|wagon|kombi|break/i.test(value)) return 'ESTATE';

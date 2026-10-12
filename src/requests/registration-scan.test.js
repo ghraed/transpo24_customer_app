@@ -139,74 +139,39 @@ beforeEach(() => {
 afterEach(async () => {
   if (tree) await act(async () => tree.unmount());
 });
-it('requires confirmation, then maps dependent IDs without submitting a request', async () => {
-  await render();
-  await review();
-  expect(onApply).not.toHaveBeenCalled();
-  await click(tree, 'vehicleRequest.scan.confirm');
-  expect(onApply).toHaveBeenCalledWith(
-    expect.objectContaining({
-      vin: 'WDD1770511N100321',
-      brandId: 'vw',
-      modelId: 'golf',
-      weight: '1550',
-      source: 'REGISTRATION_CARD',
-    }),
-  );
-  expect(mockDelete).toHaveBeenCalled();
-});
-it('keeps existing values until the customer selects replacement', async () => {
+it('fills the main fields immediately, maps catalog IDs and removes apply controls', async () => {
   await render({ weight: '1700' });
   await review();
-  expect(
-    tree.root.findByProps({ testID: 'scan-apply-weight' }).props
-      .accessibilityState.checked,
-  ).toBe(false);
-  await click(tree, 'vehicleRequest.scan.confirm');
-  expect(onApply.mock.calls[0][0].weight).toBe('1700');
+  expect(onApply).toHaveBeenCalledTimes(1);
+  expect(onApply).toHaveBeenCalledWith(expect.objectContaining({
+    vin: 'WDD1770511N100321', brand: 'Volkswagen', model: 'Golf',
+    brandId: 'vw', modelId: 'golf', weight: '1550', source: 'REGISTRATION_CARD',
+  }));
+  expect(tree.root.findAll((node) => node.props.testID?.startsWith('scan-apply-'))).toHaveLength(0);
+  expect(button(tree, 'vehicleRequest.scan.confirm')).toBeUndefined();
+  expect(mockDelete).toHaveBeenCalled();
 });
-it('requires renewed confirmation after newer form edits', async () => {
+it('preserves newer form edits made while extraction is pending', async () => {
+  let resolveScan;
+  extractRegistrationCard.mockImplementationOnce(() => new Promise((resolve) => { resolveScan = resolve; }));
   await render();
   await review();
-  const newer = { ...vehicle, weight: '1800' };
-  await act(async () =>
-    tree.update(
-      <RegistrationScan value={newer} brands={brands} onApply={onApply} />,
-    ),
-  );
-  await click(tree, 'vehicleRequest.scan.confirm');
-  expect(onApply).not.toHaveBeenCalled();
-  expect(
-    tree.root.findAll(
-      (node) => node.props.children === 'vehicleRequest.scan.editsChanged',
-    ).length,
-  ).toBeGreaterThan(0);
-  await click(tree, 'vehicleRequest.scan.confirm');
+  await act(async () => tree.update(
+    <RegistrationScan value={{ ...vehicle, weight: '1800' }} brands={brands} onApply={onApply} />,
+  ));
+  await act(async () => resolveScan(result()));
   expect(onApply.mock.calls[0][0].weight).toBe('1800');
 });
-it('allows edits and marks their provenance as manual', async () => {
-  await render();
-  await review();
-  await act(async () =>
-    tree.root.findByProps({ testID: 'scan-weight' }).props.onChangeText('1600'),
-  );
-  await click(tree, 'vehicleRequest.scan.confirm');
-  expect(onApply.mock.calls[0][0].fieldSources.weight).toBe('MANUAL');
-});
-it('requires explicit manual approval for unmatched models', async () => {
+it('fills separate make and model text fields when the model is absent from the catalog', async () => {
   getVehicleModels.mockResolvedValue([]);
+  const extracted = result();
+  extracted.fields.brand.value = 'Ford';
+  extracted.fields.model.value = 'Transit Courier';
+  extractRegistrationCard.mockResolvedValueOnce(extracted);
   await render();
   await review();
-  await click(tree, 'vehicleRequest.scan.confirm');
-  expect(onApply).not.toHaveBeenCalled();
-  await act(async () =>
-    tree.root.findByProps({ testID: 'scan-manual-approval' }).props.onPress(),
-  );
-  await click(tree, 'vehicleRequest.scan.confirm');
   expect(onApply.mock.calls[0][0]).toMatchObject({
-    manual: true,
-    brandId: '',
-    modelId: '',
+    brand: 'Ford', model: 'Transit Courier', manual: true, brandId: '', modelId: '',
   });
 });
 it('supports denied permission and picker cancellation without uploading', async () => {
@@ -249,8 +214,8 @@ it('discards delayed scan responses after cancellation and a newer scan', async 
   await click(tree, 'vehicleRequest.scan.title');
   await review();
   await act(async () => resolveOld({ ...result(), status: 'wrong_document' }));
-  expect(button(tree, 'vehicleRequest.scan.confirm')).toBeDefined();
-  expect(onApply).not.toHaveBeenCalled();
+  expect(button(tree, 'vehicleRequest.scan.confirm')).toBeUndefined();
+  expect(onApply).toHaveBeenCalledTimes(1);
 });
 it('aborts scans and clears previews when switching accounts', async () => {
   extractRegistrationCard.mockImplementationOnce(() => new Promise(() => {}));
@@ -306,7 +271,7 @@ it.each(['extracted', 'partial'])('shows visible feedback for a %s scan', async 
   await render();
   await review();
   expectVisibleFeedback(status === 'partial' ? 'partialSuccess' : 'success');
-  expect(button(tree, 'vehicleRequest.scan.confirm')).toBeDefined();
+  expect(button(tree, 'vehicleRequest.scan.confirm')).toBeUndefined();
 });
 
 it('shows no details found and allows retry when all fields are empty', async () => {
@@ -320,6 +285,45 @@ it('shows no details found and allows retry when all fields are empty', async ()
   expect(button(tree, 'vehicleRequest.scan.confirm')).toBeUndefined();
   expect(button(tree, 'vehicleRequest.scan.extract').props.disabled).toBe(false);
   await click(tree, 'vehicleRequest.scan.extract');
+  expect(feedback('noDetails')).toBeUndefined();
+  expectVisibleFeedback('partialSuccess');
+});
+
+it('fills a recovered combined make/model and spaced-photo VIN while mapping Fourgon to body type', async () => {
+  const extracted = result();
+  for (const [name, value] of Object.entries({
+    brand: 'FORD Transit Courier', model: 'FORD Transit Courier',
+    vin: 'WF0WXXTACWKJ75955', emptyWeightKg: 1394, manufactureYear: 2019, bodyType: 'Fourgon',
+  })) extracted.fields[name] = { value, status: 'extracted', evidence: [] };
+  extractRegistrationCard.mockResolvedValueOnce(extracted);
+  getVehicleModels.mockResolvedValueOnce([{ id: 'courier', name: 'Transit Courier', brandId: 'ford' }]);
+  const fordBrands = [{ id: 'ford', name: 'Ford' }];
+  vehicle = newVehicleDraft('customer', 'service').vehicle;
+  onApply = jest.fn();
+  await act(async () => { tree = create(<RegistrationScan value={vehicle} brands={fordBrands} onApply={onApply} />); });
+  await click(tree, 'vehicleRequest.scan.title');
+  await review();
+  expect(onApply).toHaveBeenCalledWith(expect.objectContaining({
+    brand: 'Ford', model: 'Transit Courier', brandId: 'ford', modelId: 'courier',
+    vin: 'WF0WXXTACWKJ75955', weight: '1394', year: '2019', bodyType: 'VAN',
+  }));
+});
+
+it('fills all readable fields for the reported Ford, including its date-derived year', async () => {
+  const extracted = result();
+  for (const [name, value] of Object.entries({
+    brand: 'Ford', model: 'Transit Courier', vin: 'WF0WXXTACWKJ75955',
+    emptyWeightKg: 1349, manufactureYear: 2019,
+  })) extracted.fields[name] = { value, status: 'extracted', evidence: [] };
+  extractRegistrationCard.mockResolvedValueOnce(extracted);
+  // A readable make/model remains usable even when the catalog lacks it.
+  await render();
+  await review();
+  expect(onApply).toHaveBeenCalledWith(expect.objectContaining({
+    brand: 'Ford', model: 'Transit Courier', vin: 'WF0WXXTACWKJ75955',
+    weight: '1349', year: '2019', manual: true,
+    registrationScanApplied: true, source: 'REGISTRATION_CARD',
+  }));
   expect(feedback('noDetails')).toBeUndefined();
   expectVisibleFeedback('partialSuccess');
 });

@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,45 +19,15 @@ import { File, Paths } from 'expo-file-system';
 import { extractRegistrationCard, getVehicleModels } from '@/lib/api';
 import { getAuthSessionSnapshot, subscribeAuthSession } from '@/lib/auth-token';
 import type { LocalPhotoAsset } from '@/types/customer-request';
-import type { VehicleCatalogBrand, VehicleCatalogModel } from '@/types/vehicle';
-import type {
-  RegistrationExtraction,
-  RegistrationFieldName,
-} from '@/types/registration';
+import type { VehicleCatalogBrand } from '@/types/vehicle';
 import {
-  applyRegistrationReview,
-  defaultScanSelection,
+  applyRegistrationExtraction,
   exactCatalogMatch,
   invalidScanField,
-  sameVehicle,
   SCAN_FORM_FIELDS,
   scanValues,
   type FormVehicle,
-  type ScanFormField,
-  type ScanSelection,
-  type ScanValues,
 } from './registration-mapping';
-
-const labels: Record<ScanFormField, string> = {
-  vin: 'vin',
-  registration: 'registration',
-  brand: 'brand',
-  model: 'model',
-  year: 'year',
-  weight: 'weight',
-  bodyType: 'bodyType',
-  transmission: 'transmission',
-};
-const extractionNames: Record<ScanFormField, RegistrationFieldName> = {
-  vin: 'vin',
-  registration: 'swissRegistrationNumber',
-  brand: 'brand',
-  model: 'model',
-  year: 'manufactureYear',
-  weight: 'emptyWeightKg',
-  bodyType: 'bodyType',
-  transmission: 'transmission',
-};
 
 function ScanButton({
   title,
@@ -99,23 +68,13 @@ export function RegistrationScan({
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const [result, setResult] = useState<RegistrationExtraction | null>(null);
-  const [values, setValues] = useState<ScanValues | null>(null);
-  const [selected, setSelected] = useState<ScanSelection | null>(null);
-  const [catalogModels, setCatalogModels] = useState<{
-    brandId: string;
-    items: VehicleCatalogModel[];
-  } | null>(null);
-  const [manualApproved, setManualApproved] = useState(false);
-  const [expandedChoice, setExpandedChoice] = useState<ScanFormField | null>(
-    null,
-  );
+  const [appliedStatus, setAppliedStatus] = useState<
+    'extracted' | 'partial' | null
+  >(null);
   const current = useRef(value);
   useLayoutEffect(() => {
     current.current = value;
   }, [value]);
-  const baseline = useRef(value);
-  const original = useRef<ScanValues | null>(null);
   const epoch = useRef(0);
   const controller = useRef<AbortController | null>(null);
   const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,15 +108,12 @@ export function RegistrationScan({
     imageRef.current = [];
     setImages([]);
     setOpen(false);
-    setResult(null);
-    setValues(null);
-    setSelected(null);
     busyRef.current = false;
     setBusy(false);
     setProgress(null);
     setError('');
     setPermissionDenied(false);
-    setManualApproved(false);
+    setAppliedStatus(null);
   };
   useEffect(() => {
     const owner = getAuthSessionSnapshot().user?.id;
@@ -173,43 +129,15 @@ export function RegistrationScan({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const effectiveBrand = values && selected?.brand ? values.brand : value.brand;
-  const matchedBrandId = exactCatalogMatch(brands, effectiveBrand)?.id;
-  const modelsLoading =
-    !!result && !!matchedBrandId && catalogModels?.brandId !== matchedBrandId;
-  const models =
-    catalogModels?.brandId === matchedBrandId
-      ? (catalogModels?.items ?? [])
-      : [];
-  useEffect(() => {
-    let active = true;
-    if (!result || !matchedBrandId) return;
-    void getVehicleModels(matchedBrandId)
-      .then((next) => {
-        if (active) setCatalogModels({ brandId: matchedBrandId, items: next });
-      })
-      .catch(() => {
-        if (active) {
-          setCatalogModels({ brandId: matchedBrandId, items: [] });
-          setError('vehicleRequest.scan.catalogReview');
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [matchedBrandId, result]);
-
   const changeImages = (next: LocalPhotoAsset[]) => {
     invalidate();
-    setResult(null);
-    setValues(null);
-    setSelected(null);
     setError('');
     setProgress(null);
     busyRef.current = false;
     setBusy(false);
     imageRef.current = next;
     setImages(next);
+    setAppliedStatus(null);
   };
   const prepare = async (
     uri: string,
@@ -354,6 +282,7 @@ export function RegistrationScan({
     if (busyRef.current || !imageRef.current.length) return;
     invalidate();
     const id = epoch.current;
+    const beforeScan = { ...current.current };
     const abort = new AbortController();
     controller.current = abort;
     busyRef.current = true;
@@ -384,17 +313,35 @@ export function RegistrationScan({
         setError(`vehicleRequest.scan.${extracted.status}`);
         return;
       }
-      const next = scanValues(extracted);
-      if (!SCAN_FORM_FIELDS.some((name) => next[name].trim())) {
+      const next = scanValues(extracted, brands);
+      if (
+        !SCAN_FORM_FIELDS.some((name) => !invalidScanField(name, next[name]))
+      ) {
         setError('vehicleRequest.scan.noDetails');
         return;
       }
-      baseline.current = { ...current.current };
-      original.current = next;
-      setValues(next);
-      setSelected(defaultScanSelection(current.current, next));
-      setManualApproved(false);
-      setResult(extracted);
+      const brand = exactCatalogMatch(
+        brands,
+        next.brand || current.current.brand,
+      );
+      const models = brand
+        ? await Promise.race([
+            getVehicleModels(brand.id).catch(() => []),
+            timeout,
+          ])
+        : [];
+      if (id !== epoch.current || abort.signal.aborted) return;
+      onApply(
+        applyRegistrationExtraction(
+          current.current,
+          next,
+          brands,
+          models,
+          beforeScan,
+        ),
+      );
+      close();
+      setAppliedStatus(extracted.status);
     } catch (e) {
       if (id === epoch.current) {
         const code = (e as { code?: string }).code;
@@ -422,33 +369,6 @@ export function RegistrationScan({
       }
     }
   };
-  const confirm = () => {
-    if (!values || !selected || !original.current || modelsLoading) return;
-    if (!sameVehicle(baseline.current, current.current)) {
-      baseline.current = { ...current.current };
-      setSelected(defaultScanSelection(current.current, values));
-      setManualApproved(false);
-      setError('vehicleRequest.scan.editsChanged');
-      return;
-    }
-    try {
-      const next = applyRegistrationReview(
-        current.current,
-        values,
-        selected,
-        brands,
-        models,
-        manualApproved,
-        original.current,
-      );
-      onApply(next);
-      close();
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : 'vehicleRequest.scan.invalidValue',
-      );
-    }
-  };
   return (
     <View style={styles.card}>
       {
@@ -461,16 +381,19 @@ export function RegistrationScan({
         />
       }
       <Text style={styles.text}>{t('vehicleRequest.scan.intro')}</Text>
+      {appliedStatus ? (
+        <Text accessibilityLiveRegion="polite" style={styles.feedbackSuccess}>
+          {t(
+            appliedStatus === 'partial'
+              ? 'vehicleRequest.scan.partialSuccess'
+              : 'vehicleRequest.scan.success',
+          )}
+        </Text>
+      ) : null}
       <Modal visible={open} animationType="slide" onRequestClose={close}>
         <SafeAreaView style={[styles.screen, { direction: i18n.dir() }]}>
           <View style={styles.row}>
-            <Text style={styles.heading}>
-              {t(
-                result
-                  ? 'vehicleRequest.scan.review'
-                  : 'vehicleRequest.scan.title',
-              )}
-            </Text>
+            <Text style={styles.heading}>{t('vehicleRequest.scan.title')}</Text>
             {<ScanButton title={'vehicleRequest.close'} onPress={close} />}
           </View>
           {error ? (
@@ -478,15 +401,11 @@ export function RegistrationScan({
               {t(error)}
             </Text>
           ) : null}
-          {result ? (
-            <Text accessibilityLiveRegion="polite" style={styles.feedbackSuccess}>
-              {t(result.status === 'partial'
-                ? 'vehicleRequest.scan.partialSuccess'
-                : 'vehicleRequest.scan.success')}
-            </Text>
-          ) : null}
           {busy ? (
-            <View accessibilityLiveRegion="polite" style={styles.feedbackProgress}>
+            <View
+              accessibilityLiveRegion="polite"
+              style={styles.feedbackProgress}
+            >
               <ActivityIndicator color="#111827" />
               <Text style={styles.text}>
                 {t(
@@ -512,7 +431,7 @@ export function RegistrationScan({
                 }}
               />
             ) : null}
-            {!result ? (
+            {
               <>
                 <Text style={styles.text}>
                   {t('vehicleRequest.scan.disclosure')}
@@ -618,220 +537,7 @@ export function RegistrationScan({
                   />
                 }
               </>
-            ) : values && selected ? (
-              <>
-                <Text style={styles.text}>
-                  {t('vehicleRequest.scan.reviewNotice')}
-                </Text>
-                {result.warnings.map((warning, index) => (
-                  <Text key={index} style={styles.error}>
-                    {t('vehicleRequest.scan.warning', {
-                      field: warning.field
-                        ? t(
-                            `vehicleRequest.${labels[SCAN_FORM_FIELDS.find((name) => extractionNames[name] === warning.field)!]}`,
-                          )
-                        : '',
-                    })}
-                  </Text>
-                ))}
-                {SCAN_FORM_FIELDS.map((name) => (
-                  <View key={name} style={styles.card}>
-                    <Text style={styles.label}>
-                      {t(`vehicleRequest.${labels[name]}`)}
-                    </Text>
-                    {value[name] ? (
-                      <Text style={styles.text}>
-                        {t('vehicleRequest.scan.currentValue', {
-                          value: value[name],
-                        })}
-                      </Text>
-                    ) : null}
-                    <Text style={styles.text}>
-                      {t(
-                        `vehicleRequest.scan.status.${result.fields[extractionNames[name]].status}`,
-                      )}
-                    </Text>
-                    {result.fields[extractionNames[name]].evidence.map(
-                      (e, index) => (
-                        <Text key={index} style={styles.evidence}>
-                          {e.label}: {e.printedValue}
-                          {e.unit ? ` ${e.unit}` : ''}
-                        </Text>
-                      ),
-                    )}
-                    {name === 'bodyType' || name === 'transmission' ? (
-                      <>
-                        {
-                          <ScanButton
-                            title={`vehicleRequest.${labels[name]}`}
-                            onPress={() =>
-                              setExpandedChoice(
-                                expandedChoice === name ? null : name,
-                              )
-                            }
-                          />
-                        }
-                        <Text style={styles.text}>
-                          {values[name]
-                            ? t(
-                                name === 'bodyType'
-                                  ? `vehicleRequest.body.${values[name]}`
-                                  : `vehicleRequest.transmissionType.${values[name]}`,
-                              )
-                            : t('vehicleRequest.select')}
-                        </Text>
-                        {expandedChoice === name
-                          ? (name === 'bodyType'
-                              ? [
-                                  'SEDAN',
-                                  'HATCHBACK',
-                                  'ESTATE',
-                                  'SUV',
-                                  'VAN',
-                                  'PICKUP',
-                                  'COUPE',
-                                  'CONVERTIBLE',
-                                  'OTHER',
-                                ]
-                              : ['MANUAL', 'AUTOMATIC', 'OTHER']
-                            ).map((option) => (
-                              <Pressable
-                                key={option}
-                                accessibilityRole="radio"
-                                accessibilityState={{
-                                  selected: values[name] === option,
-                                }}
-                                onPress={() => {
-                                  setValues({ ...values, [name]: option });
-                                  setExpandedChoice(null);
-                                }}
-                                style={styles.button}
-                              >
-                                <Text style={styles.text}>
-                                  {t(
-                                    name === 'bodyType'
-                                      ? `vehicleRequest.body.${option}`
-                                      : `vehicleRequest.transmissionType.${option}`,
-                                  )}
-                                </Text>
-                              </Pressable>
-                            ))
-                          : null}
-                      </>
-                    ) : (
-                      <TextInput
-                        testID={`scan-${name}`}
-                        accessibilityLabel={t(`vehicleRequest.${labels[name]}`)}
-                        style={styles.input}
-                        value={values[name]}
-                        placeholderTextColor="#98A2B3"
-                        maxLength={120}
-                        onChangeText={(text) => {
-                          const normalized =
-                            name === 'vin'
-                              ? text.replace(/\s/g, '').toUpperCase()
-                              : name === 'registration'
-                                ? text.replace(/[\s.]/g, '')
-                                : name === 'weight'
-                                  ? text.replace(',', '.')
-                                  : text;
-                          setValues({ ...values, [name]: normalized });
-                          setManualApproved(false);
-                        }}
-                      />
-                    )}
-                    {name === 'brand' || name === 'model'
-                      ? (name === 'brand' ? brands : models)
-                          .filter((option) =>
-                            option.name
-                              .toLocaleLowerCase()
-                              .includes(values[name].toLocaleLowerCase()),
-                          )
-                          .slice(0, 8)
-                          .map((option) => (
-                            <Pressable
-                              accessibilityRole="radio"
-                              accessibilityState={{
-                                selected: option.name === values[name],
-                              }}
-                              key={option.id}
-                              style={styles.button}
-                              onPress={() => {
-                                setValues({ ...values, [name]: option.name });
-                                setManualApproved(false);
-                              }}
-                            >
-                              <Text style={styles.text}>{option.name}</Text>
-                            </Pressable>
-                          ))
-                      : null}
-                    <Pressable
-                      testID={`scan-apply-${name}`}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{
-                        checked: selected[name],
-                        disabled: invalidScanField(name, values[name]),
-                      }}
-                      disabled={invalidScanField(name, values[name])}
-                      style={styles.button}
-                      onPress={() =>
-                        setSelected({ ...selected, [name]: !selected[name] })
-                      }
-                    >
-                      <Text style={styles.text}>
-                        {selected[name] ? '☑ ' : '☐ '}
-                        {t(
-                          value[name]
-                            ? 'vehicleRequest.scan.replaceValue'
-                            : 'vehicleRequest.scan.applyValue',
-                        )}
-                      </Text>
-                    </Pressable>
-                  </View>
-                ))}
-                {modelsLoading ? <ActivityIndicator color="#111827" /> : null}
-                <Pressable
-                  testID="scan-manual-approval"
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: manualApproved }}
-                  onPress={() => setManualApproved(!manualApproved)}
-                  style={styles.button}
-                >
-                  <Text style={styles.text}>
-                    {manualApproved ? '☑ ' : '☐ '}
-                    {t('vehicleRequest.scan.manualApproval')}
-                  </Text>
-                </Pressable>
-                {
-                  <ScanButton
-                    title={'vehicleRequest.scan.confirm'}
-                    onPress={confirm}
-                    disabled={
-                      modelsLoading ||
-                      !SCAN_FORM_FIELDS.some((name) => selected[name])
-                    }
-                  />
-                }
-                {
-                  <ScanButton
-                    title={'vehicleRequest.scan.rescan'}
-                    onPress={() => {
-                      invalidate();
-                      setResult(null);
-                      setValues(null);
-                      setSelected(null);
-                      setError('');
-                    }}
-                  />
-                }
-                {
-                  <ScanButton
-                    title={'vehicleRequest.scan.manual'}
-                    onPress={close}
-                  />
-                }
-              </>
-            ) : null}
+            }
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -859,18 +565,29 @@ const styles = StyleSheet.create({
   heading: { color: '#111827', fontSize: 20, fontWeight: '700', flexShrink: 1 },
   label: { color: '#111827', fontSize: 14, fontWeight: '600' },
   text: { color: '#111827', fontSize: 14, lineHeight: 21 },
-  evidence: { color: '#475467', fontSize: 13, lineHeight: 20 },
-  error: { color: '#B42318', fontSize: 14, lineHeight: 21 },
   feedbackError: {
-    color: '#B42318', backgroundColor: '#FEF3F2', padding: 12,
-    borderRadius: 12, marginVertical: 8, fontSize: 14, lineHeight: 21,
+    color: '#B42318',
+    backgroundColor: '#FEF3F2',
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 8,
+    fontSize: 14,
+    lineHeight: 21,
   },
   feedbackSuccess: {
-    color: '#067647', backgroundColor: '#ECFDF3', padding: 12,
-    borderRadius: 12, marginVertical: 8, fontSize: 14, lineHeight: 21,
+    color: '#067647',
+    backgroundColor: '#ECFDF3',
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 8,
+    fontSize: 14,
+    lineHeight: 21,
   },
   feedbackProgress: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
   },
   button: {
     backgroundColor: '#FFC548',
@@ -880,12 +597,4 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.45 },
   preview: { width: '100%', height: 220 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D9DFE8',
-    padding: 14,
-    color: '#111827',
-    borderRadius: 14,
-    minHeight: 50,
-  },
 });

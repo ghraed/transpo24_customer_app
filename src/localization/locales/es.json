@@ -1217,7 +1217,7 @@
   "Add photos": "Agregar fotos",
   "vehicleRequest.scan.title": "Escanear permiso de circulación",
   "vehicleRequest.scan.intro": "Fotografía el permiso para completar los datos del vehículo.",
-  "vehicleRequest.scan.disclosure": "Al pulsar Extraer datos, las imágenes se envían a un servicio externo de IA. Revisa los valores antes de aplicarlos.",
+  "vehicleRequest.scan.disclosure": "Al pulsar Extraer datos, las imágenes se envían a un servicio externo de IA. Los valores legibles rellenan los campos automáticamente. Revísalos antes de continuar.",
   "vehicleRequest.scan.instructions": "Mantén toda la tarjeta visible, nítida y sin reflejos. Añade el reverso si hace falta.",
   "vehicleRequest.scan.front": "Primera imagen",
   "vehicleRequest.scan.back": "Reverso (opcional)",
@@ -1263,7 +1263,7 @@
   "vehicleRequest.scan.REGISTRATION_UNAVAILABLE": "El escaneo no está disponible temporalmente. Reintenta o introduce los datos manualmente.",
   "vehicleRequest.scan.REGISTRATION_INVALID_OUTPUT": "El escaneo devolvió datos inutilizables. Prueba una foto más clara o introduce los datos manualmente.",
   "vehicleRequest.scan.REGISTRATION_AUTH_REQUIRED": "Vuelve a iniciar sesión para escanear o continúa introduciendo datos manualmente.",
-  "vehicleRequest.scan.success": "Se encontraron datos del vehículo. Revísalos antes de aplicarlos.",
-  "vehicleRequest.scan.partialSuccess": "Se encontraron algunos datos del vehículo. Revísalos y completa lo que falta.",
+  "vehicleRequest.scan.success": "Datos del vehículo rellenados. Revisa los campos antes de continuar.",
+  "vehicleRequest.scan.partialSuccess": "Datos disponibles rellenados. Revisa los campos y completa lo que falta.",
   "vehicleRequest.scan.noDetails": "No se encontraron datos del vehículo. Prueba con una foto más clara o introduce los datos manualmente."
 }

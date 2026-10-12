@@ -1217,7 +1217,7 @@
   "Add photos": "Fotos hinzufügen",
   "vehicleRequest.scan.title": "Fahrzeugausweis scannen",
   "vehicleRequest.scan.intro": "Fotografieren Sie Ihren Fahrzeugausweis, um Fahrzeugdaten auszufüllen.",
-  "vehicleRequest.scan.disclosure": "Mit Daten auslesen werden diese Bilder an einen externen KI-Dienst gesendet. Prüfen Sie alle Werte vor dem Übernehmen.",
+  "vehicleRequest.scan.disclosure": "Mit Daten auslesen werden die Bilder an einen externen KI-Dienst gesendet. Lesbare Werte füllen die Fahrzeugfelder automatisch aus. Prüfen Sie diese vor dem Fortfahren.",
   "vehicleRequest.scan.instructions": "Die gesamte Karte muss scharf und ohne Spiegelungen sichtbar sein. Rückseite bei Bedarf hinzufügen.",
   "vehicleRequest.scan.front": "Erstes Bild",
   "vehicleRequest.scan.back": "Rückseite (optional)",
@@ -1263,7 +1263,7 @@
   "vehicleRequest.scan.REGISTRATION_UNAVAILABLE": "Scannen ist vorübergehend nicht verfügbar. Erneut versuchen oder manuell ausfüllen.",
   "vehicleRequest.scan.REGISTRATION_INVALID_OUTPUT": "Der Scan lieferte unbrauchbare Daten. Klareres Foto wählen oder manuell eingeben.",
   "vehicleRequest.scan.REGISTRATION_AUTH_REQUIRED": "Melden Sie sich zum Scannen erneut an oder füllen Sie manuell weiter aus.",
-  "vehicleRequest.scan.success": "Fahrzeugdaten gefunden. Prüfen Sie sie vor dem Übernehmen.",
-  "vehicleRequest.scan.partialSuccess": "Einige Fahrzeugdaten wurden gefunden. Prüfen und ergänzen Sie fehlende Angaben.",
+  "vehicleRequest.scan.success": "Fahrzeugdaten eingetragen. Prüfen Sie die Felder vor dem Fortfahren.",
+  "vehicleRequest.scan.partialSuccess": "Verfügbare Fahrzeugdaten eingetragen. Prüfen und ergänzen Sie fehlende Angaben.",
   "vehicleRequest.scan.noDetails": "Keine Fahrzeugdaten gefunden. Versuchen Sie ein schärferes Foto oder geben Sie die Daten manuell ein."
 }

@@ -37,6 +37,8 @@ let instances;
 let replies;
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  jest.spyOn(console, 'info').mockImplementation(() => undefined);
   mockOwner = 'customer';
   instances = [];
   replies = [{ status: 201, body: response() }];
@@ -72,6 +74,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  jest.restoreAllMocks();
   global.XMLHttpRequest = originalXhr;
   global.FormData = originalForm;
 });
@@ -88,6 +91,7 @@ it('uploads authenticated native multipart with progress and parses the typed co
       onProgress,
     }),
   ).resolves.toMatchObject({ status: 'partial' });
+  expect(console.info).toHaveBeenCalledWith('[RegistrationScan] Sending scan', { apiOrigin: 'https://api.test' });
   expect(instances[0].open).toHaveBeenCalledWith(
     'POST',
     'https://api.test/vehicles/extract-registration',
