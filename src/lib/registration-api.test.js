@@ -1,5 +1,6 @@
 import { extractRegistrationCard } from './api';
 import { REGISTRATION_FIELDS } from '@/types/registration';
+import { REGISTRATION_SCAN_TIMEOUT_MS } from '@/requests/registration-limits';
 import { refreshAccessToken } from './auth-token';
 
 let mockOwner = 'customer';
@@ -109,7 +110,8 @@ it('uploads authenticated native multipart with progress and parses the typed co
     uri: photo.uri,
     type: 'image/jpeg',
   });
-  expect(instances[0].timeout).toBeLessThanOrEqual(90000);
+  expect(instances[0].timeout).toBeLessThanOrEqual(REGISTRATION_SCAN_TIMEOUT_MS);
+  expect(instances[0].timeout).toBeGreaterThan(120000);
   expect(onProgress).toHaveBeenCalledWith(0.5);
   expect(onProgress).toHaveBeenCalledWith(1);
 });

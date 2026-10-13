@@ -61,13 +61,14 @@ import type {
 import { sanitizeVin } from '@/utils/vin';
 import appI18n from '@/localization/i18n';
 import { isRegistrationExtraction, type RegistrationExtraction } from '@/types/registration';
+import { REGISTRATION_SCAN_TIMEOUT_MS } from '@/requests/registration-limits';
 
 export async function extractRegistrationCard(
   photos: LocalPhotoAsset[],
   options: { signal: AbortSignal; onProgress?: (progress: number) => void },
 ): Promise<RegistrationExtraction> {
   const ownerId = getAuthSessionSnapshot().user?.id;
-  const deadline = Date.now() + 90000;
+  const deadline = Date.now() + REGISTRATION_SCAN_TIMEOUT_MS;
   const failure = (code: string) => Object.assign(new Error(code), { code });
   const send = async (): Promise<RegistrationExtraction> => {
     if (options.signal.aborted || !ownerId || getAuthSessionSnapshot().user?.id !== ownerId) throw failure('REGISTRATION_CANCELLED');

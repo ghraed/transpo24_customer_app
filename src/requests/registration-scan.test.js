@@ -4,6 +4,7 @@ import { ScrollView } from 'react-native';
 import { RegistrationScan } from './registration-scan';
 import { newVehicleDraft } from './vehicle-draft';
 import { REGISTRATION_FIELDS } from '@/types/registration';
+import { REGISTRATION_SCAN_TIMEOUT_MS } from './registration-limits';
 import { extractRegistrationCard, getVehicleModels } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -336,7 +337,7 @@ it.each(['REGISTRATION_UNAVAILABLE', 'REGISTRATION_INVALID_OUTPUT', 'REGISTRATIO
   expect(button(tree, 'vehicleRequest.scan.extract').props.disabled).toBe(false);
 });
 
-it('ends a stalled scan after 90 seconds, enables retry and ignores its late result', async () => {
+it('ends a stalled scan at the deadline, enables retry and ignores its late result', async () => {
   jest.useFakeTimers();
   let resolveOld;
   extractRegistrationCard.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));
@@ -344,7 +345,7 @@ it('ends a stalled scan after 90 seconds, enables retry and ignores its late res
     await render();
     await review();
     const oldSignal = extractRegistrationCard.mock.calls[0][1].signal;
-    await act(async () => jest.advanceTimersByTime(90000));
+    await act(async () => jest.advanceTimersByTime(REGISTRATION_SCAN_TIMEOUT_MS));
     expectVisibleFeedback('REGISTRATION_TIMEOUT');
     expect(oldSignal.aborted).toBe(true);
     expect(button(tree, 'vehicleRequest.scan.extract').props.disabled).toBe(false);
@@ -353,7 +354,24 @@ it('ends a stalled scan after 90 seconds, enables retry and ignores its late res
     await act(async () => resolveOld({ ...result(), status: 'wrong_document' }));
     expectVisibleFeedback('partialSuccess');
     expect(feedback('wrong_document')).toBeUndefined();
-    await act(async () => jest.advanceTimersByTime(90000));
+    await act(async () => jest.advanceTimersByTime(REGISTRATION_SCAN_TIMEOUT_MS));
+    expectVisibleFeedback('partialSuccess');
+    expect(feedback('REGISTRATION_TIMEOUT')).toBeUndefined();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+it('keeps readable scan fields when the catalog lookup stalls', async () => {
+  jest.useFakeTimers();
+  getVehicleModels.mockImplementationOnce(() => new Promise(() => {}));
+  try {
+    await render();
+    await review();
+    expect(onApply).not.toHaveBeenCalled();
+    await act(async () => jest.advanceTimersByTime(3000));
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({
+      brand: 'Volkswagen', model: 'Golf', manual: true, year: '2019',
+    }));
     expectVisibleFeedback('partialSuccess');
     expect(feedback('REGISTRATION_TIMEOUT')).toBeUndefined();
   } finally {

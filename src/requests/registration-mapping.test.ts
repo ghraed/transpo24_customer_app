@@ -27,6 +27,51 @@ const values = {
 };
 const current = () => newVehicleDraft('customer', 'service').vehicle;
 describe('registration review mapping', () => {
+  it('autofills a Lebanese card while leaving unavailable weight and Swiss number blank', () => {
+    const fields = Object.fromEntries(
+      REGISTRATION_FIELDS.map((name) => [
+        name,
+        {
+          value: null,
+          status: 'missing',
+          evidence: [],
+        } as RegistrationExtraction['fields']['vin'],
+      ]),
+    ) as RegistrationExtraction['fields'];
+    for (const [name, value] of Object.entries({
+      vin: 'MR2K19F31K1044204',
+      brand: 'TOYOTA',
+      model: 'YARIS',
+      manufactureYear: 2019,
+    })) {
+      fields[name as keyof typeof fields] = {
+        value,
+        status: 'extracted',
+        evidence: [],
+      };
+    }
+    const extracted: RegistrationExtraction = {
+      status: 'partial',
+      fields,
+      missingFields: ['emptyWeightKg', 'swissRegistrationNumber'],
+      warnings: [],
+    };
+    const next = applyRegistrationExtraction(
+      current(),
+      scanValues(extracted),
+      [],
+      [],
+    );
+    expect(next).toMatchObject({
+      vin: 'MR2K19F31K1044204',
+      brand: 'TOYOTA',
+      model: 'YARIS',
+      year: '2019',
+      weight: '',
+      registration: '',
+      manual: true,
+    });
+  });
   it('maps only confirmed current-form fields to dependent catalog IDs', () => {
     const v = current();
     const selected = defaultScanSelection(v, values);
