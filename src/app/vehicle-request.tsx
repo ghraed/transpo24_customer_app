@@ -584,16 +584,6 @@ function VehicleRequest({
                       {draft.vehicle.year} –{' '}
                       {Number(draft.vehicle.weight).toLocaleString('de-CH')} kg
                     </Text>
-                    <Text style={styles.body}>
-                      {t(`vehicleRequest.body.${draft.vehicle.bodyType}`, {
-                        defaultValue: draft.vehicle.bodyType,
-                      })}{' '}
-                      ·{' '}
-                      {t(
-                        `vehicleRequest.transmissionType.${draft.vehicle.transmission}`,
-                        { defaultValue: draft.vehicle.transmission },
-                      )}
-                    </Text>
                     {draft.vehicle.vin ? (
                       <Text style={styles.body}>
                         {t('vehicleRequest.vin')}: {draft.vehicle.vin}

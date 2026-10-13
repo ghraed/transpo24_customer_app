@@ -63,6 +63,21 @@ it('rejects an invalid VIN in VIN mode', async () => {
   expect(decodeVehicleVin).not.toHaveBeenCalled();
 });
 
+it('keeps both identifiers visible and shows only the six vehicle inputs', async () => {
+  let tree;
+  const value = { ...newVehicleDraft('customer', 'service').vehicle, manual: true };
+  await act(async () => { tree = create(<VehicleEditor value={value} onChange={jest.fn()} errors={[]} />); });
+  const fields = tree.root.findAll(node => typeof node.props.onChangeText === 'function')
+    .map(node => node.props.accessibilityLabel).filter(Boolean);
+  expect([...new Set(fields)]).toEqual([
+    'vehicleRequest.vin', 'vehicleRequest.registration', 'vehicleRequest.brand',
+    'vehicleRequest.model', 'vehicleRequest.weight', 'vehicleRequest.year',
+  ]);
+  expect(tree.root.findAll(node => node.props.children === 'vehicleRequest.bodyType')).toHaveLength(0);
+  expect(tree.root.findAll(node => node.props.children === 'vehicleRequest.transmission')).toHaveLength(0);
+  await act(async () => tree.unmount());
+});
+
 it('fills missing provider weight after scanning without replacing confirmed or manual details', async () => {
   decodeVehicleVin.mockResolvedValue({ brand: 'Different brand', model: 'Different model', manufactureYear: 2020, estimatedWeightKg: 1600 });
   const onChange = await renderAndLookup({ vin: 'WDD1770511N100321', registration: '', brand: 'Volkswagen', model: 'Golf', year: '2019', weight: '', registrationScanApplied: true, fieldSources: { brand: 'REGISTRATION_CARD', model: 'MANUAL', year: 'MANUAL' } });

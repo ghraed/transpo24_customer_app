@@ -24,8 +24,6 @@ const values = {
   model: 'Golf',
   year: '2019',
   weight: '1550',
-  bodyType: 'HATCHBACK',
-  transmission: 'MANUAL',
 };
 const current = () => newVehicleDraft('customer', 'service').vehicle;
 describe('registration review mapping', () => {
@@ -189,6 +187,16 @@ describe('registration review mapping', () => {
 });
 
 describe('automatic registration field mapping', () => {
+  it('replaces the previously misread displacement with a confirmed empty weight when rescanned', () => {
+    const previous = { ...current(), brand: 'Peugeot', model: '3008 1.6i Turbo',
+      vin: 'VF30U5FVAES099966', registration: '649403107', weight: '1598', year: '2014' };
+    const next = applyRegistrationExtraction(previous, { ...values, brand: previous.brand,
+      model: previous.model, vin: previous.vin, registration: previous.registration,
+      year: '2014', weight: '1607' }, [], []);
+    expect(next.weight).toBe('1607');
+    expect(next.fieldSources?.weight).toBe('REGISTRATION_CARD');
+    expect(next.vin).toBe(previous.vin);
+  });
   it('preserves missing values and clears the previous model when only a new make is readable', () => {
     const v = {
       ...current(),
@@ -275,13 +283,16 @@ it.each(['Fahrgestell-Nr.', 'fahrgetell-Nr', 'Fourgon', 'Carrosserie', 'Marque e
   expect(next.weight).toBe('1349');
 });
 
-it('ignores unconfirmed identity values and maps a confirmed Fourgon body description to VAN', () => {
+it('ignores unconfirmed identity values and extra body/transmission scan fields', () => {
   const result: RegistrationExtraction = {
     status: 'partial', fields: Object.fromEntries(REGISTRATION_FIELDS.map((name) => [name, { value: null, status: 'missing', evidence: [] }])) as unknown as RegistrationExtraction['fields'],
     missingFields: [], warnings: [],
   };
   result.fields.brand = { value: 'Fahrgestell-Nr.', status: 'invalid', evidence: [] };
   result.fields.model = { value: 'Fourgon', status: 'ambiguous', evidence: [] };
-  result.fields.bodyType = { value: 'Fourgon', status: 'extracted', evidence: [] };
-  expect(scanValues(result)).toMatchObject({ brand: '', model: '', bodyType: 'VAN' });
+  result.fields = { ...result.fields, bodyType: { value: 'Fourgon', status: 'extracted', evidence: [] }, transmission: { value: 'MANUAL', status: 'extracted', evidence: [] } } as typeof result.fields;
+  const mapped = scanValues(result);
+  expect(mapped).toMatchObject({ brand: '', model: '' });
+  expect(mapped).not.toHaveProperty('bodyType');
+  expect(mapped).not.toHaveProperty('transmission');
 });

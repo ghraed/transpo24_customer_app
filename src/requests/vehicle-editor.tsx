@@ -17,25 +17,10 @@ import {
   getVehicleModels,
 } from '@/lib/api';
 import type { VehicleCatalogBrand, VehicleCatalogModel } from '@/types/vehicle';
-import {
-  normalizeBodyType,
-  normalizeTransmission,
-  type VehicleDraft,
-} from './vehicle-draft';
+import type { VehicleDraft } from './vehicle-draft';
 import { RegistrationScan } from './registration-scan';
 import { SCAN_FORM_FIELDS, sameVehicle } from './registration-mapping';
 
-export const BODY_TYPES = [
-  'SEDAN',
-  'HATCHBACK',
-  'ESTATE',
-  'SUV',
-  'VAN',
-  'PICKUP',
-  'COUPE',
-  'CONVERTIBLE',
-  'OTHER',
-];
 export function ChoiceField({
   label,
   value,
@@ -219,8 +204,6 @@ export function VehicleEditor({
         weight: result.estimatedWeightKg
           ? String(result.estimatedWeightKg)
           : '',
-        bodyType: normalizeBodyType(result.bodyType),
-        transmission: normalizeTransmission(result.transmissionStyle),
         source: 'VIN_API',
         manual: false,
         ...(result.vin && /^[A-HJ-NPR-Z0-9]{17}$/.test(result.vin)
@@ -309,9 +292,8 @@ export function VehicleEditor({
             </Pressable>
           ))}
         </View>
-        {lookupMode === 'vin'
-          ? field('vin', 'vehicleRequest.vin')
-          : field('registration', 'vehicleRequest.registration', true)}
+        {field('vin', 'vehicleRequest.vin')}
+        {field('registration', 'vehicleRequest.registration', true)}
         <Pressable
           disabled={loading}
           onPress={() => void lookup()}
@@ -328,6 +310,44 @@ export function VehicleEditor({
         ) : null}
       </View>
       <View style={styles.card}>
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('vehicleRequest.entryMethod')}</Text>
+          <View style={styles.entryModes}>
+            {([false, true] as const).map((manual) => {
+              const selected = value.manual === manual;
+              const label = manual
+                ? 'vehicleRequest.manualMode'
+                : 'vehicleRequest.catalogMode';
+              return (
+                <Pressable
+                  key={label}
+                  accessibilityRole="radio"
+                  accessibilityLabel={t(label)}
+                  accessibilityState={{ selected, checked: selected }}
+                  onPress={() => {
+                    if (!selected) patch({ manual, source: 'MANUAL' });
+                  }}
+                  style={({ pressed }) => [
+                    styles.entryMode,
+                    selected && styles.entryModeSelected,
+                    pressed && styles.entryModePressed,
+                  ]}
+                >
+                  <View
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    style={[styles.modeIndicator, selected && styles.modeIndicatorSelected]}
+                  >
+                    {selected ? <View style={styles.modeIndicatorDot} /> : null}
+                  </View>
+                  <Text style={[styles.entryModeText, selected && styles.entryModeTextSelected]}>
+                    {t(label)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
         {value.manual ? (
           <>
             {field('brand', 'vehicleRequest.brand')}
@@ -372,39 +392,8 @@ export function VehicleEditor({
             />
           </>
         )}
-        <Pressable
-          onPress={() => patch({ manual: !value.manual, source: 'MANUAL' })}
-        >
-          <Text style={styles.link}>
-            {t(
-              value.manual
-                ? 'vehicleRequest.useCatalog'
-                : 'vehicleRequest.manualEntry',
-            )}
-          </Text>
-        </Pressable>
-        <ChoiceField
-          label={t('vehicleRequest.bodyType')}
-          value={value.bodyType}
-          invalid={errors.includes('bodyType')}
-          options={BODY_TYPES.map((type) => ({
-            value: type,
-            label: t(`vehicleRequest.body.${type}`),
-          }))}
-          onChange={(bodyType) => patch({ bodyType })}
-        />
-        <ChoiceField
-          label={t('vehicleRequest.transmission')}
-          value={value.transmission}
-          invalid={errors.includes('transmission')}
-          options={['MANUAL', 'AUTOMATIC', 'OTHER'].map((type) => ({
-            value: type,
-            label: t(`vehicleRequest.transmissionType.${type}`),
-          }))}
-          onChange={(transmission) => patch({ transmission })}
-        />
-        {field('year', 'vehicleRequest.year', true)}
         {field('weight', 'vehicleRequest.weight', true)}
+        {field('year', 'vehicleRequest.year', true)}
       </View>
     </View>
   );
@@ -426,6 +415,43 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   field: { gap: 8 },
+  entryModes: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 4,
+    borderRadius: 16,
+    backgroundColor: '#F4F6F8',
+    borderWidth: 1,
+    borderColor: '#E5E8EF',
+  },
+  entryMode: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  entryModeSelected: { backgroundColor: '#FFF', borderColor: '#FFC548' },
+  entryModePressed: { opacity: 0.7 },
+  entryModeText: { flexShrink: 1, color: '#475467', fontSize: 14, fontWeight: '500' },
+  entryModeTextSelected: { color: '#111827', fontWeight: '700' },
+  modeIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#667085',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeIndicatorSelected: { borderColor: '#111827' },
+  modeIndicatorDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#111827' },
   label: { fontSize: 14, fontWeight: '600', color: '#111827' },
   input: {
     borderWidth: 1,
@@ -454,7 +480,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
   },
-  link: { color: '#111827', fontWeight: '600', paddingVertical: 8 },
   modal: { flex: 1, padding: 20, gap: 20, backgroundColor: '#FFF' },
   buttonText: { color: '#111827', fontWeight: '700' },
   heading: { color: '#111827', fontSize: 20, fontWeight: '700' },

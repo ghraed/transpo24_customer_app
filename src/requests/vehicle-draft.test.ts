@@ -79,6 +79,17 @@ describe('vehicle draft isolation', () => {
       'CRANE',
     ]);
   });
+  it('allows submission with only the six vehicle form fields and omits hidden specifications', () => {
+    const draft = completeDraft();
+    draft.vehicle.vin = 'WF0WXXTACWKJ75955';
+    draft.vehicle.registration = '';
+    draft.vehicle.bodyType = '';
+    draft.vehicle.transmission = '';
+    expect(validateVehicleDraft(draft)).toEqual([]);
+    const payload = vehiclePayload(draft);
+    expect(payload).not.toHaveProperty('vehicleBodyType');
+    expect(payload).not.toHaveProperty('vehicleTransmission');
+  });
   it('routes missing and expired fields to their own sections', () => {
     const draft = completeDraft();
     draft.vehicle.weight = '';

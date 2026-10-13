@@ -709,7 +709,7 @@ export async function updateDropoffLocation(
 
 export async function updateScheduleAndItemDetails(
   requestId: string,
-  payload: UpdateScheduleAndItemDetailsPayload | (Omit<UpdateScheduleAndItemDetailsPayload, "itemTitle" | "itemType"> & { vehicleMobility: string; vehicleIssues: string[]; vehicleTransmission: string }),
+  payload: UpdateScheduleAndItemDetailsPayload | (Omit<UpdateScheduleAndItemDetailsPayload, "itemTitle" | "itemType"> & { vehicleMobility: string; vehicleIssues: string[]; vehicleTransmission?: string }),
 ): Promise<CustomerRequest> {
   const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/schedule-and-item-details`;
   const response = await fetchWithNetworkError(endpoint, {

@@ -289,7 +289,7 @@ it('shows no details found and allows retry when all fields are empty', async ()
   expectVisibleFeedback('partialSuccess');
 });
 
-it('fills a recovered combined make/model and spaced-photo VIN while mapping Fourgon to body type', async () => {
+it('fills a recovered make/model and VIN while ignoring extra body details', async () => {
   const extracted = result();
   for (const [name, value] of Object.entries({
     brand: 'FORD Transit Courier', model: 'FORD Transit Courier',
@@ -305,7 +305,7 @@ it('fills a recovered combined make/model and spaced-photo VIN while mapping Fou
   await review();
   expect(onApply).toHaveBeenCalledWith(expect.objectContaining({
     brand: 'Ford', model: 'Transit Courier', brandId: 'ford', modelId: 'courier',
-    vin: 'WF0WXXTACWKJ75955', weight: '1394', year: '2019', bodyType: 'VAN',
+    vin: 'WF0WXXTACWKJ75955', weight: '1394', year: '2019', bodyType: '', transmission: '',
   }));
 });
 

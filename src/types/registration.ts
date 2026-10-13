@@ -5,8 +5,6 @@ export const REGISTRATION_FIELDS = [
   'model',
   'manufactureYear',
   'emptyWeightKg',
-  'bodyType',
-  'transmission',
 ] as const;
 export type RegistrationFieldName = (typeof REGISTRATION_FIELDS)[number];
 export type RegistrationField = {
@@ -17,6 +15,7 @@ export type RegistrationField = {
     label: string;
     printedValue: string;
     unit: string | null;
+    meaning?: string;
   }[];
 };
 export type RegistrationExtraction = {

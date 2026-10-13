@@ -144,10 +144,6 @@ export function validateVehicleDraft(
     Number(draft.vehicle.weight) <= 0
   )
     add('vehicle', 'weight', 'vehicleRequest.errorWeight');
-  if (!draft.vehicle.bodyType.trim())
-    add('vehicle', 'bodyType', 'vehicleRequest.errorBody');
-  if (!draft.vehicle.transmission.trim())
-    add('vehicle', 'transmission', 'vehicleRequest.errorTransmission');
   if (draft.vehicle.vin && !/^[A-HJ-NPR-Z0-9]{17}$/.test(draft.vehicle.vin))
     add('vehicle', 'vin', 'vehicleRequest.errorVin');
   if (!draft.condition.mobility)
@@ -197,9 +193,7 @@ export function vehiclePayload(draft: VehicleDraft) {
     vehicleModel: v.model.trim(),
     vehicleManufactureYear: Number(v.year),
     vehicleEstimatedWeightKg: Number(v.weight),
-    vehicleBodyType: v.bodyType,
     vehicleDataSource: v.source,
-    vehicleTransmission: v.transmission,
     vehicleMobility: draft.condition.mobility,
     vehicleIssues: draft.condition.issues,
     vehicleConditionNotes: draft.condition.notes,

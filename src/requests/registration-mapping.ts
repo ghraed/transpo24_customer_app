@@ -1,10 +1,6 @@
 import type { VehicleCatalogBrand, VehicleCatalogModel } from '@/types/vehicle';
 import type { RegistrationExtraction } from '@/types/registration';
-import {
-  normalizeBodyType,
-  normalizeTransmission,
-  type VehicleDraft,
-} from './vehicle-draft';
+import type { VehicleDraft } from './vehicle-draft';
 
 export const SCAN_FORM_FIELDS = [
   'vin',
@@ -13,8 +9,6 @@ export const SCAN_FORM_FIELDS = [
   'model',
   'year',
   'weight',
-  'bodyType',
-  'transmission',
 ] as const;
 export type ScanFormField = (typeof SCAN_FORM_FIELDS)[number];
 export type ScanValues = Record<ScanFormField, string>;
@@ -69,8 +63,6 @@ export function scanValues(
     model,
     year: value('manufactureYear'),
     weight: value('emptyWeightKg'),
-    bodyType: normalizeBodyType(value('bodyType')),
-    transmission: normalizeTransmission(value('transmission')),
   };
 }
 export function defaultScanSelection(
@@ -113,20 +105,6 @@ export function invalidScanField(name: ScanFormField, value: string): boolean {
       Number(value) <= 0 ||
       Number(value) > 100000
     );
-  if (name === 'bodyType')
-    return ![
-      'SEDAN',
-      'HATCHBACK',
-      'ESTATE',
-      'SUV',
-      'VAN',
-      'PICKUP',
-      'COUPE',
-      'CONVERTIBLE',
-      'OTHER',
-    ].includes(value);
-  if (name === 'transmission')
-    return !['MANUAL', 'AUTOMATIC', 'OTHER'].includes(value);
   return value.length > 120;
 }
 export function applyRegistrationReview(

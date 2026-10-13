@@ -124,6 +124,16 @@ it('refreshes authentication once without retrying other failures', async () => 
   expect(refreshAccessToken).toHaveBeenCalledTimes(1);
   expect(instances).toHaveLength(2);
 });
+it('accepts an evidence-backed weight with the original multilingual source label', async () => {
+  const body = response();
+  body.fields.emptyWeightKg = { value: 1607, status: 'extracted', evidence: [{
+    imageIndex: 0, label: 'Leergewicht / Poids à vide', printedValue: '**1607', unit: 'kg', meaning: 'empty_weight',
+  }] };
+  replies = [{ status: 201, body }];
+  const extracted = await extractRegistrationCard([photo], { signal: new AbortController().signal });
+  expect(extracted.fields.emptyWeightKg.value).toBe(1607);
+  expect(extracted.fields.emptyWeightKg.evidence[0].meaning).toBe('empty_weight');
+});
 it.each(['{broken', {}, { status: 'partial', fields: {} }])(
   'rejects malformed or incomplete successful output',
   async (body) => {
