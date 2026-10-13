@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -10,16 +10,17 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { File, Paths } from 'expo-file-system';
-import { extractRegistrationCard, getVehicleModels } from '@/lib/api';
-import { getAuthSessionSnapshot, subscribeAuthSession } from '@/lib/auth-token';
-import type { LocalPhotoAsset } from '@/types/customer-request';
-import type { VehicleCatalogBrand } from '@/types/vehicle';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
+import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { File, Paths } from "expo-file-system";
+import { extractRegistrationCard, getVehicleModels } from "@/lib/api";
+import type { ScanPhase } from "@/lib/registration-job-api";
+import { getAuthSessionSnapshot, subscribeAuthSession } from "@/lib/auth-token";
+import type { LocalPhotoAsset } from "@/types/customer-request";
+import type { VehicleCatalogBrand } from "@/types/vehicle";
 import {
   applyRegistrationExtraction,
   exactCatalogMatch,
@@ -27,7 +28,7 @@ import {
   SCAN_FORM_FIELDS,
   scanValues,
   type FormVehicle,
-} from './registration-mapping';
+} from "./registration-mapping";
 
 function ScanButton({
   title,
@@ -66,10 +67,15 @@ export function RegistrationScan({
   const [images, setImages] = useState<LocalPhotoAsset[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
-  const [error, setError] = useState('');
+  const [phase, setPhase] = useState<ScanPhase | null>(null);
+  const [cancelPrompt, setCancelPrompt] = useState(false);
+  const cancelPromptRef = useRef(false);
+  const cancellationDecision = useRef<((keep: boolean) => void) | null>(null);
+  const remoteCancel = useRef<(() => Promise<void>) | null>(null);
+  const [error, setError] = useState("");
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [appliedStatus, setAppliedStatus] = useState<
-    'extracted' | 'partial' | null
+    "extracted" | "partial" | null
   >(null);
   const current = useRef(value);
   useLayoutEffect(() => {
@@ -83,14 +89,14 @@ export function RegistrationScan({
   const imageRef = useRef(images);
   const cleanupFile = (uri: string) => {
     if (!ownedFiles.current.delete(uri)) return;
-    if (Platform.OS !== 'web') {
+    if (Platform.OS !== "web") {
       try {
         const file = new File(uri);
         if (file.exists) file.delete();
       } catch {
         /* Cache expiration is safe. */
       }
-    } else if (uri.startsWith('blob:')) URL.revokeObjectURL(uri);
+    } else if (uri.startsWith("blob:")) URL.revokeObjectURL(uri);
   };
   const cleanup = () => {
     for (const uri of [...ownedFiles.current]) cleanupFile(uri);
@@ -103,6 +109,12 @@ export function RegistrationScan({
     controller.current = null;
   };
   const close = () => {
+    void remoteCancel.current?.();
+    remoteCancel.current = null;
+    cancelPromptRef.current = false;
+    setCancelPrompt(false);
+    cancellationDecision.current?.(false);
+    cancellationDecision.current = null;
     invalidate();
     cleanup();
     imageRef.current = [];
@@ -111,9 +123,22 @@ export function RegistrationScan({
     busyRef.current = false;
     setBusy(false);
     setProgress(null);
-    setError('');
+    setPhase(null);
+    setError("");
     setPermissionDenied(false);
     setAppliedStatus(null);
+  };
+  const requestClose = () => {
+    if (controller.current) {
+      cancelPromptRef.current = true;
+      setCancelPrompt(true);
+    } else close();
+  };
+  const keepWaiting = () => {
+    cancelPromptRef.current = false;
+    setCancelPrompt(false);
+    cancellationDecision.current?.(true);
+    cancellationDecision.current = null;
   };
   useEffect(() => {
     const owner = getAuthSessionSnapshot().user?.id;
@@ -122,6 +147,9 @@ export function RegistrationScan({
     });
     return () => {
       unsubscribe();
+      void remoteCancel.current?.();
+      remoteCancel.current = null;
+      cancellationDecision.current?.(false);
       invalidate();
       cleanup();
     };
@@ -131,7 +159,7 @@ export function RegistrationScan({
 
   const changeImages = (next: LocalPhotoAsset[]) => {
     invalidate();
-    setError('');
+    setError("");
     setProgress(null);
     busyRef.current = false;
     setBusy(false);
@@ -149,7 +177,7 @@ export function RegistrationScan({
       const decoded = await context.renderAsync();
       try {
         if (decoded.width < 64 || decoded.height < 64)
-          throw new Error('vehicleRequest.scan.invalidImage');
+          throw new Error("vehicleRequest.scan.invalidImage");
         if (Math.max(decoded.width, decoded.height) > 4000) {
           context.resize(
             decoded.width >= decoded.height
@@ -166,17 +194,17 @@ export function RegistrationScan({
           });
           ownedFiles.current.add(saved.uri);
           const size =
-            Platform.OS === 'web'
+            Platform.OS === "web"
               ? (await (await fetch(saved.uri)).blob()).size
               : new File(saved.uri).size;
           if (size > 8 * 1024 * 1024) {
             cleanupFile(saved.uri);
-            throw new Error('vehicleRequest.scan.tooLarge');
+            throw new Error("vehicleRequest.scan.tooLarge");
           }
           return {
             uri: saved.uri,
-            mimeType: 'image/jpeg',
-            fileName: 'registration-card.jpg',
+            mimeType: "image/jpeg",
+            fileName: "registration-card.jpg",
           };
         } finally {
           normalized.release();
@@ -198,7 +226,7 @@ export function RegistrationScan({
     const id = epoch.current;
     busyRef.current = true;
     setBusy(true);
-    setError('');
+    setError("");
     setPermissionDenied(false);
     try {
       if (camera) {
@@ -206,13 +234,13 @@ export function RegistrationScan({
         if (!permission.granted) {
           if (id === epoch.current) {
             setPermissionDenied(true);
-            setError('vehicleRequest.scan.permission');
+            setError("vehicleRequest.scan.permission");
           }
           return;
         }
       }
       const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: false,
         allowsMultipleSelection: false,
         quality: 1,
@@ -224,7 +252,7 @@ export function RegistrationScan({
         : await ImagePicker.launchImageLibraryAsync(options);
       if (picked.canceled || id !== epoch.current) return;
       const asset = picked.assets[0];
-      if (Platform.OS !== 'web' && asset.uri.startsWith(Paths.cache.uri))
+      if (Platform.OS !== "web" && asset.uri.startsWith(Paths.cache.uri))
         ownedFiles.current.add(asset.uri);
       const prepared = await prepare(asset.uri);
       if (asset.uri !== prepared.uri) cleanupFile(asset.uri);
@@ -242,9 +270,9 @@ export function RegistrationScan({
     } catch (e) {
       if (id === epoch.current)
         setError(
-          e instanceof Error && e.message.startsWith('vehicleRequest.scan.')
+          e instanceof Error && e.message.startsWith("vehicleRequest.scan.")
             ? e.message
-            : 'vehicleRequest.scan.invalidImage',
+            : "vehicleRequest.scan.invalidImage",
         );
     } finally {
       if (id === epoch.current) {
@@ -270,7 +298,7 @@ export function RegistrationScan({
       next[index] = prepared;
       changeImages(next);
     } catch {
-      if (id === epoch.current) setError('vehicleRequest.scan.invalidImage');
+      if (id === epoch.current) setError("vehicleRequest.scan.invalidImage");
     } finally {
       if (id === epoch.current) {
         busyRef.current = false;
@@ -288,27 +316,51 @@ export function RegistrationScan({
     busyRef.current = true;
     setBusy(true);
     setProgress(0);
-    setError('');
+    setPhase(null);
+    setError("");
     try {
       const timeout = new Promise<never>((_, reject) => {
         scanTimer.current = setTimeout(() => {
-          reject({ code: 'REGISTRATION_TIMEOUT' });
+          reject({ code: "REGISTRATION_TIMEOUT" });
           abort.abort();
-        }, 90000);
+        }, 300000);
       });
+      const waitForDecision = async () => {
+        if (!cancelPromptRef.current) return true;
+        return Promise.race([
+          new Promise<boolean>((resolve) => {
+            cancellationDecision.current = resolve;
+          }),
+          timeout,
+        ]);
+      };
       const extracted = await Promise.race([
         extractRegistrationCard(imageRef.current, {
           signal: abort.signal,
           onProgress: (n) => {
             if (id === epoch.current && !abort.signal.aborted) setProgress(n);
           },
+          onStatus: (status) => {
+            if (id === epoch.current && !abort.signal.aborted) setPhase(status);
+          },
+          onAccepted: (cancel) => {
+            if (id === epoch.current && !abort.signal.aborted)
+              remoteCancel.current = cancel;
+            else void cancel();
+          },
         }),
         timeout,
       ]);
       if (id !== epoch.current) return;
       if (
-        extracted.status === 'wrong_document' ||
-        extracted.status === 'unreadable'
+        !(await waitForDecision()) ||
+        id !== epoch.current ||
+        abort.signal.aborted
+      )
+        return;
+      if (
+        extracted.status === "wrong_document" ||
+        extracted.status === "unreadable"
       ) {
         setError(`vehicleRequest.scan.${extracted.status}`);
         return;
@@ -317,7 +369,7 @@ export function RegistrationScan({
       if (
         !SCAN_FORM_FIELDS.some((name) => !invalidScanField(name, next[name]))
       ) {
-        setError('vehicleRequest.scan.noDetails');
+        setError("vehicleRequest.scan.noDetails");
         return;
       }
       const brand = exactCatalogMatch(
@@ -331,6 +383,12 @@ export function RegistrationScan({
           ])
         : [];
       if (id !== epoch.current || abort.signal.aborted) return;
+      if (
+        !(await waitForDecision()) ||
+        id !== epoch.current ||
+        abort.signal.aborted
+      )
+        return;
       onApply(
         applyRegistrationExtraction(
           current.current,
@@ -346,26 +404,35 @@ export function RegistrationScan({
       if (id === epoch.current) {
         const code = (e as { code?: string }).code;
         const known = [
-          'REGISTRATION_INVALID_UPLOAD',
-          'REGISTRATION_CONFIGURATION',
-          'REGISTRATION_TIMEOUT',
-          'REGISTRATION_RATE_LIMIT',
-          'REGISTRATION_UNAVAILABLE',
-          'REGISTRATION_INVALID_OUTPUT',
-          'REGISTRATION_AUTH_REQUIRED',
+          "REGISTRATION_INVALID_UPLOAD",
+          "REGISTRATION_CONFIGURATION",
+          "REGISTRATION_TIMEOUT",
+          "REGISTRATION_RATE_LIMIT",
+          "REGISTRATION_UNAVAILABLE",
+          "REGISTRATION_INVALID_OUTPUT",
+          "REGISTRATION_AUTH_REQUIRED",
+          "REGISTRATION_QUEUE_FULL",
+          "REGISTRATION_ALREADY_PENDING",
+          "REGISTRATION_CANCELLED",
         ];
         setError(
-          `vehicleRequest.scan.${known.includes(code ?? '') ? code : 'REGISTRATION_UNAVAILABLE'}`,
+          `vehicleRequest.scan.${known.includes(code ?? "") ? code : "REGISTRATION_UNAVAILABLE"}`,
         );
       }
     } finally {
       if (id === epoch.current) {
+        void remoteCancel.current?.();
+        remoteCancel.current = null;
         if (scanTimer.current !== null) clearTimeout(scanTimer.current);
         scanTimer.current = null;
         controller.current = null;
         busyRef.current = false;
         setBusy(false);
         setProgress(null);
+        setPhase(null);
+        cancelPromptRef.current = false;
+        setCancelPrompt(false);
+        cancellationDecision.current = null;
       }
     }
   };
@@ -373,51 +440,79 @@ export function RegistrationScan({
     <View style={styles.card}>
       {
         <ScanButton
-          title={'vehicleRequest.scan.title'}
+          title={"vehicleRequest.scan.title"}
           onPress={() => {
             setOpen(true);
-            setError('');
+            setError("");
           }}
         />
       }
-      <Text style={styles.text}>{t('vehicleRequest.scan.intro')}</Text>
+      <Text style={styles.text}>{t("vehicleRequest.scan.intro")}</Text>
       {appliedStatus ? (
         <Text accessibilityLiveRegion="polite" style={styles.feedbackSuccess}>
           {t(
-            appliedStatus === 'partial'
-              ? 'vehicleRequest.scan.partialSuccess'
-              : 'vehicleRequest.scan.success',
+            appliedStatus === "partial"
+              ? "vehicleRequest.scan.partialSuccess"
+              : "vehicleRequest.scan.success",
           )}
         </Text>
       ) : null}
-      <Modal visible={open} animationType="slide" onRequestClose={close}>
+      <Modal visible={open} animationType="slide" onRequestClose={requestClose}>
         <SafeAreaView style={[styles.screen, { direction: i18n.dir() }]}>
           <View style={styles.row}>
-            <Text style={styles.heading}>{t('vehicleRequest.scan.title')}</Text>
-            {<ScanButton title={'vehicleRequest.close'} onPress={close} />}
+            <Text style={styles.heading}>{t("vehicleRequest.scan.title")}</Text>
+            {
+              <ScanButton
+                title={"vehicleRequest.close"}
+                onPress={requestClose}
+              />
+            }
           </View>
+          {cancelPrompt ? (
+            <View accessibilityViewIsModal style={styles.card}>
+              <Text
+                accessibilityRole="header"
+                accessibilityLiveRegion="polite"
+                style={styles.heading}
+              >
+                {t("vehicleRequest.scan.cancelQuestion")}
+              </Text>
+              <ScanButton
+                title="vehicleRequest.scan.keepWaiting"
+                onPress={keepWaiting}
+              />
+              <ScanButton title="vehicleRequest.scan.cancel" onPress={close} />
+            </View>
+          ) : null}
           {error ? (
             <Text accessibilityLiveRegion="polite" style={styles.feedbackError}>
               {t(error)}
             </Text>
           ) : null}
           {busy ? (
-            <View
-              accessibilityLiveRegion="polite"
-              style={styles.feedbackProgress}
-            >
+            <View style={styles.feedbackProgress}>
               <ActivityIndicator color="#111827" />
-              <Text style={styles.text}>
+              <Text accessibilityLiveRegion="polite" style={styles.text}>
                 {t(
-                  progress === null
-                    ? 'vehicleRequest.scan.preparing'
-                    : progress >= 1
-                      ? 'vehicleRequest.scan.processing'
-                      : 'vehicleRequest.scan.uploading',
+                  phase === "queued"
+                    ? "vehicleRequest.scan.queued"
+                    : phase === "processing"
+                      ? "vehicleRequest.scan.processing"
+                      : progress === null
+                        ? "vehicleRequest.scan.preparing"
+                        : progress >= 1
+                          ? "vehicleRequest.scan.accepting"
+                          : "vehicleRequest.scan.uploading",
                   { progress: Math.round((progress ?? 0) * 100) },
                 )}
               </Text>
             </View>
+          ) : null}
+          {busy && progress !== null && !cancelPrompt ? (
+            <ScanButton
+              title="vehicleRequest.scan.cancel"
+              onPress={requestClose}
+            />
           ) : null}
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -425,7 +520,7 @@ export function RegistrationScan({
           >
             {permissionDenied ? (
               <ScanButton
-                title={'vehicleRequest.scan.settings'}
+                title={"vehicleRequest.scan.settings"}
                 onPress={() => {
                   void Linking.openSettings();
                 }}
@@ -434,22 +529,22 @@ export function RegistrationScan({
             {
               <>
                 <Text style={styles.text}>
-                  {t('vehicleRequest.scan.disclosure')}
+                  {t("vehicleRequest.scan.disclosure")}
                 </Text>
                 <Text style={styles.text}>
-                  {t('vehicleRequest.scan.instructions')}
+                  {t("vehicleRequest.scan.instructions")}
                 </Text>
                 {images.map((photo, index) => (
                   <View key={photo.uri} style={styles.card}>
                     <Text style={styles.label}>
                       {t(
                         index === 0
-                          ? 'vehicleRequest.scan.front'
-                          : 'vehicleRequest.scan.back',
+                          ? "vehicleRequest.scan.front"
+                          : "vehicleRequest.scan.back",
                       )}
                     </Text>
                     <Image
-                      accessibilityLabel={t('vehicleRequest.scan.preview')}
+                      accessibilityLabel={t("vehicleRequest.scan.preview")}
                       source={{ uri: photo.uri }}
                       style={styles.preview}
                       resizeMode="contain"
@@ -457,7 +552,7 @@ export function RegistrationScan({
                     <View style={styles.row}>
                       {
                         <ScanButton
-                          title={'vehicleRequest.scan.retake'}
+                          title={"vehicleRequest.scan.retake"}
                           onPress={() => {
                             void choose(true, index);
                           }}
@@ -466,7 +561,7 @@ export function RegistrationScan({
                       }
                       {
                         <ScanButton
-                          title={'vehicleRequest.scan.replace'}
+                          title={"vehicleRequest.scan.replace"}
                           onPress={() => {
                             void choose(false, index);
                           }}
@@ -477,7 +572,7 @@ export function RegistrationScan({
                     <View style={styles.row}>
                       {
                         <ScanButton
-                          title={'vehicleRequest.scan.rotate'}
+                          title={"vehicleRequest.scan.rotate"}
                           onPress={() => {
                             void rotate(index);
                           }}
@@ -486,7 +581,7 @@ export function RegistrationScan({
                       }
                       {
                         <ScanButton
-                          title={'vehicleRequest.scan.remove'}
+                          title={"vehicleRequest.scan.remove"}
                           onPress={() => {
                             cleanupFile(photo.uri);
                             changeImages(
@@ -503,7 +598,7 @@ export function RegistrationScan({
                   <View style={styles.row}>
                     {
                       <ScanButton
-                        title={'vehicleRequest.scan.camera'}
+                        title={"vehicleRequest.scan.camera"}
                         onPress={() => {
                           void choose(true);
                         }}
@@ -512,7 +607,7 @@ export function RegistrationScan({
                     }
                     {
                       <ScanButton
-                        title={'vehicleRequest.scan.gallery'}
+                        title={"vehicleRequest.scan.gallery"}
                         onPress={() => {
                           void choose(false);
                         }}
@@ -523,7 +618,7 @@ export function RegistrationScan({
                 ) : null}
                 {
                   <ScanButton
-                    title={'vehicleRequest.scan.extract'}
+                    title={"vehicleRequest.scan.extract"}
                     onPress={() => {
                       void scan();
                     }}
@@ -532,8 +627,8 @@ export function RegistrationScan({
                 }
                 {
                   <ScanButton
-                    title={'vehicleRequest.scan.manual'}
-                    onPress={close}
+                    title={"vehicleRequest.scan.manual"}
+                    onPress={requestClose}
                   />
                 }
               </>
@@ -545,29 +640,29 @@ export function RegistrationScan({
   );
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFF', padding: 16 },
+  screen: { flex: 1, backgroundColor: "#FFF", padding: 16 },
   content: { gap: 16, paddingBottom: 24 },
   card: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     padding: 16,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: "#E5E8EF",
     gap: 12,
   },
   row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
     gap: 8,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
-  heading: { color: '#111827', fontSize: 20, fontWeight: '700', flexShrink: 1 },
-  label: { color: '#111827', fontSize: 14, fontWeight: '600' },
-  text: { color: '#111827', fontSize: 14, lineHeight: 21 },
+  heading: { color: "#111827", fontSize: 20, fontWeight: "700", flexShrink: 1 },
+  label: { color: "#111827", fontSize: 14, fontWeight: "600" },
+  text: { color: "#111827", fontSize: 14, lineHeight: 21 },
   feedbackError: {
-    color: '#B42318',
-    backgroundColor: '#FEF3F2',
+    color: "#B42318",
+    backgroundColor: "#FEF3F2",
     padding: 12,
     borderRadius: 12,
     marginVertical: 8,
@@ -575,8 +670,8 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   feedbackSuccess: {
-    color: '#067647',
-    backgroundColor: '#ECFDF3',
+    color: "#067647",
+    backgroundColor: "#ECFDF3",
     padding: 12,
     borderRadius: 12,
     marginVertical: 8,
@@ -584,17 +679,17 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   feedbackProgress: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 12,
   },
   button: {
-    backgroundColor: '#FFC548',
+    backgroundColor: "#FFC548",
     borderRadius: 14,
     padding: 14,
     minHeight: 48,
   },
   disabled: { opacity: 0.45 },
-  preview: { width: '100%', height: 220 },
+  preview: { width: "100%", height: 220 },
 });

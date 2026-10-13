@@ -5,10 +5,24 @@
 The vehicle transport form now starts with **Scan registration card**, while
 retaining manual entry and VIN/Swiss lookup. Capture or choose one image and an
 optional reverse side, review the previews, then explicitly upload for extraction.
-The screen explains external AI processing before upload. Review/edit extracted
-values and confirm which fields to apply; replacing existing values requires an
-explicit selection. Unknown make/model values require catalog selection or
-manual-entry confirmation. Scanning never submits the transport request.
+The screen explains external AI processing before upload. Readable values fill
+the form automatically; review and edit them before submitting. Edits made while
+a scan is pending are preserved. Unknown make/model names remain editable.
+Scanning never submits the transport request.
+
+Uploads return a job ID, then the app polls for the result every two seconds.
+The waiting message explains that other scans must finish first, and changes to
+**Reading your registration card…** when processing starts. Scans are bounded to
+five minutes. Polling pauses in the background and resumes immediately on return.
+**Cancel scan**, close/back and manual entry ask **Cancel this scan?** with
+**Keep waiting** and **Cancel scan**. Confirming cancels the server job and
+discards late results. If cancellation cannot reach the API, server expiration
+still cleans up. Switching accounts also discards the old scan.
+
+Deploy the updated API first. It requires Redis, globally limits extraction
+workers, and streams photos into private temporary storage. The previous API
+endpoint remains supported for older app versions. No new native dependency is
+needed for the job/status flow, and there are no background completion notifications.
 
 This feature adds `expo-image-manipulator` for Expo SDK 56; install with
 `npm install` and rebuild the development/native app using `npm run android:usb`
@@ -23,7 +37,8 @@ section for the regional endpoint, response/error contract and server setup.
 
 To test a real card, sign in, open Vehicle transport, scan a sharp full-card
 photo without glare, then compare every extracted value with the original.
-Check replacement consent, missing weight fallback, and manual entry before
+Check waiting/processing feedback, cancellation confirmation, missing weight
+fallback, and manual entry before
 continuing through normal request submission. Scan images and review evidence
 are temporary and are excluded from saved drafts and transport request photos.
 Only confirmed form values and minimal local provenance enter the draft.

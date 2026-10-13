@@ -210,6 +210,8 @@ it('discards delayed scan responses after cancellation and a newer scan', async 
   await click(tree, 'vehicleRequest.scan.extract');
   const oldSignal = extractRegistrationCard.mock.calls[0][1].signal;
   await click(tree, 'vehicleRequest.close');
+  expect(oldSignal.aborted).toBe(false);
+  await click(tree, 'vehicleRequest.scan.cancel');
   expect(oldSignal.aborted).toBe(true);
   await click(tree, 'vehicleRequest.scan.title');
   await review();
@@ -336,7 +338,7 @@ it.each(['REGISTRATION_UNAVAILABLE', 'REGISTRATION_INVALID_OUTPUT', 'REGISTRATIO
   expect(button(tree, 'vehicleRequest.scan.extract').props.disabled).toBe(false);
 });
 
-it('ends a stalled scan after 90 seconds, enables retry and ignores its late result', async () => {
+it('ends a stalled scan after five minutes, enables retry and ignores its late result', async () => {
   jest.useFakeTimers();
   let resolveOld;
   extractRegistrationCard.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));
@@ -344,7 +346,7 @@ it('ends a stalled scan after 90 seconds, enables retry and ignores its late res
     await render();
     await review();
     const oldSignal = extractRegistrationCard.mock.calls[0][1].signal;
-    await act(async () => jest.advanceTimersByTime(90000));
+    await act(async () => jest.advanceTimersByTime(300000));
     expectVisibleFeedback('REGISTRATION_TIMEOUT');
     expect(oldSignal.aborted).toBe(true);
     expect(button(tree, 'vehicleRequest.scan.extract').props.disabled).toBe(false);
@@ -353,10 +355,64 @@ it('ends a stalled scan after 90 seconds, enables retry and ignores its late res
     await act(async () => resolveOld({ ...result(), status: 'wrong_document' }));
     expectVisibleFeedback('partialSuccess');
     expect(feedback('wrong_document')).toBeUndefined();
-    await act(async () => jest.advanceTimersByTime(90000));
+    await act(async () => jest.advanceTimersByTime(300000));
     expectVisibleFeedback('partialSuccess');
     expect(feedback('REGISTRATION_TIMEOUT')).toBeUndefined();
   } finally {
     jest.useRealTimers();
   }
+});
+
+it('shows queued/processing status and asks before cancellation', async () => {
+  let updateStatus;
+  extractRegistrationCard.mockImplementationOnce((_photos, options) => {
+    updateStatus = options.onStatus;
+    return new Promise(() => {});
+  });
+  await render();
+  await review();
+  const signal = extractRegistrationCard.mock.calls[0][1].signal;
+  await act(async () => updateStatus('queued'));
+  expectVisibleFeedback('queued');
+  await click(tree, 'vehicleRequest.scan.cancel');
+  expectVisibleFeedback('cancelQuestion');
+  expect(signal.aborted).toBe(false);
+  await click(tree, 'vehicleRequest.scan.keepWaiting');
+  expect(signal.aborted).toBe(false);
+  await act(async () => updateStatus('processing'));
+  expectVisibleFeedback('processing');
+  await click(tree, 'vehicleRequest.scan.manual');
+  expect(signal.aborted).toBe(false);
+  await click(tree, 'vehicleRequest.scan.cancel');
+  expect(signal.aborted).toBe(true);
+  expect(onApply).not.toHaveBeenCalled();
+});
+
+it('holds a completed result while the cancellation confirmation is open', async () => {
+  let complete;
+  extractRegistrationCard.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+  await render();
+  await review();
+  await click(tree, 'vehicleRequest.close');
+  await act(async () => complete(result()));
+  expect(onApply).not.toHaveBeenCalled();
+  await click(tree, 'vehicleRequest.scan.keepWaiting');
+  expect(onApply).toHaveBeenCalledTimes(1);
+});
+
+it('cancels and discards a completed result after confirming cancellation', async () => {
+  const cancel = jest.fn(async () => {});
+  let complete;
+  extractRegistrationCard.mockImplementationOnce((_photos, options) => {
+    options.onAccepted(cancel);
+    return new Promise(resolve => { complete = resolve; });
+  });
+  await render();
+  await review();
+  await click(tree, 'vehicleRequest.close');
+  await act(async () => complete(result()));
+  expect(onApply).not.toHaveBeenCalled();
+  await click(tree, 'vehicleRequest.scan.cancel');
+  expect(cancel).toHaveBeenCalledTimes(1);
+  expect(onApply).not.toHaveBeenCalled();
 });
