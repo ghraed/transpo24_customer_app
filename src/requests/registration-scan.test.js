@@ -7,6 +7,7 @@ import { REGISTRATION_FIELDS } from '@/types/registration';
 import { REGISTRATION_SCAN_TIMEOUT_MS } from './registration-limits';
 import { extractRegistrationCard, getVehicleModels } from '@/lib/api';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 let mockAuthListener;
 let mockOwner = 'customer';
@@ -28,6 +29,7 @@ jest.mock('@/lib/api', () => ({
     { id: 'golf', name: 'Golf', brandId: 'vw' },
   ]),
 }));
+jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn(),
   launchCameraAsync: jest.fn(),
@@ -121,6 +123,7 @@ async function review() {
 }
 beforeEach(() => {
   jest.clearAllMocks();
+  DocumentPicker.getDocumentAsync.mockResolvedValue({ canceled: true, assets: null });
   mockOwner = 'customer';
   mockSavedCounter = 0;
   ImagePicker.requestCameraPermissionsAsync.mockResolvedValue({
@@ -377,4 +380,47 @@ it('keeps readable scan fields when the catalog lookup stalls', async () => {
   } finally {
     jest.useRealTimers();
   }
+});
+
+it('uploads a PDF with its original filename without image manipulation or rotation', async () => {
+  await render();
+  DocumentPicker.getDocumentAsync.mockResolvedValueOnce({
+    canceled: false, assets: [{ uri: 'file:///cache/card.pdf', name: 'card.pdf', mimeType: 'application/pdf', size: 1000 }],
+  });
+  await click(tree, 'vehicleRequest.scan.file');
+  expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith(expect.objectContaining({
+    type: ['application/pdf', 'image/*'], copyToCacheDirectory: true, base64: false,
+  }));
+  expect(mockSave).not.toHaveBeenCalled();
+  expect(button(tree, 'vehicleRequest.scan.rotate')).toBeUndefined();
+  await click(tree, 'vehicleRequest.scan.extract');
+  expect(extractRegistrationCard).toHaveBeenCalledWith([
+    { uri: 'file:///cache/card.pdf', fileName: 'card.pdf', mimeType: 'application/pdf' },
+  ], expect.anything());
+  expect(onApply).toHaveBeenCalledTimes(1);
+  expect(mockDelete).toHaveBeenCalled();
+});
+it('normalizes images selected from files and preserves the selection on cancellation', async () => {
+  await render();
+  DocumentPicker.getDocumentAsync.mockResolvedValueOnce({
+    canceled: false, assets: [{ uri: 'file:///cache/card.png', name: 'card.png', mimeType: 'image/png' }],
+  });
+  await click(tree, 'vehicleRequest.scan.file');
+  expect(mockSave).toHaveBeenCalledTimes(1);
+  await click(tree, 'vehicleRequest.scan.file');
+  await click(tree, 'vehicleRequest.scan.extract');
+  expect(extractRegistrationCard.mock.calls[0][0]).toEqual([
+    expect.objectContaining({ mimeType: 'image/jpeg' }),
+  ]);
+});
+it('ignores and cleans a file returned after the scan was closed', async () => {
+  let finish;
+  await render();
+  DocumentPicker.getDocumentAsync.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  await click(tree, 'vehicleRequest.scan.file');
+  await click(tree, 'vehicleRequest.close');
+  await act(async () => finish({ canceled: false, assets: [{ uri: 'file:///cache/card.pdf', name: 'card.pdf' }] }));
+  expect(mockDelete).toHaveBeenCalled();
+  expect(mockSave).not.toHaveBeenCalled();
+  expect(extractRegistrationCard).not.toHaveBeenCalled();
 });

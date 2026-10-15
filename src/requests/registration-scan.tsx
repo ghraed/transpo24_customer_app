@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { File, Paths } from 'expo-file-system';
 import Svg, { Path, Rect } from 'react-native-svg';
@@ -54,6 +55,7 @@ const scanColors = {
 const iconPaths = {
   scan: 'M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3M7 9h10M7 13h10M7 17h6',
   camera: 'M8 6l1.5-3h5L16 6h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4m8 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  document: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6M14 2v6h6M8 13h8M8 17h6',
   gallery: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2M3 17l6-6 4 4 3-3 5 5M8 7h.01',
   rotate: 'M3 10a9 9 0 1 1 2 8M3 4v6h6',
   remove: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',
@@ -264,7 +266,7 @@ export function RegistrationScan({
       context.release();
     }
   };
-  const choose = async (camera: boolean, replaceIndex?: number) => {
+  const choose = async (source: 'camera' | 'gallery' | 'file', replaceIndex?: number) => {
     if (
       busyRef.current ||
       (replaceIndex === undefined && imageRef.current.length >= 2)
@@ -277,7 +279,7 @@ export function RegistrationScan({
     setError('');
     setPermissionDenied(false);
     try {
-      if (camera) {
+      if (source === 'camera') {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
         if (!permission.granted) {
           if (id === epoch.current) {
@@ -295,14 +297,43 @@ export function RegistrationScan({
         exif: false,
         base64: false,
       };
-      const picked = camera
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
-      if (picked.canceled || id !== epoch.current) return;
+      const picked = source === 'file'
+        ? await DocumentPicker.getDocumentAsync({
+            type: ['application/pdf', 'image/*'],
+            multiple: false,
+            copyToCacheDirectory: true,
+            base64: false,
+          })
+        : source === 'camera'
+          ? await ImagePicker.launchCameraAsync(options)
+          : await ImagePicker.launchImageLibraryAsync(options);
+      if (picked.canceled) return;
       const asset = picked.assets[0];
-      if (Platform.OS !== 'web' && asset.uri.startsWith(Paths.cache.uri))
+      if ((Platform.OS !== 'web' && asset.uri.startsWith(Paths.cache.uri)) ||
+          (source === 'file' && asset.uri.startsWith('blob:')))
         ownedFiles.current.add(asset.uri);
-      const prepared = await prepare(asset.uri);
+      if (id !== epoch.current) {
+        cleanupFile(asset.uri);
+        return;
+      }
+      let prepared: LocalPhotoAsset;
+      try {
+        const name = 'name' in asset ? asset.name : asset.fileName;
+        const isPdf = asset.mimeType === 'application/pdf' || /\.pdf$/i.test(name ?? '');
+        if (isPdf) {
+          const size = Platform.OS === 'web'
+            ? ('file' in asset && asset.file ? asset.file.size : (await (await fetch(asset.uri)).blob()).size)
+            : new File(asset.uri).size;
+          if (!size || size > 8 * 1024 * 1024)
+            throw new Error('vehicleRequest.scan.tooLarge');
+          prepared = { uri: asset.uri, fileName: name || 'registration-card.pdf', mimeType: 'application/pdf' };
+        } else {
+          prepared = await prepare(asset.uri);
+        }
+      } catch (error) {
+        cleanupFile(asset.uri);
+        throw error;
+      }
       if (asset.uri !== prepared.uri) cleanupFile(asset.uri);
       if (id !== epoch.current) {
         cleanupFile(prepared.uri);
@@ -540,20 +571,26 @@ export function RegistrationScan({
                     {t(index === 0 ? 'vehicleRequest.scan.front' : 'vehicleRequest.scan.back')}
                   </Text>
                 </View>
-                <Image
+                {photo.mimeType === 'application/pdf' ? (
+                  <View style={styles.captureCard}>
+                    <ScanIcon name="document" size={40} />
+                    <Text style={styles.label}>{photo.fileName}</Text>
+                  </View>
+                ) : <Image
                   accessible
                   accessibilityLabel={t('vehicleRequest.scan.preview')}
                   source={{ uri: photo.uri }}
                   style={styles.preview}
                   resizeMode="contain"
-                />
+                />}
                 <View style={styles.photoControls}>
                   <View style={styles.row}>
-                    <ScanButton title="vehicleRequest.scan.retake" icon="camera" onPress={() => { void choose(true, index); }} disabled={busy} />
-                    <ScanButton title="vehicleRequest.scan.replace" icon="gallery" onPress={() => { void choose(false, index); }} disabled={busy} />
+                    <ScanButton title="vehicleRequest.scan.retake" icon="camera" onPress={() => { void choose('camera', index); }} disabled={busy} />
+                    <ScanButton title="vehicleRequest.scan.replace" icon="gallery" onPress={() => { void choose('gallery', index); }} disabled={busy} />
+                    <ScanButton title="vehicleRequest.scan.replaceFile" icon="document" onPress={() => { void choose('file', index); }} disabled={busy} />
                   </View>
                   <View style={styles.row}>
-                    <ScanButton title="vehicleRequest.scan.rotate" variant="quiet" icon="rotate" onPress={() => { void rotate(index); }} disabled={busy} />
+                    {photo.mimeType !== 'application/pdf' ? <ScanButton title="vehicleRequest.scan.rotate" variant="quiet" icon="rotate" onPress={() => { void rotate(index); }} disabled={busy} /> : null}
                     <ScanButton
                       title="vehicleRequest.scan.remove"
                       variant="danger"
@@ -572,9 +609,10 @@ export function RegistrationScan({
               <View style={styles.sourceActions}>
                 {images.length ? <Text style={styles.label}>{t('vehicleRequest.scan.back')}</Text> : null}
                 <View style={styles.row}>
-                  <ScanButton title="vehicleRequest.scan.camera" variant={images.length ? 'secondary' : 'primary'} icon="camera" onPress={() => { void choose(true); }} disabled={busy} />
-                  <ScanButton title="vehicleRequest.scan.gallery" icon="gallery" onPress={() => { void choose(false); }} disabled={busy} />
+                  <ScanButton title="vehicleRequest.scan.camera" variant={images.length ? 'secondary' : 'primary'} icon="camera" onPress={() => { void choose('camera'); }} disabled={busy} />
+                  <ScanButton title="vehicleRequest.scan.gallery" icon="gallery" onPress={() => { void choose('gallery'); }} disabled={busy} />
                 </View>
+                <ScanButton title="vehicleRequest.scan.file" icon="document" onPress={() => { void choose('file'); }} disabled={busy} />
               </View>
             ) : null}
             <View style={styles.disclosure}>

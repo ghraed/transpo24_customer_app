@@ -1,5 +1,5 @@
 import { extractRegistrationCard } from './api';
-import { REGISTRATION_FIELDS } from '@/types/registration';
+import { REGISTRATION_FIELDS, isRegistrationExtraction } from '@/types/registration';
 import { REGISTRATION_SCAN_TIMEOUT_MS } from '@/requests/registration-limits';
 import { refreshAccessToken } from './auth-token';
 
@@ -189,4 +189,23 @@ it('discards a response arriving after an account change', async () => {
     code: 'REGISTRATION_CANCELLED',
   });
   expect(refreshAccessToken).not.toHaveBeenCalled();
+});
+
+it('preserves the PDF multipart filename and content type', async () => {
+  await extractRegistrationCard([{ uri: 'file:///cache/card.pdf', fileName: 'card.pdf', mimeType: 'application/pdf' }], {
+    signal: new AbortController().signal,
+  });
+  expect(instances[0].send.mock.calls[0][0].getParts()[0]).toMatchObject({
+    fieldName: 'images', name: 'card.pdf', type: 'application/pdf',
+  });
+});
+
+it('accepts third-page PDF evidence and rejects evidence beyond the six-page limit', () => {
+  const body = response();
+  body.fields.vin = { value: 'WDD1770511N100321', status: 'extracted', evidence: [{
+    imageIndex: 2, label: 'E', printedValue: 'WDD1770511N100321', unit: null, meaning: 'vin',
+  }] };
+  expect(isRegistrationExtraction(body)).toBe(true);
+  body.fields.vin.evidence[0].imageIndex = 6;
+  expect(isRegistrationExtraction(body)).toBe(false);
 });

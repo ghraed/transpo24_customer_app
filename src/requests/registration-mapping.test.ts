@@ -72,6 +72,17 @@ describe('registration review mapping', () => {
       manual: true,
     });
   });
+  it('leaves a VIN flagged by the API for review out of automatic form filling', () => {
+    const fields = Object.fromEntries(REGISTRATION_FIELDS.map(name => [name, {
+      value: null, status: 'missing', evidence: [],
+    } as RegistrationExtraction['fields']['vin']])) as RegistrationExtraction['fields'];
+    fields.vin = { value: '1M8GDM9A6KP042788', status: 'invalid', evidence: [] };
+    fields.brand = { value: 'Example Make', status: 'extracted', evidence: [] };
+    const extracted: RegistrationExtraction = { status: 'partial', fields, missingFields: ['vin'], warnings: [{ code: 'VIN_REVIEW_REQUIRED', field: 'vin' }] };
+    const next = applyRegistrationExtraction(current(), scanValues(extracted), [], []);
+    expect(next.vin).toBe('');
+    expect(next.brand).toBe('Example Make');
+  });
   it('maps only confirmed current-form fields to dependent catalog IDs', () => {
     const v = current();
     const selected = defaultScanSelection(v, values);
