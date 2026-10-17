@@ -1,3 +1,5 @@
+import { DeliveryDateEditor } from './delivery-date-editor';
+import { addCalendarDays } from './schedule-rules';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import {
@@ -34,10 +36,12 @@ export function ScheduleEditor({
   value,
   onChange,
   invalid,
+  furniture = false,
 }: {
   value: VehicleDraft['schedule'];
   onChange: (value: VehicleDraft['schedule']) => void;
   invalid: boolean;
+  furniture?: boolean;
 }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<'date' | 'time'>();
@@ -57,6 +61,12 @@ export function ScheduleEditor({
     else result.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
     return result;
   };
+  const commitPickup = (next: VehicleDraft['schedule']) => {
+    const deliveryAt = next.immediate !== value.immediate || next.at !== value.at
+      ? undefined
+      : value.deliveryAt;
+    onChange({ ...next, deliveryAt });
+  };
   const picker = mode ? (
     <DateTimePicker
       value={pending}
@@ -69,13 +79,14 @@ export function ScheduleEditor({
       locale={mode === 'time' ? 'en_GB' : getActiveLocale()}
       positiveButton={{ label: t('vehicleRequest.save') }}
       negativeButton={{ label: t('vehicleRequest.close') }}
+      maximumDate={mode === 'date' && !furniture ? addCalendarDays(new Date(), 5) : undefined}
       minimumDate={mode === 'date' ? new Date() : undefined}
       onChange={(event, selected) => {
         if (Platform.OS === 'android') {
           const selectedMode = mode;
           setMode(undefined);
           if (event.type === 'set' && selected)
-            onChange({
+            commitPickup({
               ...value,
               at: merge(selected, selectedMode).toISOString(),
             });
@@ -93,7 +104,7 @@ export function ScheduleEditor({
           trackColor={{ false: '#D9DFE8', true: '#FFC548' }}
           thumbColor="#FFFFFF"
           value={value.immediate}
-          onValueChange={(immediate) => onChange({ ...value, immediate })}
+          onValueChange={(immediate) => commitPickup({ ...value, immediate })}
         />
       </View>
       {!value.immediate ? (
@@ -121,6 +132,9 @@ export function ScheduleEditor({
           ))}
         </View>
       ) : null}
+      <DeliveryDateEditor furniture={furniture} pickup={value.immediate ? new Date() : current}
+        value={value.deliveryAt ? new Date(value.deliveryAt) : undefined}
+        onChange={(date) => onChange({ ...value, deliveryAt: date.toISOString() })} />
       {Platform.OS === 'ios' ? (
         <Modal
           transparent
@@ -137,7 +151,7 @@ export function ScheduleEditor({
                 </Pressable>
                 <Pressable
                   onPress={() => {
-                    onChange({ ...value, at: pending.toISOString() });
+                    commitPickup({ ...value, at: pending.toISOString() });
                     setMode(undefined);
                   }}
                 >

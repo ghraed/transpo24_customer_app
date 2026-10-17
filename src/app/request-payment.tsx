@@ -25,6 +25,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   cancelPaymentHold,
   confirmDriverOffer,
+  confirmFurnitureReservation,
   finalizeAcceptedOfferPayment,
   getCustomerRequestStatus,
   getRequestPaymentStatus,
@@ -167,6 +168,7 @@ function isPendingPaymentStatus(status: PaymentStatus): boolean {
 
 function isFinalizedRequestStatus(status: RequestStatusResponse['status']): boolean {
   return (
+    status === 'DRIVER_ASSIGNED' ||
     status === 'DRIVER_GOING_TO_PICKUP' ||
     status === 'DRIVER_ARRIVED_PICKUP' ||
     status === 'ITEM_PICKED_UP' ||
@@ -401,14 +403,23 @@ export default function RequestPaymentScreen() {
 
     try {
       try {
-        const response = await confirmDriverOffer(requestId, offerId, {
+        const response = await (requestData?.status === 'RESERVED'
+          ? confirmFurnitureReservation(requestId, {
+              confirm: true, paymentMethod: selectedMethod, stripePaymentMethodId: cardSelection.paymentMethodId || undefined,
+            })
+          : confirmDriverOffer(requestId, offerId, {
           confirm: true,
           paymentMethod: selectedMethod,
-        });
+          stripePaymentMethodId: cardSelection.paymentMethodId || undefined,
+        }));
 
         createdPayment = response.payment;
         setPaymentResult(response.payment);
 
+        if (response.nextStep === 'RESERVATION_CONFIRMED') {
+          router.replace({ pathname: '/request-status', params: { requestId } });
+          return;
+        }
         if (response.nextStep === 'TRACK_REQUEST') {
           if (!(await recoverFinalizedRequestState())) {
             navigateToNextStep(response.request.id);
@@ -702,7 +713,7 @@ export default function RequestPaymentScreen() {
             <View style={styles.modalBadge}>
               <Text style={styles.modalBadgeText}>{appI18n.t("Important")}</Text>
             </View>
-            <Text style={styles.modalTitle}>{appI18n.t("Immediate payment capture")}</Text>
+            <Text style={styles.modalTitle}>{appI18n.t(requestData?.status === 'RESERVED' ? "Confirm pickup and pay" : "Immediate payment capture")}</Text>
             <Text style={styles.modalBody}>
               {appI18n.t('Confirming this driver charges {{amount}} immediately.', {
                 amount: formatMoney(amount, currency),

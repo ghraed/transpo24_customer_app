@@ -1,3 +1,5 @@
+import { DeliveryDateEditor } from '@/requests/delivery-date-editor';
+import { deliveryAfterPickupChange, validateSchedule } from '@/requests/schedule-rules';
 import { RequestProgress } from '@/requests/request-progress';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -132,6 +134,9 @@ function formatValidationMessage(
     return appI18n.t("Scheduled pickup must be in the future.");
   }
 
+  const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.movingDate, delivery: form.scheduledDeliveryAt, furniture: true });
+  if (scheduleError) return appI18n.t(scheduleError);
+
   return null;
 }
 
@@ -151,21 +156,43 @@ export default function FurnitureDetailsScreen() {
       : undefined,
   );
 
-  const [form, setForm] = useState<FurnitureTransportFormData>(() => ({
-    furnitureDescription: pendingFurnitureDetails?.furnitureDescription ?? '',
-    approximateItemCount:
-      typeof pendingFurnitureDetails?.approximateItemCount === 'number'
-        ? String(pendingFurnitureDetails.approximateItemCount)
-        : '1',
-    needsHelpers: pendingFurnitureDetails?.needsHelpers ?? false,
-    helpersCount:
-      typeof pendingFurnitureDetails?.helpersCount === 'number'
-        ? String(pendingFurnitureDetails.helpersCount)
-        : '',
-    isImmediate: pendingFurnitureDetails?.isImmediate ?? false,
-    movingDate: buildDefaultMovingDate(pendingFurnitureDetails?.movingDate),
-    customerCanHelpLoading: pendingFurnitureDetails?.customerCanHelpLoading ?? false,
-  }));
+  const [form, setForm] = useState<FurnitureTransportFormData>(() => {
+    const movingDate = buildDefaultMovingDate(pendingFurnitureDetails?.movingDate);
+    return {
+      furnitureDescription: pendingFurnitureDetails?.furnitureDescription ?? '',
+      approximateItemCount:
+        typeof pendingFurnitureDetails?.approximateItemCount === 'number'
+          ? String(pendingFurnitureDetails.approximateItemCount)
+          : '1',
+      needsHelpers: pendingFurnitureDetails?.needsHelpers ?? false,
+      helpersCount:
+        typeof pendingFurnitureDetails?.helpersCount === 'number'
+          ? String(pendingFurnitureDetails.helpersCount)
+          : '',
+      isImmediate: pendingFurnitureDetails?.isImmediate ?? false,
+      movingDate,
+      scheduledDeliveryAt: pendingFurnitureDetails?.scheduledDeliveryAt
+        ? new Date(pendingFurnitureDetails.scheduledDeliveryAt)
+        : undefined,
+      customerCanHelpLoading: pendingFurnitureDetails?.customerCanHelpLoading ?? false,
+    };
+  });
+  const updatePickup = (
+    patch: Partial<Pick<FurnitureTransportFormData, 'movingDate' | 'isImmediate'>>,
+  ) => {
+    setForm(prev => {
+      const next = { ...prev, ...patch };
+      const now = new Date();
+      return {
+        ...next,
+        scheduledDeliveryAt: next.isImmediate !== prev.isImmediate ? undefined : deliveryAfterPickupChange(
+          prev.isImmediate ? now : prev.movingDate,
+          next.isImmediate ? now : next.movingDate,
+          prev.scheduledDeliveryAt,
+        ),
+      };
+    });
+  };
   const [selectedPhotos, setSelectedPhotos] = useState<LocalPhotoAsset[]>(
     pendingFurniturePhotoAssets,
   );
@@ -187,8 +214,9 @@ export default function FurnitureDetailsScreen() {
       return;
     }
 
-    if (validationMessage) {
-      setErrorMessage(validationMessage);
+    const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.movingDate, delivery: form.scheduledDeliveryAt, furniture: true });
+    if (validationMessage || scheduleError) {
+      setErrorMessage(validationMessage ?? appI18n.t(scheduleError!));
       return;
     }
 
@@ -207,6 +235,7 @@ export default function FurnitureDetailsScreen() {
           needsHelpers: form.needsHelpers,
           helpersCount: form.needsHelpers ? Number(form.helpersCount) : undefined,
           isImmediate: form.isImmediate,
+          scheduledDeliveryAt: form.scheduledDeliveryAt?.toISOString(),
           scheduledPickupAt:
             form.isImmediate || !form.movingDate ? undefined : form.movingDate.toISOString(),
           movingDate: form.movingDate.toISOString(),
@@ -395,14 +424,14 @@ export default function FurnitureDetailsScreen() {
             <View style={styles.toggleRow}>
               <Pressable
                 style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
-                onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
+                onPress={() => updatePickup({ isImmediate: true })}
               >
                 <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
                   {appI18n.t("Immediate pickup")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
-                onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
+                onPress={() => updatePickup({ isImmediate: false })}
               >
                 <Text style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}>
                   {appI18n.t("Schedule later")}</Text>
@@ -511,6 +540,8 @@ export default function FurnitureDetailsScreen() {
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
+          <DeliveryDateEditor furniture pickup={form.isImmediate ? new Date() : form.movingDate} value={form.scheduledDeliveryAt} onChange={(date) => setForm((prev) => ({ ...prev, scheduledDeliveryAt: date }))} />
+
           <Pressable
             style={[styles.continueButton, !canContinue && styles.continueDisabled]}
             onPress={onContinue}
@@ -533,7 +564,7 @@ export default function FurnitureDetailsScreen() {
                 if (next.getTime() <= minimumMovingDate.getTime()) {
                   next.setTime(minimumMovingDate.getTime());
                 }
-                setForm((prev) => ({ ...prev, movingDate: next }));
+                updatePickup({ movingDate: next });
               }}
             />
           ) : null}
@@ -553,7 +584,7 @@ export default function FurnitureDetailsScreen() {
                 if (next.getTime() <= minimumMovingDate.getTime()) {
                   next.setTime(minimumMovingDate.getTime());
                 }
-                setForm((prev) => ({ ...prev, movingDate: next }));
+                updatePickup({ movingDate: next });
               }}
             />
           ) : null}

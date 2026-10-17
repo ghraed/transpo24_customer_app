@@ -2,8 +2,10 @@ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import * as Notifications from 'expo-notifications';
+import { getCustomerRequestStatus, getCustomerRequestOffers } from '@/lib/api';
 import { useNotificationNavigation } from './useNotificationNavigation';
 
+jest.mock('@/lib/api', () => ({ getCustomerRequestStatus: jest.fn(), getCustomerRequestOffers: jest.fn() }));
 const mockPush = jest.fn();
 const mockRouter = { push: mockPush };
 let mockNavigationState;
@@ -91,4 +93,21 @@ test('does not replay a consumed tap after remounting', async () => {
   renderer = null;
   await render();
   expect(mockPush).toHaveBeenCalledTimes(1);
+});
+
+test('a pickup-reminder push opens payment after loading the current reservation', async () => {
+  const request = { id: 'job1', status: 'RESERVED', reservation: { canConfirmAndPay: true, confirmationOpensAt: new Date(Date.now() - 1000).toISOString(), paymentDeadlineAt: new Date(Date.now() + 86400000).toISOString() } };
+  const offer = { id: 'offer1', status: 'ACCEPTED' };
+  getCustomerRequestStatus.mockResolvedValue(request);
+  getCustomerRequestOffers.mockResolvedValue({ offers: [offer] });
+  mockResponse = response({ type: 'FURNITURE_CONFIRMATION_DUE', requestId: 'job1' });
+  await render();
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/request-payment', params: { requestId: 'job1', offerId: 'offer1', request: JSON.stringify(request), offer: JSON.stringify(offer) } });
+  expect(Notifications.clearLastNotificationResponse).toHaveBeenCalledTimes(1);
+});
+test('a reminder push falls back to Alerts when request loading fails', async () => {
+  getCustomerRequestStatus.mockRejectedValue(new Error('Offline'));
+  mockResponse = response({ type: 'FURNITURE_CONFIRMATION_DUE', requestId: 'job1' });
+  await render();
+  expect(mockPush).toHaveBeenCalledWith('/(tabs)/notifications');
 });

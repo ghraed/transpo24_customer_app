@@ -1,3 +1,5 @@
+import { DeliveryDateEditor } from '@/requests/delivery-date-editor';
+import { addCalendarDays, deliveryAfterPickupChange, validateSchedule } from '@/requests/schedule-rules';
 import { ServiceHeader, SERVICE_HEADER_OPTIONS } from '@/requests/service-header';
 import { MotorcycleProgress } from '@/requests/motorcycle-progress';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -275,6 +277,7 @@ export default function MotorcycleDetailsScreen() {
     requiresDedicatedCarrier: pendingMotorcycleDetails?.requiresDedicatedCarrier ?? false,
     isImmediate: pendingMotorcycleDetails?.isImmediate ?? false,
     scheduledPickupAt: buildDefaultScheduledPickupAt(pendingMotorcycleDetails?.scheduledPickupAt),
+    scheduledDeliveryAt: pendingMotorcycleDetails?.scheduledDeliveryAt ? new Date(pendingMotorcycleDetails.scheduledDeliveryAt) : undefined,
   }));
   const [step, setStep] = useState<'choice' | 'details' | 'schedule'>(pendingMotorcycleDetails ? 'details' : 'choice');
   const isBicycle = form.transportKind === 'BICYCLE';
@@ -352,8 +355,9 @@ export default function MotorcycleDetailsScreen() {
       return;
     }
 
-    if (validationMessage) {
-      setErrorMessage(validationMessage);
+    const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.scheduledPickupAt, delivery: form.scheduledDeliveryAt, furniture: false });
+    if (validationMessage || scheduleError) {
+      setErrorMessage(validationMessage ?? appI18n.t(scheduleError!));
       return;
     }
 
@@ -376,6 +380,7 @@ export default function MotorcycleDetailsScreen() {
           requiresSpecialWrapping: false,
           requiresDedicatedCarrier: false,
           isImmediate: form.isImmediate,
+          scheduledDeliveryAt: form.scheduledDeliveryAt?.toISOString(),
           scheduledPickupAt:
             form.isImmediate || !form.scheduledPickupAt
               ? undefined
@@ -596,14 +601,14 @@ export default function MotorcycleDetailsScreen() {
       <View style={styles.toggleRow}>
         <Pressable
           style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
-          onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
+          onPress={() => setForm((prev) => ({ ...prev, isImmediate: true, scheduledDeliveryAt: prev.isImmediate ? prev.scheduledDeliveryAt : undefined }))}
         >
           <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
             {appI18n.t("Immediate pickup")}</Text>
         </Pressable>
         <Pressable
           style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
-          onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
+          onPress={() => setForm((prev) => ({ ...prev, isImmediate: false, scheduledDeliveryAt: prev.isImmediate ? undefined : prev.scheduledDeliveryAt }))}
         >
           <Text style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}>
             {appI18n.t("Schedule for later")}</Text>
@@ -656,6 +661,8 @@ export default function MotorcycleDetailsScreen() {
       </View>
       </View>
 
+      <DeliveryDateEditor pickup={form.isImmediate ? new Date() : form.scheduledPickupAt} value={form.scheduledDeliveryAt} onChange={(date) => setForm((prev) => ({ ...prev, scheduledDeliveryAt: date }))} />
+
       <Pressable
         style={[styles.continueButton, !canContinue && styles.continueDisabled]}
         onPress={onContinue}
@@ -678,13 +685,14 @@ export default function MotorcycleDetailsScreen() {
           value={form.scheduledPickupAt}
           mode="date"
           minimumDate={new Date()}
+          maximumDate={addCalendarDays(new Date(), 5)}
           onChange={(_, selectedDate) => {
             setShowDatePicker(false);
             if (!selectedDate) return;
             const base = form.scheduledPickupAt;
             const next = new Date(selectedDate);
             next.setHours(base.getHours(), base.getMinutes(), 0, 0);
-            setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+            setForm((prev) => ({ ...prev, scheduledPickupAt: next, scheduledDeliveryAt: deliveryAfterPickupChange(prev.scheduledPickupAt, next, prev.scheduledDeliveryAt) }));
           }}
         />
       ) : null}
@@ -701,7 +709,7 @@ export default function MotorcycleDetailsScreen() {
               if (!selectedDate) return;
               const next = new Date(form.scheduledPickupAt);
               next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-              setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+              setForm((prev) => ({ ...prev, scheduledPickupAt: next, scheduledDeliveryAt: deliveryAfterPickupChange(prev.scheduledPickupAt, next, prev.scheduledDeliveryAt) }));
             }}
           />
         ) : null}

@@ -48,6 +48,7 @@ const fixture = () => ({
   updatedAt: "2026-09-21T10:00:00.000Z",
   isImmediate: true,
   scheduledPickupAt: null,
+  scheduledDeliveryAt: new Date(Date.now() + 4 * 86400000).toISOString(),
   pickupLocation: { latitude: 47, longitude: 8, address: "Pickup" },
   dropoffLocation: { latitude: 48, longitude: 9, address: "Dropoff" },
   itemTitle: "Original boxes",
@@ -104,7 +105,7 @@ it("prefills and keeps edits local until submission, preserving request identity
     });
     tree.root
       .findByType(ScheduleEditor)
-      .props.onChange({ immediate: false, at: "2099-01-01T10:00:00.000Z" });
+      .props.onChange({ deliveryAt: fixture().scheduledDeliveryAt, immediate: false, at: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1, 12).toISOString() });
     button(tree, "Remove").props.onPress();
   });
   expect(submitRequestEdit).not.toHaveBeenCalled();
@@ -116,7 +117,7 @@ it("prefills and keeps edits local until submission, preserving request identity
       goodsApproximateWeightKg: 75,
       pickupLocation: { latitude: 46, longitude: 7, address: "Changed pickup" },
       isImmediate: false,
-      scheduledPickupAt: "2099-01-01T10:00:00.000Z",
+      scheduledPickupAt: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1, 12).toISOString(),
       retainedPhotoIds: [],
     }),
     [],

@@ -665,6 +665,7 @@ function VehicleRequest({
                     {draft.schedule.immediate
                       ? t('vehicleRequest.immediate')
                       : scheduleLabel(draft.schedule, i18n.language)}
+                    {'\n'}{t('Delivery Date')}: {draft.schedule.deliveryAt ? new Date(draft.schedule.deliveryAt).toLocaleDateString() : t('Select delivery date')}
                   </Text>,
                 )}
                 {card(

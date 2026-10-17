@@ -16,3 +16,7 @@ test('chat alerts open the associated conversation', () => {
 test('an alert without a destination has no route', () => {
   expect(resolveNotificationRoute({ type: 'DRIVER_ARRIVED_PICKUP' })).toBeNull();
 });
+
+test('a development reminder preview opens Alerts without opening a booking', () => {
+  expect(resolveNotificationRoute({ type: 'TEST_NOTIFICATION', reminderPreview: true })).toBe('/(tabs)/notifications');
+});

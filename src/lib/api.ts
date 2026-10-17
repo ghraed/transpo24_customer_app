@@ -549,7 +549,7 @@ export async function createMotorcycleTransportRequest(
   const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/motorcycle-transport`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, scheduleTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
   });
 
   if (!response.ok) {
@@ -569,7 +569,7 @@ export async function createGoodsTransportRequest(
   const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/goods-transport`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, scheduleTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
   });
 
   if (!response.ok) {
@@ -593,6 +593,8 @@ export async function createFurnitureTransportRequest(
   if (payload.isImmediate !== undefined) formData.append('isImmediate', String(payload.isImmediate));
   if (payload.helpersCount !== undefined) formData.append('helpersCount', String(payload.helpersCount));
   formData.append('movingDate', payload.movingDate);
+  formData.append('scheduleTimeZone', Intl.DateTimeFormat().resolvedOptions().timeZone);
+  if (payload.scheduledDeliveryAt) formData.append('scheduledDeliveryAt', payload.scheduledDeliveryAt);
   formData.append(
     'customerCanHelpLoading',
     String(payload.customerCanHelpLoading ?? false),
@@ -716,7 +718,7 @@ export async function updateScheduleAndItemDetails(
   const response = await fetchWithNetworkError(endpoint, {
       method: 'PATCH',
       headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, scheduleTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
     },
   );
 
@@ -1426,7 +1428,7 @@ export async function getCustomerRequestOffers(requestId: string): Promise<Custo
 
 export interface AcceptCustomerRequestOfferPayload {
   confirm?: boolean;
-  paymentMethod: PaymentMethod;
+  paymentMethod?: PaymentMethod;
   stripePaymentMethodId?: string;
 }
 
@@ -1440,6 +1442,7 @@ export async function acceptCustomerRequestOffer(
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
+      supportsDeferredFurniture: true,
       confirm: payload.confirm ?? true,
       paymentMethod: payload.paymentMethod,
       ...(payload.stripePaymentMethodId
@@ -1456,6 +1459,20 @@ export async function acceptCustomerRequestOffer(
     response,
     'Failed to parse confirm offer response.',
   );
+}
+
+export async function confirmFurnitureReservation(requestId: string, payload: AcceptCustomerRequestOfferPayload): Promise<CustomerAcceptOfferResponse> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/reservation/confirm`, {
+    method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ ...payload, confirm: true }),
+  });
+  if (!response.ok) throw await parseError(response, 'Failed to confirm pickup.');
+  return parseJsonBody<CustomerAcceptOfferResponse>(response, 'Failed to parse reservation payment.');
+}
+
+export async function cancelFurnitureReservation(requestId: string): Promise<{ requestStatus: 'CANCELLED'; refundedAmount: number; retainedAmount: number; currency: string }> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/reservation/cancel`, { method: 'POST', headers: getAuthHeaders() });
+  if (!response.ok) throw await parseError(response, 'Failed to cancel reservation.');
+  return { requestStatus: 'CANCELLED', refundedAmount: 0, retainedAmount: 0, currency: '' };
 }
 
 export async function confirmDriverOffer(
@@ -1663,7 +1680,7 @@ export async function getRequestForEdit(requestId: string): Promise<EditableRequ
 
 export async function submitRequestEdit(requestId: string, details: Record<string, unknown>, photos: LocalPhotoAsset[]): Promise<void> {
   const form = new FormData();
-  form.append('details', JSON.stringify(details));
+  form.append('details', JSON.stringify({ ...details, scheduleTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
   for (const [index, photo] of photos.entries()) {
     const file = toFormDataFile(photo, index);
     if (Platform.OS === 'web') {
@@ -1689,4 +1706,21 @@ export async function submitRequestEdit(requestId: string, details: Record<strin
     xhr.onerror = xhr.ontimeout = xhr.onabort = () => reject(new Error('Failed to save request.'));
     xhr.send(form);
   });
+}
+
+export interface PickupPaymentReminder {
+  timeZone?: string;
+  requestId: string;
+  offerId: string;
+  pickupAt: string;
+  deadlineAt: string;
+  pickupAddress: string | null;
+  dropoffAddress: string | null;
+  price: number;
+  currency: string;
+}
+export async function getPickupPaymentReminders(): Promise<PickupPaymentReminder[]> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/reservations/payment-due`, { method: 'GET', headers: getAuthHeaders() });
+  if (!response.ok) throw await parseError(response, 'Failed to load pickup reminders.');
+  return parseJsonBody<PickupPaymentReminder[]>(response, 'Failed to load pickup reminders.');
 }

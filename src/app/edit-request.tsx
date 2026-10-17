@@ -1,3 +1,4 @@
+import { validateSchedule } from '@/requests/schedule-rules';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -252,6 +253,13 @@ export default function EditRequestScreen() {
           Date.parse(draft.scheduledPickupAt) <= Date.now())
       )
         throw new Error(t("vehicleRequest.errorSchedule"));
+      const scheduleError = validateSchedule({
+        immediate: draft.isImmediate,
+        pickup: draft.scheduledPickupAt ? new Date(draft.scheduledPickupAt) : undefined,
+        delivery: typeof draft.scheduledDeliveryAt === 'string' ? new Date(draft.scheduledDeliveryAt) : undefined,
+        furniture: service?.key === 'FURNITURE_TRANSPORT',
+      });
+      if (scheduleError) throw new Error(t(scheduleError));
       await submitRequestEdit(requestId, editRequestPayload(draft), photos);
       router.replace({
         pathname: "/request-status",
@@ -383,7 +391,9 @@ export default function EditRequestScreen() {
                   pickupLocation={draft.pickupLocation}
                 />
                 <ScheduleEditor
+                  furniture={service?.key === 'FURNITURE_TRANSPORT'}
                   value={{
+                    deliveryAt: typeof draft.scheduledDeliveryAt === 'string' ? draft.scheduledDeliveryAt : undefined,
                     immediate: draft.isImmediate,
                     at: draft.scheduledPickupAt ?? defaultPickupAt,
                   }}
@@ -391,6 +401,7 @@ export default function EditRequestScreen() {
                     patch({
                       isImmediate: value.immediate,
                       scheduledPickupAt: value.at,
+                      scheduledDeliveryAt: value.deliveryAt,
                     })
                   }
                   invalid={false}

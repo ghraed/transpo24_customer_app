@@ -61,6 +61,7 @@ export interface CreateMotorcycleTransportRequestPayload {
   requiresDedicatedCarrier: boolean;
   isImmediate?: boolean;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
   pickupLocation: MotorcycleLocationPayload;
   deliveryLocation: MotorcycleLocationPayload;
 }
@@ -75,6 +76,7 @@ export interface GoodsLocationPayload {
 export interface CreateGoodsTransportRequestPayload {
   isImmediate?: boolean;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
   shipmentSize: GoodsShipmentSize;
   goodsDescription: string;
   approximateWeightKg: number;
@@ -100,6 +102,7 @@ export interface PendingMotorcycleDetailsPayload {
   requiresDedicatedCarrier: boolean;
   isImmediate?: boolean;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
 }
 
 export interface PendingGoodsDetailsPayload {
@@ -112,6 +115,7 @@ export interface PendingGoodsDetailsPayload {
   heavyShipmentType?: GoodsHeavyShipmentType;
   isImmediate?: boolean;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
 }
 
 export interface FurnitureLocationPayload {
@@ -128,6 +132,7 @@ export interface CreateFurnitureTransportRequestPayload {
   approximateItemCount: number;
   needsHelpers?: boolean;
   movingDate: string;
+  scheduledDeliveryAt?: string;
   customerCanHelpLoading?: boolean;
   pickupLocation: FurnitureLocationPayload;
   deliveryLocation: FurnitureLocationPayload;
@@ -141,6 +146,7 @@ export interface PendingFurnitureDetailsPayload {
   helpersCount?: number;
   isImmediate?: boolean;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
   movingDate: string;
   customerCanHelpLoading: boolean;
 }
@@ -159,6 +165,7 @@ export interface MotorcycleTransportFormData {
   requiresDedicatedCarrier: boolean;
   isImmediate: boolean;
   scheduledPickupAt: Date;
+  scheduledDeliveryAt?: Date;
 }
 
 export interface GoodsTransportFormData {
@@ -171,6 +178,7 @@ export interface GoodsTransportFormData {
   heavyShipmentType: GoodsHeavyShipmentType | '';
   isImmediate: boolean;
   scheduledPickupAt: Date;
+  scheduledDeliveryAt?: Date;
 }
 
 export interface FurnitureTransportFormData {
@@ -180,6 +188,7 @@ export interface FurnitureTransportFormData {
   helpersCount: string;
   isImmediate: boolean;
   movingDate: Date;
+  scheduledDeliveryAt?: Date;
   customerCanHelpLoading: boolean;
 }
 
@@ -215,6 +224,7 @@ export type ItemCondition =
 export interface UpdateScheduleAndItemDetailsPayload {
   isImmediate: boolean;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
   itemTitle: string;
   itemDescription?: string;
   itemType: ItemType;
@@ -278,6 +288,7 @@ export interface SubmitCustomerRequestPayload {
 }
 
 export type CustomerRequestStatus =
+  | 'RESERVED'
   | 'DRAFT'
   | 'PENDING_QUOTES'
   | 'QUOTED'
@@ -294,6 +305,7 @@ export type CustomerRequestStatus =
   | 'CANCELLED';
 
 export type RequestTrackingStatus =
+  | 'RESERVED'
   | 'DRIVER_ASSIGNED'
   | 'DRIVER_GOING_TO_PICKUP'
   | 'DRIVER_ARRIVED_PICKUP'
@@ -569,6 +581,7 @@ export interface CustomerRequest {
   schedule?: {
     isImmediate: boolean;
     scheduledPickupAt: string | null;
+    scheduledDeliveryAt?: string | null;
   };
   itemDetails?: {
     title: string | null;
@@ -634,6 +647,7 @@ export interface CustomerRequestApiResponse {
   schedule: {
     isImmediate: boolean;
     scheduledPickupAt: string | null;
+    scheduledDeliveryAt?: string | null;
   };
   itemDetails: {
     title: string | null;
@@ -699,6 +713,7 @@ export type DropoffLocationRouteParams = {
   pendingPhotoAssets?: string;
   isImmediate?: string;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
   itemDetails?: string;
   uploadedPhotos?: string;
 };
@@ -761,6 +776,7 @@ export interface SubmitRequestRouteParams {
   dropoffPlaceId?: string;
   isImmediate?: string;
   scheduledPickupAt?: string;
+  scheduledDeliveryAt?: string;
   itemTitle?: string;
   itemType?: ItemType;
   itemDetails?: string;
@@ -770,7 +786,20 @@ export interface SubmitRequestRouteParams {
   routeDistanceKm?: string;
 }
 
+export interface FurnitureReservation {
+  state: string;
+  confirmationOpensAt: string;
+  paymentDeadlineAt: string;
+  pickupConfirmedAt: string | null;
+  paidAt: string | null;
+  canConfirmAndPay: boolean;
+  canCancel: boolean;
+}
+
 export interface RequestStatusResponse {
+  reservation?: FurnitureReservation | null;
+  deferredFurnitureEligible?: boolean;
+  deferredReservationEligible?: boolean;
   canEdit?: boolean;
   id: string;
   serviceId: string;
@@ -805,6 +834,7 @@ export interface RequestStatusResponse {
   schedule: {
     isImmediate: boolean;
     scheduledPickupAt: string | null;
+    scheduledDeliveryAt?: string | null;
   };
   itemDetails: {
     title: string | null;
@@ -898,8 +928,9 @@ export interface CustomerAcceptOfferResponse {
     createdAt: string;
   };
   rejectedOffersCount: number;
-  nextStep: 'CONFIRM_PAYMENT' | 'TRACK_REQUEST';
-  payment: PaymentSummary;
+  nextStep: 'CONFIRM_PAYMENT' | 'TRACK_REQUEST' | 'RESERVATION_CONFIRMED';
+  reservation?: FurnitureReservation | null;
+  payment: PaymentSummary | null;
 }
 
 export interface RequestStatusRouteParams {

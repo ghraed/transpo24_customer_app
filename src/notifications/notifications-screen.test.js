@@ -3,7 +3,7 @@ import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { FlatList } from 'react-native';
 import NotificationsScreen from '@/app/(tabs)/notifications';
-import { getCustomerNotifications, getPendingDeliveryConfirmations, markCustomerNotificationRead } from '@/lib/api';
+import { getCustomerNotifications, getPendingDeliveryConfirmations, markCustomerNotificationRead, getCustomerRequestStatus, getCustomerRequestOffers } from '@/lib/api';
 
 const mockPush = jest.fn();
 const mockTranslate = (key) => key;
@@ -13,8 +13,8 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: mockTranslate }) }));
 jest.mock('expo-notifications', () => ({ addNotificationReceivedListener: () => ({ remove: jest.fn() }) }));
-jest.mock('@/lib/api', () => ({ getCustomerNotifications: jest.fn(), getPendingDeliveryConfirmations: jest.fn(), markCustomerNotificationRead: jest.fn() }));
-jest.mock('@/components/tracking-ui', () => ({ clientTheme: {} }));
+jest.mock('@/lib/api', () => ({ getCustomerNotifications: jest.fn(), getPendingDeliveryConfirmations: jest.fn(), markCustomerNotificationRead: jest.fn(), getCustomerRequestStatus: jest.fn(), getCustomerRequestOffers: jest.fn() }));
+jest.mock('@/components/tracking-ui', () => ({ clientTheme: { reminderSurface: '#FFF7E0' } }));
 
 let renderer;
 const alert = { id: 'n1', title: 'Driver reached pickup', body: 'Driver arrived.', type: 'DRIVER_ARRIVED_PICKUP', data: { tripId: 'trip1' }, readAt: null, createdAt: '2026-09-11T10:00:00.000Z' };
@@ -131,4 +131,24 @@ test('Today refreshes its cutoff after local midnight', async () => {
   await act(async () => { jest.advanceTimersByTime(30000); });
   expect(getCustomerNotifications).toHaveBeenLastCalledWith(undefined, new Date(2026, 8, 12, 0, 0).toISOString());
   expect(renderer.root.findByType(FlatList).props.data).toEqual([]);
+});
+
+test('pickup payment reminders have a soft amber surface and action label even after being read', async () => {
+  await mount();
+  const list = renderer.root.findByType(FlatList).props;
+  const row = list.renderItem({ item: { ...alert, type: 'FURNITURE_CONFIRMATION_DUE', readAt: new Date().toISOString() } });
+  expect(row.props.style).toEqual(expect.arrayContaining([expect.objectContaining({ backgroundColor: '#FFF7E0', borderLeftWidth: 4 })]));
+  expect(textContent(row)).toContain('ACTION REQUIRED');
+});
+
+test('a pickup reminder opens payment for its current accepted offer', async () => {
+  const request = { id: 'request2', status: 'RESERVED', reservation: { canConfirmAndPay: true, confirmationOpensAt: new Date(Date.now() - 1000).toISOString(), paymentDeadlineAt: new Date(Date.now() + 86400000).toISOString() } };
+  const offer = { id: 'offer2', status: 'ACCEPTED', price: 120, currency: 'CHF' };
+  getCustomerRequestStatus.mockResolvedValue(request);
+  getCustomerRequestOffers.mockResolvedValue({ offers: [offer] });
+  await mount();
+  const row = renderer.root.findByType(FlatList).props.renderItem({ item: { ...alert, type: 'FURNITURE_CONFIRMATION_DUE', data: { requestId: 'request2' } } });
+  await act(async () => { await row.props.onPress(); });
+  expect(getCustomerRequestStatus).toHaveBeenCalledWith('request2');
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/request-payment', params: { requestId: 'request2', offerId: 'offer2', request: JSON.stringify(request), offer: JSON.stringify(offer) } });
 });

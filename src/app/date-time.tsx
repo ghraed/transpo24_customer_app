@@ -1,3 +1,5 @@
+import { DeliveryDateEditor } from '@/requests/delivery-date-editor';
+import { addCalendarDays, deliveryAfterPickupChange, validateSchedule } from '@/requests/schedule-rules';
 import { Redirect } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -47,6 +49,7 @@ type ServiceKey =
 interface ScheduleAndItemDetailsForm {
   isImmediate: boolean;
   scheduledPickupAt?: Date;
+  scheduledDeliveryAt?: Date;
   itemTitle: string;
   itemDescription?: string;
   itemType: ItemType;
@@ -166,6 +169,7 @@ function DateTimeScreen() {
   const [form, setForm] = useState<ScheduleAndItemDetailsForm>({
     isImmediate: false,
     scheduledPickupAt: defaultScheduledPickupAt,
+    scheduledDeliveryAt: undefined,
     itemTitle: '',
     itemDescription: '',
     itemType: defaultItemTypeFromServiceKey(serviceKey),
@@ -193,7 +197,18 @@ function DateTimeScreen() {
     key: K,
     value: ScheduleAndItemDetailsForm[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm(prev => {
+      const next = { ...prev, [key]: value };
+      if (key === 'scheduledPickupAt' || key === 'isImmediate') {
+        const now = new Date();
+        next.scheduledDeliveryAt = next.isImmediate !== prev.isImmediate ? undefined : deliveryAfterPickupChange(
+          prev.isImmediate ? now : prev.scheduledPickupAt ?? now,
+          next.isImmediate ? now : next.scheduledPickupAt ?? now,
+          prev.scheduledDeliveryAt,
+        );
+      }
+      return next;
+    });
   };
 
   const validationErrors = useMemo(() => {
@@ -224,6 +239,8 @@ function DateTimeScreen() {
       }
     }
 
+    const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.scheduledPickupAt, delivery: form.scheduledDeliveryAt, furniture: serviceKey === 'FURNITURE_TRANSPORT' });
+    if (scheduleError) errors.push(appI18n.t(scheduleError));
     if (form.itemYear) {
       const year = parseInteger(form.itemYear);
       if (year === undefined || year < 1900 || year > currentYear + 1) {
@@ -329,6 +346,8 @@ function DateTimeScreen() {
   };
 
   const onContinue = async (): Promise<void> => {
+    const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.scheduledPickupAt, delivery: form.scheduledDeliveryAt, furniture: serviceKey === 'FURNITURE_TRANSPORT' });
+    if (scheduleError) { setErrorMessage(appI18n.t(scheduleError)); return; }
     if (validationErrors.length > 0) {
       setErrorMessage(validationErrors[0] ?? appI18n.t("Please complete required fields."));
       return;
@@ -336,6 +355,7 @@ function DateTimeScreen() {
 
     const payload: UpdateScheduleAndItemDetailsPayload = {
       isImmediate: form.isImmediate,
+      scheduledDeliveryAt: form.scheduledDeliveryAt?.toISOString(),
       scheduledPickupAt:
         form.isImmediate || !form.scheduledPickupAt ? undefined : form.scheduledPickupAt.toISOString(),
       itemTitle: form.itemTitle.trim(),
@@ -402,6 +422,7 @@ function DateTimeScreen() {
           dropoffPlaceId: params.dropoffPlaceId ?? '',
           isImmediate: String(payload.isImmediate),
           scheduledPickupAt: payload.scheduledPickupAt ?? '',
+          scheduledDeliveryAt: payload.scheduledDeliveryAt ?? '',
           itemTitle: payload.itemTitle,
           itemType: payload.itemType,
           itemDetails: JSON.stringify({
@@ -551,6 +572,8 @@ function DateTimeScreen() {
           ) : null}
         </View>
 
+        <DeliveryDateEditor furniture={serviceKey === 'FURNITURE_TRANSPORT'} pickup={form.isImmediate ? new Date() : form.scheduledPickupAt ?? new Date()}
+          value={form.scheduledDeliveryAt} onChange={(date) => updateForm('scheduledDeliveryAt', date)} />
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{appI18n.t("Item Details")}</Text>
           <TextInput
@@ -751,6 +774,7 @@ function DateTimeScreen() {
           value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="date"
           minimumDate={new Date()}
+          maximumDate={(serviceKey === 'FURNITURE_TRANSPORT') ? undefined : addCalendarDays(new Date(), 5)}
           onChange={(_, selectedDate) => {
             setShowDatePicker(false);
             if (!selectedDate) return;

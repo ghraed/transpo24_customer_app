@@ -41,6 +41,7 @@ export async function submitVehicleDraft(
   await updateScheduleAndItemDetails(id, {
     ...vehiclePayload(current),
     isImmediate: current.schedule.immediate,
+    scheduledDeliveryAt: current.schedule.deliveryAt,
     scheduledPickupAt: current.schedule.immediate
       ? undefined
       : current.schedule.at,

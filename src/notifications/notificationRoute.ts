@@ -3,6 +3,8 @@ import type { PushNotificationData } from './types';
 
 export function resolveNotificationRoute(data: PushNotificationData): Href | null {
   switch (data.type) {
+    case 'TEST_NOTIFICATION':
+      return data.reminderPreview === true ? '/(tabs)/notifications' : null;
     case 'NEW_DRIVER_OFFER':
       if (typeof data.requestId === 'string' && data.requestId.trim()) {
         return {

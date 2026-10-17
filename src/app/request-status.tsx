@@ -35,6 +35,8 @@ import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { useTransportRequestChatRoom } from '@/hooks/use-transport-request-chat-room';
 import {
   approveAdditionalCharge,
+  confirmDriverOffer,
+  cancelFurnitureReservation,
   cancelCollectedTrip,
   deleteCustomerRequest,
   getCustomerRequestOffers,
@@ -93,6 +95,7 @@ interface OrderProgressStep {
 type SocketState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error' | 'unavailable';
 
 const STATUS_LABELS: Partial<Record<CustomerRequestStatus, string>> = {
+  RESERVED: 'Driver reserved — awaiting payment',
   PENDING_QUOTES: 'Waiting for driver offers',
   QUOTED: 'Choose your driver',
   ACCEPTED: 'Driver before starting the order',
@@ -959,13 +962,25 @@ export default function RequestStatusScreen() {
     router.push(buildTrackingHref(requestData, effectiveTrackingStatus));
   }, [canOpenTrackingMap, effectiveTrackingStatus, requestData, router]);
 
-  const openPaymentScreen = (): void => {
+  const openPaymentScreen = async (): Promise<void> => {
     if (!requestData || !selectedOffer) return;
 
     const offerId = selectedOffer.offerId || selectedOffer.id;
     setErrorMessage('');
     setSuccessMessage('');
     setIsOpeningPaymentOfferId(offerId);
+
+    if (requestData.deferredReservationEligible ?? requestData.deferredFurnitureEligible) {
+      try {
+        await confirmDriverOffer(requestData.id, offerId, { confirm: true });
+        const refreshed = await getCustomerRequestStatus(requestData.id);
+        setRequestData(refreshed);
+        setSuccessMessage(appI18n.t('Driver reserved. Payment opens 48 hours before pickup.'));
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : appI18n.t('Unable to reserve driver.'));
+      } finally { setIsOpeningPaymentOfferId(''); }
+      return;
+    }
 
     router.push(
       (`/request-payment?requestId=${encodeURIComponent(requestData.id)}&offerId=${encodeURIComponent(offerId)}&request=${encodeURIComponent(JSON.stringify(requestData))}&offer=${encodeURIComponent(JSON.stringify(selectedOffer))}`) as Href,
@@ -1029,7 +1044,7 @@ export default function RequestStatusScreen() {
       setErrorMessage('');
       setSuccessMessage('');
 
-      const result = await cancelCollectedTrip(requestData.id);
+      const result = requestData.status === 'RESERVED' ? await cancelFurnitureReservation(requestData.id) : await cancelCollectedTrip(requestData.id);
 
       setRequestData((previousRequestData) =>
         previousRequestData
@@ -1072,7 +1087,7 @@ export default function RequestStatusScreen() {
       setLatestDriverLocation(null);
       setNearDeliveryMessage('');
       setSuccessMessage(
-        `Trip cancelled. Refunded ${formatMoney(
+        requestData.status === 'RESERVED' ? appI18n.t('Reservation cancelled. No cancellation fee applies.') : `Trip cancelled. Refunded ${formatMoney(
           result.refundedAmount,
           result.currency,
         )}. Cancellation fee kept: ${formatMoney(
@@ -1388,7 +1403,7 @@ export default function RequestStatusScreen() {
   const helperText = buildOffersHelperText(requestData, offers.length);
   const canChooseOffer = requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED';
   const canDeleteCurrentRequest = canDeleteRequest(requestData.status);
-  const canCancelCurrentTrip = requestData.cancellation.canCancelCollectedTrip;
+  const canCancelCurrentTrip = requestData.status === 'RESERVED' || requestData.cancellation.canCancelCollectedTrip;
   const cancellationReason = requestData.cancellation.reason;
   const refundPreview = requestData.cancellation.refundPreview;
   const liveStatusLabel = getTrackingStatusLabel(
@@ -1608,6 +1623,7 @@ export default function RequestStatusScreen() {
                     ? 'Immediate pickup'
                     : formatDate(requestData.schedule.scheduledPickupAt)}
                 </Text>
+                {requestData.schedule.scheduledDeliveryAt ? <Text style={styles.detailValue}>{appI18n.t('Delivery Date')}: {formatDate(requestData.schedule.scheduledDeliveryAt)}</Text> : null}
               </View>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>{appI18n.t("Item")}</Text>
@@ -1638,6 +1654,17 @@ export default function RequestStatusScreen() {
             ) : null}
           </View>
 
+          {requestData.reservation && requestData.status === 'RESERVED' ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{appI18n.t('Driver reserved — awaiting payment')}</Text>
+              <Text style={styles.rowValue}>{appI18n.t('Payment opens')}: {formatDate(requestData.reservation.confirmationOpensAt)}</Text>
+              <Text style={styles.rowValue}>{appI18n.t('Payment deadline')}: {formatDate(requestData.reservation.paymentDeadlineAt)}</Text>
+              <Text style={styles.rowValue}>{appI18n.t('Confirm pickup and pay before the deadline to keep your reservation.')}</Text>
+              {requestData.reservation.canConfirmAndPay && acceptedOffer ? <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={() => router.push({ pathname: '/request-payment', params: { requestId: requestData.id, offerId: acceptedOffer.offerId || acceptedOffer.id, request: JSON.stringify(requestData), offer: JSON.stringify(acceptedOffer) } })}>
+                <Text style={styles.primaryButtonText}>{appI18n.t('Confirm pickup and pay')}</Text>
+              </Pressable> : null}
+            </View>
+          ) : null}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{appI18n.t("Driver Offers")}</Text>
             {offers.length === 0 ? (
@@ -1751,7 +1778,7 @@ export default function RequestStatusScreen() {
                       }}
                     >
                       <Text style={styles.primaryButtonText}>
-                        {isOpening ? appI18n.t('Opening next step…') : isSelected ? appI18n.t('Continue') : appI18n.t('Select Driver')}
+                        {isOpening ? appI18n.t('Opening next step…') : isSelected ? appI18n.t((requestData.deferredReservationEligible ?? requestData.deferredFurnitureEligible) ? 'Reserve Driver' : 'Continue') : appI18n.t('Select Driver')}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -1968,7 +1995,7 @@ export default function RequestStatusScreen() {
               >
                 <Text style={styles.cardTitle}>{appI18n.t("Cancel trip?")}</Text>
                 <Text style={styles.rowValue}>
-                  {requestData.cancellation.refundPreview
+                  {requestData.status === 'RESERVED' ? appI18n.t('Cancel this unpaid reservation for free? Your driver reservation will be released.') : requestData.cancellation.refundPreview
                     ? `If you cancel now, ${formatMoney(
                       requestData.cancellation.refundPreview.refundedAmount,
                       requestData.cancellation.refundPreview.currency,

@@ -3,6 +3,7 @@ import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { TextInput } from 'react-native';
 import MotorcycleDetails from '@/app/motorcycle-details';
+import { DeliveryDateEditor } from './delivery-date-editor';
 import SubmitRequest from '@/app/submit-request';
 import { createMotorcycleTransportRequest, updateScheduleAndItemDetails, submitCustomerRequest } from '@/lib/api';
 
@@ -60,6 +61,10 @@ test('bicycle flow validates type, hides VIN, retains optional details and needs
   });
   await press(tree, 'Continue');
   await press(tree, 'Immediate pickup');
+  expect(tree.root.findByType(DeliveryDateEditor).props.value).toBeUndefined();
+  await press(tree, 'Continue to Pickup Location');
+  expect(mockPush).not.toHaveBeenCalled();
+  await act(async () => tree.root.findByType(DeliveryDateEditor).props.onChange(new Date(Date.now() + 2 * 86400000)));
   await press(tree, 'Continue to Pickup Location');
   const route = mockPush.mock.calls[0][0];
   expect(route.pathname).toBe('/pickup-location');
@@ -73,7 +78,7 @@ test('bicycle flow validates type, hides VIN, retains optional details and needs
 
 test('switching from motorcycle to bicycle removes a stale VIN from the outgoing request', async () => {
   mockParams = { serviceId: 'service', serviceKey: 'MOTORCYCLE_TRANSPORT', pendingMotorcycleDetails: JSON.stringify({
-    transportKind: 'MOTORCYCLE', motorcycleType: 'CRUISER', motorcycleCondition: 'WORKING', chassisNumber: 'INVALID', isImmediate: true,
+    transportKind: 'MOTORCYCLE', motorcycleType: 'CRUISER', motorcycleCondition: 'WORKING', chassisNumber: 'INVALID', isImmediate: true, scheduledDeliveryAt: new Date(Date.now() + 2 * 86400000).toISOString(),
   }) };
   await act(async () => { tree = create(<MotorcycleDetails />); });
   expect(visible(tree, 'VIN / Chassis')).toBe(true);
@@ -82,6 +87,7 @@ test('switching from motorcycle to bicycle removes a stale VIN from the outgoing
   await press(tree, 'Select bicycle type');
   await press(tree, 'City bike');
   await press(tree, 'Continue');
+  await act(async () => tree.root.findByType(DeliveryDateEditor).props.onChange(new Date(Date.now() + 2 * 86400000)));
   await press(tree, 'Continue to Pickup Location');
   expect(JSON.parse(mockPush.mock.calls[0][0].params.pendingMotorcycleDetails).chassisNumber).toBeUndefined();
 });
@@ -92,7 +98,7 @@ test('review submits bicycle brand/model and transport notes before publishing',
     pickupLatitude: '48', pickupLongitude: '8', pickupAddress: 'Pickup',
     dropoffLatitude: '49', dropoffLongitude: '9', dropoffAddress: 'Delivery',
     pendingMotorcycleDetails: JSON.stringify({ transportKind: 'BICYCLE', bicycleType: 'E_BIKE',
-      motorcycleType: 'OTHER', motorcycleCondition: 'UNKNOWN', isImmediate: true,
+      motorcycleType: 'OTHER', motorcycleCondition: 'UNKNOWN', isImmediate: true, scheduledDeliveryAt: new Date(Date.now() + 2 * 86400000).toISOString(),
       brand: 'Trek', model: 'Verve', additionalNotes: 'Keep upright' }),
   };
   await act(async () => { tree = create(<SubmitRequest />); });
@@ -106,4 +112,30 @@ test('review submits bicycle brand/model and transport notes before publishing',
   }));
   expect(submitCustomerRequest).toHaveBeenCalledWith('request-1', { customerNote: 'Keep upright' });
   expect(updateScheduleAndItemDetails.mock.invocationCallOrder[0]).toBeLessThan(submitCustomerRequest.mock.invocationCallOrder[0]);
+});
+
+test('motorcycle pickup changes clear delivery and block continuation', async () => {
+  mockParams = { serviceId: 'service', serviceKey: 'MOTORCYCLE_TRANSPORT', pendingMotorcycleDetails: JSON.stringify({
+    transportKind: 'MOTORCYCLE', motorcycleType: 'CRUISER', motorcycleCondition: 'WORKING', isImmediate: false,
+    scheduledPickupAt: new Date(Date.now() + 86400000).toISOString(), scheduledDeliveryAt: new Date(Date.now() + 3 * 86400000).toISOString(),
+  }) };
+  await act(async () => { tree = create(<MotorcycleDetails />); });
+  await press(tree, 'Continue');
+  await press(tree, 'Pickup Date');
+  await act(async () => tree.root.findByType('DateTimePicker').props.onChange({ type: 'set' }, new Date(Date.now() + 2 * 86400000)));
+  expect(tree.root.findByType(DeliveryDateEditor).props.value).toBeUndefined();
+  await press(tree, 'Continue to Pickup Location');
+  expect(mockPush).not.toHaveBeenCalled();
+});
+
+test('review rejects missing delivery even when route parameters are entered directly', async () => {
+  mockParams = { serviceId: 'service', serviceKey: 'MOTORCYCLE_TRANSPORT',
+    pickupLatitude: '48', pickupLongitude: '8', dropoffLatitude: '49', dropoffLongitude: '9',
+    pendingMotorcycleDetails: JSON.stringify({ motorcycleType: 'OTHER', motorcycleCondition: 'UNKNOWN', isImmediate: true }),
+  };
+  await act(async () => { tree = create(<SubmitRequest />); });
+  expect(visible(tree, 'Please select a delivery date.')).toBe(true);
+  await press(tree, 'Submit Request');
+  expect(createMotorcycleTransportRequest).not.toHaveBeenCalled();
+  expect(submitCustomerRequest).not.toHaveBeenCalled();
 });

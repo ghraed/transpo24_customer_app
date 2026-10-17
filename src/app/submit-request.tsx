@@ -1,3 +1,4 @@
+import { validateSchedule } from '@/requests/schedule-rules';
 import { RequestProgress } from '@/requests/request-progress';
 import { reviewAddressRoute } from '@/requests/review-address-route';
 import { Redirect } from 'expo-router';
@@ -374,8 +375,25 @@ function SubmitRequestScreen() {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [currentValidationTime] = useState<number>(() => Date.now());
 
+  const getScheduleError = (now = new Date()): string | null => {
+    const details = isMotorcycleTransport ? pendingMotorcycleDetails : isGoodsTransport ? pendingGoodsDetails : isFurnitureTransport ? pendingFurnitureDetails : undefined;
+    const pickup = details
+      ? details.scheduledPickupAt ?? ('movingDate' in details ? details.movingDate : undefined)
+      : typeof params.scheduledPickupAt === 'string' ? params.scheduledPickupAt : undefined;
+    const delivery = details?.scheduledDeliveryAt ?? (typeof params.scheduledDeliveryAt === 'string' ? params.scheduledDeliveryAt : undefined);
+    return validateSchedule({
+      immediate: details ? details.isImmediate ?? true : params.isImmediate === 'true',
+      pickup: pickup ? new Date(pickup) : undefined,
+      delivery: delivery ? new Date(delivery) : undefined,
+      furniture: isFurnitureTransport,
+      now,
+    });
+  };
+  const scheduleValidationMessage = getScheduleError(new Date(currentValidationTime));
+
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
+    if (scheduleValidationMessage) errors.push(appI18n.t(scheduleValidationMessage));
     if (!pickupLocation) errors.push('Pickup location is missing.');
     if (!dropoffLocation) errors.push('Dropoff location is missing.');
     if (isMotorcycleTransport) {
@@ -488,6 +506,7 @@ function SubmitRequestScreen() {
     requestId,
     scheduledPickupAt,
     currentValidationTime,
+    scheduleValidationMessage,
   ]);
 
   const canSubmit = validationErrors.length === 0 && !isSubmitting;
@@ -582,6 +601,8 @@ function SubmitRequestScreen() {
       return;
     }
 
+    const scheduleError = getScheduleError();
+    if (scheduleError) { setErrorMessage(appI18n.t(scheduleError)); return; }
     setIsSubmitting(true);
     setErrorMessage('');
     setSuccessMessage('');
@@ -589,6 +610,7 @@ function SubmitRequestScreen() {
     try {
       if (isMotorcycleTransport && pickupLocation && dropoffLocation && pendingMotorcycleDetails) {
         const payload: CreateMotorcycleTransportRequestPayload = {
+          scheduledDeliveryAt: pendingMotorcycleDetails.scheduledDeliveryAt,
           motorcycleType: pendingMotorcycleDetails.transportKind === 'BICYCLE' ? 'OTHER' : pendingMotorcycleDetails.motorcycleType,
           chassisNumber: pendingMotorcycleDetails.transportKind === 'BICYCLE' ? undefined : pendingMotorcycleDetails.chassisNumber?.trim() || undefined,
           motorcycleCondition: pendingMotorcycleDetails.motorcycleCondition,
@@ -620,6 +642,7 @@ function SubmitRequestScreen() {
         await updateScheduleAndItemDetails(created.id, {
           isImmediate: payload.isImmediate ?? true,
           scheduledPickupAt: payload.scheduledPickupAt,
+          scheduledDeliveryAt: payload.scheduledDeliveryAt,
           itemType: bicycle ? 'OTHER' : 'MOTORCYCLE',
           itemTitle: `${appI18n.t(bicycle ? 'Bicycle' : 'Motorcycle')} — ${formatEnumLabel(bicycle ? pendingMotorcycleDetails.bicycleType! : pendingMotorcycleDetails.motorcycleType)}`,
           itemDescription: bicycle ? formatEnumLabel(pendingMotorcycleDetails.bicycleType!) : undefined,
@@ -644,6 +667,7 @@ function SubmitRequestScreen() {
 
       if (isGoodsTransport && pickupLocation && dropoffLocation && pendingGoodsDetails) {
         const payload: CreateGoodsTransportRequestPayload = {
+          scheduledDeliveryAt: pendingGoodsDetails.scheduledDeliveryAt,
           shipmentSize: pendingGoodsDetails.shipmentSize,
           isImmediate: pendingGoodsDetails.isImmediate,
           scheduledPickupAt: pendingGoodsDetails.isImmediate ? undefined : pendingGoodsDetails.scheduledPickupAt,
@@ -692,6 +716,7 @@ function SubmitRequestScreen() {
         pendingFurnitureDetails
       ) {
         const payload: CreateFurnitureTransportRequestPayload = {
+          scheduledDeliveryAt: pendingFurnitureDetails.scheduledDeliveryAt,
           furnitureDescription: pendingFurnitureDetails.furnitureDescription.trim(),
           approximateItemCount: pendingFurnitureDetails.approximateItemCount,
           needsHelpers: pendingFurnitureDetails.needsHelpers,
@@ -723,6 +748,7 @@ function SubmitRequestScreen() {
         const payload: UpdateScheduleAndItemDetailsPayload = {
           isImmediate,
           scheduledPickupAt: isImmediate ? undefined : scheduledPickupAt,
+          scheduledDeliveryAt: typeof params.scheduledDeliveryAt === 'string' ? params.scheduledDeliveryAt : undefined,
           itemTitle: itemDetails.title?.trim() || appI18n.t("Vehicle transport"),
           itemDescription: itemDetails.description ?? undefined,
           itemType: itemDetails.type ?? 'VEHICLE',
@@ -905,6 +931,7 @@ function SubmitRequestScreen() {
                 pendingMotorcycleDetails.isImmediate ?? true,
                 pendingMotorcycleDetails.scheduledPickupAt,
               )}
+              {'\n'}{appI18n.t('Delivery Date')}: {pendingMotorcycleDetails.scheduledDeliveryAt ? new Date(pendingMotorcycleDetails.scheduledDeliveryAt).toLocaleDateString() : appI18n.t('Select delivery date')}
             </Text>
           </View>
         ) : null}
@@ -938,6 +965,7 @@ function SubmitRequestScreen() {
                 pendingGoodsDetails.isImmediate ?? true,
                 pendingGoodsDetails.scheduledPickupAt,
               )}
+              {'\n'}{appI18n.t('Delivery Date')}: {pendingGoodsDetails.scheduledDeliveryAt ? new Date(pendingGoodsDetails.scheduledDeliveryAt).toLocaleDateString() : appI18n.t('Select delivery date')}
             </Text>
           </View>
         ) : null}
@@ -973,7 +1001,7 @@ function SubmitRequestScreen() {
             <Text style={styles.value}>
               {(() => {
                 const schedule = buildFurnitureSchedule(pendingFurnitureDetails);
-                return formatSchedule(schedule.isImmediate, schedule.scheduledPickupAt);
+                return formatSchedule(schedule.isImmediate, schedule.scheduledPickupAt) + '\n' + appI18n.t('Delivery Date') + ': ' + (pendingFurnitureDetails.scheduledDeliveryAt ? new Date(pendingFurnitureDetails.scheduledDeliveryAt).toLocaleDateString() : appI18n.t('Select delivery date'));
               })()}
             </Text>
           </View>

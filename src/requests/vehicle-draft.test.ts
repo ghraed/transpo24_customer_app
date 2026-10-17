@@ -28,6 +28,7 @@ export function completeDraft(): VehicleDraft {
       pickup: { latitude: 47.55, longitude: 7.59, address: 'Basel' },
       dropoff: { latitude: 47.37, longitude: 8.54, address: 'Zurich' },
       schedule: {
+        deliveryAt: new Date(Date.now() + 4 * 86400000).toISOString(),
         immediate: false,
         at: new Date(Date.now() + 86400000).toISOString(),
       },
@@ -56,7 +57,7 @@ describe('vehicle draft isolation', () => {
     let draft = completeDraft();
     const at = new Date(Date.now() + 172800000).toISOString();
     draft = patchVehicleDraft(draft, {
-      schedule: { immediate: false, at },
+      schedule: { ...draft.schedule, immediate: false, at },
       photos: Array.from({ length: 4 }, (_, index) => ({
         localId: `${index}`,
         uri: `file:///${index}.jpg`,
@@ -96,7 +97,7 @@ describe('vehicle draft isolation', () => {
     draft.schedule.at = new Date(Date.now() - 1).toISOString();
     expect(validateVehicleDraft(draft)).toEqual([
       { step: 'vehicle', field: 'weight', key: 'vehicleRequest.errorWeight' },
-      { step: 'schedule', field: 'at', key: 'vehicleRequest.errorSchedule' },
+      { step: 'schedule', field: 'at', key: 'Scheduled pickup must be in the future.' },
     ]);
   });
   it('cannot change service identity and starts another draft without previous vehicle data', () => {
@@ -113,4 +114,24 @@ describe('vehicle draft isolation', () => {
       '',
     );
   });
+});
+
+it('rejects a vehicle draft months ahead with same-day delivery', () => {
+  const draft = completeDraft();
+  const pickup = new Date(); pickup.setMonth(pickup.getMonth() + 3);
+  draft.schedule = { immediate: false, at: pickup.toISOString(), deliveryAt: pickup.toISOString() };
+  expect(validateVehicleDraft(draft)).toContainEqual(expect.objectContaining({ step: 'schedule', key: 'Pickup must be between today and five days ahead.' }));
+});
+
+it('requires a customer-selected delivery date for a new vehicle draft', () => {
+  expect(newVehicleDraft('customer', 'service').schedule.deliveryAt).toBeUndefined();
+});
+it('rejects same-day vehicle delivery but accepts the next day', () => {
+  const draft = completeDraft();
+  draft.schedule.deliveryAt = draft.schedule.at;
+  expect(validateVehicleDraft(draft)).toContainEqual(expect.objectContaining({ step: 'schedule', key: 'Delivery date must be after the pickup date.' }));
+  const delivery = new Date(draft.schedule.at);
+  delivery.setDate(delivery.getDate() + 1);
+  draft.schedule.deliveryAt = delivery.toISOString();
+  expect(validateVehicleDraft(draft)).toEqual([]);
 });

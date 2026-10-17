@@ -1,3 +1,4 @@
+import { validateSchedule } from './schedule-rules';
 import type { LocalPhotoAsset } from '@/types/customer-request';
 
 export const VEHICLE_ISSUES = [
@@ -56,7 +57,7 @@ export type VehicleDraft = {
   condition: { mobility: Mobility | ''; issues: VehicleIssue[]; notes: string };
   pickup?: Address;
   dropoff?: Address;
-  schedule: { immediate: boolean; at: string };
+  schedule: { immediate: boolean; at: string; deliveryAt?: string };
   photos: DraftPhoto[];
   removedPhotoIds: string[];
   distanceKm?: number;
@@ -67,6 +68,7 @@ export function newVehicleDraft(
   ownerId: string,
   serviceId: string,
 ): VehicleDraft {
+  const pickup = new Date(Date.now() + 3600000);
   return {
     version: 1,
     ownerId,
@@ -90,7 +92,7 @@ export function newVehicleDraft(
     condition: { mobility: '', issues: [], notes: '' },
     schedule: {
       immediate: false,
-      at: new Date(Date.now() + 3600000).toISOString(),
+      at: pickup.toISOString(),
     },
     photos: [],
     removedPhotoIds: [],
@@ -174,12 +176,10 @@ export function validateVehicleDraft(
     draft.pickup.longitude === draft.dropoff.longitude
   )
     add('dropoff', 'dropoff', 'vehicleRequest.errorSameAddress');
-  if (
-    !draft.schedule.immediate &&
-    (!Number.isFinite(Date.parse(draft.schedule.at)) ||
-      Date.parse(draft.schedule.at) <= now)
-  )
-    add('schedule', 'at', 'vehicleRequest.errorSchedule');
+  const scheduleError = validateSchedule({ immediate: draft.schedule.immediate,
+    pickup: new Date(draft.schedule.at), delivery: draft.schedule.deliveryAt ? new Date(draft.schedule.deliveryAt) : undefined,
+    now: new Date(now) });
+  if (scheduleError) add('schedule', 'at', scheduleError);
   if (draft.photos.length > 8)
     add('photos', 'photos', 'vehicleRequest.errorPhotos');
   return errors;

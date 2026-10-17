@@ -109,6 +109,7 @@ describe('vehicle review editing', () => {
     const draft = newVehicleDraft('customer', 'vehicle-service');
     readVehicleDraft.mockReturnValue({
       ...draft,
+      schedule: { ...draft.schedule, deliveryAt: new Date(Date.now() + 4 * 86400000).toISOString() },
       vehicle: {
         ...draft.vehicle,
         brand: 'VW',
@@ -149,13 +150,14 @@ describe('vehicle review editing', () => {
       });
     }
     expect(tree.root.findByType(ScheduleEditor)).toBeDefined();
+    expect(tree.root.findByType(ScheduleEditor).props.furniture).not.toBe(true);
     expect(button(tree, 'vehicleRequest.camera')).toBeDefined();
     expect(button(tree, 'vehicleRequest.gallery')).toBeDefined();
     expect(button(tree, 'vehicleRequest.submit')).toBeUndefined();
     expect(tree.root.findAll(node => node.props.accessibilityLabel === 'vehicleRequest.edit vehicleRequest.step.vehicle')).toHaveLength(0);
     const at = new Date(Date.now() + 172800000).toISOString();
     await act(async () => {
-      tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at });
+      tree.root.findByType(ScheduleEditor).props.onChange({ ...tree.root.findByType(ScheduleEditor).props.value, immediate: false, at });
     });
     await act(async () => button(tree, 'vehicleRequest.continue').props.onPress());
     expect(tree.root.findAllByType(ScheduleEditor)).toHaveLength(0);
@@ -190,13 +192,13 @@ describe('vehicle review editing', () => {
     await edit('schedule');
     expect(tree.root.findByType(ScheduleEditor).props.value.at).toBe(at);
     await act(async () => {
-      tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at: new Date(Date.now() - 1000).toISOString() });
+      tree.root.findByType(ScheduleEditor).props.onChange({ ...tree.root.findByType(ScheduleEditor).props.value, immediate: false, at: new Date(Date.now() - 1000).toISOString() });
     });
     await act(async () => button(tree, 'vehicleRequest.save').props.onPress());
     expect(tree.root.findByType(ScheduleEditor)).toBeDefined();
     expect(button(tree, 'vehicleRequest.submit')).toBeUndefined();
     await act(async () => {
-      tree.root.findByType(ScheduleEditor).props.onChange({ immediate: false, at });
+      tree.root.findByType(ScheduleEditor).props.onChange({ ...tree.root.findByType(ScheduleEditor).props.value, immediate: false, at });
     });
     await act(async () => button(tree, 'vehicleRequest.save').props.onPress());
     expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);

@@ -1,3 +1,5 @@
+import { DeliveryDateEditor } from '@/requests/delivery-date-editor';
+import { addCalendarDays, deliveryAfterPickupChange, validateSchedule } from '@/requests/schedule-rules';
 import { RequestProgress } from '@/requests/request-progress';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -236,6 +238,9 @@ function formatValidationMessage(form: GoodsTransportFormData): string | null {
     return appI18n.t("Scheduled pickup must be in the future.");
   }
 
+  const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.scheduledPickupAt, delivery: form.scheduledDeliveryAt, furniture: false });
+  if (scheduleError) return appI18n.t(scheduleError);
+
   return null;
 }
 
@@ -269,6 +274,7 @@ export default function GoodsDetailsScreen() {
     heavyShipmentType: pendingGoodsDetails?.heavyShipmentType ?? '',
     isImmediate: pendingGoodsDetails?.isImmediate ?? false,
     scheduledPickupAt: buildDefaultScheduledPickupAt(pendingGoodsDetails?.scheduledPickupAt),
+    scheduledDeliveryAt: pendingGoodsDetails?.scheduledDeliveryAt ? new Date(pendingGoodsDetails.scheduledDeliveryAt) : undefined,
   }));
   const [selectedPhotos, setSelectedPhotos] = useState<LocalPhotoAsset[]>(pendingGoodsPhotoAssets);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -299,8 +305,9 @@ export default function GoodsDetailsScreen() {
       return;
     }
 
-    if (validationMessage) {
-      setErrorMessage(validationMessage);
+    const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.scheduledPickupAt, delivery: form.scheduledDeliveryAt, furniture: false });
+    if (validationMessage || scheduleError) {
+      setErrorMessage(validationMessage ?? appI18n.t(scheduleError!));
       return;
     }
 
@@ -323,6 +330,7 @@ export default function GoodsDetailsScreen() {
           requiresRefrigeration: form.requiresRefrigeration,
           heavyShipmentType: inferHeavyShipmentType(weight, pieces) || undefined,
           isImmediate: form.isImmediate,
+          scheduledDeliveryAt: form.scheduledDeliveryAt?.toISOString(),
           scheduledPickupAt:
             form.isImmediate || !form.scheduledPickupAt
               ? undefined
@@ -531,14 +539,14 @@ export default function GoodsDetailsScreen() {
             <View style={styles.toggleRow}>
               <Pressable
                 style={[styles.optionChip, form.isImmediate && styles.optionChipActive]}
-                onPress={() => setForm((prev) => ({ ...prev, isImmediate: true }))}
+                onPress={() => setForm((prev) => ({ ...prev, isImmediate: true, scheduledDeliveryAt: prev.isImmediate ? prev.scheduledDeliveryAt : undefined }))}
               >
                 <Text style={[styles.optionChipText, form.isImmediate && styles.optionChipTextActive]}>
                   {appI18n.t("Immediate pickup")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.optionChip, !form.isImmediate && styles.optionChipActive]}
-                onPress={() => setForm((prev) => ({ ...prev, isImmediate: false }))}
+                onPress={() => setForm((prev) => ({ ...prev, isImmediate: false, scheduledDeliveryAt: prev.isImmediate ? undefined : prev.scheduledDeliveryAt }))}
               >
                 <Text
                   style={[styles.optionChipText, !form.isImmediate && styles.optionChipTextActive]}
@@ -672,6 +680,8 @@ export default function GoodsDetailsScreen() {
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
+          <DeliveryDateEditor pickup={form.isImmediate ? new Date() : form.scheduledPickupAt} value={form.scheduledDeliveryAt} onChange={(date) => setForm((prev) => ({ ...prev, scheduledDeliveryAt: date }))} />
+
           <Pressable
             style={[styles.continueButton, !canContinue && styles.continueDisabled]}
             onPress={onContinue}
@@ -686,13 +696,14 @@ export default function GoodsDetailsScreen() {
               value={form.scheduledPickupAt}
               mode="date"
               minimumDate={new Date()}
+              maximumDate={addCalendarDays(new Date(), 5)}
               onChange={(_, selectedDate) => {
                 setShowDatePicker(false);
                 if (!selectedDate) return;
                 const base = form.scheduledPickupAt;
                 const next = new Date(selectedDate);
                 next.setHours(base.getHours(), base.getMinutes(), 0, 0);
-                setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+                setForm((prev) => ({ ...prev, scheduledPickupAt: next, scheduledDeliveryAt: deliveryAfterPickupChange(prev.scheduledPickupAt, next, prev.scheduledDeliveryAt) }));
               }}
             />
           ) : null}
@@ -709,7 +720,7 @@ export default function GoodsDetailsScreen() {
                 if (!selectedDate) return;
                 const next = new Date(form.scheduledPickupAt);
                 next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-                setForm((prev) => ({ ...prev, scheduledPickupAt: next }));
+                setForm((prev) => ({ ...prev, scheduledPickupAt: next, scheduledDeliveryAt: deliveryAfterPickupChange(prev.scheduledPickupAt, next, prev.scheduledDeliveryAt) }));
               }}
             />
           ) : null}

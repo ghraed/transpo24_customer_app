@@ -34,6 +34,7 @@ function fixture() {
       bodyType: 'VAN',
       transmission: 'MANUAL',
     },
+    schedule: { ...draft.schedule, deliveryAt: new Date(Date.now() + 4 * 86400000).toISOString() },
     condition: { mobility: 'RUNNING', issues: [], notes: '' },
     pickup: { latitude: 47, longitude: 7, address: 'Pickup' },
     dropoff: { latitude: 48, longitude: 8, address: 'Dropoff' },
@@ -59,6 +60,7 @@ describe('vehicle submission', () => {
       mocked.updateScheduleAndItemDetails.mock.calls[0][1],
     ).not.toHaveProperty('itemTitle');
     expect(mocked.updateScheduleAndItemDetails.mock.calls[0][1]).toMatchObject({
+      scheduledDeliveryAt: draft.schedule.deliveryAt,
       vehicleBrand: 'VW',
       vehicleEstimatedWeightKg: 1549,
       requiresLoadingHelp: false,
@@ -94,4 +96,13 @@ describe('vehicle submission', () => {
     expect(mocked.updatePickupLocation).not.toHaveBeenCalled();
     expect(mocked.submitCustomerRequest).not.toHaveBeenCalled();
   });
+});
+
+it.each(['pickup', 'delivery'])('blocks vehicle submission when %s is missing', async (field) => {
+  const draft = fixture();
+  if (field === 'pickup') draft.schedule.at = '';
+  else draft.schedule.deliveryAt = undefined;
+  await expect(submitVehicleDraft(draft, () => draft)).rejects.toThrow('vehicleRequest.invalidDraft');
+  expect(mocked.createCustomerRequest).not.toHaveBeenCalled();
+  expect(mocked.submitCustomerRequest).not.toHaveBeenCalled();
 });

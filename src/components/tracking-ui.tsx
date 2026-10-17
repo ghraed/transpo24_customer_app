@@ -22,6 +22,8 @@ export const clientTheme = {
   accent: '#FFC548',
   accentStrong: '#D89A1A',
   accentSoft: '#FFF1C9',
+  reminderSurface: '#FFF7E0',
+  reminderText: '#735014',
   danger: '#FF5E57',
   success: '#22C55E',
   blue: '#3B82F6',

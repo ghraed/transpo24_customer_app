@@ -5,13 +5,14 @@ import { ActivityIndicator, AppState, FlatList, Pressable, RefreshControl, Style
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { isPickupReminderNotification } from '@/notifications/pickup-reminders';
 import { clientTheme } from '@/components/tracking-ui';
 import {
   getCustomerNotifications, getPendingDeliveryConfirmations, markCustomerNotificationRead,
   type CustomerNotification, type PendingDeliveryConfirmation,
 } from '@/lib/api';
 import { getNotificationSince, type NotificationPeriod } from '@/notifications/notificationDateFilter';
-import { resolveNotificationRoute } from '@/notifications/notificationRoute';
+import { resolveNotificationDestination } from '@/notifications/notificationDestination';
 
 export default function NotificationsTabScreen() {
   const { t } = useTranslation();
@@ -27,6 +28,7 @@ export default function NotificationsTabScreen() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState('');
   const active = useRef(false);
+  const openingNotification = useRef(false);
   const generation = useRef(0);
   const busy = useRef<number | null>(null);
   const since = useRef<string | undefined>(undefined);
@@ -93,6 +95,8 @@ export default function NotificationsTabScreen() {
   }, [load]));
 
   const openNotification = async (item: CustomerNotification) => {
+    if (openingNotification.current) return;
+    openingNotification.current = true;
     try {
       if (!item.readAt) {
         await markCustomerNotificationRead(item.id);
@@ -101,8 +105,14 @@ export default function NotificationsTabScreen() {
     } catch (e) {
       setError(e instanceof Error ? e.message : t('Failed to mark notification as read.'));
     }
-    const route = resolveNotificationRoute({ ...item.data, type: item.type });
-    if (route) router.push(route);
+    try {
+      const route = await resolveNotificationDestination({ ...item.data, type: item.type });
+      if (route) router.push(route);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('Unable to open payment. Please try again.'));
+    } finally {
+      openingNotification.current = false;
+    }
   };
 
   return (
@@ -152,7 +162,8 @@ export default function NotificationsTabScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable accessibilityRole="button" accessibilityLabel={`${!item.readAt ? t('Unread') + '. ' : ''}${item.title}. ${item.body}`} style={[styles.card, !item.readAt && styles.unreadCard]} onPress={() => { void openNotification(item); }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`${!item.readAt ? t('Unread') + '. ' : ''}${item.title}. ${item.body}`} style={[styles.card, !item.readAt && styles.unreadCard, isPickupReminderNotification(item) && styles.reminderCard]} onPress={() => { void openNotification(item); }}>
+            {isPickupReminderNotification(item) ? <Text style={styles.reminderLabel}>{t('ACTION REQUIRED')} · {t('Pickup confirmation')}</Text> : null}
             <View style={styles.row}>
               <Text style={styles.cardTitle}>{item.title}</Text>
               {!item.readAt ? <View style={styles.dot} /> : null}
@@ -179,6 +190,8 @@ const styles = StyleSheet.create({
   list: { padding: 16, gap: 12, paddingBottom: 32 },
   header: { gap: 12, marginBottom: 8 },
   card: { backgroundColor: clientTheme.surface, borderRadius: 18, borderWidth: 1, borderColor: clientTheme.border, padding: 18, gap: 8 },
+  reminderCard: { backgroundColor: clientTheme.reminderSurface, borderColor: clientTheme.accentStrong, borderLeftWidth: 4 },
+  reminderLabel: { color: clientTheme.reminderText, fontWeight: '800', fontSize: 12, letterSpacing: 0.6 },
   unreadCard: { borderColor: clientTheme.accentStrong },
   actionCard: { backgroundColor: clientTheme.surface, borderRadius: 18, borderWidth: 1, borderColor: clientTheme.accentStrong, padding: 18, gap: 10 },
   title: { fontSize: 28, fontWeight: '800', color: clientTheme.text },

@@ -1,3 +1,4 @@
+import { PickupPaymentReminderPopup } from '@/components/pickup-payment-reminder';
 import { serviceHeaderOptions } from '@/requests/service-header';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
@@ -351,6 +352,7 @@ function RootNavigator() {
             }}
           />
             </Stack>
+            <PickupPaymentReminderPopup key={authSession.user?.id ?? 'signed-out'} ready={authSession.status === 'authenticated' && localizationReady} userId={authSession.user?.id} />
           </View>
         </View>
       </ThemeProvider>
