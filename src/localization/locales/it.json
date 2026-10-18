@@ -1311,5 +1311,12 @@
   "TEST REMINDER": "PROMEMORIA DI PROVA",
   "This is a preview. No booking or payment will be created.": "Questa è un’anteprima. Non verrà creata alcuna prenotazione né alcun pagamento.",
   "View in Alerts": "Visualizza negli avvisi",
-  "Unable to open payment. Please try again.": "Impossibile aprire il pagamento. Riprovi."
+  "Unable to open payment. Please try again.": "Impossibile aprire il pagamento. Riprovi.",
+  "Pending requests": "Richieste in sospeso",
+  "No pending requests": "Nessuna richiesta in sospeso",
+  "Pending": "In sospeso",
+  "Pending payment": "Pagamento in sospeso",
+  "Waiting for client payment. New offers are closed.": "In attesa del pagamento del cliente. Non si accettano nuove offerte.",
+  "Booked — offers closed": "Prenotato — offerte chiuse",
+  "Booked": "Prenotato"
 }

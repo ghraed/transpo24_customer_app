@@ -255,6 +255,7 @@ function RootNavigator() {
           <Stack.Screen name="dropoff-location" options={serviceHeaderOptions(t('Dropoff Location'))} />
           <Stack.Screen name="date-time" options={serviceHeaderOptions(t('Date & Item Details'))} />
           <Stack.Screen name="submit-request" options={serviceHeaderOptions(t('Submit Request'))} />
+          <Stack.Screen name="pending-requests" options={{ title: t('Pending requests'), headerShown: false }} />
           <Stack.Screen name="request-status" options={{ title: t('Request Status') }} />
           <Stack.Screen name="request-payment" options={{ title: t('Pay Now') }} />
           <Stack.Screen name="payment-method" options={{ title: t('Payment Method') }} />

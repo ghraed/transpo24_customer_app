@@ -1312,5 +1312,12 @@
   "TEST REMINDER": "TEST REMINDER",
   "This is a preview. No booking or payment will be created.": "This is a preview. No booking or payment will be created.",
   "View in Alerts": "View in Alerts",
-  "Unable to open payment. Please try again.": "Unable to open payment. Please try again."
+  "Unable to open payment. Please try again.": "Unable to open payment. Please try again.",
+  "Pending requests": "Pending requests",
+  "No pending requests": "No pending requests",
+  "Pending": "Pending",
+  "Pending payment": "Pending payment",
+  "Waiting for client payment. New offers are closed.": "Waiting for client payment. New offers are closed.",
+  "Booked — offers closed": "Booked — offers closed",
+  "Booked": "Booked"
 }

@@ -1307,5 +1307,12 @@
   "TEST REMINDER": "تذكير تجريبي",
   "This is a preview. No booking or payment will be created.": "هذه معاينة فقط. لن يتم إنشاء حجز أو إجراء أي دفع.",
   "View in Alerts": "عرض في التنبيهات",
-  "Unable to open payment. Please try again.": "تعذّر فتح الدفع. يرجى المحاولة مجدداً."
+  "Unable to open payment. Please try again.": "تعذّر فتح الدفع. يرجى المحاولة مجدداً.",
+  "Pending requests": "الطلبات المعلقة",
+  "No pending requests": "لا توجد طلبات معلقة",
+  "Pending": "معلق",
+  "Pending payment": "بانتظار الدفع",
+  "Waiting for client payment. New offers are closed.": "بانتظار دفع العميل. لا يمكن تقديم عروض جديدة.",
+  "Booked — offers closed": "محجوز — العروض مغلقة",
+  "Booked": "محجوز"
 }

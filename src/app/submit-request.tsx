@@ -721,7 +721,7 @@ function SubmitRequestScreen() {
           approximateItemCount: pendingFurnitureDetails.approximateItemCount,
           needsHelpers: pendingFurnitureDetails.needsHelpers,
           helpersCount: pendingFurnitureDetails.needsHelpers ? pendingFurnitureDetails.helpersCount : undefined,
-          isImmediate: pendingFurnitureDetails.isImmediate,
+          ...buildFurnitureSchedule(pendingFurnitureDetails),
           movingDate:
             pendingFurnitureDetails.isImmediate === true
               ? new Date().toISOString()

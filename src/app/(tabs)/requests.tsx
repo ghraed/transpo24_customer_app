@@ -1,6 +1,6 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -29,7 +29,7 @@ const serviceIcons: Record<string, SymbolViewProps['name']> = {
   FURNITURE_TRANSPORT: { ios: 'sofa.fill', android: 'chair', web: 'chair' },
 };
 
-type RequestFilter = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+type RequestFilter = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 const completedStatuses: CustomerRequestStatus[] = ['DELIVERED', 'COMPLETED'];
 const cancelledStatuses: CustomerRequestStatus[] = ['CANCELLED'];
@@ -204,7 +204,7 @@ function OrderCard({
   );
 }
 
-export default function RequestsTabScreen() {
+export default function RequestsTabScreen({ pendingOnly = false }: { pendingOnly?: boolean }) {
   const router = useRouter();
   const { t } = useTranslation();
   const { isRTL } = useAppLanguage();
@@ -213,7 +213,7 @@ export default function RequestsTabScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [activeFilter, setActiveFilter] = useState<RequestFilter>('ACTIVE');
+  const [activeFilter, setActiveFilter] = useState<RequestFilter>(pendingOnly ? 'PENDING' : 'ACTIVE');
 
   const loadRequests = useCallback(
     async (isRefresh: boolean): Promise<void> => {
@@ -238,18 +238,16 @@ export default function RequestsTabScreen() {
     [t],
   );
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void loadRequests(false);
-    }, 0);
-
-    return () => clearTimeout(timeoutId);
-  }, [loadRequests]);
+  useFocusEffect(useCallback(() => {
+    void loadRequests(false);
+  }, [loadRequests]));
 
   const directionArrow = isRTL ? '←' : '→';
 
   const filteredRequests = useMemo(() => {
     switch (activeFilter) {
+      case 'PENDING':
+        return requests.filter((request) => request.status === 'RESERVED');
       case 'COMPLETED':
         return requests.filter((request) => completedStatuses.includes(request.status));
       case 'CANCELLED':
@@ -258,7 +256,7 @@ export default function RequestsTabScreen() {
       default:
         return requests.filter(
           (request) =>
-            !completedStatuses.includes(request.status) && !cancelledStatuses.includes(request.status),
+            request.status !== 'RESERVED' && !completedStatuses.includes(request.status) && !cancelledStatuses.includes(request.status),
         );
     }
   }, [activeFilter, requests]);
@@ -288,9 +286,15 @@ export default function RequestsTabScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>{t('My Orders')}</Text>
+        {pendingOnly && <Pressable style={styles.filterChip} onPress={() => router.back()}>
+          <Text style={styles.filterChipText}>{t('Back')}</Text>
+        </Pressable>}
+        <Text style={styles.title}>{t(pendingOnly ? 'Pending requests' : 'My Orders')}</Text>
 
-        <View style={styles.filtersRow}>
+        {!pendingOnly && <Pressable style={styles.filterChip} onPress={() => router.push('/pending-requests')}>
+          <Text style={styles.filterChipText}>{t('Pending requests')}</Text>
+        </Pressable>}
+        {!pendingOnly && <View style={styles.filtersRow}>
           <FilterChip title={t('Active')} active={activeFilter === 'ACTIVE'} onPress={() => setActiveFilter('ACTIVE')} />
           <FilterChip
             title={t('Completed')}
@@ -302,7 +306,7 @@ export default function RequestsTabScreen() {
             active={activeFilter === 'CANCELLED'}
             onPress={() => setActiveFilter('CANCELLED')}
           />
-        </View>
+        </View>}
 
         {!!errorMessage ? (
           <View style={styles.errorCard}>
@@ -324,7 +328,7 @@ export default function RequestsTabScreen() {
         {!errorMessage && filteredRequests.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>
-              {activeFilter === 'ACTIVE'
+              {activeFilter === 'PENDING' ? t('No pending requests') : activeFilter === 'ACTIVE'
                 ? t('No active orders')
                 : activeFilter === 'COMPLETED'
                   ? t('No completed orders')
@@ -389,6 +393,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   filterChip: {
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,

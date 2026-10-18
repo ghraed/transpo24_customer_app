@@ -1307,5 +1307,12 @@
   "TEST REMINDER": "RECORDATORIO DE PRUEBA",
   "This is a preview. No booking or payment will be created.": "Esta es una vista previa. No se creará ninguna reserva ni pago.",
   "View in Alerts": "Ver en alertas",
-  "Unable to open payment. Please try again.": "No se puede abrir el pago. Inténtelo de nuevo."
+  "Unable to open payment. Please try again.": "No se puede abrir el pago. Inténtelo de nuevo.",
+  "Pending requests": "Solicitudes pendientes",
+  "No pending requests": "No hay solicitudes pendientes",
+  "Pending": "Pendiente",
+  "Pending payment": "Pago pendiente",
+  "Waiting for client payment. New offers are closed.": "Esperando el pago del cliente. No se aceptan nuevas ofertas.",
+  "Booked — offers closed": "Reservado — ofertas cerradas",
+  "Booked": "Reservado"
 }

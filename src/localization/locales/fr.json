@@ -1307,5 +1307,12 @@
   "TEST REMINDER": "RAPPEL TEST",
   "This is a preview. No booking or payment will be created.": "Ceci est un aperçu. Aucune réservation ni aucun paiement ne sera créé.",
   "View in Alerts": "Voir dans les alertes",
-  "Unable to open payment. Please try again.": "Impossible d’ouvrir le paiement. Veuillez réessayer."
+  "Unable to open payment. Please try again.": "Impossible d’ouvrir le paiement. Veuillez réessayer.",
+  "Pending requests": "Demandes en attente",
+  "No pending requests": "Aucune demande en attente",
+  "Pending": "En attente",
+  "Pending payment": "Paiement en attente",
+  "Waiting for client payment. New offers are closed.": "En attente du paiement du client. Les nouvelles offres sont fermées.",
+  "Booked — offers closed": "Réservé — offres fermées",
+  "Booked": "Réservé"
 }

@@ -1307,5 +1307,12 @@
   "TEST REMINDER": "TESTERINNERUNG",
   "This is a preview. No booking or payment will be created.": "Dies ist eine Vorschau. Es wird keine Buchung oder Zahlung erstellt.",
   "View in Alerts": "In Mitteilungen ansehen",
-  "Unable to open payment. Please try again.": "Die Zahlung kann nicht geöffnet werden. Bitte versuchen Sie es erneut."
+  "Unable to open payment. Please try again.": "Die Zahlung kann nicht geöffnet werden. Bitte versuchen Sie es erneut.",
+  "Pending requests": "Ausstehende Anfragen",
+  "No pending requests": "Keine ausstehenden Anfragen",
+  "Pending": "Ausstehend",
+  "Pending payment": "Zahlung ausstehend",
+  "Waiting for client payment. New offers are closed.": "Warten auf die Zahlung des Kunden. Neue Angebote sind geschlossen.",
+  "Booked — offers closed": "Gebucht — Angebote geschlossen",
+  "Booked": "Gebucht"
 }

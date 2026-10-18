@@ -593,6 +593,9 @@ export async function createFurnitureTransportRequest(
   if (payload.isImmediate !== undefined) formData.append('isImmediate', String(payload.isImmediate));
   if (payload.helpersCount !== undefined) formData.append('helpersCount', String(payload.helpersCount));
   formData.append('movingDate', payload.movingDate);
+  if (payload.isImmediate !== true) {
+    formData.append('scheduledPickupAt', payload.scheduledPickupAt ?? payload.movingDate);
+  }
   formData.append('scheduleTimeZone', Intl.DateTimeFormat().resolvedOptions().timeZone);
   if (payload.scheduledDeliveryAt) formData.append('scheduledDeliveryAt', payload.scheduledDeliveryAt);
   formData.append(

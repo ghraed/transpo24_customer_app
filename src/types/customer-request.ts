@@ -127,6 +127,7 @@ export interface FurnitureLocationPayload {
 
 export interface CreateFurnitureTransportRequestPayload {
   isImmediate?: boolean;
+  scheduledPickupAt?: string;
   helpersCount?: number;
   furnitureDescription: string;
   approximateItemCount: number;
