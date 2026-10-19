@@ -1322,5 +1322,19 @@
   "Company": "شركة",
   "Tax Registration Number (TRN)": "رقم التسجيل الضريبي (TRN)",
   "TRN is required for companies.": "رقم التسجيل الضريبي مطلوب للشركات.",
-  "Chat with {{name}}": "محادثة مع {{name}}"
+  "Chat with {{name}}": "محادثة مع {{name}}",
+  "Driver did not show up": "لم يحضر السائق",
+  "Suspected theft or missing items": "اشتباه بسرقة أو أغراض مفقودة",
+  "Other driver issue": "مشكلة أخرى مع السائق",
+  "Please describe what happened.": "يرجى وصف ما حدث.",
+  "Report driver": "الإبلاغ عن السائق",
+  "Driver did not arrive, missing items, or another issue?": "لم يصل السائق، أو توجد أغراض مفقودة، أو مشكلة أخرى؟",
+  "Report submitted": "تم إرسال البلاغ",
+  "Your report has been sent to the Transpo24 safety team for review.": "تم إرسال بلاغك إلى فريق السلامة في Transpo24 للمراجعة.",
+  "Tell us what happened with this request. Your report will be sent to the Transpo24 safety team.": "أخبرنا بما حدث في هذا الطلب. سيتم إرسال بلاغك إلى فريق السلامة في Transpo24.",
+  "What happened?": "ماذا حدث؟",
+  "Describe what happened (required)": "صف ما حدث (مطلوب)",
+  "Could not submit your report. Please try again.": "تعذر إرسال بلاغك. يرجى المحاولة مجددًا.",
+  "Submitting…": "جارٍ الإرسال…",
+  "Submit report": "إرسال البلاغ"
 }

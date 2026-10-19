@@ -1322,5 +1322,19 @@
   "Company": "Unternehmen",
   "Tax Registration Number (TRN)": "Steuerregistrierungsnummer (TRN)",
   "TRN is required for companies.": "Für Unternehmen ist eine TRN erforderlich.",
-  "Chat with {{name}}": "Chat mit {{name}}"
+  "Chat with {{name}}": "Chat mit {{name}}",
+  "Driver did not show up": "Fahrer ist nicht erschienen",
+  "Suspected theft or missing items": "Verdacht auf Diebstahl oder fehlende Gegenstände",
+  "Other driver issue": "Anderes Problem mit dem Fahrer",
+  "Please describe what happened.": "Bitte beschreiben Sie, was passiert ist.",
+  "Report driver": "Fahrer melden",
+  "Driver did not arrive, missing items, or another issue?": "Fahrer nicht erschienen, fehlende Gegenstände oder ein anderes Problem?",
+  "Report submitted": "Meldung gesendet",
+  "Your report has been sent to the Transpo24 safety team for review.": "Ihre Meldung wurde zur Prüfung an das Transpo24-Sicherheitsteam gesendet.",
+  "Tell us what happened with this request. Your report will be sent to the Transpo24 safety team.": "Teilen Sie uns mit, was bei diesem Auftrag passiert ist. Ihre Meldung wird an das Transpo24-Sicherheitsteam gesendet.",
+  "What happened?": "Was ist passiert?",
+  "Describe what happened (required)": "Beschreiben Sie, was passiert ist (erforderlich)",
+  "Could not submit your report. Please try again.": "Ihre Meldung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+  "Submitting…": "Wird gesendet…",
+  "Submit report": "Meldung senden"
 }

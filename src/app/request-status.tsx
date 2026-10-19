@@ -1,4 +1,5 @@
 import { RequestDocuments } from '@/components/request-documents';
+import { ReportDriver } from '@/components/report-driver';
 import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -1458,6 +1459,10 @@ export default function RequestStatusScreen() {
               />
             </Pressable>
           </View>
+
+          {requestData.driverDetailsAvailable && (requestData.driverSummary.assigned || acceptedOffer) ? (
+            <ReportDriver key={requestData.id} requestId={requestData.id} />
+          ) : null}
 
           <View style={styles.progressSection}>
             <View style={styles.progressRail} />

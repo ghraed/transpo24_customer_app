@@ -1327,5 +1327,19 @@
   "Company": "Company",
   "Tax Registration Number (TRN)": "Tax Registration Number (TRN)",
   "TRN is required for companies.": "TRN is required for companies.",
-  "Chat with {{name}}": "Chat with {{name}}"
+  "Chat with {{name}}": "Chat with {{name}}",
+  "Driver did not show up": "Driver did not show up",
+  "Suspected theft or missing items": "Suspected theft or missing items",
+  "Other driver issue": "Other driver issue",
+  "Please describe what happened.": "Please describe what happened.",
+  "Report driver": "Report driver",
+  "Driver did not arrive, missing items, or another issue?": "Driver did not arrive, missing items, or another issue?",
+  "Report submitted": "Report submitted",
+  "Your report has been sent to the Transpo24 safety team for review.": "Your report has been sent to the Transpo24 safety team for review.",
+  "Tell us what happened with this request. Your report will be sent to the Transpo24 safety team.": "Tell us what happened with this request. Your report will be sent to the Transpo24 safety team.",
+  "What happened?": "What happened?",
+  "Describe what happened (required)": "Describe what happened (required)",
+  "Could not submit your report. Please try again.": "Could not submit your report. Please try again.",
+  "Submitting…": "Submitting…",
+  "Submit report": "Submit report"
 }
