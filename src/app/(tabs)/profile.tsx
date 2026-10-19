@@ -227,13 +227,12 @@ export default function ProfileTabScreen() {
         <Pressable
           style={styles.heroCard}
           accessibilityRole="button"
-          accessibilityLabel={`${t("Nickname")}: ${auth.user?.nickname || t("Edit Profile")}`}
+          accessibilityLabel={`${t("Full name")}: ${auth.user?.name || t("Edit Profile")}`}
           onPress={() => router.push("/edit-profile")}
         >
           <View style={styles.heroCopy}>
-            <Text style={styles.heroMeta}>{t("Nickname")}</Text>
-            <Text style={styles.sectionTitle}>{auth.user?.nickname || t("Edit Profile")}</Text>
-            <Text style={styles.heroMeta}>{t("Drivers will see your nickname on requests and in chats.")}</Text>
+            <Text style={styles.heroMeta}>{t("Full name")}</Text>
+            <Text style={styles.sectionTitle}>{auth.user?.name || t("Edit Profile")}</Text>
           </View>
           <Text style={styles.nicknameEdit}>{t("Edit Profile")}</Text>
         </Pressable>

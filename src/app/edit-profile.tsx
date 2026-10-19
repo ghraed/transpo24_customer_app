@@ -25,8 +25,6 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const auth = useAuthSession();
-  const [draftNickname, setDraftNickname] = useState<string | null>(null);
-  const nickname = draftNickname ?? auth.user?.nickname ?? "";
   const [draftName, setDraftName] = useState<string | null>(null);
   const [draftCountryCode, setDraftCountryCode] = useState<CountryCode | null>(
     normalizeCountryCode(auth.user?.countryCode),
@@ -49,10 +47,6 @@ export default function EditProfileScreen() {
       return;
     }
 
-    if (nickname.trim().length < 2 || nickname.trim().length > 40) {
-      setError(t("Nickname must be between 2 and 40 characters."));
-      return;
-    }
     setLoading(true);
     setError("");
 
@@ -60,11 +54,9 @@ export default function EditProfileScreen() {
       const result = await updateCustomerProfile(
         trimmedName,
         normalizedCountryCode,
-        nickname.trim(),
       );
       await updateCustomerSessionProfile({
         name: result.name,
-        nickname: result.nickname,
         countryCode: result.countryCode,
       });
       router.back();
@@ -106,12 +98,6 @@ export default function EditProfileScreen() {
                 autoCapitalize="words"
                 returnKeyType="done"
               />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>{t("Nickname")}</Text>
-              <TextInput accessibilityLabel={t("Nickname")} style={styles.input} placeholder={t("Nickname")} value={nickname} onChangeText={setDraftNickname} maxLength={40} autoCorrect={false} />
-              <Text style={styles.countryMeta}>{t("Drivers will see your nickname on requests and in chats.")}</Text>
             </View>
 
             <View style={styles.fieldGroup}>

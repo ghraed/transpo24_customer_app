@@ -1316,5 +1316,11 @@
   "Pending payment": "Pago pendiente",
   "Waiting for client payment. New offers are closed.": "Esperando el pago del cliente. No se aceptan nuevas ofertas.",
   "Booked — offers closed": "Reservado — ofertas cerradas",
-  "Booked": "Reservado"
+  "Booked": "Reservado",
+  "Account type": "Tipo de cuenta",
+  "Personal": "Personal",
+  "Company": "Empresa",
+  "Tax Registration Number (TRN)": "Número de registro fiscal (TRN)",
+  "TRN is required for companies.": "El TRN es obligatorio para empresas.",
+  "Chat with {{name}}": "Chatear con {{name}}"
 }

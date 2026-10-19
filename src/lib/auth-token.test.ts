@@ -53,18 +53,18 @@ describe('customer session persistence', () => {
     expect(auth.getAuthSessionSnapshot().status).toBe('authenticated');
   });
 
-  it('persists the nickname in both session copies after completion and profile edits', async () => {
+  it('persists the name in both session copies after completion and profile edits', async () => {
     const auth = loadAuth();
     await auth.setCustomerSession({ ...session, profileCompleted: false });
-    await auth.markProfileCompleted('Private Name', 'LB', 'Road Runner');
-    expect(auth.getAuthSessionSnapshot().user?.nickname).toBe('Road Runner');
+    await auth.markProfileCompleted('Private Name', 'LB');
+    expect(auth.getAuthSessionSnapshot().user?.name).toBe('Private Name');
     expect(auth.getAuthSessionSnapshot().status).toBe('authenticated');
     const trusted = JSON.parse(mockStorage.get('transpo24.customer.trustedSession')!);
-    expect(trusted.user.nickname).toBe('Road Runner');
+    expect(trusted.user.name).toBe('Private Name');
     expect(trusted.profileCompleted).toBe(true);
-    await auth.updateCustomerSessionProfile({ name: 'Private Name', countryCode: 'LB', nickname: 'New Nickname' });
-    expect(JSON.parse(mockStorage.get('transpo24.customer.user')!).nickname).toBe('New Nickname');
-    expect(JSON.parse(mockStorage.get('transpo24.customer.trustedSession')!).user.nickname).toBe('New Nickname');
+    await auth.updateCustomerSessionProfile({ name: 'Updated Name', countryCode: 'LB' });
+    expect(JSON.parse(mockStorage.get('transpo24.customer.user')!).name).toBe('Updated Name');
+    expect(JSON.parse(mockStorage.get('transpo24.customer.trustedSession')!).user.name).toBe('Updated Name');
   });
 
   it('restores a session by rotating the stored refresh token', async () => {

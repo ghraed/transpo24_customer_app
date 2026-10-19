@@ -281,8 +281,8 @@ export async function switchCustomerAccountOnDevice(): Promise<void> {
   await clearSession();
 }
 
-export async function markProfileCompleted(name: string, countryCode: string, nickname: string): Promise<void> {
-  await updateCustomerSessionProfile({ name, countryCode, nickname });
+export async function markProfileCompleted(name: string, countryCode: string): Promise<void> {
+  await updateCustomerSessionProfile({ name, countryCode });
   const trustedSession = await readTrustedSession();
   if (trustedSession) {
     await SecureStore.setItemAsync(TRUSTED_SESSION_STORAGE_KEY, JSON.stringify({
@@ -294,7 +294,6 @@ export async function markProfileCompleted(name: string, countryCode: string, ni
 }
 
 export async function updateCustomerSessionProfile(input: {
-  nickname?: string;
   name: string;
   countryCode: string;
 }): Promise<void> {
@@ -302,7 +301,7 @@ export async function updateCustomerSessionProfile(input: {
     return;
   }
 
-  currentUser = { ...currentUser, name: input.name, nickname: input.nickname ?? currentUser.nickname, countryCode: input.countryCode };
+  currentUser = { ...currentUser, name: input.name, countryCode: input.countryCode };
 
   const trustedSession = await readTrustedSession();
   const nextTrustedSession = trustedSession
@@ -311,7 +310,6 @@ export async function updateCustomerSessionProfile(input: {
         user: {
           ...trustedSession.user,
           name: input.name,
-          nickname: input.nickname ?? currentUser.nickname,
           countryCode: input.countryCode,
         },
       }

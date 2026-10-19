@@ -557,7 +557,7 @@ export default function RequestPaymentScreen() {
           <Text style={styles.sectionTitle}>{appI18n.t("Payment Summary")}</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>{appI18n.t("Selected driver")}</Text>
-            <Text style={styles.summaryValue}>{offerData.driverName || 'Driver'}</Text>
+            <Text style={styles.summaryValue}>{appI18n.t(offerData.driverType === 'COMPANY' ? 'Company' : 'Personal')} • {offerData.driverName || 'Driver'}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>{appI18n.t("Agreed amount")}</Text>

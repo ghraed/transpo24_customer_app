@@ -1547,6 +1547,7 @@ export default function RequestStatusScreen() {
                 </View>
                 <View style={styles.driverInfo}>
                   <Text style={styles.driverName}>{driverName || appI18n.t("Driver pending")}</Text>
+                  <Text style={styles.driverMeta}>{appI18n.t(requestData.driverSummary.driverType === 'COMPANY' ? 'Company' : 'Personal')}</Text>
                   <Text style={styles.driverMeta}>
                     {driverRating !== null ? `★ ${driverRating.toFixed(1)} • ` : ''}
                     {requestData.driverSummary.assigned ? appI18n.t('Assigned driver') : appI18n.t('Waiting assignment')}
@@ -1695,7 +1696,7 @@ export default function RequestStatusScreen() {
               <View style={styles.selectedOfferBanner}>
                 <Text style={styles.selectedOfferLabel}>{appI18n.t("Selected offer")}</Text>
                 <Text style={styles.selectedOfferValue}>
-                  {selectedOffer.driverName || 'Driver'} •{' '}
+                  {appI18n.t(selectedOffer.driverType === 'COMPANY' ? 'Company' : 'Personal')} • {selectedOffer.driverName || 'Driver'} •{' '}
                   {formatMoney(selectedOffer.proposedPrice ?? selectedOffer.price, selectedOffer.currency)}
                 </Text>
               </View>
@@ -1705,7 +1706,7 @@ export default function RequestStatusScreen() {
               <View style={styles.offerCardAccepted}>
                 <Text style={[styles.offerCardTitle, styles.offerTextOnDark]}>{appI18n.t("Accepted Offer")}</Text>
                 <Text style={[styles.offerPrimaryValue, styles.offerTextOnDark]}>
-                  {acceptedOffer.driverName || 'Driver'} •{' '}
+                  {appI18n.t(acceptedOffer.driverType === 'COMPANY' ? 'Company' : 'Personal')} • {acceptedOffer.driverName || 'Driver'} •{' '}
                   {formatMoney(acceptedOffer.proposedPrice ?? acceptedOffer.price, acceptedOffer.currency)}
                 </Text>
                 <Text style={[styles.rowValue, styles.offerSubtextOnDark]}>
@@ -1741,7 +1742,7 @@ export default function RequestStatusScreen() {
                     )}
                     <View style={styles.offerTopText}>
                       <Text style={[styles.offerCardTitle, isSelected ? styles.offerTextOnDark : undefined]}>
-                        {offer.driverName || 'Driver'}
+                        {appI18n.t(offer.driverType === 'COMPANY' ? 'Company' : 'Personal')} • {offer.driverName || 'Driver'}
                       </Text>
                       <Text
                         style={[styles.offerRatingText, isSelected ? styles.offerSubtextOnDark : undefined]}

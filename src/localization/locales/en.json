@@ -1321,5 +1321,11 @@
   "Pending payment": "Pending payment",
   "Waiting for client payment. New offers are closed.": "Waiting for client payment. New offers are closed.",
   "Booked — offers closed": "Booked — offers closed",
-  "Booked": "Booked"
+  "Booked": "Booked",
+  "Account type": "Account type",
+  "Personal": "Personal",
+  "Company": "Company",
+  "Tax Registration Number (TRN)": "Tax Registration Number (TRN)",
+  "TRN is required for companies.": "TRN is required for companies.",
+  "Chat with {{name}}": "Chat with {{name}}"
 }

@@ -343,6 +343,7 @@ export interface RequestTracking {
   requestId: string;
   currentStatus: RequestTrackingStatus;
   assignedDriverId: string | null;
+  driverType?: 'PERSONAL' | 'COMPANY' | null;
   driverName: string | null;
   driverVehiclePhoto: string | null;
   pickupLocation: {
@@ -897,7 +898,8 @@ export interface RequestStatusResponse {
   driverSummary: {
     assigned: boolean;
     driverId: string | null;
-    driverName: string | null;
+    driverType?: 'PERSONAL' | 'COMPANY' | null;
+  driverName: string | null;
     vehicleInfo: string | null;
   };
   trackingSummary: {
@@ -995,6 +997,7 @@ export interface CustomerRequestOfferSummary {
   offerId: string;
   requestId: string;
   driverId: string;
+  driverType?: 'PERSONAL' | 'COMPANY' | null;
   driverName: string | null;
   driverVehiclePhoto: string | null;
   driverRating: number | null;

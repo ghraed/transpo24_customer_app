@@ -1316,5 +1316,11 @@
   "Pending payment": "بانتظار الدفع",
   "Waiting for client payment. New offers are closed.": "بانتظار دفع العميل. لا يمكن تقديم عروض جديدة.",
   "Booked — offers closed": "محجوز — العروض مغلقة",
-  "Booked": "محجوز"
+  "Booked": "محجوز",
+  "Account type": "نوع الحساب",
+  "Personal": "شخصي",
+  "Company": "شركة",
+  "Tax Registration Number (TRN)": "رقم التسجيل الضريبي (TRN)",
+  "TRN is required for companies.": "رقم التسجيل الضريبي مطلوب للشركات.",
+  "Chat with {{name}}": "محادثة مع {{name}}"
 }

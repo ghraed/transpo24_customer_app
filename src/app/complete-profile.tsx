@@ -16,7 +16,6 @@ export default function CompleteProfileScreen() {
   const { t } = useTranslation();
   const auth = useAuthSession();
   const [name, setName] = useState('');
-  const [nickname, setNickname] = useState('');
   const [countryCode, setCountryCode] = useState<CountryCode>('LB');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,15 +29,11 @@ export default function CompleteProfileScreen() {
       if (!loading) setError(t('Enter your full name.'));
       return;
     }
-    if (nickname.trim().length < 2 || nickname.trim().length > 40) {
-      setError(t('Nickname must be between 2 and 40 characters.'));
-      return;
-    }
     setLoading(true);
     setError('');
     try {
-      const result = await completeCustomerProfile(name.trim(), normalizedCountryCode, nickname.trim());
-      await markProfileCompleted(result.name, result.countryCode, result.nickname);
+      const result = await completeCustomerProfile(name.trim(), normalizedCountryCode);
+      await markProfileCompleted(result.name, result.countryCode);
       router.dismissAll();
       router.replace('/(tabs)/home');
     } catch (requestError) {
@@ -61,9 +56,6 @@ export default function CompleteProfileScreen() {
           </View>
         </View>
         <TextInput accessibilityLabel={t('Full name')} style={styles.input} placeholder={t('Full name')} value={name} onChangeText={setName} autoCapitalize="words" />
-        <Text style={styles.nicknameLabel}>{t('Nickname')}</Text>
-        <TextInput accessibilityLabel={t('Nickname')} style={styles.input} placeholder={t('Nickname')} value={nickname} onChangeText={setNickname} maxLength={40} autoCorrect={false} />
-        <Text style={styles.nicknameHint}>{t('Drivers will see your nickname on requests and in chats.')}</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Pressable style={[styles.button, loading && styles.disabled]} disabled={loading} onPress={() => void submit()}>
           {loading ? <ActivityIndicator color="#111827" /> : <Text style={styles.buttonText}>{t('Continue')}</Text>}
@@ -84,8 +76,6 @@ const styles = StyleSheet.create({
   countryLabel: { marginBottom: 8, fontSize: 13, fontWeight: '700', color: '#374151' },
   countryPickerWrap: { minHeight: 56, borderWidth: 1, borderColor: clientTheme.border, borderRadius: 16, justifyContent: 'center' },
   input: { minHeight: 56, borderWidth: 1, borderColor: clientTheme.border, borderRadius: 16, paddingHorizontal: 16, fontSize: 16, color: clientTheme.text },
-  nicknameLabel: { marginTop: 16, marginBottom: 8, fontSize: 13, fontWeight: '700', color: '#374151' },
-  nicknameHint: { marginTop: 8, fontSize: 13, color: clientTheme.textMuted },
   error: { marginTop: 10, color: '#C62828' },
   button: { minHeight: 54, borderRadius: 16, backgroundColor: clientTheme.accent, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
   disabled: { opacity: 0.6 }, buttonText: { fontSize: 16, fontWeight: '800', color: '#111827' },
