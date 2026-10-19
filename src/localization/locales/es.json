@@ -1,4 +1,6 @@
 {
+  "Driver details and chat become available after the first 10 minutes following payment.": "Los datos del conductor y el chat estarán disponibles después de los primeros 10 minutos tras el pago.",
+  "Cancellation is free for the first 10 minutes after payment. A 15% fee applies after 10 minutes through 24 hours, and 50% after 24 hours.": "La cancelación es gratuita durante los primeros 10 minutos tras el pago. Después de 10 minutos y hasta 24 horas se aplica una tarifa del 15 %, y después de 24 horas, del 50 %.",
   "Login": "Iniciar sesión",
   "Continue with your phone number": "Continuar con tu número de teléfono",
   "We will send a six-digit verification code by SMS.": "Te enviaremos un código de verificación de seis dígitos por SMS.",

@@ -638,6 +638,12 @@ export default function RequestStatusScreen() {
   }, [loadStatus, refreshTs]);
 
   useEffect(() => {
+    if (!requestData?.status || isHistoryRequestStatus(requestData.status)) return;
+    const timer = setInterval(() => void loadStatus(true), 15000);
+    return () => clearInterval(timer);
+  }, [loadStatus, requestData?.status]);
+
+  useEffect(() => {
     if (!canUseRealtime) {
       disconnectSocket();
       setTimeout(() => {
@@ -671,7 +677,7 @@ export default function RequestStatusScreen() {
       .then(() => {
         setSocketState('connected');
         setSocketMessage('');
-        joinTripRoom(requestId);
+        if (requestData?.driverDetailsAvailable) joinTripRoom(requestId);
       })
       .catch((error) => {
         setSocketState('error');
@@ -881,7 +887,7 @@ export default function RequestStatusScreen() {
       unsubSocketError();
       leaveTripRoom(requestId);
     };
-  }, [accessToken, canUseRealtime, loadStatus, requestId, router]);
+  }, [accessToken, canUseRealtime, loadStatus, requestId, router, requestData?.driverDetailsAvailable]);
 
   const pendingOffers = offers.filter((offer) => (offer.offerStatus ?? offer.status) === 'PENDING');
   const acceptedOffer = offers.find((offer) => (offer.offerStatus ?? offer.status) === 'ACCEPTED') ?? null;
@@ -909,6 +915,7 @@ export default function RequestStatusScreen() {
   const isHistoryRequest = isHistoryRequestStatus(requestData?.status);
   const canOpenChat = Boolean(
     !isHistoryRequest &&
+    requestData?.driverDetailsAvailable === true &&
     (acceptedOffer || requestData?.driverSummary.assigned) &&
     (requestData?.driverSummary.driverId || acceptedOffer?.driverId),
   );
@@ -923,18 +930,19 @@ export default function RequestStatusScreen() {
     trimmedAdditionalChargeConfirmationText === confirmationKeyword;
   const currentOrderStep = getOrderProgressStep(effectiveTrackingStatus);
   const requestReference = getOrderReference(requestData?.id ?? requestId);
-  const driverName =
+  const driverName = requestData?.driverDetailsAvailable ? (
     trackingData?.driverName ||
     requestData?.driverSummary.driverName ||
     acceptedOffer?.driverName ||
     selectedOffer?.driverName ||
-    null;
+    null) : null;
   const driverVehicleInfo =
     requestData?.driverSummary.vehicleInfo ||
     requestData?.itemDetails.title ||
     null;
   const driverRating = acceptedOffer?.driverRating ?? selectedOffer?.driverRating ?? null;
   const shouldShowTrackingMap =
+    requestData?.driverDetailsAvailable === true &&
     requestData?.status !== 'CANCELLED' &&
     currentOrderStep >= 2 &&
     canOpenTrackingMap;
@@ -1519,13 +1527,19 @@ export default function RequestStatusScreen() {
             </View>
           ) : null}
 
+          {requestData.driverSummary.assigned && !requestData.driverDetailsAvailable && requestData.status !== 'CANCELLED' ? (
+            <View style={styles.noticeCard}>
+              <Text style={styles.supportingText}>{appI18n.t("Driver details and chat become available after the first 10 minutes following payment.")}</Text>
+            </View>
+          ) : null}
+
           {shouldShowTrackingMap ? (
             <View style={styles.mapCard}>
               {renderTrackingMap(false)}
             </View>
           ) : null}
 
-          {(driverName || requestData.driverSummary.assigned || acceptedOffer || canOpenChat) ? (
+          {requestData.driverDetailsAvailable && (driverName || requestData.driverSummary.assigned || acceptedOffer || canOpenChat) ? (
             <View style={styles.driverCard}>
               <View style={styles.driverRow}>
                 <View style={styles.driverAvatar}>
@@ -1644,6 +1658,7 @@ export default function RequestStatusScreen() {
                 })}
               </Text>
             ) : null}
+            {refundPreview ? <Text style={styles.mutedCaption}>{appI18n.t('Cancellation is free for the first 10 minutes after payment. A 15% fee applies after 10 minutes through 24 hours, and 50% after 24 hours.')}</Text> : null}
             {refundPreview && requestData.status !== 'CANCELLED' ? (
               <Text style={styles.mutedCaption}>
                 {appI18n.t('Cancel now: refund {{refund}} and keep fee {{fee}}.', {
@@ -2003,7 +2018,7 @@ export default function RequestStatusScreen() {
                       requestData.cancellation.refundPreview.retainedAmount,
                       requestData.cancellation.refundPreview.currency,
                     )} will be kept as the cancellation fee.`
-                    : 'If you cancel before pickup, 85% will be refunded automatically and 15% will be kept as the cancellation fee.'}
+                    : appI18n.t('Cancellation is free for the first 10 minutes after payment. A 15% fee applies after 10 minutes through 24 hours, and 50% after 24 hours.')}
                 </Text>
                 <View style={styles.dialogActions}>
                   <Pressable
