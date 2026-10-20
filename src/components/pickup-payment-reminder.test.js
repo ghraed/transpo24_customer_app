@@ -57,3 +57,11 @@ test('closes automatically at the payment deadline', async () => {
   await mount(); await act(async () => { jest.advanceTimersByTime(24 * 3600000); });
   expect(tree.toJSON()).toBeNull();
 });
+
+test('shows the commission-inclusive reminder total without adding the fee again', async () => {
+  api.getPickupPaymentReminders.mockResolvedValue([{ ...due, price: 105, customerPlatformFeeAmount: 5 }]);
+  await mount();
+  expect(JSON.stringify(tree.toJSON())).toContain('105.00');
+  expect(JSON.stringify(tree.toJSON())).toContain('Includes 5% platform commission');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('110.25');
+});

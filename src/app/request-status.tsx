@@ -1714,6 +1714,11 @@ export default function RequestStatusScreen() {
                   {appI18n.t(acceptedOffer.driverType === 'COMPANY' ? 'Company' : 'Personal')} • {acceptedOffer.driverName || 'Driver'} •{' '}
                   {formatMoney(acceptedOffer.proposedPrice ?? acceptedOffer.price, acceptedOffer.currency)}
                 </Text>
+                {(acceptedOffer.customerPlatformFeeAmount ?? 0) > 0 ? (
+                  <Text style={[styles.rowValue, styles.offerSubtextOnDark]}>
+                    {appI18n.t('Includes 5% platform commission')}
+                  </Text>
+                ) : null}
                 <Text style={[styles.rowValue, styles.offerSubtextOnDark]}>
                   {appI18n.t("Accepted at:")} {formatDate(acceptedOffer.acceptedAt)}
                 </Text>
@@ -1773,6 +1778,12 @@ export default function RequestStatusScreen() {
                       </Text>
                     </View>
                   </View>
+
+                  {(offer.customerPlatformFeeAmount ?? 0) > 0 ? (
+                    <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
+                      {appI18n.t('Includes 5% platform commission')}
+                    </Text>
+                  ) : null}
 
                   <Text style={[styles.rowValue, isSelected ? styles.offerSubtextOnDark : undefined]}>
                     {appI18n.t("Estimated delivery:")}{' '}

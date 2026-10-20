@@ -443,6 +443,7 @@ export interface SavedPaymentMethodSummary {
 }
 
 export interface PaymentSummary {
+  customerPlatformFeeAmount?: number;
   id: string;
   requestId: string;
   acceptedOfferId: string;
@@ -721,6 +722,7 @@ export type DropoffLocationRouteParams = {
 };
 
 export type DateTimeRouteParams = {
+  customerNote?: string;
   requestId?: string;
   serviceId?: string;
   serviceKey?: string;
@@ -737,6 +739,7 @@ export type DateTimeRouteParams = {
 };
 
 export type MotorcycleDetailsRouteParams = {
+  customerNote?: string;
   serviceId?: string;
   serviceKey?: string;
   pendingMotorcycleDetails?: string;
@@ -744,6 +747,7 @@ export type MotorcycleDetailsRouteParams = {
 };
 
 export type GoodsDetailsRouteParams = {
+  customerNote?: string;
   serviceId?: string;
   serviceKey?: string;
   pendingGoodsDetails?: string;
@@ -751,6 +755,7 @@ export type GoodsDetailsRouteParams = {
 };
 
 export type FurnitureDetailsRouteParams = {
+  customerNote?: string;
   serviceId?: string;
   serviceKey?: string;
   pendingFurnitureDetails?: string;
@@ -923,6 +928,7 @@ export interface CustomerAcceptOfferResponse {
     requestId: string;
     driverId: string;
     price: number;
+    customerPlatformFeeAmount?: number;
     currency: string;
     estimatedPickupAt: string | null;
     estimatedDeliveryAt: string | null;
@@ -993,6 +999,8 @@ export interface CustomerHomeResponse {
 export type DriverOfferStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED';
 
 export interface CustomerRequestOfferSummary {
+  /** Client total includes the platform commission returned by the API. */
+  customerPlatformFeeAmount?: number;
   id: string;
   offerId: string;
   requestId: string;

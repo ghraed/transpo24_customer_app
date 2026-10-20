@@ -1,3 +1,4 @@
+import { OptionalRequestNote } from '@/requests/optional-request-note';
 import { validateSchedule } from '@/requests/schedule-rules';
 import { RequestProgress } from '@/requests/request-progress';
 import { reviewAddressRoute } from '@/requests/review-address-route';
@@ -15,7 +16,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   View,
   type ColorValue,
 } from 'react-native';
@@ -369,7 +369,13 @@ function SubmitRequestScreen() {
   const isFurnitureTransport = serviceKey === 'FURNITURE_TRANSPORT';
   const isVehicleTransport = serviceKey === 'VEHICLE_TRANSPORT';
 
-  const [customerNote, setCustomerNote] = useState<string>('');
+  const [customerNote, setCustomerNote] = useState<string>(() =>
+    singleParam(params.customerNote) ?? [
+      pendingMotorcycleDetails?.additionalNotes,
+      vehicleConditionDetails?.vehicleConditionNotes,
+      itemDetails?.specialInstructions,
+    ].filter((note, index, notes) => note?.trim() && notes.indexOf(note) === index).join('\n'),
+  );
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
@@ -386,6 +392,7 @@ function SubmitRequestScreen() {
       pickup: pickup ? new Date(pickup) : undefined,
       delivery: delivery ? new Date(delivery) : undefined,
       furniture: isFurnitureTransport,
+      bicycle: isMotorcycleTransport && pendingMotorcycleDetails?.transportKind === 'BICYCLE',
       now,
     });
   };
@@ -512,11 +519,11 @@ function SubmitRequestScreen() {
   const canSubmit = validationErrors.length === 0 && !isSubmitting;
 
   const navigateToPickup = (): void => {
-    router.push(reviewAddressRoute('pickup', params));
+    router.push(reviewAddressRoute('pickup', { ...params, customerNote }));
   };
 
   const navigateToDropoff = (): void => {
-    router.push(reviewAddressRoute('dropoff', params));
+    router.push(reviewAddressRoute('dropoff', { ...params, customerNote }));
   };
 
   const navigateToDateTime = (): void => {
@@ -526,6 +533,7 @@ function SubmitRequestScreen() {
         params: {
           serviceId,
           serviceKey,
+          customerNote,
           pendingMotorcycleDetails: params.pendingMotorcycleDetails ?? '',
           pendingMotorcyclePhotoAssets: params.pendingMotorcyclePhotoAssets ?? '',
         },
@@ -539,6 +547,7 @@ function SubmitRequestScreen() {
         params: {
           serviceId,
           serviceKey,
+          customerNote,
           pendingGoodsDetails: params.pendingGoodsDetails ?? '',
           pendingGoodsPhotoAssets: params.pendingGoodsPhotoAssets ?? '',
         },
@@ -552,6 +561,7 @@ function SubmitRequestScreen() {
         params: {
           serviceId,
           serviceKey,
+          customerNote,
           pendingFurnitureDetails: params.pendingFurnitureDetails ?? '',
           pendingFurniturePhotoAssets: params.pendingFurniturePhotoAssets ?? '',
         },
@@ -563,6 +573,7 @@ function SubmitRequestScreen() {
       pathname: '/date-time',
       params: {
         requestId,
+        customerNote,
         serviceId,
         serviceKey,
         vehicleDetails: params.vehicleDetails ?? '',
@@ -648,7 +659,6 @@ function SubmitRequestScreen() {
           itemDescription: bicycle ? formatEnumLabel(pendingMotorcycleDetails.bicycleType!) : undefined,
           itemBrand: bicycle ? pendingMotorcycleDetails.brand?.trim() || undefined : undefined,
           itemModel: bicycle ? pendingMotorcycleDetails.model?.trim() || undefined : undefined,
-          specialInstructions: pendingMotorcycleDetails.additionalNotes?.trim() || undefined,
           requiresLoadingHelp: false,
         });
 
@@ -657,7 +667,7 @@ function SubmitRequestScreen() {
         }
 
         const submitted = await submitCustomerRequest(created.id, {
-          customerNote: (isMotorcycleTransport ? pendingMotorcycleDetails?.additionalNotes : customerNote)?.trim() || undefined,
+          customerNote: customerNote.trim() || undefined,
         });
 
         setSuccessMessage('Request submitted successfully.');
@@ -774,9 +784,7 @@ function SubmitRequestScreen() {
           itemHeightCm: itemDetails.dimensions.heightCm ?? undefined,
           requiresLoadingHelp: itemDetails.requiresLoadingHelp,
           loadingWorkersCount: itemDetails.loadingWorkersCount ?? undefined,
-          specialInstructions: itemDetails.specialInstructions ?? undefined,
           vehicleCondition: vehicleConditionDetails?.vehicleCondition,
-          vehicleConditionNotes: vehicleConditionDetails?.vehicleConditionNotes?.trim() || undefined,
         };
 
         await updateScheduleAndItemDetails(requestId, payload);
@@ -869,9 +877,6 @@ function SubmitRequestScreen() {
             {vehicleConditionDetails?.vehicleCondition ? (
               <Text style={styles.value}>{appI18n.t("Vehicle condition:")} {formatEnumLabel(vehicleConditionDetails.vehicleCondition)}</Text>
             ) : null}
-            {vehicleConditionDetails?.vehicleConditionNotes ? (
-              <Text style={styles.value}>{appI18n.t("Condition notes:")} {vehicleConditionDetails.vehicleConditionNotes}</Text>
-            ) : null}
           </View>
         ) : null}
 
@@ -931,7 +936,7 @@ function SubmitRequestScreen() {
                 pendingMotorcycleDetails.isImmediate ?? true,
                 pendingMotorcycleDetails.scheduledPickupAt,
               )}
-              {'\n'}{appI18n.t('Delivery Date')}: {pendingMotorcycleDetails.scheduledDeliveryAt ? new Date(pendingMotorcycleDetails.scheduledDeliveryAt).toLocaleDateString() : appI18n.t('Select delivery date')}
+              {pendingMotorcycleDetails.scheduledDeliveryAt || !(pendingMotorcycleDetails.transportKind === 'BICYCLE' && (pendingMotorcycleDetails.isImmediate ?? true)) ? <>{'\n'}{appI18n.t('Delivery Date')}: {pendingMotorcycleDetails.scheduledDeliveryAt ? new Date(pendingMotorcycleDetails.scheduledDeliveryAt).toLocaleDateString() : appI18n.t('Select delivery date')}</> : null}
             </Text>
           </View>
         ) : null}
@@ -950,7 +955,6 @@ function SubmitRequestScreen() {
               <Text style={styles.value}>{appI18n.t('Condition:')} {formatEnumLabel(pendingMotorcycleDetails.motorcycleCondition)}</Text>
               <Text style={styles.value}>{appI18n.t('Chassis number:')} {pendingMotorcycleDetails.chassisNumber || appI18n.t('Not provided')}</Text>
             </>}
-            <Text style={styles.value}>{appI18n.t('Additional Notes (optional)')}: {pendingMotorcycleDetails.additionalNotes || appI18n.t('Not provided')}</Text>
           </View>
         ) : null}
 
@@ -1092,9 +1096,7 @@ function SubmitRequestScreen() {
                   ? appI18n.t('Yes ({{workers}} workers)', { workers: itemDetails.loadingWorkersCount ?? 0 })
                   : appI18n.t('No')}
               </Text>
-              {itemDetails?.specialInstructions ? (
-                <Text style={styles.value}>{appI18n.t("Special instructions:")} {itemDetails.specialInstructions}</Text>
-              ) : null}
+
             </View>
 
             <View style={styles.section}>
@@ -1109,36 +1111,15 @@ function SubmitRequestScreen() {
                 </ScrollView>
               )}
             </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{appI18n.t("Optional Note")}</Text>
-              <TextInput
-                value={customerNote}
-                onChangeText={setCustomerNote}
-                onFocus={scrollNoteIntoView}
-                placeholder={appI18n.t("Add a note for drivers, optional")}
-                placeholderTextColor="#98a2b3"
-                style={styles.noteInput}
-                multiline
-              />
-            </View>
           </>
         ) : null}
 
-        {isGoodsTransport || isFurnitureTransport ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{appI18n.t("Optional Note")}</Text>
-            <TextInput
-              value={customerNote}
-              onChangeText={setCustomerNote}
-              onFocus={scrollNoteIntoView}
-              placeholder={appI18n.t("Add a note for drivers, optional")}
-              placeholderTextColor="#98a2b3"
-              style={styles.noteInput}
-              multiline
-            />
-          </View>
-        ) : null}
+        <OptionalRequestNote
+          value={customerNote}
+          onChangeText={setCustomerNote}
+          onFocus={scrollNoteIntoView}
+          editable={!isSubmitting}
+        />
 
         <Text style={styles.helperText}>
           {appI18n.t("Drivers will review your request and send offers.")}</Text>
@@ -1262,18 +1243,6 @@ const styles = StyleSheet.create({
     height: 92,
     borderRadius: 18,
     backgroundColor: '#E5E7EB',
-  },
-  noteInput: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 18,
-    minHeight: 84,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    textAlignVertical: 'top',
-    color: '#111827',
-    fontSize: 14,
   },
   helperText: {
     fontSize: 13,

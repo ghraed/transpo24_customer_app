@@ -35,12 +35,14 @@ export function validateSchedule({
   pickup,
   delivery,
   furniture = false,
+  bicycle = false,
   now = new Date(),
 }: {
   immediate: boolean;
   pickup?: Date;
   delivery?: Date;
   furniture?: boolean;
+  bicycle?: boolean;
   now?: Date;
 }): string | null {
   const effectivePickup = immediate ? now : pickup;
@@ -53,6 +55,7 @@ export function validateSchedule({
     return "Scheduled pickup must be in the future.";
   if (!furniture && effectivePickup.getTime() >= maximum)
     return "Pickup must be between today and five days ahead.";
+  if (bicycle && immediate && delivery === undefined) return null;
   if (furniture) {
     if (!delivery || !Number.isFinite(delivery.getTime()))
       return "Please select a delivery date.";

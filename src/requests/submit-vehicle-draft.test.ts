@@ -65,7 +65,17 @@ describe('vehicle submission', () => {
       vehicleEstimatedWeightKg: 1549,
       requiresLoadingHelp: false,
     });
-    expect(mocked.submitCustomerRequest).toHaveBeenCalledWith('request-1');
+    expect(mocked.submitCustomerRequest).toHaveBeenCalledWith('request-1', { customerNote: undefined });
+  });
+  it.each([undefined, '', '  Call at gate  '])('submits the final note and allows clearing old condition notes: %s', async (customerNote) => {
+    let draft: VehicleDraft = { ...fixture(), customerNote };
+    draft.condition.notes = 'Old condition note';
+    const persist = (change: Partial<VehicleDraft>) => (draft = patchVehicleDraft(draft, change));
+    await submitVehicleDraft(draft, persist);
+    expect(mocked.submitCustomerRequest).toHaveBeenCalledWith('request-1', {
+      customerNote: customerNote === undefined ? 'Old condition note' : customerNote.trim() || undefined,
+    });
+    expect(mocked.updateScheduleAndItemDetails.mock.calls[0][1]).not.toHaveProperty('vehicleConditionNotes');
   });
   it('reuses the draft and uploaded images after submission fails', async () => {
     let draft = {

@@ -314,6 +314,7 @@ it("shows bicycle fields and additional notes without motorcycle-only inputs", a
   getRequestForEdit.mockResolvedValue({
     ...fixture(),
     itemType: "OTHER",
+    scheduledDeliveryAt: null,
     customerNote: "Existing bicycle note",
     specialInstructions: null,
   });
@@ -336,6 +337,9 @@ it("shows bicycle fields and additional notes without motorcycle-only inputs", a
   ]);
   expect(inputs[3].props.value).toBe("Existing bicycle note");
   expect(button(tree, "Motorcycle")).toBeUndefined();
+  expect(tree.root.findByType(ScheduleEditor).props.bicycle).toBe(true);
+  await confirmSubmission(tree);
+  expect(submitRequestEdit).toHaveBeenCalledWith("request", expect.objectContaining({ isImmediate: true }), []);
   await act(async () => tree.unmount());
 });
 

@@ -1710,6 +1710,7 @@ export async function submitRequestEdit(requestId: string, details: Record<strin
 }
 
 export interface PickupPaymentReminder {
+  customerPlatformFeeAmount?: number;
   timeZone?: string;
   requestId: string;
   offerId: string;

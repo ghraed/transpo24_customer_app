@@ -70,6 +70,8 @@ export async function submitVehicleDraft(
       ),
     });
   }
-  await submitCustomerRequest(id);
+  await submitCustomerRequest(id, {
+    customerNote: (current.customerNote ?? current.condition.notes).trim() || undefined,
+  });
   return id;
 }

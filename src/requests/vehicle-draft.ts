@@ -61,6 +61,7 @@ export type VehicleDraft = {
   photos: DraftPhoto[];
   removedPhotoIds: string[];
   distanceKm?: number;
+  customerNote?: string;
 };
 export type DraftError = { step: VehicleStep; field: string; key: string };
 
@@ -150,8 +151,8 @@ export function validateVehicleDraft(
     add('vehicle', 'vin', 'vehicleRequest.errorVin');
   if (!draft.condition.mobility)
     add('condition', 'mobility', 'vehicleRequest.errorCondition');
-  if (draft.condition.notes.length > 500)
-    add('condition', 'notes', 'vehicleRequest.errorNotes');
+  if ((draft.customerNote ?? draft.condition.notes).length > 1000)
+    add('review', 'customerNote', 'vehicleRequest.errorNotes');
   for (const step of ['pickup', 'dropoff'] as const) {
     const address = draft[step];
     if (
@@ -196,7 +197,7 @@ export function vehiclePayload(draft: VehicleDraft) {
     vehicleDataSource: v.source,
     vehicleMobility: draft.condition.mobility,
     vehicleIssues: draft.condition.issues,
-    vehicleConditionNotes: draft.condition.notes,
+
     // Retain a useful value for older driver builds while the structured fields roll out.
     vehicleCondition:
       draft.condition.mobility === 'RUNNING'

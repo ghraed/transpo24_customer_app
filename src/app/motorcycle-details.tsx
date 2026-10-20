@@ -269,7 +269,6 @@ export default function MotorcycleDetailsScreen() {
     bicycleType: pendingMotorcycleDetails?.bicycleType ?? '',
     brand: pendingMotorcycleDetails?.brand ?? '',
     model: pendingMotorcycleDetails?.model ?? '',
-    additionalNotes: pendingMotorcycleDetails?.additionalNotes ?? '',
     motorcycleType: pendingMotorcycleDetails?.motorcycleType ?? '',
     chassisNumber: pendingMotorcycleDetails?.chassisNumber ?? '',
     motorcycleCondition: pendingMotorcycleDetails?.motorcycleCondition ?? '',
@@ -355,7 +354,7 @@ export default function MotorcycleDetailsScreen() {
       return;
     }
 
-    const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.scheduledPickupAt, delivery: form.scheduledDeliveryAt, furniture: false });
+    const scheduleError = validateSchedule({ immediate: form.isImmediate, pickup: form.scheduledPickupAt, delivery: form.scheduledDeliveryAt, bicycle: isBicycle });
     if (validationMessage || scheduleError) {
       setErrorMessage(validationMessage ?? appI18n.t(scheduleError!));
       return;
@@ -366,6 +365,7 @@ export default function MotorcycleDetailsScreen() {
     router.push({
       pathname: '/pickup-location',
       params: {
+        customerNote: params.customerNote ?? pendingMotorcycleDetails?.additionalNotes,
         serviceId,
         serviceKey,
         pendingMotorcycleDetails: JSON.stringify({
@@ -373,7 +373,6 @@ export default function MotorcycleDetailsScreen() {
           bicycleType: isBicycle ? form.bicycleType : undefined,
           brand: isBicycle ? form.brand?.trim() : undefined,
           model: isBicycle ? form.model?.trim() : undefined,
-          additionalNotes: form.additionalNotes?.trim(),
           motorcycleType: isBicycle ? 'OTHER' : form.motorcycleType,
           chassisNumber: isBicycle ? undefined : normalizedVin || undefined,
           motorcycleCondition: isBicycle ? 'UNKNOWN' : form.motorcycleCondition,
@@ -585,10 +584,6 @@ export default function MotorcycleDetailsScreen() {
         <Text style={styles.label}>{appI18n.t('Model (optional)')}</Text>
         <TextInput accessibilityLabel={appI18n.t('Model (optional)')} style={styles.input} value={form.model} onChangeText={(model) => setForm((prev) => ({ ...prev, model }))} />
       </View>}
-      <View style={styles.sectionCard}>
-        <Text style={styles.label}>{appI18n.t('Additional Notes (optional)')}</Text>
-        <TextInput accessibilityLabel={appI18n.t('Additional Notes (optional)')} multiline style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} value={form.additionalNotes} onChangeText={(additionalNotes) => setForm((prev) => ({ ...prev, additionalNotes }))} />
-      </View>
       <Pressable style={styles.continueButton} onPress={() => {
         const error = formatValidationMessage({ ...form, isImmediate: true });
         if (error) { setErrorMessage(error); return; }
@@ -661,7 +656,7 @@ export default function MotorcycleDetailsScreen() {
       </View>
       </View>
 
-      <DeliveryDateEditor pickup={form.isImmediate ? new Date() : form.scheduledPickupAt} value={form.scheduledDeliveryAt} onChange={(date) => setForm((prev) => ({ ...prev, scheduledDeliveryAt: date }))} />
+      {!(isBicycle && form.isImmediate) ? <DeliveryDateEditor pickup={form.isImmediate ? new Date() : form.scheduledPickupAt} value={form.scheduledDeliveryAt} onChange={(date) => setForm((prev) => ({ ...prev, scheduledDeliveryAt: date }))} /> : null}
 
       <Pressable
         style={[styles.continueButton, !canContinue && styles.continueDisabled]}

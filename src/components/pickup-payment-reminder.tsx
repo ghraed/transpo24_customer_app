@@ -236,12 +236,17 @@ export function PickupPaymentReminderPopup({
               ) : null}
               <View style={styles.divider} />
               <View style={styles.topRow}>
-                <Text style={styles.label}>{t("Agreed price")}</Text>
+                <Text style={styles.label}>{t("Total amount")}</Text>
                 <Text style={styles.price}>
                   {reminder.currency} {reminder.price.toFixed(2)}
                 </Text>
               </View>
             </View>
+            {(reminder.customerPlatformFeeAmount ?? 0) > 0 ? (
+              <Text style={styles.body}>
+                {t('Includes 5% platform commission')}
+              </Text>
+            ) : null}
             <View style={styles.deadline}>
               <Text style={styles.deadlineTitle}>
                 {t("Payment due before")} {date(reminder.deadlineAt)}

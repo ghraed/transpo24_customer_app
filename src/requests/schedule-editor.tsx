@@ -37,11 +37,13 @@ export function ScheduleEditor({
   onChange,
   invalid,
   furniture = false,
+  bicycle = false,
 }: {
   value: VehicleDraft['schedule'];
   onChange: (value: VehicleDraft['schedule']) => void;
   invalid: boolean;
   furniture?: boolean;
+  bicycle?: boolean;
 }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<'date' | 'time'>();
@@ -132,9 +134,9 @@ export function ScheduleEditor({
           ))}
         </View>
       ) : null}
-      <DeliveryDateEditor furniture={furniture} pickup={value.immediate ? new Date() : current}
+      {!(bicycle && value.immediate) ? <DeliveryDateEditor furniture={furniture} pickup={value.immediate ? new Date() : current}
         value={value.deliveryAt ? new Date(value.deliveryAt) : undefined}
-        onChange={(date) => onChange({ ...value, deliveryAt: date.toISOString() })} />
+        onChange={(date) => onChange({ ...value, deliveryAt: date.toISOString() })} /> : null}
       {Platform.OS === 'ios' ? (
         <Modal
           transparent

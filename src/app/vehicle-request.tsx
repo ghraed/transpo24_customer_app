@@ -1,3 +1,4 @@
+import { OptionalRequestNote } from '@/requests/optional-request-note';
 import { ServiceHeader, SERVICE_HEADER_OPTIONS } from '@/requests/service-header';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -10,7 +11,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -481,19 +481,7 @@ function VehicleRequest({
                     </Text>
                   </Pressable>
                 ))}
-                <Text style={styles.cardTitle}>
-                  {t('vehicleRequest.notes')}
-                </Text>
-                <TextInput
-                  multiline
-                  maxLength={500}
-                  accessibilityLabel={t('vehicleRequest.notes')}
-                  value={draft.condition.notes}
-                  onChangeText={(notes) =>
-                    patch({ condition: { ...draft.condition, notes } })
-                  }
-                  style={styles.notes}
-                />
+
               </View>
             ) : null}
             {step === 'pickup' || step === 'dropoff' ? (
@@ -605,9 +593,7 @@ function VehicleRequest({
                       {edit('condition')}
                     </View>
                     {issueList}
-                    {draft.condition.notes ? (
-                      <Text style={styles.body}>{draft.condition.notes}</Text>
-                    ) : null}
+
                   </>,
                 )}
                 <View style={styles.card}>
@@ -686,6 +672,12 @@ function VehicleRequest({
                     )}
                   </>,
                 )}
+                <OptionalRequestNote
+                  value={draft.customerNote ?? draft.condition.notes}
+                  onChangeText={(customerNote) => patch({ customerNote })}
+                  onFocus={() => requestAnimationFrame(() => scroll.current?.scrollToEnd({ animated: true }))}
+                  editable={!busy}
+                />
               </View>
             ) : null}
           </View>
@@ -854,16 +846,6 @@ const styles = StyleSheet.create({
   },
   selected: { borderColor: '#FFC548', backgroundColor: '#FFC548' },
   invalid: { borderColor: '#C0392B', borderWidth: 2 },
-  notes: {
-    borderWidth: 1,
-    borderColor: '#D9DFE8',
-    backgroundColor: '#FFF',
-    padding: 16,
-    minHeight: 100,
-    borderRadius: 12,
-    textAlignVertical: 'top',
-    color: '#111827',
-  },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   photoItem: { width: 120 },
   photo: { width: 120, height: 90, borderRadius: 10 },

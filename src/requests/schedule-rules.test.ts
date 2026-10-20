@@ -131,6 +131,13 @@ describe("vehicle scheduling follows goods rules", () => {
 });
 
 describe("required schedule fields for every service", () => {
+  it("allows immediate bicycle pickup without delivery but requires delivery for scheduled bicycles", () => {
+    expect(validateSchedule({ immediate: true, bicycle: true, now })).toBeNull();
+    expect(validateSchedule({ immediate: false, bicycle: true, pickup: day(1), now }))
+      .toBe("Please select a delivery date.");
+    expect(validateSchedule({ immediate: true, bicycle: true, delivery: new Date('invalid'), now }))
+      .toBe("Please select a delivery date.");
+  });
   it.each([false, true])(
     "requires scheduled pickup and delivery (furniture=%s)",
     (furniture) => {

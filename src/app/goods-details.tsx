@@ -319,6 +319,7 @@ export default function GoodsDetailsScreen() {
     router.push({
       pathname: '/pickup-location',
       params: {
+        customerNote: params.customerNote,
         serviceId,
         serviceKey,
         pendingGoodsDetails: JSON.stringify({

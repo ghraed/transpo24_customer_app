@@ -8,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,8 +23,6 @@ type RouteParams = {
   pendingRequestDetails?: string;
   pendingPhotoAssets?: string;
 };
-
-const MAX_NOTES_LENGTH = 500;
 
 const VEHICLE_CONDITION_OPTIONS: VehicleConditionOption[] = [
   { value: 'RUNNING', label: 'Running vehicle', description: 'Can be driven' },
@@ -52,15 +49,10 @@ function VehicleConditionScreen() {
   });
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  const trimmedNotes = useMemo(() => form.notes?.trim() ?? '', [form.notes]);
-
   const validationError = useMemo(() => {
     if (!form.condition) return appI18n.t("Please select the vehicle condition.");
-    if (trimmedNotes.length > MAX_NOTES_LENGTH) {
-      return appI18n.t("Additional notes cannot exceed {{value0}} characters.", { value0: MAX_NOTES_LENGTH });
-    }
     return '';
-  }, [form.condition, trimmedNotes]);
+  }, [form.condition]);
 
   const onContinue = () => {
     if (validationError) {
@@ -78,7 +70,6 @@ function VehicleConditionScreen() {
         pendingPhotoAssets,
         vehicleConditionDetails: JSON.stringify({
           vehicleCondition: form.condition,
-          vehicleConditionNotes: trimmedNotes || undefined,
         }),
       },
     } as unknown as Href);
@@ -141,23 +132,7 @@ function VehicleConditionScreen() {
             </View>
           </View>
 
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>{appI18n.t("Additional notes")}</Text>
-            <TextInput
-              value={form.notes}
-              onChangeText={(value) => {
-                setForm((prev) => ({ ...prev, notes: value }));
-                setErrorMessage('');
-              }}
-              placeholder={appI18n.t("Add any notes or extra details about the vehicle condition")}
-              placeholderTextColor="#98A2B3"
-              style={styles.notesInput}
-              multiline
-              textAlignVertical="top"
-              maxLength={MAX_NOTES_LENGTH}
-            />
-            <Text style={styles.notesCount}>{trimmedNotes.length}/{MAX_NOTES_LENGTH}</Text>
-          </View>
+
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
@@ -275,26 +250,6 @@ const styles = StyleSheet.create({
     color: clientTheme.textMuted,
   },
   optionDescriptionSelected: {
-    color: clientTheme.textMuted,
-  },
-  notesLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: clientTheme.text,
-  },
-  notesInput: {
-    minHeight: 110,
-    borderWidth: 1,
-    borderColor: clientTheme.border,
-    borderRadius: 16,
-    backgroundColor: clientTheme.surfaceMuted,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: clientTheme.text,
-  },
-  notesCount: {
-    alignSelf: 'flex-end',
-    fontSize: 12,
     color: clientTheme.textMuted,
   },
   errorText: {

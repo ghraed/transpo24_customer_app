@@ -258,6 +258,7 @@ export default function EditRequestScreen() {
         pickup: draft.scheduledPickupAt ? new Date(draft.scheduledPickupAt) : undefined,
         delivery: typeof draft.scheduledDeliveryAt === 'string' ? new Date(draft.scheduledDeliveryAt) : undefined,
         furniture: service?.key === 'FURNITURE_TRANSPORT',
+        bicycle: service?.key === 'MOTORCYCLE_TRANSPORT' && draft.itemType === 'OTHER',
       });
       if (scheduleError) throw new Error(t(scheduleError));
       await submitRequestEdit(requestId, editRequestPayload(draft), photos);
@@ -392,6 +393,7 @@ export default function EditRequestScreen() {
                 />
                 <ScheduleEditor
                   furniture={service?.key === 'FURNITURE_TRANSPORT'}
+                  bicycle={service?.key === 'MOTORCYCLE_TRANSPORT' && draft.itemType === 'OTHER'}
                   value={{
                     deliveryAt: typeof draft.scheduledDeliveryAt === 'string' ? draft.scheduledDeliveryAt : undefined,
                     immediate: draft.isImmediate,

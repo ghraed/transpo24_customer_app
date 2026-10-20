@@ -1,3 +1,4 @@
+import { OptionalRequestNote } from './optional-request-note';
 import {
   afterEach,
   beforeEach,
@@ -149,6 +150,7 @@ describe('vehicle review editing', () => {
         button(tree, `vehicleRequest.${label}`).props.onPress();
       });
     }
+    expect(tree.root.findAllByType(OptionalRequestNote)).toHaveLength(0);
     expect(tree.root.findByType(ScheduleEditor)).toBeDefined();
     expect(tree.root.findByType(ScheduleEditor).props.furniture).not.toBe(true);
     expect(button(tree, 'vehicleRequest.camera')).toBeDefined();
@@ -163,6 +165,9 @@ describe('vehicle review editing', () => {
     expect(tree.root.findAllByType(ScheduleEditor)).toHaveLength(0);
     expect(button(tree, 'vehicleRequest.camera')).toBeUndefined();
     expect(button(tree, 'vehicleRequest.submit')).toBeDefined();
+    expect(tree.root.findAllByType(OptionalRequestNote)).toHaveLength(1);
+    expect(tree.root.findByType(OptionalRequestNote).props.value).toBe('Gate 2');
+    await act(async () => tree.root.findByType(OptionalRequestNote).props.onChangeText('Call first'));
     for (const section of ['vehicle', 'condition', 'pickup', 'dropoff', 'schedule', 'photos']) {
       expect(tree.root.findAll(node => node.props.accessibilityLabel === `vehicleRequest.edit vehicleRequest.step.${section}`).length).toBeGreaterThan(0);
     }
@@ -189,6 +194,7 @@ describe('vehicle review editing', () => {
     await act(async () => {
       button(tree, 'vehicleRequest.confirmPickup').props.onPress();
     });
+    expect(tree.root.findByType(OptionalRequestNote).props.value).toBe('Call first');
     await edit('schedule');
     expect(tree.root.findByType(ScheduleEditor).props.value.at).toBe(at);
     await act(async () => {

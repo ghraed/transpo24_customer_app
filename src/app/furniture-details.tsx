@@ -227,6 +227,7 @@ export default function FurnitureDetailsScreen() {
     router.push({
       pathname: '/pickup-location',
       params: {
+        customerNote: params.customerNote,
         serviceId,
         serviceKey,
         pendingFurnitureDetails: JSON.stringify({

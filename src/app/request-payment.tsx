@@ -1,3 +1,5 @@
+import { PaymentSummary as PaymentSummaryCard } from '@/components/payment-summary';
+import { PaymentConditions } from '@/components/payment-conditions';
 import {
   confirmPayment,
   confirmPlatformPayPayment,
@@ -216,7 +218,10 @@ export default function RequestPaymentScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showPaymentNotice, setShowPaymentNotice] = useState(false);
 
-  const amount = offerData ? offerData.proposedPrice ?? offerData.price : 0;
+  const amount = paymentResult?.amount ?? (offerData ? offerData.proposedPrice ?? offerData.price : 0);
+  const customerPlatformFeeAmount = paymentResult?.customerPlatformFeeAmount
+    ?? offerData?.customerPlatformFeeAmount
+    ?? 0;
   const currency = offerData?.currency ?? 'USD';
 
   useEffect(() => {
@@ -550,30 +555,23 @@ export default function RequestPaymentScreen() {
           </View>
           <Text style={styles.heroTitle}>{appI18n.t("Pay Now")}</Text>
           <Text style={styles.heroSubtitle}>
-            {appI18n.t("The agreed amount will be collected now when you confirm the driver. If you cancel before pickup, 85% is refunded automatically and 15% is kept as the cancellation fee.")}</Text>
+            {appI18n.t("The agreed amount will be collected now when you confirm the driver.")}</Text>
         </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{appI18n.t("Payment Summary")}</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{appI18n.t("Selected driver")}</Text>
-            <Text style={styles.summaryValue}>{appI18n.t(offerData.driverType === 'COMPANY' ? 'Company' : 'Personal')} • {offerData.driverName || 'Driver'}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{appI18n.t("Agreed amount")}</Text>
-            <Text style={styles.summaryValue}>{formatMoney(amount, currency)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{appI18n.t("Pickup")}</Text>
-            <Text style={styles.summaryValue}>{requestData.pickupLocation.address || 'N/A'}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{appI18n.t("Estimated pickup")}</Text>
-            <Text style={styles.summaryValue}>{formatDate(offerData.estimatedPickupAt)}</Text>
-          </View>
-          <Text style={styles.helperText}>
-            {appI18n.t("This payment is collected now and held in the platform until the trip outcome is resolved.")}</Text>
-        </View>
+        <PaymentSummaryCard
+          amountLabel={formatMoney(amount, currency)}
+          currency={currency}
+          commissionLabel={customerPlatformFeeAmount > 0
+            ? appI18n.t('Includes 5% platform commission ({{amount}}).', {
+                amount: formatMoney(customerPlatformFeeAmount, currency),
+              })
+            : undefined}
+          driverLabel={`${appI18n.t(offerData.driverType === 'COMPANY' ? 'Company' : 'Personal')}${requestData.driverDetailsAvailable && offerData.driverName ? ` • ${offerData.driverName}` : ''}`}
+          pickupAddress={requestData.pickupLocation.address || 'N/A'}
+          estimatedPickup={formatDate(offerData.estimatedPickupAt)}
+        />
+
+        <PaymentConditions />
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{appI18n.t("Choose Payment Method")}</Text>
@@ -710,26 +708,30 @@ export default function RequestPaymentScreen() {
       <Modal visible={showPaymentNotice} transparent animationType="fade" onRequestClose={closePaymentNotice}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <View style={styles.modalBadge}>
-              <Text style={styles.modalBadgeText}>{appI18n.t("Important")}</Text>
-            </View>
-            <Text style={styles.modalTitle}>{appI18n.t(requestData?.status === 'RESERVED' ? "Confirm pickup and pay" : "Immediate payment capture")}</Text>
-            <Text style={styles.modalBody}>
-              {appI18n.t('Confirming this driver charges {{amount}} immediately.', {
-                amount: formatMoney(amount, currency),
-              })}
-            </Text>
+            <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+              <View style={styles.modalBadge}>
+                <Text style={styles.modalBadgeText}>{appI18n.t("Important")}</Text>
+              </View>
+              <Text style={styles.modalTitle}>{appI18n.t(requestData?.status === 'RESERVED' ? "Confirm pickup and pay" : "Immediate payment capture")}</Text>
+              <Text style={styles.modalBody}>
+                {appI18n.t('Confirming this driver charges {{amount}} immediately.', {
+                  amount: formatMoney(amount, currency),
+                })}
+              </Text>
 
-            <View style={styles.noticePanel}>
-              <Text style={styles.noticePanelTitle}>{appI18n.t("Cancellation policy")}</Text>
-              <Text style={styles.noticePanelText}>
-                {appI18n.t("Before pickup: 85% is refunded automatically and 15% is kept as the cancellation fee.")}</Text>
-              <Text style={styles.noticePanelText}>
-                {appI18n.t("After pickup: automatic cancellation is not available and the case goes to manual review.")}</Text>
-            </View>
+              {customerPlatformFeeAmount > 0 ? (
+                <Text style={styles.modalBody}>
+                  {appI18n.t('Includes 5% platform commission ({{amount}}).', {
+                    amount: formatMoney(customerPlatformFeeAmount, currency),
+                  })}
+                </Text>
+              ) : null}
 
-            <Text style={styles.modalFootnote}>
-              {appI18n.t("Continue only if you want to pay now and lock this offer for the selected driver.")}</Text>
+              <PaymentConditions compact />
+
+              <Text style={styles.modalFootnote}>
+                {appI18n.t("Continue only if you want to pay now and lock this offer for the selected driver.")}</Text>
+            </ScrollView>
 
             <View style={styles.modalActions}>
               <Pressable style={styles.modalSecondaryButton} onPress={closePaymentNotice}>
@@ -985,11 +987,16 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 380,
+    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
     borderColor: '#E5E8EF',
+  },
+  modalScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   modalBadge: {
     alignSelf: 'flex-start',
@@ -1014,25 +1021,6 @@ const styles = StyleSheet.create({
     color: '#68768A',
     fontSize: 14,
     lineHeight: 20,
-  },
-  noticePanel: {
-    marginTop: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F8FAFC',
-    padding: 14,
-    gap: 8,
-  },
-  noticePanelTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  noticePanelText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#68768A',
   },
   modalFootnote: {
     marginTop: 14,

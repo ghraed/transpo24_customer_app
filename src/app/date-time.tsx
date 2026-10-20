@@ -408,6 +408,7 @@ function DateTimeScreen() {
         pathname: '/submit-request',
         params: {
           requestId: updatedRequest.id,
+          customerNote: params.customerNote ?? '',
           serviceId: updatedRequest.serviceId,
           serviceKey: serviceKey ?? '',
           vehicleDetails,
@@ -714,14 +715,7 @@ function DateTimeScreen() {
             />
           ) : null}
 
-          <TextInput
-            value={form.specialInstructions}
-            onChangeText={(value) => updateForm('specialInstructions', value)}
-            placeholder={appI18n.t("Special instructions (optional)")}
-            style={[styles.input, styles.textarea]}
-            placeholderTextColor="#98a2b3"
-            multiline
-          />
+
         </View>
 
         <View style={styles.section}>
