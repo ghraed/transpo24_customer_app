@@ -41,6 +41,7 @@ import type {
 } from '@/types/customer-request';
 import { SavedCardPicker, EMPTY_CARD_SELECTION } from '@/components/saved-card-picker';
 import appI18n from '@/localization/i18n';
+import { getVisiblePaymentOptions } from '@/lib/ios-payment-options';
 
 type PaymentOption = {
   method: PaymentMethod;
@@ -203,7 +204,8 @@ export default function RequestPaymentScreen() {
       ? rawPublishableKey
       : '';
   const merchantCountryCode =
-    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() || 'US';
+    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() ||
+    (Platform.OS === 'ios' ? '' : 'US');
   const merchantIdentifier = process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() || '';
   const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -229,7 +231,9 @@ export default function RequestPaymentScreen() {
     void (async () => {
       try {
         const appleSupported =
-          Platform.OS === 'ios' && !isExpoGo ? await isPlatformPaySupported() : false;
+          Platform.OS === 'ios' && !isExpoGo
+            ? await isPlatformPaySupported().catch(() => false)
+            : false;
         const googleSupported =
           Platform.OS === 'android' && !isExpoGo
             ? await isPlatformPaySupported({
@@ -249,6 +253,12 @@ export default function RequestPaymentScreen() {
       active = false;
     };
   }, [isExpoGo]);
+
+  const paymentOptions = useMemo(() => getVisiblePaymentOptions(PAYMENT_OPTIONS, Platform.OS, {
+    merchantIdentifier,
+    merchantCountryCode,
+    supported: applePaySupported && Boolean(publishableKey),
+  }), [applePaySupported, merchantCountryCode, merchantIdentifier, publishableKey]);
 
   const selectedOption =
     PAYMENT_OPTIONS.find((option) => option.method === selectedMethod) ?? PAYMENT_OPTIONS[0];
@@ -575,7 +585,7 @@ export default function RequestPaymentScreen() {
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{appI18n.t("Choose Payment Method")}</Text>
-          {PAYMENT_OPTIONS.map((option) => {
+          {paymentOptions.map((option) => {
             const isSelected = option.method === selectedMethod;
             const isUnavailableInExpoGo =
               isExpoGo && (option.method === 'APPLE_PAY' || option.method === 'GOOGLE_PAY');
@@ -596,7 +606,11 @@ export default function RequestPaymentScreen() {
                   </View>
                   <View style={styles.methodCopy}>
                     <Text style={styles.methodTitle}>{appI18n.t(option.title)}</Text>
-                    <Text style={styles.methodDescription}>{appI18n.t(option.description)}</Text>
+                    <Text style={styles.methodDescription}>
+                      {appI18n.t(Platform.OS === 'ios' && option.method === 'APPLE_PAY'
+                        ? 'Pay with Apple Pay'
+                        : option.description)}
+                    </Text>
                     {isUnavailableInExpoGo ? (
                       <Text style={styles.methodHint}>
                         {appI18n.t("Development build required. Native wallets do not work in Expo Go.")}</Text>

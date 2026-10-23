@@ -1,6 +1,8 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
-import { Modal, Text } from 'react-native';
+import { Modal, Platform, Text } from 'react-native';
+import Constants from 'expo-constants';
+import { isPlatformPaySupported } from '@stripe/stripe-react-native';
 import RequestPaymentScreen from '../app/request-payment';
 import * as api from '@/lib/api';
 
@@ -127,6 +129,51 @@ test.each([false, true])('cached driver names respect API disclosure permission 
 
 const capturedPayment = { amount: 105, capturedAmount: 105, customerPlatformFeeAmount: 5, currency: 'USD', status: 'PAYMENT_CAPTURED' };
 const chooseWalletAndReview = async () => { await render(); await press('App Wallet'); await press('Pay from Wallet'); };
+
+describe('iOS release payment choices', () => {
+  const envNames = ['EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER', 'EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE', 'EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY'];
+  let originalEnv;
+  let originalDev;
+  let originalOwnership;
+  beforeEach(() => {
+    originalEnv = envNames.map(name => process.env[name]);
+    originalDev = global.__DEV__;
+    originalOwnership = Constants.appOwnership;
+    Constants.appOwnership = 'standalone';
+    global.__DEV__ = false;
+    process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_release_ui';
+    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER = 'merchant.com.transpo24.app';
+    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE = 'CH';
+    isPlatformPaySupported.mockResolvedValue(true);
+  });
+  afterEach(() => {
+    envNames.forEach((name, index) => {
+      if (originalEnv[index] === undefined) delete process.env[name];
+      else process.env[name] = originalEnv[index];
+    });
+    global.__DEV__ = originalDev;
+    Constants.appOwnership = originalOwnership;
+    jest.restoreAllMocks();
+  });
+
+  test('missing merchant configuration hides Apple Pay and keeps cards and wallet', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    delete process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER;
+    await render();
+    const labels = tree.root.findAllByType(Text).map(node => node.props.children);
+    expect(labels).not.toContain('Apple Pay');
+    expect(labels).not.toContain('Google Pay');
+    expect(labels).toEqual(expect.arrayContaining(['Credit Card', 'Debit Card', 'App Wallet']));
+  });
+
+  test('Android retains its Google Pay choice and existing payment diagnostics', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    await render();
+    expect(tree.root.findAllByType(Text).map(node => node.props.children)).toContain('Google Pay');
+    await press('Apple Pay');
+    expect(text()).toContain('Merchant identifier configured: merchant.com.transpo24.app');
+  });
+});
 
 test.each([
   [20.99, 1, '$20.99', '$1.00'], [1000.01, 47.62, '$1,000.01', '$47.62'],

@@ -25,6 +25,7 @@ import { useAuthSession } from '@/lib/auth-token';
 import type { CustomerWalletTopUpResponse, PaymentMethod } from '@/types/customer-request';
 import { SavedCardPicker, EMPTY_CARD_SELECTION } from '@/components/saved-card-picker';
 import appI18n from '@/localization/i18n';
+import { getVisiblePaymentOptions } from '@/lib/ios-payment-options';
 
 type PaymentOption = {
   method: PaymentMethod;
@@ -126,7 +127,8 @@ export default function WalletTopUpScreen() {
       ? rawPublishableKey
       : '';
   const merchantCountryCode =
-    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() || 'US';
+    process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() ||
+    (Platform.OS === 'ios' ? '' : 'US');
   const merchantIdentifier =
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() || '';
   const isExpoGo = Constants.appOwnership === 'expo';
@@ -153,7 +155,7 @@ export default function WalletTopUpScreen() {
       try {
         const appleSupported =
           Platform.OS === 'ios' && !isExpoGo
-            ? await isPlatformPaySupported()
+            ? await isPlatformPaySupported().catch(() => false)
             : false;
         const googleSupported =
           Platform.OS === 'android' && !isExpoGo
@@ -177,6 +179,11 @@ export default function WalletTopUpScreen() {
     };
   }, [isExpoGo]);
 
+  const paymentOptions = useMemo(() => getVisiblePaymentOptions(PAYMENT_OPTIONS, Platform.OS, {
+    merchantIdentifier,
+    merchantCountryCode,
+    supported: applePaySupported && Boolean(publishableKey),
+  }), [applePaySupported, merchantCountryCode, merchantIdentifier, publishableKey]);
   const needsCardField = selectedMethod === 'CREDIT_CARD' || selectedMethod === 'DEBIT_CARD';
   const methodDisabledReason = useMemo(() => {
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
@@ -374,7 +381,7 @@ export default function WalletTopUpScreen() {
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>{appI18n.t("Payment method")}</Text>
-            {PAYMENT_OPTIONS.map((option) => {
+            {paymentOptions.map((option) => {
               const isSelected = option.method === selectedMethod;
               const isUnsupported =
                 (option.method === 'APPLE_PAY' && (!supportCheckComplete || !applePaySupported)) ||
@@ -393,7 +400,11 @@ export default function WalletTopUpScreen() {
                     </View>
                     <View style={styles.optionTextBlock}>
                       <Text style={styles.optionTitle}>{appI18n.t(option.title)}</Text>
-                      <Text style={styles.optionDescription}>{appI18n.t(option.description)}</Text>
+                      <Text style={styles.optionDescription}>
+                        {appI18n.t(Platform.OS === 'ios' && option.method === 'APPLE_PAY'
+                          ? 'Pay with Apple Pay'
+                          : option.description)}
+                      </Text>
                       {isUnsupported ? (
                         <Text style={styles.optionHint}>{appI18n.t("Not available on this device/build.")}</Text>
                       ) : null}
