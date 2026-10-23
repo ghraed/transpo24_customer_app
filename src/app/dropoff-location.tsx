@@ -1,3 +1,4 @@
+import { MapLocationMarker, MAP_COLORS } from '@/components/map-location-marker';
 import { ServiceAddressStep, usesSharedAddressStep } from '@/requests/service-address-step';
 import { MotorcycleProgress } from '@/requests/motorcycle-progress';
 import { useInitialMapCenter, WORLD_REGION } from '@/requests/use-initial-map-center';
@@ -931,11 +932,11 @@ function DropoffLocationScreen() {
             onPress={onMapPress}
           >
             {hasPickupCoordinates ? (
-              <NativeMarker
+              <MapLocationMarker
+                kind="pickup"
                 coordinate={{ latitude: pickupLatitude, longitude: pickupLongitude }}
                 title={appI18n.t("Pickup location")}
                 description={pickupAddress || appI18n.t("Pickup location")}
-                pinColor="#2563eb"
               />
             ) : null}
 
@@ -952,7 +953,7 @@ function DropoffLocationScreen() {
                 apikey={GOOGLE_MAPS_API_KEY}
                 mode="DRIVING"
                 strokeWidth={4}
-                strokeColor="#2563EB"
+                strokeColor={MAP_COLORS.route}
                 onReady={(result: { distance: number }) => {
                   setRouteDistanceKm(result.distance);
                   setRouteMessage('');
@@ -965,14 +966,14 @@ function DropoffLocationScreen() {
             ) : null}
 
             {selectedLocation ? (
-              <NativeMarker
+              <MapLocationMarker
+                kind="dropoff"
                 coordinate={{
                   latitude: selectedLocation.latitude,
                   longitude: selectedLocation.longitude,
                 }}
                 title={appI18n.t("Dropoff location")}
                 description={selectedLocation.address ?? appI18n.t("Selected dropoff location")}
-                pinColor="#dc2626"
               />
             ) : null}
           </NativeMapView>

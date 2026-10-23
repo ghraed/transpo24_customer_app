@@ -1,3 +1,4 @@
+import { MapLocationMarker } from '@/components/map-location-marker';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -236,12 +237,22 @@ export default function WaitingForPickupScreen() {
         longitudeDelta: 0.03,
       }}
     >
-      <NativeMarker coordinate={pickupLocation} title={appI18n.t("Pickup")} />
-      <NativeMarker coordinate={dropoffLocation} title={appI18n.t("Dropoff")} pinColor="#FF5E57" />
+      <MapLocationMarker
+        kind="pickup"
+        coordinate={pickupLocation}
+        title={appI18n.t("Pickup")}
+      />
+      <MapLocationMarker
+        kind="dropoff"
+        coordinate={dropoffLocation}
+        title={appI18n.t("Dropoff")}
+      />
       {driverLocation ? (
-        <NativeMarker coordinate={driverLocation} title={appI18n.t("Driver")} anchor={{ x: 0.5, y: 0.5 }}>
-          <Text style={styles.driverMarkerIcon}>🚗</Text>
-        </NativeMarker>
+        <MapLocationMarker
+          kind="driver"
+          coordinate={driverLocation}
+          title={appI18n.t("Driver")}
+        />
       ) : null}
     </NativeMapView>
   );
@@ -376,9 +387,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-  },
-  driverMarkerIcon: {
-    fontSize: 28,
   },
   expandedMap: {
     width: '100%',

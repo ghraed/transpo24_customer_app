@@ -1,3 +1,4 @@
+import { MapLocationMarker } from '@/components/map-location-marker';
 import { ServiceAddressStep, usesSharedAddressStep } from '@/requests/service-address-step';
 import { MotorcycleProgress } from '@/requests/motorcycle-progress';
 import { useInitialMapCenter, WORLD_REGION } from '@/requests/use-initial-map-center';
@@ -824,7 +825,8 @@ function PickupLocationScreen() {
             onPress={onMapPress}
           >
             {selectedLocation ? (
-              <NativeMarker
+              <MapLocationMarker
+                kind="pickup"
                 coordinate={{ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }}
                 title={appI18n.t("Pickup location")}
                 description={selectedLocation.address ?? appI18n.t("Selected location")}

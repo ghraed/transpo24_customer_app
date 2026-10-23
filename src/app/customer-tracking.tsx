@@ -1,3 +1,4 @@
+import { MapLocationMarker, MAP_COLORS } from '@/components/map-location-marker';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
@@ -281,24 +282,30 @@ export default function CustomerTrackingScreen() {
         longitudeDelta: 0.04,
       }}
     >
-      <NativeMarker coordinate={pickupLocation} title={appI18n.t("Pickup")} />
-      <NativeMarker coordinate={dropoffLocation} title={appI18n.t("Destination")} anchor={{ x: 0.5, y: 0.5 }}>
-        <View style={styles.destinationXMarker}>
-          <Text style={styles.destinationXText}>X</Text>
-        </View>
-      </NativeMarker>
+      <MapLocationMarker
+        kind="pickup"
+        coordinate={pickupLocation}
+        title={appI18n.t("Pickup")}
+      />
+      <MapLocationMarker
+        kind="dropoff"
+        coordinate={dropoffLocation}
+        title={appI18n.t("Destination")}
+      />
       {driverLocation ? (
         <>
-          <NativeMarker coordinate={driverLocation} title={appI18n.t("Driver")} anchor={{ x: 0.5, y: 0.5 }}>
-            <Text style={styles.driverMarkerIcon}>🚗</Text>
-          </NativeMarker>
+          <MapLocationMarker
+            kind="driver"
+            coordinate={driverLocation}
+            title={appI18n.t("Driver")}
+          />
           <NativeMapViewDirections
             origin={driverLocation}
             destination={routeStage === 'pickup' ? pickupLocation : dropoffLocation}
             apikey={mapsApiKey}
             mode="DRIVING"
             strokeWidth={4}
-            strokeColor="#FFC548"
+            strokeColor={MAP_COLORS.route}
             onError={(message: string) => {
               setRouteError(`Route error: ${message}`);
             }}
@@ -452,24 +459,5 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 14,
     lineHeight: 20,
-  },
-  driverMarkerIcon: {
-    fontSize: 28,
-  },
-  destinationXMarker: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#DC2626',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  destinationXText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
-    lineHeight: 18,
   },
 });

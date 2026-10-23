@@ -1,3 +1,4 @@
+import { MapLocationMarker, MAP_COLORS } from '@/components/map-location-marker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -16,7 +17,6 @@ import { useTranslation } from 'react-i18next';
 import {
   NativeMapView,
   NativeMapViewDirections,
-  NativeMarker,
   PROVIDER_GOOGLE,
   isNativeMapRuntimeAvailable,
   type MapPressEvent,
@@ -313,11 +313,11 @@ export function AddressEditor({
           initialRegion={camera}
           region={camera}
         >
-          {routeOrigin ? <NativeMarker
+          {routeOrigin ? <MapLocationMarker
+            kind="pickup"
             coordinate={routeOrigin}
             title={t('vehicleRequest.step.pickup')}
             description={routeOrigin.address}
-            pinColor="#DC2626"
           /> : null}
           {routeOrigin && (pendingPin || value) && GOOGLE_MAPS_API_KEY ? (
             <NativeMapViewDirections
@@ -327,14 +327,14 @@ export function AddressEditor({
               apikey={GOOGLE_MAPS_API_KEY}
               mode="DRIVING"
               strokeWidth={4}
-              strokeColor="#2563EB"
+              strokeColor={MAP_COLORS.route}
             />
           ) : null}
-          {pendingPin || value ? <NativeMarker
-            coordinate={pendingPin ?? value}
+          {pendingPin || value ? <MapLocationMarker
+            kind={locationKind}
+            coordinate={(pendingPin ?? value)!}
             title={t(`vehicleRequest.step.${locationKind}`)}
             description={pendingPin ? undefined : value?.address}
-            pinColor={locationKind === 'dropoff' ? '#2563EB' : '#DC2626'}
           /> : null}
         </NativeMapView>
         {resolving ? (

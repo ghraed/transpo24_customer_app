@@ -3,6 +3,7 @@ import { act, create } from 'react-test-renderer';
 import React from 'react';
 import { beforeEach, expect, it, jest } from '@jest/globals';
 import { fetchPlaceDetails, searchPlacesAutocomplete } from '@/lib/places';
+import { MapLocationMarker } from '@/components/map-location-marker';
 import { AddressEditor } from './address-editor';
 import { AddressPlaces } from './address-places';
 import { resolveCurrentAddress } from './resolve-current-address';
@@ -92,19 +93,19 @@ it('preserves map position and zoom during pin lookup and after the address upda
   await act(async () => tree.unmount());
 });
 
-it('shows a red pickup pin without a route on the pickup step', async () => {
+it('shows the shared pickup pin without a route on the pickup step', async () => {
   const { tree } = await render();
-  expect(tree.root.findAllByType('TestMarker')[0].props.pinColor).toBe('#DC2626');
+  expect(tree.root.findAllByType(MapLocationMarker)[0].props.kind).toBe('pickup');
   expect(tree.root.findAllByType('TestDirections')).toHaveLength(0);
   await act(async () => tree.unmount());
 });
 
-it('shows the red pickup, blue dropoff, and driving route and updates it when the dropoff moves', async () => {
+it('shows shared pickup and dropoff pins with a blue driving route and updates it when the dropoff moves', async () => {
   const pickup = { latitude: 46, longitude: 7, address: 'Pickup address' };
   const { tree, tap } = await render('Delivery', { locationKind: 'dropoff', pickupLocation: pickup });
-  const markers = tree.root.findAllByType('TestMarker');
-  expect(markers[0].props).toMatchObject({ coordinate: pickup, pinColor: '#DC2626' });
-  expect(markers[1].props).toMatchObject({ coordinate: { latitude: 47, longitude: 8 }, pinColor: '#2563EB' });
+  const markers = tree.root.findAllByType(MapLocationMarker);
+  expect(markers[0].props).toMatchObject({ coordinate: pickup, kind: 'pickup' });
+  expect(markers[1].props).toMatchObject({ coordinate: { latitude: 47, longitude: 8 }, kind: 'dropoff' });
   expect(tree.root.findAllByType('TestDirections')[0].props).toMatchObject({
     origin: pickup, destination: { latitude: 47, longitude: 8 }, mode: 'DRIVING', strokeColor: '#2563EB',
   });
@@ -113,7 +114,7 @@ it('shows the red pickup, blue dropoff, and driving route and updates it when th
   await act(async () => tap(point));
   expect(tree.root.findAllByType('TestDirections')[0].props.destination).toMatchObject(point);
   expect(tree.root.findAllByType('TestMarker')[0].props.coordinate).toEqual(pickup);
-  expect(tree.root.findAllByType('TestMarker')[1].props.pinColor).toBe('#2563EB');
+  expect(tree.root.findAllByType(MapLocationMarker)[1].props.kind).toBe('dropoff');
   await act(async () => tree.unmount());
 });
 
@@ -121,7 +122,7 @@ it('centers the dropoff map on pickup until a destination is selected', async ()
   const pickup = { latitude: 46, longitude: 7, address: 'Pickup address' };
   const { tree } = await render('Delivery', { locationKind: 'dropoff', pickupLocation: pickup, value: undefined });
   expect(tree.root.findAllByType('TestMap')[0].props.region).toMatchObject({ latitude: 46, longitude: 7 });
-  expect(tree.root.findAllByType('TestMarker')[0].props).toMatchObject({ coordinate: pickup, pinColor: '#DC2626' });
+  expect(tree.root.findAllByType(MapLocationMarker)[0].props).toMatchObject({ coordinate: pickup, kind: 'pickup' });
   expect(tree.root.findAllByType('TestDirections')).toHaveLength(0);
   await act(async () => tree.unmount());
 });

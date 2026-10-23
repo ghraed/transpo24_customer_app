@@ -1,3 +1,4 @@
+import { MapLocationMarker, MAP_COLORS } from '@/components/map-location-marker';
 import { RequestDocuments } from '@/components/request-documents';
 import { ReportDriver } from '@/components/report-driver';
 import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
@@ -31,6 +32,7 @@ import {
   PROVIDER_GOOGLE,
   type Region,
 } from '@/components/native-maps';
+import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { getApiBaseUrl } from '@/config/backend';
 import { useAndroidKeyboardInset } from '@/hooks/use-android-keyboard-inset';
 import { useTransportRequestChatRoom } from '@/hooks/use-transport-request-chat-room';
@@ -482,12 +484,7 @@ export default function RequestStatusScreen() {
   const requestId = typeof params.requestId === 'string' ? params.requestId.trim() : '';
   const refreshTs = typeof params.refreshTs === 'string' ? params.refreshTs : '';
   const accessToken = useMemo(() => getAccessToken(), []);
-  const mapsApiKey =
-    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
-    (Platform.OS === 'ios'
-      ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY?.trim()
-      : process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY?.trim()) ||
-    '';
+  const mapsApiKey = GOOGLE_MAPS_API_KEY;
 
   const [requestData, setRequestData] = useState<RequestStatusResponse | null>(null);
   const [offers, setOffers] = useState<CustomerRequestOfferSummary[]>([]);
@@ -678,7 +675,7 @@ export default function RequestStatusScreen() {
       .then(() => {
         setSocketState('connected');
         setSocketMessage('');
-        if (requestData?.driverDetailsAvailable) joinTripRoom(requestId);
+        if (requestData?.driverSummary.assigned && requestData.status !== 'RESERVED') joinTripRoom(requestId);
       })
       .catch((error) => {
         setSocketState('error');
@@ -862,6 +859,7 @@ export default function RequestStatusScreen() {
     const unsubConnected = onSocketConnected(() => {
       setSocketState('connected');
       setSocketMessage('');
+      if (requestData?.driverSummary.assigned && requestData.status !== 'RESERVED') joinTripRoom(requestId);
     });
 
     const unsubDisconnected = onSocketDisconnect(() => {
@@ -888,7 +886,7 @@ export default function RequestStatusScreen() {
       unsubSocketError();
       leaveTripRoom(requestId);
     };
-  }, [accessToken, canUseRealtime, loadStatus, requestId, router, requestData?.driverDetailsAvailable]);
+  }, [accessToken, canUseRealtime, loadStatus, requestId, router, requestData?.driverSummary.assigned, requestData?.status]);
 
   const pendingOffers = offers.filter((offer) => (offer.offerStatus ?? offer.status) === 'PENDING');
   const acceptedOffer = offers.find((offer) => (offer.offerStatus ?? offer.status) === 'ACCEPTED') ?? null;
@@ -942,18 +940,7 @@ export default function RequestStatusScreen() {
     requestData?.itemDetails.title ||
     null;
   const driverRating = acceptedOffer?.driverRating ?? selectedOffer?.driverRating ?? null;
-  const shouldShowTrackingMap =
-    requestData?.driverDetailsAvailable === true &&
-    requestData?.status !== 'CANCELLED' &&
-    currentOrderStep >= 2 &&
-    canOpenTrackingMap;
-  const canRenderInlineMap = Boolean(
-    shouldShowTrackingMap &&
-    mapsApiKey &&
-    isNativeMapRuntimeAvailable &&
-    NativeMapView &&
-    NativeMarker,
-  );
+  const shouldShowTrackingMap = Boolean(requestData);
   const usesPickupDestination =
     effectiveTrackingStatus === 'ACCEPTED' ||
     effectiveTrackingStatus === 'DRIVER_ASSIGNED' ||
@@ -1234,7 +1221,7 @@ export default function RequestStatusScreen() {
 
   const renderTrackingMap = useCallback(
     (expanded: boolean): React.ReactNode => {
-      if (!requestData || !shouldShowTrackingMap) {
+      if (!requestData || (!canOpenTrackingMap && !latestDriverLocation)) {
         return (
           <View style={[styles.mapFallbackCard, expanded ? styles.mapFallbackCardExpanded : null]}>
             <Text style={styles.cardTitle}>{appI18n.t("Live Map")}</Text>
@@ -1244,7 +1231,7 @@ export default function RequestStatusScreen() {
         );
       }
 
-      if (!mapsApiKey || !isNativeMapRuntimeAvailable || !NativeMapView || !NativeMarker) {
+      if (!isNativeMapRuntimeAvailable || !NativeMapView || !NativeMarker) {
         return (
           <View style={[styles.mapFallbackCard, expanded ? styles.mapFallbackCardExpanded : null]}>
             <Text style={styles.cardTitle}>{appI18n.t("Live Map")}</Text>
@@ -1298,40 +1285,30 @@ export default function RequestStatusScreen() {
             provider={PROVIDER_GOOGLE}
           >
             {pickupCoordinate ? (
-              <NativeMarker coordinate={pickupCoordinate} title={appI18n.t("Pickup")} anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={styles.pickupMarker}>
-                  <IconSymbol
-                    name={{ ios: 'mappin.circle.fill', android: 'location_on', web: 'location_on' }}
-                    color="#FFFFFF"
-                    size={18}
-                  />
-                </View>
-              </NativeMarker>
+              <MapLocationMarker
+                kind="pickup"
+                coordinate={pickupCoordinate}
+                title={appI18n.t("Pickup")}
+              />
             ) : null}
             {dropoffCoordinate ? (
-              <NativeMarker coordinate={dropoffCoordinate} title={appI18n.t("Dropoff")} anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={styles.dropoffMarker}>
-                  <IconSymbol
-                    name={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
-                    color="#FFFFFF"
-                    size={16}
-                  />
-                </View>
-              </NativeMarker>
+              <MapLocationMarker
+                kind="dropoff"
+                coordinate={dropoffCoordinate}
+                title={appI18n.t("Dropoff")}
+              />
             ) : null}
             {latestDriverLocation ? (
-              <NativeMarker
+              <MapLocationMarker
+                kind="driver"
                 coordinate={{
                   latitude: latestDriverLocation.latitude,
                   longitude: latestDriverLocation.longitude,
                 }}
                 title={appI18n.t("Driver")}
-                anchor={{ x: 0.5, y: 0.5 }}
-              >
-                <Text style={styles.driverMarkerIcon}>🚗</Text>
-              </NativeMarker>
+              />
             ) : null}
-            {latestDriverLocation && destinationCoordinate && NativeMapViewDirections ? (
+            {mapsApiKey && latestDriverLocation && destinationCoordinate && NativeMapViewDirections ? (
               <NativeMapViewDirections
                 origin={{
                   latitude: latestDriverLocation.latitude,
@@ -1343,7 +1320,7 @@ export default function RequestStatusScreen() {
                 precision="high"
                 resetOnChange={false}
                 strokeWidth={expanded ? 6 : 5}
-                strokeColor="#F5C11A"
+                strokeColor={MAP_COLORS.route}
                 onError={(message: string) => {
                   console.warn('Live tracking directions failed.', message);
                 }}
@@ -1383,7 +1360,7 @@ export default function RequestStatusScreen() {
       mapsApiKey,
       openTracking,
       requestData,
-      shouldShowTrackingMap,
+      canOpenTrackingMap,
       trackingDestination,
     ],
   );
@@ -1541,6 +1518,18 @@ export default function RequestStatusScreen() {
           {shouldShowTrackingMap ? (
             <View style={styles.mapCard}>
               {renderTrackingMap(false)}
+              <Pressable
+                accessibilityRole="button"
+                style={styles.primaryActionButton}
+                onPress={() => setIsMapExpanded(true)}
+              >
+                <IconSymbol
+                  name={{ ios: 'location', android: 'my_location', web: 'my_location' }}
+                  color="#111827"
+                  size={20}
+                />
+                <Text style={styles.primaryActionButtonText}>{appI18n.t("Track Driver Live")}</Text>
+              </Pressable>
             </View>
           ) : null}
 
@@ -1575,18 +1564,7 @@ export default function RequestStatusScreen() {
                 </View>
               </View>
 
-              <Pressable
-                style={[styles.primaryActionButton, !canRenderInlineMap && styles.disabledButton]}
-                disabled={!canRenderInlineMap}
-                onPress={() => setIsMapExpanded(true)}
-              >
-                <IconSymbol
-                  name={{ ios: 'location', android: 'my_location', web: 'my_location' }}
-                  color="#111827"
-                  size={20}
-                />
-                <Text style={styles.primaryActionButtonText}>{appI18n.t("Track Driver Live")}</Text>
-              </Pressable>
+
 
               {canOpenChat ? (
                 isChatRoomLoading && !chatRoom ? (
@@ -2492,25 +2470,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  pickupMarker: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#1DB954',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dropoffMarker: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#FF4B3E',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  driverMarkerIcon: {
-    fontSize: 28,
-  },
   driverCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -2634,10 +2593,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   detailsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'stretch',
+    gap: 8,
   },
   cardTitle: {
     fontSize: 16,
@@ -2645,12 +2602,16 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   inlineStatusPill: {
-    borderRadius: 999,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    flexShrink: 1,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 7,
     backgroundColor: '#F3F4F6',
     color: '#111827',
     fontSize: 12,
+    lineHeight: 18,
     fontWeight: '600',
   },
   detailsMetaText: {
