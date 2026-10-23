@@ -166,6 +166,16 @@ describe('iOS release payment choices', () => {
     expect(labels).toEqual(expect.arrayContaining(['Credit Card', 'Debit Card', 'App Wallet']));
   });
 
+  test('configured Apple Pay has no developer setup details in an iOS release', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    await render();
+    await press('Apple Pay');
+    expect(text()).toContain('Pay with Apple Pay');
+    expect(text()).not.toContain('merchant.com.transpo24.app');
+    expect(text()).not.toContain('EXPO_PUBLIC_');
+    expect(text()).not.toContain('development or production build');
+  });
+
   test('Android retains its Google Pay choice and existing payment diagnostics', async () => {
     jest.replaceProperty(Platform, 'OS', 'android');
     await render();

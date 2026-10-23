@@ -259,6 +259,7 @@ export default function RequestPaymentScreen() {
     merchantCountryCode,
     supported: applePaySupported && Boolean(publishableKey),
   }), [applePaySupported, merchantCountryCode, merchantIdentifier, publishableKey]);
+  const showPaymentDiagnostics = Platform.OS !== 'ios' || __DEV__;
 
   const selectedOption =
     PAYMENT_OPTIONS.find((option) => option.method === selectedMethod) ?? PAYMENT_OPTIONS[0];
@@ -670,7 +671,7 @@ export default function RequestPaymentScreen() {
             <Text style={styles.summaryLabel}>{appI18n.t("Chosen method")}</Text>
             <Text style={styles.summaryValue}>{getPaymentMethodLabel(selectedOption.method)}</Text>
           </View>
-          {selectedMethod === 'APPLE_PAY' ? (
+          {showPaymentDiagnostics && selectedMethod === 'APPLE_PAY' ? (
             <Text style={styles.helperText}>
               {merchantIdentifier
                 ? `Merchant identifier configured: ${merchantIdentifier}`
