@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StatusBar,
@@ -61,6 +62,7 @@ export default function ProfileTabScreen() {
   const { t } = useTranslation();
   const { language, isChangingLanguage, setLanguage } = useAppLanguage();
   const insets = useSafeAreaInsets();
+  const showPushDiagnostics = Platform.OS !== 'ios' || __DEV__;
   const [profile, setProfile] = useState<CustomerHomeProfile | null>(null);
   const [pushStatus, setPushStatus] = useState("");
   const [isRegisteringPush, setIsRegisteringPush] = useState(false);
@@ -432,32 +434,36 @@ export default function ProfileTabScreen() {
             <Text style={styles.actionText}>{t("Terms of Service")}</Text>
           </Pressable>
 
-          <Pressable
-            style={styles.actionRow}
-            onPress={() => void onRegisterPush()}
-          >
-            <View style={styles.actionIconWrap}>
-              <IconSymbol
-                name={{
-                  ios: "bell.badge.fill",
-                  android: "notifications",
-                  web: "notifications",
-                }}
-                color="#111827"
-                size={18}
-              />
-            </View>
-            <Text style={styles.actionText}>
-              {isRegisteringPush
-                ? t("Registering Push...")
-                : t("Register Push Notifications")}
-            </Text>
-          </Pressable>
+          {showPushDiagnostics ? (
+            <>
+              <Pressable
+                style={styles.actionRow}
+                onPress={() => void onRegisterPush()}
+              >
+                <View style={styles.actionIconWrap}>
+                  <IconSymbol
+                    name={{
+                      ios: "bell.badge.fill",
+                      android: "notifications",
+                      web: "notifications",
+                    }}
+                    color="#111827"
+                    size={18}
+                  />
+                </View>
+                <Text style={styles.actionText}>
+                  {isRegisteringPush
+                    ? t("Registering Push...")
+                    : t("Register Push Notifications")}
+                </Text>
+              </Pressable>
 
-          <TestNotificationButton />
+              <TestNotificationButton />
 
-          {pushStatus ? (
-            <Text style={styles.statusText}>{pushStatus}</Text>
+              {pushStatus ? (
+                <Text style={styles.statusText}>{pushStatus}</Text>
+              ) : null}
+            </>
           ) : null}
 
           <Pressable
