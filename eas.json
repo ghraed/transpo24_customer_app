@@ -27,6 +27,11 @@
     "production": {
       "environment": "production",
       "channel": "production",
+      "ios": {
+        "image": "sdk-56",
+        "distribution": "store",
+        "channel": "production-ios"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.transpo24.com",
         "EXPO_PUBLIC_SOCKET_URL": "https://api.transpo24.com",
