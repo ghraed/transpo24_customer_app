@@ -1,14 +1,14 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
-import { Modal } from 'react-native';
+import { Modal, Text } from 'react-native';
 import RequestStatusScreen from '@/app/request-status';
-import { getCustomerRequestStatus, getRequestTracking } from '@/lib/api';
+import { getCustomerRequestStatus, getRequestTracking, getRequestAdditionalCharges } from '@/lib/api';
 import { joinTripRoom } from '@/services/socketService';
 
 const mockNavigation = { addListener: () => () => {}, setOptions: jest.fn() };
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 const mockParams = { requestId: 'request' };
-const mockT = key => key;
+const mockT = key => key.startsWith('orderChargeLabels.') ? require('@/localization/locales/en.json').orderChargeLabels[key.split('.')[1]] : key;
 let mockLocationListener;
 let mockConnectedListener;
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useNavigation: () => mockNavigation, useRouter: () => mockRouter }));
@@ -41,7 +41,7 @@ jest.mock('@/services/socketService', () => {
 
 const location = { latitude: 33.89, longitude: 35.5, address: 'Pickup' };
 let tree;
-beforeEach(() => { jest.useFakeTimers(); jest.clearAllMocks(); });
+beforeEach(() => { jest.useFakeTimers(); jest.clearAllMocks(); getRequestAdditionalCharges.mockResolvedValue([]); });
 afterEach(async () => { if (tree) await act(async () => tree.unmount()); tree = null; jest.useRealTimers(); });
 async function mount(status, assigned = true) {
   getCustomerRequestStatus.mockResolvedValue({
@@ -75,4 +75,17 @@ test('subscribes to the assigned driver before contact details unlock and displa
   const update = { tripId: 'request', driverId: 'driver', latitude: 33.9, longitude: 35.6, heading: null, speed: null, accuracy: null, recordedAt: new Date().toISOString() };
   await act(async () => mockLocationListener(update));
   expect(tree.root.findAllByType('LocationMarker').find(node => node.props.kind === 'driver').props.coordinate).toMatchObject({ latitude: 33.9, longitude: 35.6 });
+});
+
+test('labels the additional-charge details and hides the raw invoice URL', async () => {
+  getRequestAdditionalCharges.mockResolvedValue([{
+    id: 'charge', amount: 25, appFeeAmount: 2.5, totalChargeAmount: 27.5, currency: 'CHF',
+    reason: 'Ma khasak', equipmentType: 'Haik', status: 'PAID', createdAt: '2026-10-23T08:00:00Z',
+    payment: { method: 'CASH_ON_DELIVERY' }, invoiceUrl: 'http://127.0.0.1:3000/invoice.pdf',
+  }]);
+  await mount('IN_TRANSIT');
+  const text = tree.root.findAllByType(Text).map(node => node.props.children).join(' ');
+  for (const label of ['Reason', 'Equipment', 'Status', 'Date added', 'Ma khasak', 'Haik']) expect(text).toContain(label);
+  expect(text).not.toContain('127.0.0.1');
+  expect(text).not.toContain('invoice.pdf');
 });

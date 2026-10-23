@@ -1,4 +1,14 @@
 {
+  "orderChargeLabels": {
+      "reason": "Raison",
+      "equipment": "Équipement",
+      "status": "Statut",
+      "date": "Date d’ajout"
+  },
+  "Driver before starting the order": "Le chauffeur se prépare à démarrer",
+  "Driver is on the way to the pickup location": "Le chauffeur est en route vers le lieu de prise en charge",
+  "Driver has arrived at the pickup location": "Le chauffeur est arrivé au lieu de prise en charge",
+  "Driver is on the way to the delivery location": "Le chauffeur est en route vers le lieu de livraison",
   "10 min – 24 h": "10 min – 24 h",
   "First 10 minutes": "Les 10 premières minutes",
   "Free cancellation": "Annulation gratuite",

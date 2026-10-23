@@ -1,4 +1,14 @@
 {
+  "orderChargeLabels": {
+      "reason": "سبب",
+      "equipment": "معدات",
+      "status": "حالة",
+      "date": "تاريخ الإضافة"
+  },
+  "Driver before starting the order": "السائق يستعد لبدء الطلب",
+  "Driver is on the way to the pickup location": "السائق في الطريق إلى موقع الاستلام",
+  "Driver has arrived at the pickup location": "وصل السائق إلى موقع الاستلام",
+  "Driver is on the way to the delivery location": "السائق في الطريق إلى موقع التسليم",
   "10 min – 24 h": "بعد 10 دقائق وحتى 24 ساعة",
   "First 10 minutes": "أول 10 دقائق",
   "Free cancellation": "إلغاء مجاني",

@@ -1,4 +1,14 @@
 {
+  "orderChargeLabels": {
+      "reason": "Reason",
+      "equipment": "Equipment",
+      "status": "Status",
+      "date": "Date added"
+  },
+  "Driver before starting the order": "Driver before starting the order",
+  "Driver is on the way to the pickup location": "Driver is on the way to the pickup location",
+  "Driver has arrived at the pickup location": "Driver has arrived at the pickup location",
+  "Driver is on the way to the delivery location": "Driver is on the way to the delivery location",
   "10 min – 24 h": "10 min – 24 h",
   "First 10 minutes": "First 10 minutes",
   "Free cancellation": "Free cancellation",

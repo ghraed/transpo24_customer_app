@@ -1,4 +1,14 @@
 {
+  "orderChargeLabels": {
+      "reason": "Razón",
+      "equipment": "Equipo",
+      "status": "Estado",
+      "date": "Fecha de creación"
+  },
+  "Driver before starting the order": "El conductor se prepara para iniciar el pedido",
+  "Driver is on the way to the pickup location": "El conductor va de camino al punto de recogida",
+  "Driver has arrived at the pickup location": "El conductor ha llegado al punto de recogida",
+  "Driver is on the way to the delivery location": "El conductor va de camino al punto de entrega",
   "10 min – 24 h": "10 min – 24 h",
   "First 10 minutes": "Primeros 10 minutos",
   "Free cancellation": "Cancelación gratuita",

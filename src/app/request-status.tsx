@@ -1,3 +1,5 @@
+import { OrderSectionHeading, OrderDetailRow, OrderRouteCard, OrderNotice, OrderEmptyState, OrderProgress } from '@/components/order-ui';
+import { orderColors as colors } from '@/theme/order-theme';
 import { MapLocationMarker, MAP_COLORS } from '@/components/map-location-marker';
 import { RequestDocuments } from '@/components/request-documents';
 import { ReportDriver } from '@/components/report-driver';
@@ -510,7 +512,7 @@ export default function RequestStatusScreen() {
   const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string>('');
   const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
   const [socketState, setSocketState] = useState<SocketState>(accessToken ? 'idle' : 'unavailable');
-  const [socketMessage, setSocketMessage] = useState<string>(
+  const [, setSocketMessage] = useState<string>(
     accessToken ? '' : 'Missing auth token. Realtime offer updates are unavailable.',
   );
   const canUseRealtime = Boolean(
@@ -1329,7 +1331,9 @@ export default function RequestStatusScreen() {
           </NativeMapView>
 
           <Pressable
-            style={styles.mapExpandButton}
+            accessibilityRole="button"
+            accessibilityLabel={appI18n.t('Live Map')}
+            style={({ pressed }) => [styles.mapExpandButton, pressed && styles.disabledButton]}
             onPress={() => setIsMapExpanded((previous) => !previous)}
           >
             <IconSymbol
@@ -1399,8 +1403,8 @@ export default function RequestStatusScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+    <SafeAreaView style={[styles.container, { direction: language === 'ar' ? 'rtl' : 'ltr' }]} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.canvas} />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1415,7 +1419,7 @@ export default function RequestStatusScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.topBar}>
-            <Pressable style={styles.topBarButton} onPress={goToHome}>
+            <Pressable accessibilityRole="button" accessibilityLabel={appI18n.t("Back")} style={({ pressed }) => [styles.topBarButton, pressed && styles.disabledButton]} onPress={goToHome}>
               <IconSymbol
                 name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
                 color="#111827"
@@ -1428,9 +1432,9 @@ export default function RequestStatusScreen() {
                 {requestData.service?.nameEn || requestData.service?.key || requestData.serviceId}
               </Text>
             </View>
-            <Pressable style={styles.topBarButton} onPress={() => void loadStatus(true)}>
+            <Pressable accessibilityRole="button" accessibilityLabel={appI18n.t("Request Status")} style={({ pressed }) => [styles.topBarButton, pressed && styles.disabledButton]} onPress={() => void loadStatus(true)}>
               <IconSymbol
-                name={{ ios: 'ellipsis', android: 'more_horiz', web: 'more_horiz' }}
+                name={{ ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' }}
                 color="#111827"
                 size={22}
               />
@@ -1441,63 +1445,22 @@ export default function RequestStatusScreen() {
             <ReportDriver key={requestData.id} requestId={requestData.id} />
           ) : null}
 
-          <View style={styles.progressSection}>
-            <View style={styles.progressRail} />
-            <View style={styles.progressRow}>
-              {ORDER_PROGRESS_STEPS.map((step) => {
-                const isDone = currentOrderStep > step.id;
-                const isCurrent = currentOrderStep === step.id;
-
-                return (
-                  <View key={step.id} style={styles.progressStep}>
-                    <View
-                      style={[
-                        styles.progressCircle,
-                        isDone ? styles.progressCircleDone : null,
-                        isCurrent ? styles.progressCircleCurrent : null,
-                        requestData.status === 'CANCELLED' ? styles.progressCircleDisabled : null,
-                      ]}
-                    >
-                      {isDone ? (
-                        <IconSymbol
-                          name={{ ios: 'checkmark', android: 'check', web: 'check' }}
-                          color="#111827"
-                          size={18}
-                        />
-                      ) : (
-                        <Text
-                          style={[
-                            styles.progressCircleText,
-                            isCurrent ? styles.progressCircleTextActive : null,
-                            requestData.status === 'CANCELLED' ? styles.progressCircleTextDisabled : null,
-                          ]}
-                        >
-                          {step.id}
-                        </Text>
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.progressLabel,
-                        isDone || isCurrent ? styles.progressLabelActive : null,
-                        requestData.status === 'CANCELLED' ? styles.progressLabelDisabled : null,
-                      ]}
-                    >
-                      {appI18n.t(step.label)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
+          <OrderProgress
+            steps={ORDER_PROGRESS_STEPS.map(step => ({ ...step, label: appI18n.t(step.label) }))}
+            current={currentOrderStep}
+            cancelled={requestData.status === 'CANCELLED'}
+            rtl={language === 'ar'}
+          />
+          <View style={styles.orderIntro}>
+            <Text style={styles.orderEyebrow}>{appI18n.t('Request Status')}</Text>
+            <Text accessibilityRole="header" style={styles.orderHeading}>{liveStatusLabel}</Text>
           </View>
 
           {requestData.service?.key === 'VEHICLE_TRANSPORT' ? <RequestDocuments requestId={requestData.id} customer /> : null}
-          {successMessage ? <View style={styles.successBanner}><Text style={styles.successBannerText}>{successMessage}</Text></View> : null}
-          {errorMessage ? <View style={styles.errorBanner}><Text style={styles.errorBannerText}>{errorMessage}</Text></View> : null}
+          {successMessage ? <OrderNotice tone="success" icon="check" text={successMessage} /> : null}
+          {errorMessage ? <OrderNotice tone="danger" icon="warning" text={errorMessage} /> : null}
           {nearDeliveryMessage ? (
-            <View style={styles.infoBanner}>
-              <Text style={styles.infoBannerText}>{nearDeliveryMessage}</Text>
-            </View>
+            <OrderNotice icon="route" text={nearDeliveryMessage} />
           ) : null}
           {requestData.status === 'CANCELLED' ? (
             <View style={styles.noticeCard}>
@@ -1510,28 +1473,34 @@ export default function RequestStatusScreen() {
           ) : null}
 
           {requestData.driverSummary.assigned && !requestData.driverDetailsAvailable && requestData.status !== 'CANCELLED' ? (
-            <View style={styles.noticeCard}>
-              <Text style={styles.supportingText}>{appI18n.t("Driver details and chat become available after the first 10 minutes following payment.")}</Text>
-            </View>
+            <OrderNotice icon="clock" text={appI18n.t("Driver details and chat become available after the first 10 minutes following payment.")} />
           ) : null}
 
           {shouldShowTrackingMap ? (
             <View style={styles.mapCard}>
+              <View style={styles.mapHeading}><OrderSectionHeading title={appI18n.t('Live Map')} icon="route" /></View>
               {renderTrackingMap(false)}
               <Pressable
                 accessibilityRole="button"
-                style={styles.primaryActionButton}
+                style={({ pressed }) => [styles.primaryActionButton, pressed && styles.disabledButton]}
                 onPress={() => setIsMapExpanded(true)}
               >
                 <IconSymbol
                   name={{ ios: 'location', android: 'my_location', web: 'my_location' }}
-                  color="#111827"
+                  color={colors.onPrimary}
                   size={20}
                 />
                 <Text style={styles.primaryActionButtonText}>{appI18n.t("Track Driver Live")}</Text>
               </Pressable>
             </View>
           ) : null}
+
+          <OrderRouteCard
+            pickup={formatLocation(requestData.pickupLocation)}
+            dropoff={formatLocation(requestData.dropoffLocation)}
+            pickupLabel={appI18n.t('Pickup')}
+            dropoffLabel={appI18n.t('Dropoff')}
+          />
 
           {requestData.driverDetailsAvailable && (driverName || requestData.driverSummary.assigned || acceptedOffer || canOpenChat) ? (
             <View style={styles.driverCard}>
@@ -1573,10 +1542,10 @@ export default function RequestStatusScreen() {
                     <Text style={styles.secondaryActionButtonText}>{appI18n.t("Checking chat…")}</Text>
                   </View>
                 ) : chatRoom ? (
-                  <Pressable style={styles.secondaryActionButton} onPress={openChat}>
+                  <Pressable accessibilityRole="button" style={({ pressed }) => [styles.secondaryActionButton, pressed && styles.disabledButton]} onPress={openChat}>
                     <IconSymbol
                       name={{ ios: 'message', android: 'chat_bubble_outline', web: 'chat' }}
-                      color="#111827"
+                      color={colors.onPrimary}
                       size={20}
                     />
                     <Text style={styles.secondaryActionButtonText}>{appI18n.t("Chat with Driver")}</Text>
@@ -1598,51 +1567,15 @@ export default function RequestStatusScreen() {
             </Pressable>
           ) : null}
           <View style={styles.detailsCard}>
-            <View style={styles.detailsHeader}>
-              <Text style={styles.cardTitle}>{appI18n.t("Request Summary")}</Text>
-              <Text style={styles.inlineStatusPill}>{liveStatusLabel}</Text>
-            </View>
-            <Text style={styles.detailsMetaText}>{appI18n.t("Submitted:")} {formatDate(requestData.submittedAt)}</Text>
-            <Text style={styles.detailsMetaText}>{helperText}</Text>
-            {socketMessage ? <Text style={styles.mutedCaption}>{socketMessage}</Text> : null}
-            <View style={styles.detailsGrid}>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>{appI18n.t("Pickup")}</Text>
-                <Text style={styles.detailValue}>{formatLocation(requestData.pickupLocation)}</Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>{appI18n.t("Dropoff")}</Text>
-                <Text style={styles.detailValue}>{formatLocation(requestData.dropoffLocation)}</Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>{appI18n.t("Schedule")}</Text>
-                <Text style={styles.detailValue}>
-                  {requestData.schedule.isImmediate
-                    ? 'Immediate pickup'
-                    : formatDate(requestData.schedule.scheduledPickupAt)}
-                </Text>
-                {requestData.schedule.scheduledDeliveryAt ? <Text style={styles.detailValue}>{appI18n.t('Delivery Date')}: {formatDate(requestData.schedule.scheduledDeliveryAt)}</Text> : null}
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>{appI18n.t("Item")}</Text>
-                <Text style={styles.detailValue}>
-                  {requestData.itemDetails.title || 'N/A'} ({requestData.itemDetails.type || 'N/A'})
-                </Text>
-              </View>
-            </View>
-            {requestData.itemDetails.description ? (
-              <Text style={styles.supportingText}>{requestData.itemDetails.description}</Text>
-            ) : null}
-            {latestDriverLocation ? (
-              <Text style={styles.mutedCaption}>
-                {appI18n.t('Latest driver update: {{latitude}}, {{longitude}} • {{time}}', {
-                  latitude: latestDriverLocation.latitude.toFixed(5),
-                  longitude: latestDriverLocation.longitude.toFixed(5),
-                  time: formatDate(latestDriverLocation.recordedAt),
-                })}
-              </Text>
-            ) : null}
-            {refundPreview ? <Text style={styles.mutedCaption}>{appI18n.t('Cancellation is free for the first 10 minutes after payment. A 15% fee applies after 10 minutes through 24 hours, and 50% after 24 hours.')}</Text> : null}
+            <OrderSectionHeading title={appI18n.t('Request Summary')} icon="summary" />
+            <OrderNotice icon={currentOrderStep >= 4 ? 'route' : 'clock'} text={liveStatusLabel} />
+            <OrderDetailRow icon="clock" label={appI18n.t('Submitted:', { nsSeparator: false })} value={formatDate(requestData.submittedAt)} />
+            <OrderDetailRow icon="calendar" label={appI18n.t('Schedule')} value={requestData.schedule.isImmediate ? appI18n.t('Immediate pickup') : formatDate(requestData.schedule.scheduledPickupAt)} />
+            {requestData.schedule.scheduledDeliveryAt ? <OrderDetailRow icon="calendar" label={appI18n.t('Delivery Date')} value={formatDate(requestData.schedule.scheduledDeliveryAt)} /> : null}
+            <OrderDetailRow icon="package" label={appI18n.t('Item')} value={requestData.itemDetails.title || requestData.itemDetails.type || appI18n.t('N/A')} />
+            {requestData.itemDetails.description ? <OrderNotice icon="package" text={requestData.itemDetails.description} /> : null}
+            {socketState === 'error' || socketState === 'disconnected' ? <OrderNotice icon="refresh" tone="warning" text={getSocketStateLabel(socketState)} /> : null}
+            {refundPreview ? <OrderNotice icon="info" tone="warning" text={appI18n.t('Cancellation is free for the first 10 minutes after payment. A 15% fee applies after 10 minutes through 24 hours, and 50% after 24 hours.')} /> : null}
             {refundPreview && requestData.status !== 'CANCELLED' ? (
               <Text style={styles.mutedCaption}>
                 {appI18n.t('Cancel now: refund {{refund}} and keep fee {{fee}}.', {
@@ -1665,12 +1598,9 @@ export default function RequestStatusScreen() {
             </View>
           ) : null}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{appI18n.t("Driver Offers")}</Text>
+            <OrderSectionHeading title={appI18n.t("Driver Offers")} icon="offers" count={offers.length} />
             {offers.length === 0 ? (
-              <View style={styles.emptyState}>
-                <ActivityIndicator size="small" color="#2563EB" />
-                <Text style={styles.rowValue}>{appI18n.t("Waiting for offers…")}</Text>
-              </View>
+              <OrderEmptyState icon="offers" text={appI18n.t("Waiting for offers…")} />
             ) : (
               <Text style={styles.rowValue}>{helperText}</Text>
             )}
@@ -1802,7 +1732,7 @@ export default function RequestStatusScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{appI18n.t("Pickup Proof Photos")}</Text>
+            <OrderSectionHeading title={appI18n.t("Pickup Proof Photos")} icon="photos" count={trackingData?.pickupProofPhotos?.length ?? 0} />
             {trackingData?.pickupProofPhotos?.length ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
                 {trackingData.pickupProofPhotos.map((photo) => (
@@ -1816,12 +1746,12 @@ export default function RequestStatusScreen() {
                 ))}
               </ScrollView>
             ) : (
-              <Text style={styles.rowValue}>{appI18n.t("Pickup proof photos will appear after pickup is completed.")}</Text>
+              <OrderEmptyState icon="photos" text={appI18n.t("Pickup proof photos will appear after pickup is completed.")} />
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{appI18n.t("Delivery Proof Photos")}</Text>
+            <OrderSectionHeading title={appI18n.t("Delivery Proof Photos")} icon="photos" count={trackingData?.deliveryProofPhotos?.length ?? 0} />
             {trackingData?.deliveryProofPhotos?.length ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
                 {trackingData.deliveryProofPhotos.map((photo) => (
@@ -1835,48 +1765,35 @@ export default function RequestStatusScreen() {
                 ))}
               </ScrollView>
             ) : (
-              <Text style={styles.rowValue}>{appI18n.t("Delivery proof photos will appear after final delivery.")}</Text>
+              <OrderEmptyState icon="photos" text={appI18n.t("Delivery proof photos will appear after final delivery.")} />
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{appI18n.t("Additional Charges")}</Text>
-            <Text style={styles.rowValue}>
-              {t('extra_expense.saved_card_notice')}: {formatSavedPaymentMethod(defaultPaymentMethod)}
-            </Text>
+            <OrderSectionHeading title={appI18n.t("Additional Charges")} icon="payment" count={additionalCharges.length} />
+            <OrderDetailRow icon="payment" label={t('extra_expense.saved_card_notice')} value={formatSavedPaymentMethod(defaultPaymentMethod)} />
             {additionalCharges.length === 0 ? (
-              <Text style={styles.rowValue}>{appI18n.t("No additional charges yet.")}</Text>
+              <OrderEmptyState icon="payment" text={appI18n.t("No additional charges yet.")} />
             ) : (
               additionalCharges.map((charge) => (
                 <View key={charge.id} style={styles.additionalChargeCard}>
                   <Text style={styles.offerPrimaryValue}>
                     {formatMoney(charge.totalChargeAmount, charge.currency)}
                   </Text>
-                  <Text style={styles.rowValue}>
-                    {t('extra_expense.expense_amount_label')}: {formatMoney(charge.amount, charge.currency)}
-                  </Text>
-                  <Text style={styles.rowValue}>
-                    {t('extra_expense.app_fee_label')}: {formatMoney(charge.appFeeAmount, charge.currency)}
-                  </Text>
-                  <Text style={styles.rowValue}>{appI18n.t("Reason:")} {charge.reason}</Text>
+                  <OrderDetailRow icon="payment" label={t('extra_expense.expense_amount_label')} value={formatMoney(charge.amount, charge.currency)} />
+                  <OrderDetailRow icon="payment" label={t('extra_expense.app_fee_label')} value={formatMoney(charge.appFeeAmount, charge.currency)} />
+                  <OrderDetailRow icon="summary" label={t("orderChargeLabels.reason")} value={charge.reason} />
                   {charge.equipmentType ? (
-                    <Text style={styles.rowValue}>{appI18n.t("Equipment:")} {charge.equipmentType}</Text>
+                    <OrderDetailRow icon="package" label={t("orderChargeLabels.equipment")} value={charge.equipmentType} />
                   ) : null}
-                  <Text style={styles.rowValue}>{appI18n.t("Status:")} {charge.status}</Text>
-                  <Text style={styles.rowValue}>{appI18n.t("Added:")} {formatDate(charge.createdAt)}</Text>
-                  <Text style={styles.rowValue}>
-                    {t('extra_expense.payment_option_label')}: {getAdditionalChargePaymentMethodLabel(charge, t)}
-                  </Text>
+                  <OrderDetailRow icon="info" label={t("orderChargeLabels.status")} value={charge.status} />
+                  <OrderDetailRow icon="clock" label={t("orderChargeLabels.date")} value={formatDate(charge.createdAt)} />
+                  <OrderDetailRow icon="payment" label={t('extra_expense.payment_option_label')} value={getAdditionalChargePaymentMethodLabel(charge, t)} />
                   {charge.payment.savedPaymentMethod ? (
-                    <Text style={styles.rowValue}>
-                      {t('extra_expense.saved_card_label')}: {formatSavedPaymentMethod(charge.payment.savedPaymentMethod)}
-                    </Text>
+                    <OrderDetailRow icon="payment" label={t('extra_expense.saved_card_label')} value={formatSavedPaymentMethod(charge.payment.savedPaymentMethod)} />
                   ) : null}
                   {charge.payment.failureReason ? (
                     <Text style={styles.errorText}>{charge.payment.failureReason}</Text>
-                  ) : null}
-                  {charge.invoiceUrl ? (
-                    <Text style={styles.rowValue}>{appI18n.t("Invoice:")} {resolveAssetUrl(charge.invoiceUrl)}</Text>
                   ) : null}
                   {(charge.status === 'PENDING' || charge.status === 'FAILED') ? (
                     <Pressable
@@ -1897,9 +1814,9 @@ export default function RequestStatusScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{appI18n.t("Photos")}</Text>
+            <OrderSectionHeading title={appI18n.t("Photos")} icon="photos" count={requestData.photos.length} />
             {requestData.photos.length === 0 ? (
-              <Text style={styles.rowValue}>{appI18n.t("No photos added.")}</Text>
+              <OrderEmptyState icon="photos" text={appI18n.t("No photos added.")} />
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
                 {requestData.photos.map((photo) => (
@@ -1917,7 +1834,7 @@ export default function RequestStatusScreen() {
 
           {ratingAvailable ? (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>{appI18n.t("Rate Service")}</Text>
+              <OrderSectionHeading title={appI18n.t("Rate Service")} icon="star" />
               <Text style={styles.rowValue}>
                 {appI18n.t("Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.")}</Text>
               <Pressable style={styles.primaryButton} onPress={onRateDriver}>
@@ -1926,8 +1843,6 @@ export default function RequestStatusScreen() {
             </View>
           ) : null}
 
-          {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
           <View style={styles.actionStack}>
             <Pressable accessibilityRole="button" style={({ pressed }) => [styles.statusActionButton, pressed && styles.disabledButton]} onPress={() => void loadStatus(false)}>
@@ -1977,7 +1892,7 @@ export default function RequestStatusScreen() {
           <Modal visible={isMapExpanded} animationType="slide" onRequestClose={() => setIsMapExpanded(false)}>
             <SafeAreaView style={styles.mapExpandedScreen}>
               <View style={styles.expandedMapHeader}>
-                <Pressable style={styles.topBarButton} onPress={() => setIsMapExpanded(false)}>
+                <Pressable accessibilityRole="button" accessibilityLabel={appI18n.t("Back")} style={({ pressed }) => [styles.topBarButton, pressed && styles.disabledButton]} onPress={() => setIsMapExpanded(false)}>
                   <IconSymbol
                     name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
                     color="#111827"
@@ -2203,16 +2118,21 @@ export default function RequestStatusScreen() {
 }
 
 const styles = StyleSheet.create({
+  orderIntro: { gap: 8, paddingBottom: 4 },
+  orderEyebrow: { fontSize: 12, lineHeight: 18, color: colors.secondary, fontWeight: '600', textAlign: 'auto' },
+  orderHeading: { fontSize: 28, lineHeight: 34, fontWeight: '700', color: colors.text, letterSpacing: -0.6, textAlign: 'auto' },
+  mapHeading: { paddingHorizontal: 4 },
+
   keyboardAvoidingView: {
     flex: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.canvas,
   },
   centeredContainer: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.canvas,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -2222,36 +2142,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 16,
     paddingBottom: 28,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    paddingTop: 12,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
-    gap: 8,
-    shadowColor: '#111827',
-    shadowOpacity: 0.05,
+    borderColor: colors.border,
+    gap: 16,
+    shadowColor: colors.text,
+    shadowOpacity: 0,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    elevation: 0,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
     textAlign: 'center',
-  },
-  helperText: {
-    color: '#627287',
-    fontSize: 13,
-    lineHeight: 18,
   },
   supportingText: {
-    color: '#627287',
+    color: colors.secondary,
     fontSize: 14,
     lineHeight: 20,
-    textAlign: 'center',
+    textAlign: 'auto',
   },
   topBar: {
     flexDirection: 'row',
@@ -2260,130 +2179,32 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   topBarButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.surface,
   },
   topBarTitleWrap: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 2,
   },
   topBarTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
   },
   topBarSubtitle: {
+    textAlign: 'auto',
     fontSize: 13,
     color: '#76869B',
-  },
-  progressSection: {
-    paddingTop: 2,
-    paddingBottom: 4,
-    position: 'relative',
-  },
-  progressRail: {
-    position: 'absolute',
-    top: 27,
-    left: 36,
-    right: 36,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: '#E5E7EB',
-  },
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  progressStep: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-  progressCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  progressCircleDone: {
-    backgroundColor: '#F9C30B',
-  },
-  progressCircleCurrent: {
-    backgroundColor: '#F9C30B',
-  },
-  progressCircleDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-  progressCircleText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#9CA3AF',
-  },
-  progressCircleTextActive: {
-    color: '#111827',
-  },
-  progressCircleTextDisabled: {
-    color: '#9CA3AF',
-  },
-  progressLabel: {
-    fontSize: 12,
-    lineHeight: 16,
-    textAlign: 'center',
-    color: '#98A2B3',
-    maxWidth: 72,
-  },
-  progressLabelActive: {
-    color: '#374151',
-    fontWeight: '600',
-  },
-  progressLabelDisabled: {
-    color: '#B8C0CC',
-  },
-  successBanner: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#E9F9EE',
-  },
-  successBannerText: {
-    color: '#1E9E4A',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  errorBanner: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#FDE8E7',
-  },
-  errorBannerText: {
-    color: '#C0392B',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  infoBanner: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#EEF5FF',
-  },
-  infoBannerText: {
-    color: '#2563EB',
-    fontSize: 13,
-    fontWeight: '600',
   },
   noticeCard: {
     borderRadius: 20,
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: '#F5D0CD',
     gap: 8,
@@ -2391,24 +2212,29 @@ const styles = StyleSheet.create({
   noticeTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   mutedCaption: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#94A3B8',
+    color: colors.secondary,
   },
   mapCard: {
-    borderRadius: 24,
+    borderRadius: 20,
     overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    gap: 12,
   },
   mapFrame: {
-    borderRadius: 24,
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#DDF0DD',
   },
   mapFrameInline: {
-    height: 420,
+    height: 280,
   },
   mapFrameExpanded: {
     flex: 1,
@@ -2419,14 +2245,15 @@ const styles = StyleSheet.create({
   },
   mapExpandButton: {
     position: 'absolute',
-    top: 14,
-    right: 14,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    top: 'auto',
+    right: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
+    bottom: 12,
   },
   mapOverlayStatus: {
     position: 'absolute',
@@ -2438,16 +2265,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(17,24,39,0.82)',
   },
   mapOverlayStatusText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 12,
     fontWeight: '600',
   },
   mapFallbackCard: {
     borderRadius: 20,
     padding: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: colors.border,
     gap: 10,
   },
   mapFallbackCardExpanded: {
@@ -2463,52 +2290,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   outlineButtonText: {
-    color: '#111827',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
   },
   driverCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 24,
-    padding: 18,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
-    gap: 14,
-    shadowColor: '#111827',
-    shadowOpacity: 0.05,
+    borderColor: colors.border,
+    gap: 16,
+    shadowColor: colors.text,
+    shadowOpacity: 0,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    elevation: 0,
   },
   driverRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    flexWrap: 'wrap',
   },
   driverAvatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#E4B200',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.successSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   driverAvatarText: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.success,
   },
   driverInfo: {
     flex: 1,
     gap: 4,
+    minWidth: 140,
   },
   driverName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   driverMeta: {
     fontSize: 15,
@@ -2516,9 +2345,10 @@ const styles = StyleSheet.create({
   },
   driverVehicleText: {
     fontSize: 13,
-    color: '#98A2B3',
+    color: colors.secondary,
   },
   socketBadgeCompact: {
+    maxWidth: '100%',
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -2536,121 +2366,98 @@ const styles = StyleSheet.create({
   socketBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.text,
   },
   primaryActionButton: {
-    minHeight: 62,
-    borderRadius: 18,
-    backgroundColor: '#F9C30B',
+    minHeight: 52,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 18,
+    paddingVertical: 12,
+    flexWrap: 'wrap',
   },
   primaryActionButtonText: {
-    color: '#111827',
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   secondaryActionButton: {
-    minHeight: 58,
-    borderRadius: 18,
+    minHeight: 52,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.contact,
+    backgroundColor: colors.contact,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 18,
+    paddingVertical: 12,
+    flexWrap: 'wrap',
   },
   secondaryActionButtonText: {
-    color: '#111827',
+    color: colors.onPrimary,
     fontSize: 14,
     fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   inlineBadge: {
     minWidth: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#111827',
+    backgroundColor: colors.text,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
   inlineBadgeText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 12,
     fontWeight: '700',
   },
   detailsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
-    gap: 10,
-  },
-  detailsHeader: {
-    alignItems: 'stretch',
-    gap: 8,
+    borderColor: colors.border,
+    gap: 16,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
-  },
-  inlineStatusPill: {
-    alignSelf: 'flex-start',
-    maxWidth: '100%',
-    flexShrink: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: '#F3F4F6',
-    color: '#111827',
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '600',
-  },
-  detailsMetaText: {
-    fontSize: 13,
-    color: '#627287',
-  },
-  detailsGrid: {
-    gap: 12,
-  },
-  detailItem: {
-    gap: 4,
+    color: colors.text,
   },
   detailLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#98A2B3',
+    color: colors.secondary,
   },
   detailValue: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#111827',
+    color: colors.text,
   },
   rowLabel: {
     marginTop: 8,
     fontSize: 12,
-    color: '#98A2B3',
+    color: colors.secondary,
     fontWeight: '600',
   },
   rowValue: {
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
     marginTop: 2,
     lineHeight: 20,
-  },
-  emptyState: {
-    minHeight: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
   },
   selectedOfferBanner: {
     marginTop: 8,
@@ -2668,7 +2475,7 @@ const styles = StyleSheet.create({
   },
   selectedOfferValue: {
     marginTop: 4,
-    color: '#111827',
+    color: colors.text,
     fontWeight: '600',
   },
   offerCardAccepted: {
@@ -2682,11 +2489,11 @@ const styles = StyleSheet.create({
   offerCard: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 12,
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   offerCardSelected: {
     borderColor: '#FFC548',
@@ -2713,7 +2520,7 @@ const styles = StyleSheet.create({
   },
   offerVehiclePhotoPlaceholderText: {
     fontSize: 11,
-    color: '#627287',
+    color: colors.secondary,
     textAlign: 'center',
   },
   offerTopText: {
@@ -2723,18 +2530,18 @@ const styles = StyleSheet.create({
   offerCardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   offerRatingText: {
-    color: '#627287',
+    color: colors.secondary,
     fontSize: 13,
   },
   offerStatusText: {
-    color: '#627287',
+    color: colors.secondary,
     fontSize: 12,
   },
   offerTextOnDark: {
-    color: '#111827',
+    color: colors.text,
   },
   offerSubtextOnDark: {
     color: '#374151',
@@ -2745,20 +2552,20 @@ const styles = StyleSheet.create({
   },
   offerPriceValue: {
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
     fontSize: 14,
     textAlign: 'right',
   },
   offerArrivalText: {
     marginTop: 4,
-    color: '#627287',
+    color: colors.secondary,
     fontSize: 12,
     textAlign: 'right',
   },
   offerPrimaryValue: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   photoRow: {
     gap: 10,
@@ -2779,7 +2586,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: colors.border,
     backgroundColor: '#F8FAFC',
     padding: 12,
     gap: 4,
@@ -2791,7 +2598,7 @@ const styles = StyleSheet.create({
   statusActionButton: {
     minHeight: 58,
     borderRadius: 20,
-    backgroundColor: '#111827',
+    backgroundColor: colors.text,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
@@ -2799,7 +2606,7 @@ const styles = StyleSheet.create({
   deleteRequestButton: {
     minHeight: 58,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: '#F4C7C3',
     alignItems: 'center',
@@ -2812,20 +2619,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   statusActionButtonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: '700',
   },
   rateActionButton: {
-    minHeight: 58,
-    borderRadius: 20,
-    backgroundColor: '#F9C30B',
+    minHeight: 52,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
   rateActionButtonText: {
-    color: '#111827',
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -2833,14 +2640,14 @@ const styles = StyleSheet.create({
     minHeight: 56,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
   supportActionButtonText: {
-    color: '#111827',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -2852,7 +2659,7 @@ const styles = StyleSheet.create({
   },
   mapExpandedScreen: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.canvas,
   },
   expandedMapHeader: {
     flexDirection: 'row',
@@ -2864,7 +2671,7 @@ const styles = StyleSheet.create({
   expandedMapTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   modalBackdrop: {
     flex: 1,
@@ -2883,21 +2690,21 @@ const styles = StyleSheet.create({
   dialogCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: colors.border,
     gap: 10,
   },
   chargeDialogCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: colors.border,
     gap: 14,
   },
   chargeDialogHeader: {
@@ -2906,7 +2713,7 @@ const styles = StyleSheet.create({
   chargeDialogAmount: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   chargeSummaryCard: {
     borderRadius: 18,
@@ -2919,7 +2726,7 @@ const styles = StyleSheet.create({
   chargeSummaryReason: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#111827',
+    color: colors.text,
     fontWeight: '600',
   },
   chargeSummaryRow: {
@@ -2931,16 +2738,16 @@ const styles = StyleSheet.create({
   chargeSummaryValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   confirmationInput: {
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     paddingHorizontal: 14,
-    color: '#111827',
+    color: colors.text,
   },
   paymentOptionList: {
     gap: 10,
@@ -2950,7 +2757,7 @@ const styles = StyleSheet.create({
     borderColor: '#D9DFE8',
     borderRadius: 14,
     padding: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     gap: 4,
   },
   paymentOptionCardSelected: {
@@ -2963,19 +2770,19 @@ const styles = StyleSheet.create({
   paymentOptionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   paymentOptionDescription: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#627287',
+    color: colors.secondary,
   },
   selectedPaymentCard: {
     borderRadius: 16,
     padding: 14,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E5E8EF',
+    borderColor: colors.border,
     gap: 4,
   },
   dialogActions: {
@@ -2985,26 +2792,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  actionsRow: {
-    gap: 10,
-  },
   primaryButton: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.primary,
     borderRadius: 14,
-    minHeight: 48,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
-  },
-  secondaryButton: {
-    borderRadius: 14,
-    minHeight: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#D9DFE8',
-    backgroundColor: '#FFFFFF',
   },
   secondaryOutlineButton: {
     borderRadius: 12,
@@ -3014,7 +2808,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: '#D9DFE8',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   deleteButton: {
     borderRadius: 12,
@@ -3025,22 +2819,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF3B30',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: colors.onPrimary,
     fontWeight: '700',
     fontSize: 15,
   },
   deleteButtonText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontWeight: '700',
     fontSize: 14,
   },
-  secondaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
   secondaryOutlineButtonText: {
-    color: '#111827',
+    color: colors.text,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -3048,14 +2837,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   loadingText: {
-    color: '#627287',
+    color: colors.secondary,
     marginTop: 8,
     fontSize: 14,
-  },
-  successText: {
-    color: '#1E9E4A',
-    fontSize: 14,
-    textAlign: 'center',
   },
   errorText: {
     color: '#C0392B',
