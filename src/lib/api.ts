@@ -394,6 +394,14 @@ export async function verifyPhoneVerificationCode(
   );
 }
 
+function customerProfilePayload(name: string, countryCode: string) {
+  const normalizedName = name.trim();
+  // Older deployed APIs require a 2–40 character nickname. Current APIs ignore it.
+  // Preserve the full name while satisfying that legacy contract.
+  const nickname = Array.from(normalizedName).slice(0, 40).join('').trim();
+  return { name: normalizedName, countryCode, nickname };
+}
+
 export async function completeCustomerProfile(
   name: string,
   countryCode: string,
@@ -402,7 +410,7 @@ export async function completeCustomerProfile(
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ name, countryCode }),
+    body: JSON.stringify(customerProfilePayload(name, countryCode)),
   });
   if (!response.ok) throw await parseError(response, 'Unable to complete your profile.');
   return parseJsonBody<{ success: true; name: string; countryCode: string }>(
@@ -419,7 +427,7 @@ export async function updateCustomerProfile(
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ name, countryCode }),
+    body: JSON.stringify(customerProfilePayload(name, countryCode)),
   });
   if (!response.ok) {
     throw await parseError(response, 'Unable to update your profile.');
