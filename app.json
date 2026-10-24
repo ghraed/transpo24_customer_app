@@ -10,6 +10,7 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.transpo24.app",
+      "appleTeamId": "GQ79L2HQU5",
       "config": {
         "googleMapsApiKey": ""
       }

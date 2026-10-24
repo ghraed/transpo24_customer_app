@@ -64,6 +64,7 @@
     "android": "node ./scripts/run-android.js",
     "android:usb": "node ./scripts/run-android.js --port=8081 --clear",
     "ios": "expo run:ios",
+    "ios:release:check": "eas env:exec production \"node scripts/check-ios-release.cjs\" --non-interactive",
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

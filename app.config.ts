@@ -40,6 +40,18 @@ if (
 }
 
 export default ({ config }: ConfigContext) => {
+  // These guards run only for iOS production workers; Android profiles are unaffected.
+  if (process.env.EAS_BUILD_PLATFORM === 'ios' && EAS_BUILD_PROFILE === 'production') {
+    if (IS_DEV) {
+      throw new Error('iOS production builds must not use APP_VARIANT=development.');
+    }
+    if (!MAPS_IOS_KEY.trim() || MAPS_IOS_KEY.startsWith('replace_')) {
+      throw new Error('iOS production builds require EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY in the EAS production environment.');
+    }
+    if (config.ios?.bundleIdentifier !== 'com.transpo24.app') {
+      throw new Error('iOS production builds must use bundle identifier com.transpo24.app.');
+    }
+  }
   const androidPackage = IS_DEV ? 'com.transpo24.app.dev' : config.android?.package;
   let androidGoogleServicesFile = ANDROID_GOOGLE_SERVICES_FILE;
   if (IS_DEV) {
