@@ -1,5 +1,63 @@
 # Welcome to your Expo app 👋
 
+## Store release shortcuts
+
+The local Zsh aliases `transpo_cbuild` and `transpo_cupload` work from any directory
+and always target this client app. Open a new terminal or run `source ~/.zshrc`
+after installing the aliases. Equivalent commands inside this project are
+`npm run release:build` and `npm run release:upload`.
+
+`transpo_cbuild` runs these steps in order and stops at the first failure:
+
+1. `npm run lint`: check code rules and common mistakes.
+2. `npm run typecheck`: run the privacy check and TypeScript validation.
+3. `npm run test`: run the automated test suite.
+4. `npm run ios:release:check`: check iOS production configuration using EAS
+   production variables (requires Expo login and network access).
+5. Increment `app.json`'s `expo.version` patch once for both platforms, for example
+   `1.0.2` to `1.0.3`. EAS continues to increment each platform's build number remotely.
+6. `npx eas-cli@latest build --platform android --profile production --local --output <path>`:
+   build Android on this computer, saving `dist/releases/transpo24-<version>.aab`.
+7. `npx eas-cli@latest build --platform ios --profile production`: build iOS in
+   EAS cloud. On Linux, Xcode/iOS compilation requires a remote Mac such as EAS.
+
+Android local builds use EAS CLI but avoid cloud compilation, queue and build
+allowance. They still require Expo authentication/network access for project
+metadata, signing credentials and remote build numbering. Install a compatible
+JDK and Android SDK/NDK locally; cloud image/tool version settings are ignored.
+The production profile selects EAS production variables. Variables with Secret
+visibility cannot be downloaded for local builds: provide them locally, including
+any referenced Firebase configuration file. Never reuse development/test values
+for a production build. See [EAS local builds](https://docs.expo.dev/build-reference/local-builds/).
+
+The checks cover shared code; the iOS check covers configuration, not device
+behavior. Test signed builds on Android/internal testing and iOS/TestFlight,
+especially login, maps, payments and push notifications. Keep production EAS
+credentials/variables configured and commit the resulting `app.json` version.
+The version changes only when the shortcut is run, after the checks pass.
+
+Use `transpo_cbuild --no-bump` to rebuild the current version after a failed build
+or when you already manually selected the next release version. With npm, use
+`npm run release:build -- --no-bump`. Failed local/cloud builds retain the version;
+they can already have consumed native build numbers.
+
+After testing, `transpo_cupload` runs Android then iOS EAS Submit using the
+production submission profile. Android submission uses the current app version's
+local AAB with `--path`; it does not select an older cloud build. It fails if that
+file is missing. Select the matching iOS production build at its prompt.
+It stops on failure; use `transpo_cupload --platform ios` (or `android`) to retry
+one store. Google Play receives a draft production release; iOS uploads go to
+App Store Connect/TestFlight. Complete review and release in the store consoles.
+Neither shortcut publishes an EAS Update.
+
+EAS Update delivers compatible JavaScript/assets inside an installed app rather
+than uploading a new AAB/IPA. This app has a download/restart banner. Delivery
+requires an installed binary with updates enabled, a matching runtime version,
+and the correct channel (`production` for Android, `production-ios` for iOS).
+The `appVersion` runtime policy uses `expo.version`, so changing it targets a new
+runtime and does not update older store binaries. Native module, permission or
+Expo SDK changes require a new store build. Follow store policies for OTA updates.
+
 ## Registration-card scanning
 
 The vehicle transport form now starts with **Scan registration card**, while
