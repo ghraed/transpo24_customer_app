@@ -158,6 +158,7 @@ it("furniture pickup clears delivery and blocks continuation until delivery is c
       .findByType("DateTimePicker")
       .props.onChange({ type: "set" }, next),
   );
+  await press("Save");
   expect(tree.root.findByType(DeliveryDateEditor).props.value).toBeUndefined();
   await press("Continue to Pickup Location");
   expect(mockPush).not.toHaveBeenCalled();
@@ -197,6 +198,7 @@ it("goods pickup changes clear delivery instead of choosing a replacement", asyn
       .findByType("DateTimePicker")
       .props.onChange({ type: "set" }, addCalendarDays(pickup, 1)),
   );
+  await press("Save");
   expect(tree.root.findByType(DeliveryDateEditor).props.value).toBeUndefined();
   await press("Continue to Pickup Location");
   expect(mockPush).not.toHaveBeenCalled();

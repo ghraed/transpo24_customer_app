@@ -1,7 +1,7 @@
 import { DeliveryDateEditor } from '@/requests/delivery-date-editor';
 import { addCalendarDays, deliveryAfterPickupChange, validateSchedule } from '@/requests/schedule-rules';
 import { Redirect } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePickerDialog } from '@/components/date-time-picker-dialog';
 import * as ImagePicker from 'expo-image-picker';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -763,13 +763,13 @@ function DateTimeScreen() {
       </ScrollView>
 
       {showDatePicker ? (
-        <DateTimePicker
-          display="spinner"
+        <DateTimePickerDialog
           value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="date"
           minimumDate={new Date()}
           maximumDate={(serviceKey === 'FURNITURE_TRANSPORT') ? undefined : addCalendarDays(new Date(), 5)}
-          onChange={(_, selectedDate) => {
+          onCancel={() => setShowDatePicker(false)}
+          onConfirm={(selectedDate) => {
             setShowDatePicker(false);
             if (!selectedDate) return;
             const base = form.scheduledPickupAt ?? new Date();
@@ -781,13 +781,13 @@ function DateTimeScreen() {
       ) : null}
 
       {showTimePicker ? (
-        <DateTimePicker
-          display="spinner"
+        <DateTimePickerDialog
           value={form.scheduledPickupAt ?? defaultScheduledPickupAt}
           mode="time"
           is24Hour={true}
           locale="en_GB"
-          onChange={(_, selectedDate) => {
+          onCancel={() => setShowTimePicker(false)}
+          onConfirm={(selectedDate) => {
             setShowTimePicker(false);
             if (!selectedDate) return;
             const base = form.scheduledPickupAt ?? new Date();

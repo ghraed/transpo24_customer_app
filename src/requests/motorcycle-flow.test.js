@@ -134,6 +134,7 @@ test('motorcycle pickup changes clear delivery and block continuation', async ()
   await press(tree, 'Continue');
   await press(tree, 'Pickup Date');
   await act(async () => tree.root.findByType('DateTimePicker').props.onChange({ type: 'set' }, new Date(Date.now() + 2 * 86400000)));
+  await press(tree, 'Save');
   expect(tree.root.findByType(DeliveryDateEditor).props.value).toBeUndefined();
   await press(tree, 'Continue to Pickup Location');
   expect(mockPush).not.toHaveBeenCalled();

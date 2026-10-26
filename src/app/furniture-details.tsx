@@ -1,7 +1,7 @@
 import { DeliveryDateEditor } from '@/requests/delivery-date-editor';
 import { deliveryAfterPickupChange, validateSchedule } from '@/requests/schedule-rules';
 import { RequestProgress } from '@/requests/request-progress';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePickerDialog } from '@/components/date-time-picker-dialog';
 import * as ImagePicker from 'expo-image-picker';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -552,12 +552,12 @@ export default function FurnitureDetailsScreen() {
           </Pressable>
 
           {showDatePicker ? (
-            <DateTimePicker
-          display="spinner"
+            <DateTimePickerDialog
               value={form.movingDate}
               mode="date"
               minimumDate={minimumMovingDate}
-              onChange={(_, selectedDate) => {
+              onCancel={() => setShowDatePicker(false)}
+              onConfirm={(selectedDate) => {
                 setShowDatePicker(false);
                 if (!selectedDate) return;
                 const next = new Date(selectedDate);
@@ -571,13 +571,13 @@ export default function FurnitureDetailsScreen() {
           ) : null}
 
           {showTimePicker ? (
-            <DateTimePicker
-          display="spinner"
+            <DateTimePickerDialog
               value={form.movingDate}
               mode="time"
               is24Hour={true}
               locale="en_GB"
-              onChange={(_, selectedDate) => {
+              onCancel={() => setShowTimePicker(false)}
+              onConfirm={(selectedDate) => {
                 setShowTimePicker(false);
                 if (!selectedDate) return;
                 const next = new Date(form.movingDate);
