@@ -28,7 +28,7 @@ export interface ChatMessage {
 }
 
 export interface ChatRoom {
-  driverNickname?: string;
+  driverName?: string;
   id: string;
   transportRequestId: string;
   clientId: string;

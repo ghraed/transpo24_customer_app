@@ -396,10 +396,7 @@ export async function verifyPhoneVerificationCode(
 
 function customerProfilePayload(name: string, countryCode: string) {
   const normalizedName = name.trim();
-  // Older deployed APIs require a 2–40 character nickname. Current APIs ignore it.
-  // Preserve the full name while satisfying that legacy contract.
-  const nickname = Array.from(normalizedName).slice(0, 40).join('').trim();
-  return { name: normalizedName, countryCode, nickname };
+  return { name: normalizedName, countryCode };
 }
 
 export async function completeCustomerProfile(

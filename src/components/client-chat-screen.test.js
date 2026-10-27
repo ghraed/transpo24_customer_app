@@ -55,7 +55,7 @@ afterEach(async () => {
 });
 async function render(messages, canSendMessages = true) {
   getChatRoomMessages.mockResolvedValue({
-    room: { id: 'room', driverNickname: 'Night Rider', transportRequestId: 'request', status: 'ACTIVE', canSendMessages },
+    room: { id: 'room', driverName: 'Night Rider', transportRequestId: 'request', status: 'ACTIVE', canSendMessages },
     messages, totalPages: 1,
   });
   await act(async () => { tree = create(<ChatScreen />); });
@@ -95,7 +95,7 @@ it('keeps blocked chats read-only and enables keyboard avoidance only while the 
 });
 
 
-it('shows the driver nickname in the conversation header', async () => {
+it('shows the driver full name in the conversation header', async () => {
   await render([message('hello', 'DRIVER')]);
   expect(tree.root.findAll(node => node.props.children === 'Night Rider').length).toBeGreaterThan(0);
 });

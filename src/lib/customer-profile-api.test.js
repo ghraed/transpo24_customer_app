@@ -16,14 +16,14 @@ beforeEach(() => jest.clearAllMocks());
 describe.each([
   ['complete-profile', completeCustomerProfile],
   ['update-profile', updateCustomerProfile],
-])('%s API compatibility', (route, submit) => {
+])('%s profile API', (route, submit) => {
   test.each([
     'Mohamad Rhayel',
     'Al',
     'A'.repeat(100),
     'é'.repeat(41),
     '𐐀'.repeat(41),
-  ])('sends a legacy nickname while preserving the full name: %s', async (name) => {
+  ])('sends only the full name and country: %s', async (name) => {
     authenticatedFetch.mockImplementation(async (url, init) => {
       expect(url).toBe(`https://api.test/auth/phone/${route}`);
       expect(init.method).toBe('POST');
@@ -35,17 +35,10 @@ describe.each([
       expect(payload).toEqual({
         name,
         countryCode: 'CH',
-        nickname: Array.from(name).slice(0, 40).join(''),
       });
-      // Reproduce the legacy validation that rejected the screenshot's request.
-      const valid = typeof payload.nickname === 'string'
-        && Array.from(payload.nickname).length >= 2
-        && Array.from(payload.nickname).length <= 40;
       return {
-        ok: valid,
-        text: async () => JSON.stringify(valid
-          ? { success: true, name: payload.name, countryCode: payload.countryCode }
-          : { message: ['nickname must be a string'] }),
+        ok: true,
+        text: async () => JSON.stringify({ success: true, name: payload.name, countryCode: payload.countryCode }),
       };
     });
     await expect(submit(` ${name} `, 'CH')).resolves.toMatchObject({ name, countryCode: 'CH' });

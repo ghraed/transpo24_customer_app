@@ -236,7 +236,7 @@ export default function ProfileTabScreen() {
             <Text style={styles.heroMeta}>{t("Full name")}</Text>
             <Text style={styles.sectionTitle}>{auth.user?.name || t("Edit Profile")}</Text>
           </View>
-          <Text style={styles.nicknameEdit}>{t("Edit Profile")}</Text>
+          <Text style={styles.profileEdit}>{t("Edit Profile")}</Text>
         </Pressable>
 
         <View style={styles.sectionCard}>
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#68768A",
   },
-  nicknameEdit: {
+  profileEdit: {
     fontSize: 13,
     fontWeight: "700",
     color: "#111827",

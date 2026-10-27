@@ -10,7 +10,6 @@ const USER_STORAGE_KEY = 'transpo24.customer.user';
 const TRUSTED_SESSION_STORAGE_KEY = 'transpo24.customer.trustedSession';
 
 export type CustomerAuthUser = {
-  nickname?: string | null;
   id: string;
   name: string;
   email: string;

@@ -15,7 +15,7 @@ jest.mock('@/components/tracking-ui', () => ({ clientTheme: {} }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
 jest.mock('@/lib/api', () => ({ completeCustomerProfile: jest.fn(), updateCustomerProfile: jest.fn() }));
 jest.mock('@/lib/auth-token', () => ({
-  useAuthSession: () => ({ status: 'needsProfileCompletion', user: { name: 'Private Name', nickname: 'Old Nickname', countryCode: 'LB' } }),
+  useAuthSession: () => ({ status: 'needsProfileCompletion', user: { name: 'Private Name', countryCode: 'LB' } }),
   updateCustomerSessionProfile: jest.fn(),
   markProfileCompleted: jest.fn(),
 }));
@@ -27,22 +27,22 @@ afterEach(async () => {
   jest.clearAllMocks();
 });
 
-test('completes a profile without a nickname', async () => {
+test('completes a profile using a full name', async () => {
   completeCustomerProfile.mockResolvedValue({ name: 'Private Name', countryCode: 'LB' });
   await act(async () => { renderer = create(<CompleteProfileScreen />); });
   const inputs = renderer.root.findAllByType(TextInput);
-  expect(inputs.some(node => node.props.accessibilityLabel === 'Nickname')).toBe(false);
+  expect(inputs.filter(node => node.props.accessibilityLabel === 'Full name')).toHaveLength(1);
   await act(async () => { inputs.find(node => node.props.accessibilityLabel === 'Full name').props.onChangeText('Private Name'); });
   await act(async () => { renderer.root.findAll(node => typeof node.props.onPress === 'function')[0].props.onPress(); });
   expect(completeCustomerProfile).toHaveBeenCalledWith('Private Name', 'LB');
   expect(markProfileCompleted).toHaveBeenCalledWith('Private Name', 'LB');
 });
 
-test('edits a full name without requiring a nickname', async () => {
+test('edits a full name using the full name', async () => {
   updateCustomerProfile.mockResolvedValue({ name: 'Updated Name', countryCode: 'LB' });
   await act(async () => { renderer = create(<EditProfileScreen />); });
   const inputs = renderer.root.findAllByType(TextInput);
-  expect(inputs.some(node => node.props.accessibilityLabel === 'Nickname')).toBe(false);
+  expect(inputs.filter(node => node.props.accessibilityLabel === 'Full name')).toHaveLength(1);
   await act(async () => { inputs.find(node => node.props.accessibilityLabel === 'Full name').props.onChangeText(' Updated Name '); });
   await act(async () => { renderer.root.findAll(node => typeof node.props.onPress === 'function')[0].props.onPress(); });
   expect(updateCustomerProfile).toHaveBeenCalledWith('Updated Name', 'LB');
