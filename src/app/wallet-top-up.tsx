@@ -1,3 +1,5 @@
+import { paymentMethodName } from '@/lib/payment-rules';
+import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
 import { confirmPayment, confirmPlatformPayPayment, isPlatformPaySupported, PlatformPay } from '@stripe/stripe-react-native';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -105,6 +107,7 @@ function isTerminalStatus(status: CustomerWalletTopUpResponse['topUp']['status']
 
 export default function WalletTopUpScreen() {
   const router = useRouter();
+  const { policy, error: policyError } = usePaymentPolicy();
   const params = useLocalSearchParams();
   const auth = useAuthSession();
   const keyboardInset = useAndroidKeyboardInset();
@@ -186,6 +189,7 @@ export default function WalletTopUpScreen() {
   }), [applePaySupported, merchantCountryCode, merchantIdentifier, publishableKey]);
   const needsCardField = selectedMethod === 'CREDIT_CARD' || selectedMethod === 'DEBIT_CARD';
   const methodDisabledReason = useMemo(() => {
+    if (!policy) return appI18n.t(policyError ? 'payment_info.unavailable' : 'payment_info.loading');
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
       return appI18n.t("Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.");
     }
@@ -215,7 +219,7 @@ export default function WalletTopUpScreen() {
     }
 
     return '';
-  }, [amount, cardComplete, isExpoGo, merchantIdentifier, needsCardField, publishableKey, selectedMethod]);
+  }, [policy, policyError, amount, cardComplete, isExpoGo, merchantIdentifier, needsCardField, publishableKey, selectedMethod]);
 
   const confirmStripeTopUp = async (topUp: CustomerWalletTopUpResponse['topUp']): Promise<void> => {
     if (!topUp.stripeClientSecret) {
@@ -297,6 +301,7 @@ export default function WalletTopUpScreen() {
         amount,
         currency: defaultCurrency,
         paymentMethod: selectedMethod,
+        policyVersion: policy?.version,
       });
       await confirmStripeTopUp(createdTopUp.topUp);
       const settled = await pollTopUpUntilSettled(createdTopUp.topUp.id);
@@ -381,6 +386,7 @@ export default function WalletTopUpScreen() {
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>{appI18n.t("Payment method")}</Text>
+            <PaymentInfo context="topUp" details={[formatMoney(amount, defaultCurrency), paymentMethodName(selectedMethod, (key) => appI18n.t(key))]} />
             {paymentOptions.map((option) => {
               const isSelected = option.method === selectedMethod;
               const isUnsupported =

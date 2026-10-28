@@ -11,6 +11,7 @@ const mockParams = { requestId: 'request' };
 const mockT = key => key.startsWith('orderChargeLabels.') ? require('@/localization/locales/en.json').orderChargeLabels[key.split('.')[1]] : key;
 let mockLocationListener;
 let mockConnectedListener;
+jest.mock('@stripe/stripe-react-native', () => ({ handleNextAction: jest.fn() }));
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useNavigation: () => mockNavigation, useRouter: () => mockRouter }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: mockT }) }));
 jest.mock('expo-symbols', () => ({ SymbolView: () => null }));

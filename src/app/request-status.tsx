@@ -1,3 +1,5 @@
+import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
+import { BookingPaymentStatus } from '@/components/booking-payment-status';
 import { OrderSectionHeading, OrderDetailRow, OrderRouteCard, OrderNotice, OrderEmptyState, OrderProgress } from '@/components/order-ui';
 import { orderColors as colors } from '@/theme/order-theme';
 import { MapLocationMarker, MAP_COLORS } from '@/components/map-location-marker';
@@ -477,6 +479,7 @@ function buildTrackingHref(
 }
 
 export default function RequestStatusScreen() {
+  const { policy: transactionPolicy } = usePaymentPolicy();
   const keyboardInset = useAndroidKeyboardInset();
   const router = useRouter();
   const navigation = useNavigation();
@@ -961,7 +964,7 @@ export default function RequestStatusScreen() {
   }, [canOpenTrackingMap, effectiveTrackingStatus, requestData, router]);
 
   const openPaymentScreen = async (): Promise<void> => {
-    if (!requestData || !selectedOffer) return;
+    if (!requestData || !selectedOffer || requestData.confirmation) return;
 
     const offerId = selectedOffer.offerId || selectedOffer.id;
     setErrorMessage('');
@@ -1035,6 +1038,7 @@ export default function RequestStatusScreen() {
       return;
     }
 
+    const cancellationTerms = requestData.cancellation.refundPreview ? { expectedRetainedAmount: requestData.cancellation.refundPreview.retainedAmount, policyVersion: requestData.paymentPolicy?.version } : undefined;
     try {
       setIsCancelTripModalVisible(false);
       setIsCancellingTrip(true);
@@ -1042,7 +1046,7 @@ export default function RequestStatusScreen() {
       setErrorMessage('');
       setSuccessMessage('');
 
-      const result = requestData.status === 'RESERVED' ? await cancelFurnitureReservation(requestData.id) : await cancelCollectedTrip(requestData.id);
+      const result = requestData.status === 'RESERVED' ? await cancelFurnitureReservation(requestData.id) : await cancelCollectedTrip(requestData.id, cancellationTerms);
 
       setRequestData((previousRequestData) =>
         previousRequestData
@@ -1085,7 +1089,7 @@ export default function RequestStatusScreen() {
       setLatestDriverLocation(null);
       setNearDeliveryMessage('');
       setSuccessMessage(
-        requestData.status === 'RESERVED' ? appI18n.t('Reservation cancelled. No cancellation fee applies.') : `Trip cancelled. Refunded ${formatMoney(
+        requestData.confirmation ? appI18n.t('payment_info.cancel_result', { fee: formatMoney(result.retainedAmount, result.currency), released: formatMoney(('releasedAmount' in result ? result.releasedAmount : 0) ?? 0, result.currency) }) : requestData.status === 'RESERVED' ? appI18n.t('Reservation cancelled. No cancellation fee applies.') : `Trip cancelled. Refunded ${formatMoney(
           result.refundedAmount,
           result.currency,
         )}. Cancellation fee kept: ${formatMoney(
@@ -1095,8 +1099,8 @@ export default function RequestStatusScreen() {
       );
       setCancelTripDebugMessage('Cancellation completed successfully.');
     } catch (error) {
-      const primaryErrorMessage =
-        error instanceof Error ? error.message : appI18n.t("Failed to cancel this trip.");
+      const rawErrorMessage = error instanceof Error ? error.message : appI18n.t("Failed to cancel this trip.");
+      const primaryErrorMessage = rawErrorMessage.includes('cancellation fee changed') ? appI18n.t('payment_info.review_fee_changes') : rawErrorMessage;
       setCancelTripDebugMessage(
         `Primary cancellation call failed: ${primaryErrorMessage}`,
       );
@@ -1104,7 +1108,7 @@ export default function RequestStatusScreen() {
       try {
         setCancelTripDebugMessage('Primary cancellation call failed. Retrying once…');
         await sleep(800);
-        await cancelCollectedTrip(requestData.id).catch(() => null);
+        await cancelCollectedTrip(requestData.id, cancellationTerms).catch(() => null);
         setCancelTripDebugMessage('Retry finished. Checking backend status…');
         const latestStatus = await waitForCancelledStatus(requestData.id);
 
@@ -1176,7 +1180,7 @@ export default function RequestStatusScreen() {
   }, [defaultPaymentMethod, isApprovingAdditionalCharge]);
 
   const onApproveAdditionalCharge = useCallback(async (): Promise<void> => {
-    if (!activeAdditionalCharge || !isAdditionalChargeConfirmationValid) {
+    if (!activeAdditionalCharge || !isAdditionalChargeConfirmationValid || !transactionPolicy) {
       return;
     }
 
@@ -1189,6 +1193,7 @@ export default function RequestStatusScreen() {
         confirmationLocale: resolvedConfirmationLocale,
         confirmationText: trimmedAdditionalChargeConfirmationText,
         paymentOption: additionalChargePaymentOption,
+        policyVersion: transactionPolicy.version,
       });
 
       setAdditionalCharges((previousCharges) =>
@@ -1216,6 +1221,7 @@ export default function RequestStatusScreen() {
     isAdditionalChargeConfirmationValid,
     loadStatus,
     requestId,
+    transactionPolicy,
     resolvedConfirmationLocale,
     t,
     trimmedAdditionalChargeConfirmationText,
@@ -1391,7 +1397,7 @@ export default function RequestStatusScreen() {
   }
 
   const helperText = buildOffersHelperText(requestData, offers.length);
-  const canChooseOffer = requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED';
+  const canChooseOffer = !requestData.confirmation && (requestData.status === 'PENDING_QUOTES' || requestData.status === 'QUOTED');
   const canDeleteCurrentRequest = canDeleteRequest(requestData.status);
   const canCancelCurrentTrip = requestData.status === 'RESERVED' || requestData.cancellation.canCancelCollectedTrip;
   const cancellationReason = requestData.cancellation.reason;
@@ -1418,6 +1424,8 @@ export default function RequestStatusScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {requestData.payment?.confirmation ? <BookingPaymentStatus payment={requestData.payment} refresh={() => loadStatus(true)} cancel={() => setIsCancelTripModalVisible(true)} /> : null}
+          <PaymentInfo context={requestData.status === 'RESERVED' || requestData.deferredReservationEligible || requestData.deferredFurnitureEligible ? 'reservation' : 'booking'} policy={requestData.paymentPolicy} details={[requestData.statusLabel, ...(requestData.reservation ? [`${appI18n.t('Payment opens')}: ${formatDate(requestData.reservation.confirmationOpensAt)}`, `${appI18n.t('Payment deadline')}: ${formatDate(requestData.reservation.paymentDeadlineAt)}`] : []), ...(requestData.payment ? [appI18n.t('payment_info.total', { amount: formatMoney(requestData.payment.amount, requestData.payment.currency) })] : [])]} />
           <View style={styles.topBar}>
             <Pressable accessibilityRole="button" accessibilityLabel={appI18n.t("Back")} style={({ pressed }) => [styles.topBarButton, pressed && styles.disabledButton]} onPress={goToHome}>
               <IconSymbol
@@ -1643,7 +1651,7 @@ export default function RequestStatusScreen() {
                 <Pressable
                   key={offerKey}
                   style={[styles.offerCard, isSelected ? styles.offerCardSelected : undefined]}
-                  disabled={!isPending}
+                  disabled={!isPending || !canChooseOffer}
                   onPress={() => setSelectedOfferId(offerKey)}
                 >
                   <View style={styles.offerTopRow}>
@@ -1777,6 +1785,7 @@ export default function RequestStatusScreen() {
             ) : (
               additionalCharges.map((charge) => (
                 <View key={charge.id} style={styles.additionalChargeCard}>
+                  <PaymentInfo context="expense" policy={transactionPolicy} details={[formatMoney(charge.amount, charge.currency), formatMoney(charge.appFeeAmount, charge.currency), formatMoney(charge.totalChargeAmount, charge.currency), charge.status]} />
                   <Text style={styles.offerPrimaryValue}>
                     {formatMoney(charge.totalChargeAmount, charge.currency)}
                   </Text>
@@ -1919,8 +1928,9 @@ export default function RequestStatusScreen() {
                 ]}
               >
                 <Text style={styles.cardTitle}>{appI18n.t("Cancel trip?")}</Text>
+                <PaymentInfo context="cancellation" policy={requestData.paymentPolicy} details={[appI18n.t('payment_info.fee', { amount: formatMoney(requestData.cancellation.refundPreview?.retainedAmount ?? 0, requestData.payment?.currency) }), appI18n.t('payment_info.released', { amount: formatMoney(requestData.cancellation.refundPreview?.releasedAmount ?? 0, requestData.payment?.currency) }), appI18n.t('payment_info.refund', { amount: formatMoney(requestData.cancellation.refundPreview?.refundedAmount ?? 0, requestData.payment?.currency) })]} />
                 <Text style={styles.rowValue}>
-                  {requestData.status === 'RESERVED' ? appI18n.t('Cancel this unpaid reservation for free? Your driver reservation will be released.') : requestData.cancellation.refundPreview
+                  {requestData.confirmation ? appI18n.t('payment_info.cancel_preview', { fee: formatMoney(requestData.cancellation.refundPreview?.retainedAmount ?? 0, requestData.payment?.currency), released: formatMoney(requestData.cancellation.refundPreview?.releasedAmount ?? 0, requestData.payment?.currency) }) : requestData.status === 'RESERVED' ? appI18n.t('Cancel this unpaid reservation for free? Your driver reservation will be released.') : requestData.cancellation.refundPreview
                     ? `If you cancel now, ${formatMoney(
                       requestData.cancellation.refundPreview.refundedAmount,
                       requestData.cancellation.refundPreview.currency,
@@ -2001,6 +2011,7 @@ export default function RequestStatusScreen() {
                     keyword: confirmationKeyword,
                   })}
                 </Text>
+                <PaymentInfo context="expense" policy={transactionPolicy} details={activeAdditionalCharge ? [formatMoney(activeAdditionalCharge.totalChargeAmount, activeAdditionalCharge.currency), t(additionalChargePaymentOption === 'SAVED_CARD' ? 'extra_expense.saved_card_option' : 'extra_expense.cash_on_delivery_option')] : []} />
                 <View style={styles.paymentOptionList}>
                   <Pressable
                     style={[

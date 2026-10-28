@@ -1,3 +1,4 @@
+import { PaymentInfo } from '@/components/payment-info';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useState } from 'react';
@@ -95,6 +96,7 @@ export default function PaymentMethodScreen() {
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{t('payment_method.title')}</Text>
+            <PaymentInfo context="cardSetup" />
           <SavedCardPicker disabled={isSubmitting} onChange={setCardSelection} />
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}

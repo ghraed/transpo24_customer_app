@@ -1,7 +1,7 @@
 import { test, expect } from '@jest/globals';
 import { resolveNotificationRoute } from './notificationRoute';
 
-test.each(['DRIVER_GOING_TO_PICKUP', 'DRIVER_ARRIVED_PICKUP', 'DRIVER_GOING_TO_DROPOFF', 'DRIVER_NEAR_DELIVERY', 'CUSTOMER_DELIVERY_CONFIRMED', 'TRIP_CANCELLED', 'ITEM_PICKED_UP', 'TRIP_FUNDS_TRANSFERRED', 'ADDITIONAL_CHARGE_ADDED'])('%s opens the corresponding job', type => {
+test.each(['BOOKING_FUNDS_RESERVED', 'BOOKING_BANK_APPROVAL_REQUIRED', 'BOOKING_PAYMENT_REVIEW', 'DRIVER_GOING_TO_PICKUP', 'DRIVER_ARRIVED_PICKUP', 'DRIVER_GOING_TO_DROPOFF', 'DRIVER_NEAR_DELIVERY', 'CUSTOMER_DELIVERY_CONFIRMED', 'TRIP_CANCELLED', 'ITEM_PICKED_UP', 'TRIP_FUNDS_TRANSFERRED', 'ADDITIONAL_CHARGE_ADDED'])('%s opens the corresponding job', type => {
   expect(resolveNotificationRoute({ type, tripId: 'job/a' })).toBe('/request-status?requestId=job%2Fa');
 });
 test('a delivery alert opens the payment confirmation screen', () => {

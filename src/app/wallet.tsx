@@ -1,3 +1,4 @@
+import { PaymentInfo } from '@/components/payment-info';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useEffect, useState } from 'react';
@@ -162,6 +163,7 @@ export default function WalletScreen() {
               />
             </View>
             <Text style={styles.walletLabel}>{appI18n.t("App Wallet")}</Text>
+            <PaymentInfo context="wallet" details={wallet ? [appI18n.t('payment_info.total', { amount: formatMoney(wallet.balance, wallet.currency) }), appI18n.t('payment_info.held', { amount: formatMoney(wallet.reservedBalance, wallet.currency) }), appI18n.t('payment_info.available', { amount: formatMoney(wallet.availableBalance, wallet.currency) })] : []} />
           </View>
 
           <Text style={styles.walletAmount}>
@@ -214,6 +216,7 @@ export default function WalletScreen() {
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{appI18n.t("Recent activity")}</Text>
+            <PaymentInfo context="wallet" details={wallet ? [appI18n.t('payment_info.total', { amount: formatMoney(wallet.balance, wallet.currency) }), appI18n.t('payment_info.held', { amount: formatMoney(wallet.reservedBalance, wallet.currency) }), appI18n.t('payment_info.available', { amount: formatMoney(wallet.availableBalance, wallet.currency) })] : []} />
 
           {isLoading ? (
             <ActivityIndicator color="#111827" />
@@ -225,6 +228,7 @@ export default function WalletScreen() {
 
               return (
                 <View key={transaction.id} style={styles.transactionCard}>
+                  <PaymentInfo context={transaction.type === 'TOP_UP' ? 'topUp' : transaction.type === 'ADDITIONAL_CHARGE' ? 'expense' : 'wallet'} details={[getTransactionTitle(transaction), formatMoney(transaction.amount, transaction.currency)]} />
                   <View style={styles.transactionHeader}>
                     <View style={styles.transactionTitleRow}>
                       <View style={[styles.transactionIconWrap, { backgroundColor: tone.backgroundColor }]}>

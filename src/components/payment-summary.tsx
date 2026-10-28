@@ -1,9 +1,12 @@
+import type { PaymentPolicy } from '@/types/payment-policy';
+import { PaymentInfo } from './payment-info';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import appI18n from '@/localization/i18n';
 
 type PaymentSummaryProps = {
+  policy?: PaymentPolicy;
   amountLabel: string;
   currency: string;
   commissionLabel?: string;
@@ -24,6 +27,7 @@ function SummaryIcon({ name, header = false }: {
 }
 
 export function PaymentSummary({
+  policy,
   amountLabel,
   currency,
   commissionLabel,
@@ -45,6 +49,7 @@ export function PaymentSummary({
       <View style={[styles.header, direction]}>
         <SummaryIcon header name={{ ios: 'doc.text', android: 'receipt_long', web: 'receipt_long' }} />
         <Text accessibilityRole="header" style={[styles.title, textDirection]}>{appI18n.t('Payment Summary')}</Text>
+        <PaymentInfo context="booking" policy={policy} details={[amountLabel, commissionLabel ?? '']} />
       </View>
 
       <View style={styles.total}>
@@ -75,7 +80,7 @@ export function PaymentSummary({
           <SymbolView name={{ ios: 'lock', android: 'lock_outline', web: 'lock_outline' }} tintColor={colors.muted} size={15} />
         </View>
         <Text style={[styles.footnote, textDirection]}>
-          {appI18n.t('This payment is collected now and held in the platform until the trip outcome is resolved.')}
+          {appI18n.t(policy?.booking.authorization === 'AFTER_COUNTDOWN' ? 'payment_info.delayed_capture' : 'This payment is collected now and held in the platform until the trip outcome is resolved.')}
         </Text>
       </View>
     </View>

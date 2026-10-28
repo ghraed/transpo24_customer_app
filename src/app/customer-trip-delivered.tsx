@@ -1,8 +1,9 @@
+import { PaymentInfo } from '@/components/payment-info';
+import type { PaymentPolicy } from '@/types/payment-policy';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -23,8 +24,8 @@ import {
   TrackingScreenCard,
   TrackingScrollable,
 } from '@/components/tracking-ui';
-import { confirmCustomerDelivery, getRequestTracking } from '@/lib/api';
-import type { RequestTracking } from '@/types/customer-request';
+import { confirmCustomerDelivery, getRequestTracking, getCustomerRequestStatus } from '@/lib/api';
+import type { PaymentSummary, RequestTracking } from '@/types/customer-request';
 import appI18n from '@/localization/i18n';
 
 type RouteParams = {
@@ -55,6 +56,9 @@ export default function CustomerTripDeliveredScreen() {
   const deliveryProofImageUrl =
     typeof params.deliveryProofImageUrl === 'string' ? params.deliveryProofImageUrl : '';
 
+  const [policy, setPolicy] = useState<PaymentPolicy | null>(null);
+  const [payment, setPayment] = useState<PaymentSummary | null>(null);
+  const [showDeliveryNotice, setShowDeliveryNotice] = useState(false);
   const [tracking, setTracking] = useState<RequestTracking | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(tripId !== 'N/A');
   const [errorMessage, setErrorMessage] = useState('');
@@ -70,6 +74,11 @@ export default function CustomerTripDeliveredScreen() {
     void (async () => {
       try {
         const response = await getRequestTracking(tripId);
+        if (typeof getCustomerRequestStatus === 'function') {
+          const status = await getCustomerRequestStatus(tripId);
+          setPolicy(status.paymentPolicy ?? null);
+          setPayment(status.payment ?? null);
+        }
         setTracking(response);
       } catch (error) {
         setErrorMessage(
@@ -85,23 +94,13 @@ export default function CustomerTripDeliveredScreen() {
     router.push((`/customer-rate-driver?tripId=${encodeURIComponent(tripId)}`) as Href);
   }, [router, tripId]);
 
-  const onConfirmDelivery = () => Alert.alert(
-    appI18n.t('Confirm successful delivery'),
-    appI18n.t('Confirm only if the service was delivered successfully. This authorizes release of the driver’s payment.'),
-    [
-      { text: appI18n.t('Cancel'), style: 'cancel' },
-      { text: appI18n.t('Confirm and release payment'), onPress: async () => {
-        setIsConfirming(true);
-        setErrorMessage('');
-        try {
-          await confirmCustomerDelivery(tripId);
-          setConfirmed(true);
-        } catch (error) {
-          setErrorMessage(error instanceof Error ? error.message : appI18n.t('Failed to confirm delivery. Please try again.'));
-        } finally { setIsConfirming(false); }
-      } },
-    ],
-  );
+  const onConfirmDelivery = async () => {
+    if (isConfirming || !policy) return;
+    setIsConfirming(true); setShowDeliveryNotice(false); setErrorMessage('');
+    try { await confirmCustomerDelivery(tripId, policy.version); setConfirmed(true); }
+    catch (error) { setErrorMessage(error instanceof Error ? error.message : appI18n.t('Failed to confirm delivery. Please try again.')); }
+    finally { setIsConfirming(false); }
+  };
 
   const deliveredAt = tracking?.deliveredAt ?? deliveredAtParam;
   const proofPhotos = tracking?.deliveryProofPhotos ?? [];
@@ -173,12 +172,13 @@ export default function CustomerTripDeliveredScreen() {
         {tracking?.currentStatus === 'DELIVERED' ? (
           <TrackingScreenCard>
             <Text style={styles.sectionTitle}>{appI18n.t('Delivery confirmation')}</Text>
+            <PaymentInfo context="delivery" policy={policy} />
             {confirmed || tracking.deliveryConfirmedByCustomerAt ? (
               <Text style={styles.bodyText}>{appI18n.t('You confirmed successful delivery. The driver’s payment is authorized for release under the payout schedule.')}</Text>
             ) : (
               <>
                 <Text style={styles.bodyText}>{appI18n.t('The driver’s payment stays on hold until you confirm the service was delivered successfully. Review the delivery proof before confirming.')}</Text>
-                <Pressable accessibilityRole="button" disabled={isConfirming} style={styles.primaryButton} onPress={onConfirmDelivery}>
+                <Pressable accessibilityRole="button" disabled={isConfirming || !policy} style={styles.primaryButton} onPress={() => setShowDeliveryNotice(true)}>
                   {isConfirming ? <ActivityIndicator /> : <Text style={styles.primaryButtonText}>{appI18n.t('Confirm and release payment')}</Text>}
                 </Pressable>
               </>
@@ -205,6 +205,20 @@ export default function CustomerTripDeliveredScreen() {
         >
           <Text style={styles.secondaryButtonText}>{appI18n.t("Back to request status")}</Text>
         </Pressable>
+
+        <Modal visible={showDeliveryNotice} transparent animationType="fade" onRequestClose={() => setShowDeliveryNotice(false)}>
+          <View style={[styles.modalBackdrop, { padding: 24 }]}>
+            <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 20, width: '100%', maxHeight: '85%' }}>
+              <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>{appI18n.t('Confirm successful delivery')}</Text>
+              <PaymentInfo context="delivery" policy={policy} details={payment ? [new Intl.NumberFormat(undefined, { style: 'currency', currency: payment.currency }).format(payment.amount)] : []} />
+              <Text style={styles.bodyText}>{appI18n.t(policy?.booking.authorization === 'AFTER_COUNTDOWN' ? 'payment_info.delivery' : 'Confirm only if the service was delivered successfully. This authorizes release of the driver’s payment.')}</Text>
+              </ScrollView>
+              <Pressable accessibilityRole="button" style={styles.primaryButton} disabled={isConfirming || !policy} onPress={() => void onConfirmDelivery()}><Text style={styles.primaryButtonText}>{appI18n.t('Confirm and release payment')}</Text></Pressable>
+              <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={() => setShowDeliveryNotice(false)}><Text style={styles.secondaryButtonText}>{appI18n.t('Cancel')}</Text></Pressable>
+            </View>
+          </View>
+        </Modal>
 
         <Modal
           visible={Boolean(expandedPhotoUrl)}

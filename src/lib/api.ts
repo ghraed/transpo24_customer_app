@@ -1,3 +1,4 @@
+import type { PaymentPolicy } from '@/types/payment-policy';
 import type { EditableRequest } from '@/requests/edit-request';
 import { Platform } from 'react-native';
 import { assertPushBackend } from '@/notifications/assertPushBackend';
@@ -1145,6 +1146,7 @@ export async function getCustomerWallet(): Promise<CustomerWalletSummary> {
 }
 
 export async function createWalletTopUp(payload: {
+  policyVersion?: string;
   amount: number;
   currency: string;
   paymentMethod: PaymentMethod;
@@ -1192,6 +1194,7 @@ export async function approveAdditionalCharge(
     confirmationLocale: string;
     confirmationText: string;
     paymentOption: 'SAVED_CARD' | 'CASH_ON_DELIVERY';
+    policyVersion?: string;
   },
 ): Promise<AdditionalCharge> {
   const endpoint =
@@ -1433,6 +1436,7 @@ export async function getCustomerRequestOffers(requestId: string): Promise<Custo
 }
 
 export interface AcceptCustomerRequestOfferPayload {
+  policyVersion?: string;
   confirm?: boolean;
   paymentMethod?: PaymentMethod;
   stripePaymentMethodId?: string;
@@ -1451,6 +1455,7 @@ export async function acceptCustomerRequestOffer(
       supportsDeferredFurniture: true,
       confirm: payload.confirm ?? true,
       paymentMethod: payload.paymentMethod,
+      policyVersion: payload.policyVersion,
       ...(payload.stripePaymentMethodId
         ? { stripePaymentMethodId: payload.stripePaymentMethodId }
         : {}),
@@ -1551,6 +1556,7 @@ export async function cancelPaymentHold(requestId: string): Promise<PaymentSumma
 
 export async function cancelCollectedTrip(
   requestId: string,
+  terms?: { expectedRetainedAmount: number; policyVersion?: string },
 ): Promise<CancelTripPaymentResponse> {
   const endpoint = `${getApiBaseUrl()}/customer/requests/${requestId}/cancel`;
   const headers = getAuthHeaders();
@@ -1609,7 +1615,7 @@ export async function cancelCollectedTrip(
       reject(createBackendReachabilityError(endpoint));
     };
 
-    request.send('{}');
+    request.send(JSON.stringify(terms ?? {}));
   });
 }
 
@@ -1640,9 +1646,9 @@ export async function getPendingDeliveryConfirmations(): Promise<PendingDelivery
   return parseJsonBody<PendingDeliveryConfirmation[]>(response, 'Failed to load delivery confirmations.');
 }
 
-export async function confirmCustomerDelivery(tripId: string): Promise<void> {
+export async function confirmCustomerDelivery(tripId: string, policyVersion?: string): Promise<void> {
   const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/trips/${encodeURIComponent(tripId)}/confirm-delivery`, {
-    method: 'POST', headers: getAuthHeaders(),
+    method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ policyVersion }),
   });
   if (!response.ok) throw await parseError(response, 'Failed to confirm delivery. Please try again.');
 }
@@ -1730,4 +1736,15 @@ export async function getPickupPaymentReminders(): Promise<PickupPaymentReminder
   const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/reservations/payment-due`, { method: 'GET', headers: getAuthHeaders() });
   if (!response.ok) throw await parseError(response, 'Failed to load pickup reminders.');
   return parseJsonBody<PickupPaymentReminder[]>(response, 'Failed to load pickup reminders.');
+}
+
+export async function getCustomerPaymentPolicy(): Promise<PaymentPolicy> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/payment-policy`, { method: 'GET', headers: getAuthHeaders(), cache: 'no-store' });
+  if (!response.ok) throw await parseError(response, 'Unable to load payment rules.');
+  return parseJsonBody<PaymentPolicy>(response, 'Unable to load payment rules.');
+}
+
+export async function failBookingApproval(requestId: string): Promise<void> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/payment/approval-failed`, { method: 'POST', headers: getAuthHeaders() });
+  if (!response.ok) throw await parseError(response, 'Unable to update bank approval. Refresh the booking status.');
 }

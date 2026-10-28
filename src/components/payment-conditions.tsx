@@ -1,3 +1,5 @@
+import type { PaymentPolicy } from '@/types/payment-policy';
+import { PaymentInfo } from './payment-info';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
@@ -24,7 +26,11 @@ const REFUND_STAGES = [
   },
 ] as const;
 
-export function PaymentConditions({ compact = false }: { compact?: boolean }) {
+export function PaymentConditions({ compact = false, policy }: { compact?: boolean; policy?: PaymentPolicy }) {
+  if (policy?.booking.authorization === 'AFTER_COUNTDOWN') return <View style={styles.card}>
+    <View style={styles.header}><Text style={styles.title}>{appI18n.t('Payment and cancellation conditions')}</Text><PaymentInfo context="booking" policy={policy} /></View>
+    <Text style={styles.subtitle}>{appI18n.t('payment_info.delayed_start', { minutes: policy.booking.freeCancellationSeconds / 60 })}</Text>
+  </View>;
   const rtl = appI18n.dir?.() === 'rtl';
   const direction = rtl && styles.rtlRow;
   const textDirection = rtl && styles.rtlText;

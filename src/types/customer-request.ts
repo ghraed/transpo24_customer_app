@@ -1,3 +1,4 @@
+import type { BookingConfirmation, PaymentPolicy } from './payment-policy';
 import type { VehicleCondition } from './vehicle-condition';
 
 export interface Coordinates {
@@ -419,6 +420,9 @@ export type PaymentTransactionType =
 export type WalletTopUpStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
 
 export type TripPaymentSettlementStatus =
+  | 'RELEASED'
+  | 'CANCELLED_WITH_FEE'
+  | 'AUTHORIZED'
   | 'COLLECTED'
   | 'REFUND_PENDING'
   | 'PARTIALLY_REFUNDED'
@@ -443,6 +447,8 @@ export interface SavedPaymentMethodSummary {
 }
 
 export interface PaymentSummary {
+  confirmation?: BookingConfirmation | null;
+  policy?: PaymentPolicy;
   customerPlatformFeeAmount?: number;
   id: string;
   requestId: string;
@@ -568,6 +574,8 @@ export interface TripPaymentSettlement {
 }
 
 export interface CancelTripPaymentResponse {
+  releasedAmount?: number;
+  nothingCharged?: boolean;
   requestStatus: CustomerRequestStatus;
   currency: string;
   refundedAmount: number;
@@ -804,6 +812,9 @@ export interface FurnitureReservation {
 }
 
 export interface RequestStatusResponse {
+  confirmation?: BookingConfirmation | null;
+  paymentPolicy?: PaymentPolicy;
+  payment?: PaymentSummary | null;
   reservation?: FurnitureReservation | null;
   deferredFurnitureEligible?: boolean;
   deferredReservationEligible?: boolean;
@@ -818,6 +829,8 @@ export interface RequestStatusResponse {
     refundPreview: {
       currency: string;
       refundedAmount: number;
+      releasedAmount?: number;
+      nothingCharged?: boolean;
       retainedAmount: number;
     } | null;
     action: 'CANCEL_COLLECTED_TRIP' | 'CANCEL_PAYMENT_HOLD' | 'NONE';
@@ -939,7 +952,7 @@ export interface CustomerAcceptOfferResponse {
     createdAt: string;
   };
   rejectedOffersCount: number;
-  nextStep: 'CONFIRM_PAYMENT' | 'TRACK_REQUEST' | 'RESERVATION_CONFIRMED';
+  nextStep: 'WAIT_CONFIRMATION' | 'CONFIRM_PAYMENT' | 'TRACK_REQUEST' | 'RESERVATION_CONFIRMED';
   reservation?: FurnitureReservation | null;
   payment: PaymentSummary | null;
 }

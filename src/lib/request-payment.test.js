@@ -7,6 +7,11 @@ import RequestPaymentScreen from '../app/request-payment';
 import * as api from '@/lib/api';
 
 const mockRouter = { replace: jest.fn(), back: jest.fn() };
+const mockLegacyPolicy = {
+  version: 'immediate-capture-v1',
+  booking: { authorization: 'IMMEDIATE_CAPTURE', freeCancellationSeconds: 600, bankApprovalSeconds: 300, capture: 'ON_CONFIRMATION', cancellationClock: 'PAYMENT_CAPTURE', cancellationTiers: [{ afterSeconds: 600, feeRate: 0.15 }, { afterSeconds: 86400, feeRate: 0.5 }] },
+  reservation: { unpaidBeyondDays: 5, confirmationHoursBeforePickup: 48, deadlineHoursBeforePickup: 24 },
+};
 let mockOffer;
 let mockRequest;
 jest.mock('expo-router', () => ({
@@ -43,7 +48,7 @@ jest.mock('@/localization/i18n', () => ({
 let tree;
 beforeEach(() => {
   jest.resetAllMocks();
-  mockRequest = { id: 'trip', status: 'QUOTED', pickupLocation: { address: 'Beirut' } };
+  mockRequest = { id: 'trip', status: 'QUOTED', pickupLocation: { address: 'Beirut' }, paymentPolicy: mockLegacyPolicy };
   mockOffer = { id: 'offer', price: 105, proposedPrice: 105, customerPlatformFeeAmount: 5, currency: 'USD', driverName: 'Driver' };
 });
 afterEach(async () => { if (tree) await act(async () => tree.unmount()); tree = null; });
@@ -74,7 +79,7 @@ test('shows the $105 API total and its included 5% commission without adding it 
   api.getCustomerRequestStatus.mockResolvedValue({ id: 'trip', status: 'DRIVER_GOING_TO_PICKUP' });
   await press('Confirm and Pay');
   expect(api.confirmDriverOffer).toHaveBeenCalledWith('trip', 'offer', {
-    confirm: true, paymentMethod: 'APP_WALLET', stripePaymentMethodId: undefined,
+    confirm: true, paymentMethod: 'APP_WALLET', stripePaymentMethodId: undefined, policyVersion: 'immediate-capture-v1',
   });
   expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/request-status', params: { requestId: 'trip' } });
 });
@@ -253,6 +258,22 @@ test('uses the reserved booking payment path with the same commission-inclusive 
   await chooseWalletAndReview();
   expect(text()).toContain('Confirm pickup and pay');
   await press('Confirm and Pay');
-  expect(api.confirmFurnitureReservation).toHaveBeenCalledWith('trip', { confirm: true, paymentMethod: 'APP_WALLET', stripePaymentMethodId: undefined });
+  expect(api.confirmFurnitureReservation).toHaveBeenCalledWith('trip', { confirm: true, paymentMethod: 'APP_WALLET', stripePaymentMethodId: undefined, policyVersion: 'immediate-capture-v1' });
   expect(api.confirmDriverOffer).not.toHaveBeenCalled();
+});
+
+test('a delayed wallet confirmation navigates to the countdown without collecting or finalizing payment', async () => {
+  mockRequest.paymentPolicy = { ...mockLegacyPolicy, version: 'delayed-authorization-v1', booking: { ...mockLegacyPolicy.booking, authorization: 'AFTER_COUNTDOWN' } };
+  api.confirmDriverOffer.mockResolvedValue({ request: { id: 'trip' }, nextStep: 'WAIT_CONFIRMATION', payment: { amount: 105, heldAmount: 0, capturedAmount: 0, status: 'PAYMENT_HOLD_PENDING' } });
+  await render(); await press('App Wallet'); await press('payment_info.confirm_offer');
+  await act(async () => tree.root.findAllByProps({ testID: 'request-payment-confirm' })[0].props.onPress());
+  expect(api.confirmDriverOffer).toHaveBeenCalledWith('trip', 'offer', expect.objectContaining({ policyVersion: 'delayed-authorization-v1', paymentMethod: 'APP_WALLET' }));
+  expect(api.finalizeAcceptedOfferPayment).not.toHaveBeenCalled(); expect(api.getRequestPaymentStatus).not.toHaveBeenCalled(); expect(api.cancelPaymentHold).not.toHaveBeenCalled();
+  expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/request-status', params: { requestId: 'trip' } });
+});
+
+test('payment is blocked when the current rules could not be loaded', async () => {
+  delete mockRequest.paymentPolicy;
+  await render(); await press('App Wallet'); await press('Pay from Wallet');
+  expect(api.confirmDriverOffer).not.toHaveBeenCalled(); expect(tree.root.findByType(Modal).props.visible).toBe(false);
 });

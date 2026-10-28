@@ -1,3 +1,4 @@
+import { PaymentInfo } from './payment-info';
 import { CardField, confirmSetupIntent } from '@stripe/stripe-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -128,7 +129,8 @@ function AccountCards({ disabled, onChange, customerId }: Props & { customerId?:
         <Text>{t('saved_cards.new_card')}</Text>
       </Pressable>
       {!selectedId ? <>
-        <CardField postalCodeEnabled={false} dangerouslyGetFullCardDetails={false}
+        <PaymentInfo context="cardSetup" />
+      <CardField postalCodeEnabled={false} dangerouslyGetFullCardDetails={false}
           disabled={busy || disabled || !customerId}
           cardStyle={{ backgroundColor: '#F8FAFC', textColor: '#111827', placeholderColor: '#68768A' }}
           style={styles.field} onCardChange={(details) => setComplete(Boolean(details.complete))} />

@@ -1,3 +1,4 @@
+import { PaymentInfo } from './payment-info';
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -215,6 +216,7 @@ export function PickupPaymentReminderPopup({
                 {t(reminder.preview ? "TEST REMINDER" : "ACTION REQUIRED")}
               </Text>
             </View>
+            <PaymentInfo context="reservation" details={[t("payment_info.total", { amount: new Intl.NumberFormat(undefined, { style: "currency", currency: reminder.currency }).format(reminder.price) }), `${t("Payment due before")} ${date(reminder.deadlineAt)}`]} />
             <Text accessibilityRole="header" style={styles.title}>
               {t("Your pickup is coming up")}
             </Text>

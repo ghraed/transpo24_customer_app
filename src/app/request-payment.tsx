@@ -1,7 +1,10 @@
+import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
 import { PaymentSummary as PaymentSummaryCard } from '@/components/payment-summary';
 import { PaymentConditions } from '@/components/payment-conditions';
 import {
   confirmPayment,
+  confirmSetupIntent,
+  confirmPlatformPaySetupIntent,
   confirmPlatformPayPayment,
   isPlatformPaySupported,
   PlatformPay,
@@ -26,6 +29,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
   cancelPaymentHold,
+  createCardSetup,
+  saveDefaultPaymentMethod,
   confirmDriverOffer,
   confirmFurnitureReservation,
   finalizeAcceptedOfferPayment,
@@ -196,6 +201,9 @@ export default function RequestPaymentScreen() {
     [params.offer],
   );
 
+  const { policy, error: policyError } = usePaymentPolicy(requestData?.paymentPolicy);
+  const delayed = policy?.booking.authorization === 'AFTER_COUNTDOWN';
+
   const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
   const publishableKey =
     rawPublishableKey &&
@@ -266,6 +274,7 @@ export default function RequestPaymentScreen() {
   const needsStripe = selectedMethod !== 'APP_WALLET';
   const needsCardField = selectedMethod === 'CREDIT_CARD' || selectedMethod === 'DEBIT_CARD';
   const methodDisabledReason = useMemo(() => {
+    if (!policy) return appI18n.t(policyError ? 'payment_info.unavailable' : 'payment_info.loading');
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
       return appI18n.t("Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.");
     }
@@ -292,6 +301,8 @@ export default function RequestPaymentScreen() {
     cardComplete,
     isExpoGo,
     merchantIdentifier,
+    policy,
+    policyError,
     needsCardField,
     needsStripe,
     offerData,
@@ -303,11 +314,12 @@ export default function RequestPaymentScreen() {
   ]);
 
   const submitLabel = useMemo(() => {
+    if (delayed) return appI18n.t('payment_info.confirm_offer');
     if (selectedMethod === 'APP_WALLET') return appI18n.t("Pay from Wallet");
     if (selectedMethod === 'APPLE_PAY') return appI18n.t("Pay with Apple Pay");
     if (selectedMethod === 'GOOGLE_PAY') return appI18n.t("Pay with Google Pay");
     return appI18n.t("Pay Now");
-  }, [selectedMethod]);
+  }, [selectedMethod, delayed]);
 
   const navigateToNextStep = (nextRequestId: string): void => {
     router.replace({
@@ -418,20 +430,37 @@ export default function RequestPaymentScreen() {
     let latestPayment: PaymentSummary | null = null;
 
     try {
+      let selectedPaymentMethodId = cardSelection.paymentMethodId;
+      if (delayed && selectedMethod !== 'APP_WALLET' && (!selectedPaymentMethodId || selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY')) {
+        const setup = await createCardSetup();
+        const result = selectedMethod === 'APPLE_PAY'
+          ? await confirmPlatformPaySetupIntent(setup.clientSecret, { applePay: { merchantCountryCode, currencyCode: currency, cartItems: [{ label: 'Transpo 24', amount: amount.toFixed(2), paymentType: PlatformPay.PaymentType.Deferred, deferredDate: Math.floor(Date.now() / 1000) + (policy?.booking.freeCancellationSeconds ?? 600) }] } })
+          : selectedMethod === 'GOOGLE_PAY'
+            ? await confirmPlatformPaySetupIntent(setup.clientSecret, { googlePay: { testEnv: __DEV__, merchantCountryCode, currencyCode: currency, merchantName: 'Transpo 24' } })
+            : await confirmSetupIntent(setup.clientSecret, { paymentMethodType: 'Card' });
+        const id = result.setupIntent?.paymentMethodId;
+        if (result.error || result.setupIntent?.status !== 'Succeeded' || !id) throw new Error(result.error?.message ?? appI18n.t('payment_info.setup_failed'));
+        await saveDefaultPaymentMethod(id);
+        selectedPaymentMethodId = id;
+      }
       try {
         const response = await (requestData?.status === 'RESERVED'
           ? confirmFurnitureReservation(requestId, {
-              confirm: true, paymentMethod: selectedMethod, stripePaymentMethodId: cardSelection.paymentMethodId || undefined,
+              confirm: true, paymentMethod: selectedMethod, stripePaymentMethodId: selectedPaymentMethodId || undefined, policyVersion: policy?.version,
             })
           : confirmDriverOffer(requestId, offerId, {
           confirm: true,
           paymentMethod: selectedMethod,
-          stripePaymentMethodId: cardSelection.paymentMethodId || undefined,
+          stripePaymentMethodId: selectedPaymentMethodId || undefined, policyVersion: policy?.version,
         }));
 
         createdPayment = response.payment;
         setPaymentResult(response.payment);
 
+        if (response.nextStep === 'WAIT_CONFIRMATION') {
+          navigateToNextStep(response.request.id);
+          return;
+        }
         if (response.nextStep === 'RESERVATION_CONFIRMED') {
           router.replace({ pathname: '/request-status', params: { requestId } });
           return;
@@ -454,6 +483,7 @@ export default function RequestPaymentScreen() {
         const existingPayment = await recoverExistingPaymentState();
         if (!existingPayment) throw error;
 
+        if (existingPayment.confirmation) { navigateToNextStep(requestId); return; }
         createdPayment = existingPayment;
         setPaymentResult(existingPayment);
       }
@@ -569,7 +599,9 @@ export default function RequestPaymentScreen() {
             {appI18n.t("The agreed amount will be collected now when you confirm the driver.")}</Text>
         </View>
 
+        <PaymentInfo context={requestData?.status === 'RESERVED' ? 'reservation' : 'booking'} policy={policy} details={[formatMoney(amount, currency), getPaymentMethodLabel(selectedMethod)]} />
         <PaymentSummaryCard
+          policy={policy ?? undefined}
           amountLabel={formatMoney(amount, currency)}
           currency={currency}
           commissionLabel={customerPlatformFeeAmount > 0
@@ -582,7 +614,7 @@ export default function RequestPaymentScreen() {
           estimatedPickup={formatDate(offerData.estimatedPickupAt)}
         />
 
-        <PaymentConditions />
+        <PaymentConditions policy={policy ?? undefined} />
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{appI18n.t("Choose Payment Method")}</Text>
@@ -652,8 +684,8 @@ export default function RequestPaymentScreen() {
             <SavedCardPicker disabled={isSubmitting} onChange={setCardSelection} />
             <Text style={styles.helperText}>
               {selectedMethod === 'CREDIT_CARD'
-                ? 'Your credit card will be charged now when you confirm the payment.'
-                : 'Your debit card will be charged now when you confirm the payment.'}
+                ? delayed ? 'payment_info.delayed_capture' : 'Your credit card will be charged now when you confirm the payment.'
+                : delayed ? 'payment_info.delayed_capture' : 'Your debit card will be charged now when you confirm the payment.'}
             </Text>
           </View>
         ) : null}
@@ -727,9 +759,10 @@ export default function RequestPaymentScreen() {
               <View style={styles.modalBadge}>
                 <Text style={styles.modalBadgeText}>{appI18n.t("Important")}</Text>
               </View>
-              <Text style={styles.modalTitle}>{appI18n.t(requestData?.status === 'RESERVED' ? "Confirm pickup and pay" : "Immediate payment capture")}</Text>
+              <Text style={styles.modalTitle}>{appI18n.t(delayed ? 'payment_info.confirm_offer' : requestData?.status === 'RESERVED' ? "Confirm pickup and pay" : "Immediate payment capture")}</Text>
+              <PaymentInfo context="booking" policy={policy} details={[formatMoney(amount, currency), getPaymentMethodLabel(selectedMethod)]} />
               <Text style={styles.modalBody}>
-                {appI18n.t('Confirming this driver charges {{amount}} immediately.', {
+                {appI18n.t(delayed ? 'payment_info.confirm_amount' : 'Confirming this driver charges {{amount}} immediately.', {
                   amount: formatMoney(amount, currency),
                 })}
               </Text>
@@ -742,10 +775,10 @@ export default function RequestPaymentScreen() {
                 </Text>
               ) : null}
 
-              <PaymentConditions compact />
+              <PaymentConditions compact policy={policy ?? undefined} />
 
               <Text style={styles.modalFootnote}>
-                {appI18n.t("Continue only if you want to pay now and lock this offer for the selected driver.")}</Text>
+                {appI18n.t(delayed ? "payment_info.delayed_start" : "Continue only if you want to pay now and lock this offer for the selected driver.", { minutes: (policy?.booking.freeCancellationSeconds ?? 600) / 60 })}</Text>
             </ScrollView>
 
             <View style={styles.modalActions}>
@@ -755,10 +788,11 @@ export default function RequestPaymentScreen() {
               <Pressable
                 style={[styles.modalPrimaryButton, isSubmitting && styles.disabledButton]}
                 disabled={isSubmitting}
+                testID="request-payment-confirm"
                 onPress={confirmPaymentNotice}
               >
                 <Text style={styles.modalPrimaryButtonText}>
-                  {isSubmitting ? appI18n.t('Processing…') : appI18n.t('Confirm and Pay')}
+                  {isSubmitting ? appI18n.t('Processing…') : appI18n.t(delayed ? 'payment_info.confirm_offer' : 'Confirm and Pay')}
                 </Text>
               </Pressable>
             </View>
