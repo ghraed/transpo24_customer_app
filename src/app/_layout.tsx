@@ -1,3 +1,4 @@
+import { getStripePublishableKey } from '@/lib/stripe-config';
 import { PickupPaymentReminderPopup } from '@/components/pickup-payment-reminder';
 import { serviceHeaderOptions } from '@/requests/service-header';
 import { StripeProvider } from '@stripe/stripe-react-native';
@@ -94,13 +95,7 @@ function RootNavigator() {
   const { ready: localizationReady, isRTL } = useAppLanguage();
   const authSession = useAuthSession();
   const authReady = authSession.status !== 'initializing';
-  const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
-  const publishableKey =
-    rawPublishableKey &&
-    !rawPublishableKey.startsWith('replace_') &&
-    rawPublishableKey.startsWith('pk_')
-      ? rawPublishableKey
-      : '';
+  const publishableKey = getStripePublishableKey();
 
   useNotificationNavigation(authSession.status === 'authenticated' && localizationReady);
 

@@ -1,3 +1,4 @@
+import { getStripePublishableKey } from '@/lib/stripe-config';
 import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
 import { PaymentSummary as PaymentSummaryCard } from '@/components/payment-summary';
 import { PaymentConditions } from '@/components/payment-conditions';
@@ -204,13 +205,8 @@ export default function RequestPaymentScreen() {
   const { policy, error: policyError } = usePaymentPolicy(requestData?.paymentPolicy);
   const delayed = policy?.booking.authorization === 'AFTER_COUNTDOWN';
 
-  const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
-  const publishableKey =
-    rawPublishableKey &&
-    !rawPublishableKey.startsWith('replace_') &&
-    rawPublishableKey.startsWith('pk_')
-      ? rawPublishableKey
-      : '';
+  const publishableKey = getStripePublishableKey();
+  const isStripeTestMode = publishableKey.startsWith('pk_test_');
   const merchantCountryCode =
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() ||
     (Platform.OS === 'ios' ? '' : 'US');
@@ -245,7 +241,7 @@ export default function RequestPaymentScreen() {
         const googleSupported =
           Platform.OS === 'android' && !isExpoGo
             ? await isPlatformPaySupported({
-                googlePay: { testEnv: __DEV__, existingPaymentMethodRequired: false },
+                googlePay: { testEnv: isStripeTestMode, existingPaymentMethodRequired: false },
               })
             : false;
 
@@ -260,7 +256,7 @@ export default function RequestPaymentScreen() {
     return () => {
       active = false;
     };
-  }, [isExpoGo]);
+  }, [isExpoGo, isStripeTestMode]);
 
   const paymentOptions = useMemo(() => getVisiblePaymentOptions(PAYMENT_OPTIONS, Platform.OS, {
     merchantIdentifier,
@@ -397,7 +393,7 @@ export default function RequestPaymentScreen() {
     if (selectedMethod === 'GOOGLE_PAY') {
       const result = await confirmPlatformPayPayment(payment.stripeClientSecret, {
         googlePay: {
-          testEnv: __DEV__,
+          testEnv: isStripeTestMode,
           merchantCountryCode,
           currencyCode: payment.currency,
           merchantName: 'Transpo 24',
@@ -436,7 +432,7 @@ export default function RequestPaymentScreen() {
         const result = selectedMethod === 'APPLE_PAY'
           ? await confirmPlatformPaySetupIntent(setup.clientSecret, { applePay: { merchantCountryCode, currencyCode: currency, cartItems: [{ label: 'Transpo 24', amount: amount.toFixed(2), paymentType: PlatformPay.PaymentType.Deferred, deferredDate: Math.floor(Date.now() / 1000) + (policy?.booking.freeCancellationSeconds ?? 600) }] } })
           : selectedMethod === 'GOOGLE_PAY'
-            ? await confirmPlatformPaySetupIntent(setup.clientSecret, { googlePay: { testEnv: __DEV__, merchantCountryCode, currencyCode: currency, merchantName: 'Transpo 24' } })
+            ? await confirmPlatformPaySetupIntent(setup.clientSecret, { googlePay: { testEnv: isStripeTestMode, merchantCountryCode, currencyCode: currency, merchantName: 'Transpo 24' } })
             : await confirmSetupIntent(setup.clientSecret, { paymentMethodType: 'Card' });
         const id = result.setupIntent?.paymentMethodId;
         if (result.error || result.setupIntent?.status !== 'Succeeded' || !id) throw new Error(result.error?.message ?? appI18n.t('payment_info.setup_failed'));

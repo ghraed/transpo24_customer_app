@@ -1,5 +1,6 @@
 import type { ConfigContext } from 'expo/config';
 import { existsSync, readFileSync } from 'node:fs';
+import { resolveStripePublishableKey } from './config/stripe';
 
 const IS_DEV = process.env.APP_VARIANT === 'development';
 
@@ -17,18 +18,16 @@ const STRIPE_MERCHANT_IDENTIFIER =
   process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER?.trim() ||
   process.env.EXPO_STRIPE_MERCHANT_IDENTIFIER?.trim() ||
   '';
-const STRIPE_PUBLISHABLE_KEY =
-  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() || '';
 const EAS_BUILD_PROFILE = process.env.EAS_BUILD_PROFILE?.trim() || '';
-
-if (
-  EAS_BUILD_PROFILE === 'production' &&
-  !STRIPE_PUBLISHABLE_KEY.startsWith('pk_live_')
-) {
-  throw new Error(
-    'Production builds require EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to be a Stripe live publishable key (pk_live_...).',
-  );
-}
+const IS_PRODUCTION_PROFILE = EAS_BUILD_PROFILE.startsWith('production');
+const STRIPE_PUBLISHABLE_KEY = resolveStripePublishableKey({
+  mode: process.env.EXPO_PUBLIC_STRIPE_MODE,
+  testKey: process.env.EXPO_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY,
+  liveKey: process.env.EXPO_PUBLIC_STRIPE_LIVE_PUBLISHABLE_KEY,
+  legacyKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+  defaultMode: EAS_BUILD_PROFILE === 'play-test' ? 'test' : 'live',
+  required: IS_PRODUCTION_PROFILE || EAS_BUILD_PROFILE === 'play-test',
+});
 
 if (
   EAS_BUILD_PROFILE === 'play-test' &&
@@ -41,7 +40,7 @@ if (
 
 export default ({ config }: ConfigContext) => {
   // These guards run only for iOS production workers; Android profiles are unaffected.
-  if (process.env.EAS_BUILD_PLATFORM === 'ios' && EAS_BUILD_PROFILE === 'production') {
+  if (process.env.EAS_BUILD_PLATFORM === 'ios' && IS_PRODUCTION_PROFILE) {
     if (IS_DEV) {
       throw new Error('iOS production builds must not use APP_VARIANT=development.');
     }

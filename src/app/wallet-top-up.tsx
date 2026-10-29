@@ -1,3 +1,4 @@
+import { getStripePublishableKey } from '@/lib/stripe-config';
 import { paymentMethodName } from '@/lib/payment-rules';
 import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
 import { confirmPayment, confirmPlatformPayPayment, isPlatformPaySupported, PlatformPay } from '@stripe/stripe-react-native';
@@ -122,13 +123,8 @@ export default function WalletTopUpScreen() {
     process.env.EXPO_PUBLIC_DEFAULT_WALLET_CURRENCY?.trim().toUpperCase() ||
     'USD';
   const amountValueInitial = typeof params.amount === 'string' ? params.amount : '';
-  const rawPublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? '';
-  const publishableKey =
-    rawPublishableKey &&
-    !rawPublishableKey.startsWith('replace_') &&
-    rawPublishableKey.startsWith('pk_')
-      ? rawPublishableKey
-      : '';
+  const publishableKey = getStripePublishableKey();
+  const isStripeTestMode = publishableKey.startsWith('pk_test_');
   const merchantCountryCode =
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE?.trim().toUpperCase() ||
     (Platform.OS === 'ios' ? '' : 'US');
@@ -163,7 +159,7 @@ export default function WalletTopUpScreen() {
         const googleSupported =
           Platform.OS === 'android' && !isExpoGo
             ? await isPlatformPaySupported({
-                googlePay: { testEnv: __DEV__, existingPaymentMethodRequired: false },
+                googlePay: { testEnv: isStripeTestMode, existingPaymentMethodRequired: false },
               })
             : false;
 
@@ -180,7 +176,7 @@ export default function WalletTopUpScreen() {
     return () => {
       active = false;
     };
-  }, [isExpoGo]);
+  }, [isExpoGo, isStripeTestMode]);
 
   const paymentOptions = useMemo(() => getVisiblePaymentOptions(PAYMENT_OPTIONS, Platform.OS, {
     merchantIdentifier,
@@ -253,7 +249,7 @@ export default function WalletTopUpScreen() {
         googlePay: {
           merchantCountryCode,
           currencyCode: topUp.currency,
-          testEnv: __DEV__,
+          testEnv: isStripeTestMode,
         },
       });
 

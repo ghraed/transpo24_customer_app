@@ -27,8 +27,9 @@ metadata, signing credentials and remote build numbering. Install a compatible
 JDK and Android SDK/NDK locally; cloud image/tool version settings are ignored.
 The production profile selects EAS production variables. Variables with Secret
 visibility cannot be downloaded for local builds: provide them locally, including
-any referenced Firebase configuration file. Never reuse development/test values
-for a production build. See [EAS local builds](https://docs.expo.dev/build-reference/local-builds/).
+any referenced Firebase configuration file. Stripe test credentials are allowed
+when explicitly selected for owner testing; see the Stripe section below.
+See [EAS local builds](https://docs.expo.dev/build-reference/local-builds/).
 
 The checks cover shared code; the iOS check covers configuration, not device
 behavior. Test signed builds on Android/internal testing and iOS/TestFlight,
@@ -57,6 +58,23 @@ and the correct channel (`production` for Android, `production-ios` for iOS).
 The `appVersion` runtime policy uses `expo.version`, so changing it targets a new
 runtime and does not update older store binaries. Native module, permission or
 Expo SDK changes require a new store build. Follow store policies for OTA updates.
+
+## Stripe mode in production builds
+
+Use `.env.stripe-production.example` as the Stripe-only deployment overlay.
+Set `EXPO_PUBLIC_STRIPE_MODE=test` and fill `EXPO_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY`
+in the EAS production environment. The API must also select `STRIPE_MODE=test`
+with its matching test key and deployed test webhook signing secret. Both
+environments keep separate live slots; switching both selectors to `live` selects
+those credentials. Explicit selection never falls back to legacy keys.
+
+The prepared `.env.stripe-production.local` contains the local test publishable
+key and is ignored by Git. It is not auto-loaded; copy values into EAS or export
+them for a local release build. Rebuild/update the app after changing values.
+Google Pay follows the selected Stripe key in release builds too.
+
+See the API repository's `docs/stripe-production-testing.md` for webhook setup,
+deployment steps, test cards and database considerations before switching modes.
 
 ## Registration-card scanning
 

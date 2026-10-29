@@ -7,6 +7,7 @@ function resolveConfig(overrides = {}, configOverrides = {}) {
     EAS_BUILD_PROFILE: 'production',
     EAS_BUILD_PLATFORM: 'ios',
     EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: 'pk_live_config_test',
+    EXPO_PUBLIC_STRIPE_MODE: '',
     EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY: 'maps_config_test',
     ...overrides,
   };
@@ -27,6 +28,26 @@ afterEach(() => { process.env = originalEnv; });
 
 test('accepts the production iOS identity and configured Maps', () => {
   expect(resolveConfig().ios.bundleIdentifier).toBe('com.transpo24.app');
+});
+test.each(['production', 'production-apk'])('allows explicit test credentials in %s builds', profile => {
+  expect(resolveConfig({
+    EAS_BUILD_PROFILE: profile,
+    EXPO_PUBLIC_STRIPE_MODE: 'test',
+    EXPO_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY: 'pk_test_owner',
+  }).ios.bundleIdentifier).toBe('com.transpo24.app');
+});
+test.each(['production', 'production-apk'])('requires live credentials by default in %s', profile => {
+  expect(() => resolveConfig({
+    EAS_BUILD_PROFILE: profile,
+    EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: 'pk_test_local',
+  })).toThrow('Stripe live publishable key');
+});
+test('play-test cannot select live keys', () => {
+  expect(() => resolveConfig({
+    EAS_BUILD_PROFILE: 'play-test',
+    EXPO_PUBLIC_STRIPE_MODE: 'live',
+    EXPO_PUBLIC_STRIPE_LIVE_PUBLISHABLE_KEY: 'pk_live_owner',
+  })).toThrow('Play testing builds require');
 });
 test.each(['', 'replace_with_your_google_maps_ios_api_key'])(
   'stops iOS production builds with missing or placeholder Maps configuration: %s', (key) => {

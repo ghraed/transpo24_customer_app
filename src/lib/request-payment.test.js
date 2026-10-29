@@ -136,7 +136,7 @@ const capturedPayment = { amount: 105, capturedAmount: 105, customerPlatformFeeA
 const chooseWalletAndReview = async () => { await render(); await press('App Wallet'); await press('Pay from Wallet'); };
 
 describe('iOS release payment choices', () => {
-  const envNames = ['EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER', 'EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE', 'EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY'];
+  const envNames = ['EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER', 'EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE', 'EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY', 'EXPO_PUBLIC_STRIPE_MODE', 'EXPO_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY', 'EXPO_PUBLIC_STRIPE_LIVE_PUBLISHABLE_KEY'];
   let originalEnv;
   let originalDev;
   let originalOwnership;
@@ -146,6 +146,7 @@ describe('iOS release payment choices', () => {
     originalOwnership = Constants.appOwnership;
     Constants.appOwnership = 'standalone';
     global.__DEV__ = false;
+    delete process.env.EXPO_PUBLIC_STRIPE_MODE;
     process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_release_ui';
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER = 'merchant.com.transpo24.app';
     process.env.EXPO_PUBLIC_STRIPE_MERCHANT_COUNTRY_CODE = 'CH';
@@ -187,6 +188,17 @@ describe('iOS release payment choices', () => {
     expect(tree.root.findAllByType(Text).map(node => node.props.children)).toContain('Google Pay');
     await press('Apple Pay');
     expect(text()).toContain('Merchant identifier configured: merchant.com.transpo24.app');
+  });
+
+  test.each(['test', 'live'])('Android release Google Pay follows the selected %s key', async mode => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    process.env.EXPO_PUBLIC_STRIPE_MODE = mode;
+    process.env.EXPO_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY = 'pk_test_owner';
+    process.env.EXPO_PUBLIC_STRIPE_LIVE_PUBLISHABLE_KEY = 'pk_live_owner';
+    await render();
+    expect(isPlatformPaySupported).toHaveBeenCalledWith({
+      googlePay: { testEnv: mode === 'test', existingPaymentMethodRequired: false },
+    });
   });
 });
 
