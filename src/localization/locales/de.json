@@ -1425,5 +1425,6 @@
     "offer_unavailable_result": "Das gewählte Angebot oder der Fahrer ist nicht mehr verfügbar. Die Buchung wurde kostenlos storniert.",
     "approval_result": "Die Bankfreigabe wurde nicht abgeschlossen. Die Buchung wurde kostenlos storniert.",
     "failed_result": "Die Zahlung konnte nicht gesichert werden. Die Buchung wurde kostenlos storniert."
-  }
+  },
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Direkte Zahlungen an Fahrer erfordern eine Karte, Apple Pay oder Google Pay."
 }

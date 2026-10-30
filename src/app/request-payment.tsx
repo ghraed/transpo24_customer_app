@@ -1,3 +1,4 @@
+import { withStripeAccount } from '@/lib/stripe-account';
 import { getStripePublishableKey } from '@/lib/stripe-config';
 import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
 import { PaymentSummary as PaymentSummaryCard } from '@/components/payment-summary';
@@ -274,6 +275,9 @@ export default function RequestPaymentScreen() {
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
       return appI18n.t("Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.");
     }
+    if (selectedMethod === 'APP_WALLET' && policy?.directCharges) {
+      return appI18n.t('Direct driver payments require a card or Apple Pay or Google Pay.');
+    }
     if (selectedMethod === 'APPLE_PAY' && Platform.OS !== 'ios') {
       return appI18n.t("Apple Pay is only available on iOS.");
     }
@@ -487,7 +491,7 @@ export default function RequestPaymentScreen() {
       if (!createdPayment) throw new Error(appI18n.t("Missing payment information."));
 
       if (selectedMethod !== 'APP_WALLET' && isPendingPaymentStatus(createdPayment.status)) {
-        await confirmStripeBackedPayment(createdPayment);
+        await withStripeAccount(createdPayment.stripeAccountId, () => confirmStripeBackedPayment(createdPayment!));
       }
 
       latestPayment = await getRequestPaymentStatus(requestId);

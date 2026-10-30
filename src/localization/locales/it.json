@@ -1429,5 +1429,6 @@
     "offer_unavailable_result": "L’offerta o il conducente non sono più disponibili. La prenotazione è stata annullata senza costi.",
     "approval_result": "L’approvazione bancaria non è stata completata. La prenotazione è stata annullata senza costi.",
     "failed_result": "Non è stato possibile garantire il pagamento. La prenotazione è stata annullata senza costi."
-  }
+  },
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "I pagamenti diretti agli autisti richiedono una carta, Apple Pay o Google Pay."
 }

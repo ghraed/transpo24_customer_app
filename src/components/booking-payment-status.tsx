@@ -6,6 +6,7 @@ import type { PaymentSummary } from '@/types/customer-request';
 import { failBookingApproval } from '@/lib/api';
 import { countdownSeconds, paymentMethodName } from '@/lib/payment-rules';
 import { PaymentInfo } from './payment-info';
+import { withStripeAccount } from '@/lib/stripe-account';
 
 export function BookingPaymentStatus({
   payment,
@@ -92,7 +93,7 @@ export function BookingPaymentStatus({
     setBusy(true);
     setError('');
     try {
-      const result = await handleNextAction(payment.stripeClientSecret);
+      const result = await withStripeAccount(payment.stripeAccountId, () => handleNextAction(payment.stripeClientSecret!));
       if (result.error) {
         setError(result.error.message);
         await failBookingApproval(payment.requestId);

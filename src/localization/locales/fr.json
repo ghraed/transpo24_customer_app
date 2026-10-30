@@ -1425,5 +1425,6 @@
     "offer_unavailable_result": "L’offre ou le chauffeur n’est plus disponible. La réservation a été annulée sans frais.",
     "approval_result": "L’approbation bancaire n’a pas abouti. La réservation a été annulée sans frais.",
     "failed_result": "Le paiement n’a pas pu être garanti. La réservation a été annulée sans frais."
-  }
+  },
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Les paiements directs aux chauffeurs nécessitent une carte, Apple Pay ou Google Pay."
 }

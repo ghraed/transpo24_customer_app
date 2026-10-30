@@ -1430,5 +1430,6 @@
     "offer_unavailable_result": "The selected offer or driver is no longer available. The booking was cancelled without a fee.",
     "approval_result": "Bank approval was not completed. The booking was cancelled without a fee.",
     "failed_result": "Payment could not be secured. The booking was cancelled without a fee."
-  }
+  },
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Direct driver payments require a card or Apple Pay or Google Pay."
 }

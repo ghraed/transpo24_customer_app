@@ -1425,5 +1425,6 @@
     "offer_unavailable_result": "La oferta o el conductor ya no están disponibles. La reserva se canceló sin coste.",
     "approval_result": "No se completó la aprobación bancaria. La reserva se canceló sin coste.",
     "failed_result": "No se pudo asegurar el pago. La reserva se canceló sin coste."
-  }
+  },
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Los pagos directos a los conductores requieren una tarjeta, Apple Pay o Google Pay."
 }

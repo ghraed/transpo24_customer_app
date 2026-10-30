@@ -464,6 +464,7 @@ export interface PaymentSummary {
   status: PaymentStatus;
   stripeMode: 'test' | 'live' | null;
   stripePaymentIntentId: string | null;
+  stripeAccountId?: string | null;
   stripeClientSecret: string | null;
   stripeChargeId: string | null;
   createdAt: string;

@@ -9,6 +9,7 @@ jest.mock('expo-symbols', () => ({ SymbolView: () => null }));
 jest.mock('@stripe/stripe-react-native', () => ({
   handleNextAction: jest.fn(),
 }));
+jest.mock('@/lib/stripe-account', () => ({ withStripeAccount: jest.fn((_id, action) => action()) }));
 jest.mock('@/lib/api', () => ({
   getCustomerPaymentPolicy: jest.fn(),
   failBookingApproval: jest.fn(async () => {}),

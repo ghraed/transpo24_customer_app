@@ -1425,5 +1425,6 @@
     "offer_unavailable_result": "لم يعد العرض أو السائق المختار متاحاً. تم إلغاء الحجز دون رسوم.",
     "approval_result": "لم تكتمل موافقة البنك. تم إلغاء الحجز دون رسوم.",
     "failed_result": "تعذّر تأمين مبلغ الدفع. تم إلغاء الحجز دون رسوم."
-  }
+  },
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "يتطلب الدفع المباشر للسائق بطاقة أو Apple Pay أو Google Pay."
 }

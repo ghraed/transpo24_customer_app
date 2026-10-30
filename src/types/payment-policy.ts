@@ -1,5 +1,6 @@
 export interface PaymentPolicy {
   version: string;
+  directCharges?: boolean;
   booking: {
     authorization: 'AFTER_COUNTDOWN' | 'IMMEDIATE_CAPTURE';
     freeCancellationSeconds: number;
