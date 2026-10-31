@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { isPlatformPaySupported } from '@stripe/stripe-react-native';
 import RequestPaymentScreen from '../app/request-payment';
 import * as api from '@/lib/api';
+import { PaymentPolicyContext } from '@/lib/payment-policy-context';
 
 const mockRouter = { replace: jest.fn(), back: jest.fn() };
 const mockLegacyPolicy = {
@@ -40,6 +41,7 @@ jest.mock('@/lib/api', () => ({
   confirmDriverOffer: jest.fn(), confirmFurnitureReservation: jest.fn(),
   finalizeAcceptedOfferPayment: jest.fn(), getRequestPaymentStatus: jest.fn(),
   getCustomerRequestStatus: jest.fn(), cancelPaymentHold: jest.fn(),
+  getCustomerPaymentPolicy: jest.fn(),
 }));
 jest.mock('@/localization/i18n', () => ({
   t: (key, values = {}) => key.replace(/\{\{(\w+)\}\}/g, (_, name) => String(values[name] ?? '')),
@@ -48,6 +50,7 @@ jest.mock('@/localization/i18n', () => ({
 let tree;
 beforeEach(() => {
   jest.resetAllMocks();
+  api.getCustomerPaymentPolicy.mockResolvedValue(mockLegacyPolicy);
   mockRequest = { id: 'trip', status: 'QUOTED', pickupLocation: { address: 'Beirut' }, paymentPolicy: mockLegacyPolicy };
   mockOffer = { id: 'offer', price: 105, proposedPrice: 105, customerPlatformFeeAmount: 5, currency: 'USD', driverName: 'Driver' };
 });
@@ -275,7 +278,8 @@ test('uses the reserved booking payment path with the same commission-inclusive 
 });
 
 test('a delayed wallet confirmation navigates to the countdown without collecting or finalizing payment', async () => {
-  mockRequest.paymentPolicy = { ...mockLegacyPolicy, version: 'delayed-authorization-v1', booking: { ...mockLegacyPolicy.booking, authorization: 'AFTER_COUNTDOWN' } };
+  // A stale request snapshot must not override the current policy for a new payment.
+  api.getCustomerPaymentPolicy.mockResolvedValue({ ...mockLegacyPolicy, version: 'delayed-authorization-v1', booking: { ...mockLegacyPolicy.booking, authorization: 'AFTER_COUNTDOWN' } });
   api.confirmDriverOffer.mockResolvedValue({ request: { id: 'trip' }, nextStep: 'WAIT_CONFIRMATION', payment: { amount: 105, heldAmount: 0, capturedAmount: 0, status: 'PAYMENT_HOLD_PENDING' } });
   await render(); await press('App Wallet'); await press('payment_info.confirm_offer');
   await act(async () => tree.root.findAllByProps({ testID: 'request-payment-confirm' })[0].props.onPress());
@@ -285,7 +289,39 @@ test('a delayed wallet confirmation navigates to the countdown without collectin
 });
 
 test('payment is blocked when the current rules could not be loaded', async () => {
-  delete mockRequest.paymentPolicy;
+  api.getCustomerPaymentPolicy.mockRejectedValue(new Error('Offline'));
   await render(); await press('App Wallet'); await press('Pay from Wallet');
   expect(api.confirmDriverOffer).not.toHaveBeenCalled(); expect(tree.root.findByType(Modal).props.visible).toBe(false);
+});
+
+test('a policy conflict reloads the terms without retrying or cancelling payment', async () => {
+  api.confirmDriverOffer.mockRejectedValue(new Error('Payment terms changed. Review the current payment rules and confirm again.'));
+  await chooseWalletAndReview();
+  const policyLoadsBeforeConflict = api.getCustomerPaymentPolicy.mock.calls.length;
+  api.getCustomerPaymentPolicy.mockResolvedValue({ ...mockLegacyPolicy, version: 'delayed-authorization-v1', booking: { ...mockLegacyPolicy.booking, authorization: 'AFTER_COUNTDOWN' } });
+  await press('Confirm and Pay');
+  expect(api.getCustomerPaymentPolicy.mock.calls.length).toBeGreaterThan(policyLoadsBeforeConflict);
+  expect(api.confirmDriverOffer).toHaveBeenCalledTimes(1);
+  expect(api.cancelPaymentHold).not.toHaveBeenCalled();
+  expect(api.getCustomerRequestStatus).not.toHaveBeenCalled();
+  expect(api.finalizeAcceptedOfferPayment).not.toHaveBeenCalled();
+  expect(text()).toContain('payment_terms.changed_again');
+});
+
+test('a pending terms review blocks booking payment until acceptance', async () => {
+  const shared = { policy: mockLegacyPolicy, error: false, checking: false, requiresAcceptance: true };
+  await act(async () => {
+    tree = create(<PaymentPolicyContext.Provider value={shared}><RequestPaymentScreen /></PaymentPolicyContext.Provider>);
+  });
+  await press('App Wallet');
+  await press('Pay from Wallet');
+  expect(text()).toContain('payment_terms.review');
+  expect(tree.root.findByType(Modal).props.visible).toBe(false);
+  expect(api.confirmDriverOffer).not.toHaveBeenCalled();
+  await act(async () => {
+    tree.update(<PaymentPolicyContext.Provider value={{ ...shared, requiresAcceptance: false }}><RequestPaymentScreen /></PaymentPolicyContext.Provider>);
+  });
+  await press('Pay from Wallet');
+  expect(tree.root.findByType(Modal).props.visible).toBe(true);
+  expect(api.confirmDriverOffer).not.toHaveBeenCalled();
 });

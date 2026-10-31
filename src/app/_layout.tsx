@@ -1,10 +1,12 @@
 import { getStripePublishableKey } from '@/lib/stripe-config';
 import { PickupPaymentReminderPopup } from '@/components/pickup-payment-reminder';
+import { PaymentTermsProvider } from '@/components/payment-terms-provider';
+import { PaymentPolicyContext } from '@/lib/payment-policy-context';
 import { serviceHeaderOptions } from '@/requests/service-header';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { Image, View, useColorScheme } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -89,6 +91,11 @@ if (__DEV__) {
   }
 }
 
+function PaymentAwarePickupReminder({ ready, userId }: { ready: boolean; userId?: string }) {
+  const terms = useContext(PaymentPolicyContext);
+  return <PickupPaymentReminderPopup ready={ready && !terms?.checking && !terms?.reviewing} userId={userId} />;
+}
+
 function RootNavigator() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
@@ -143,6 +150,8 @@ function RootNavigator() {
       urlScheme="transpo24"
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <PaymentTermsProvider key={`${authSession.status}.${authSession.user?.id ?? ''}`}
+          ready={authSession.status === 'authenticated' && localizationReady} userId={authSession.user?.id}>
         <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
           <EnvironmentBanner />
           <OtaUpdateBanner />
@@ -348,9 +357,10 @@ function RootNavigator() {
             }}
           />
             </Stack>
-            <PickupPaymentReminderPopup key={authSession.user?.id ?? 'signed-out'} ready={authSession.status === 'authenticated' && localizationReady} userId={authSession.user?.id} />
+            <PaymentAwarePickupReminder key={authSession.user?.id ?? 'signed-out'} ready={authSession.status === 'authenticated' && localizationReady} userId={authSession.user?.id} />
           </View>
         </View>
+        </PaymentTermsProvider>
       </ThemeProvider>
     </StripeProvider>
   );

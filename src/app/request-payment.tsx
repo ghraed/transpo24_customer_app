@@ -49,6 +49,7 @@ import type {
 import { SavedCardPicker, EMPTY_CARD_SELECTION } from '@/components/saved-card-picker';
 import appI18n from '@/localization/i18n';
 import { getVisiblePaymentOptions } from '@/lib/ios-payment-options';
+import { isPaymentPolicyConflict } from '@/lib/payment-policy-review';
 
 type PaymentOption = {
   method: PaymentMethod;
@@ -203,7 +204,7 @@ export default function RequestPaymentScreen() {
     [params.offer],
   );
 
-  const { policy, error: policyError } = usePaymentPolicy(requestData?.paymentPolicy);
+  const { policy, error: policyError, requiresAcceptance, refresh: refreshPolicy } = usePaymentPolicy();
   const delayed = policy?.booking.authorization === 'AFTER_COUNTDOWN';
 
   const publishableKey = getStripePublishableKey();
@@ -271,6 +272,7 @@ export default function RequestPaymentScreen() {
   const needsStripe = selectedMethod !== 'APP_WALLET';
   const needsCardField = selectedMethod === 'CREDIT_CARD' || selectedMethod === 'DEBIT_CARD';
   const methodDisabledReason = useMemo(() => {
+    if (requiresAcceptance) return appI18n.t('payment_terms.review');
     if (!policy) return appI18n.t(policyError ? 'payment_info.unavailable' : 'payment_info.loading');
     if ((selectedMethod === 'APPLE_PAY' || selectedMethod === 'GOOGLE_PAY') && isExpoGo) {
       return appI18n.t("Apple Pay and Google Pay require a development build or production build. They are not available in Expo Go.");
@@ -303,6 +305,7 @@ export default function RequestPaymentScreen() {
     merchantIdentifier,
     policy,
     policyError,
+    requiresAcceptance,
     needsCardField,
     needsStripe,
     offerData,
@@ -513,6 +516,11 @@ export default function RequestPaymentScreen() {
 
       navigateToNextStep(finalizedRequest.id);
     } catch (error) {
+      if (isPaymentPolicyConflict(error)) {
+        await refreshPolicy();
+        setErrorMessage(appI18n.t('payment_terms.changed_again'));
+        return;
+      }
       if (await recoverFinalizedRequestState()) return;
 
       if (createdPayment && isSuccessfulPaymentStatus(latestPayment?.status ?? createdPayment.status)) {

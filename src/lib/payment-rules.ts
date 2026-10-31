@@ -21,6 +21,8 @@ export function paymentRules(
 ): string[] {
   const delayed = policy.booking.authorization === 'AFTER_COUNTDOWN';
   const rules: string[] = [];
+  if (policy.directCharges && ['booking', 'wallet'].includes(context))
+    rules.push(t('Direct driver payments require a card or Apple Pay or Google Pay.'));
   if (['booking', 'hold', 'cancellation', 'approval'].includes(context)) {
     rules.push(
       t(delayed ? 'payment_info.delayed_start' : 'payment_info.legacy_start', {

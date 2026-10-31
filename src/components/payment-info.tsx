@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -14,12 +14,20 @@ import { useTranslation } from 'react-i18next';
 import { getCustomerPaymentPolicy } from '@/lib/api';
 import { paymentRules, type PaymentContext } from '@/lib/payment-rules';
 import type { PaymentPolicy } from '@/types/payment-policy';
+import { PaymentPolicyContext } from '@/lib/payment-policy-context';
 
 export function usePaymentPolicy(initial?: PaymentPolicy | null) {
+  const shared = useContext(PaymentPolicyContext);
   const [policy, setPolicy] = useState<PaymentPolicy | null>(null);
   const [error, setError] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const refresh = useCallback(async () => {
+    setPolicy(null);
+    setError(false);
+    setRevision((value) => value + 1);
+  }, []);
   useEffect(() => {
-    if (initial) return;
+    if (initial || shared) return;
     let active = true;
     if (typeof getCustomerPaymentPolicy !== 'function') return;
     void getCustomerPaymentPolicy()
@@ -32,8 +40,14 @@ export function usePaymentPolicy(initial?: PaymentPolicy | null) {
     return () => {
       active = false;
     };
-  }, [initial]);
-  return { policy: initial ?? policy, error };
+  }, [initial, shared, revision]);
+  // Supplied policies describe historical transactions; new payments use the current policy.
+  return {
+    policy: initial ?? (shared ? (shared.error || shared.checking ? null : shared.policy) : policy),
+    error: initial ? false : (shared?.error ?? error),
+    requiresAcceptance: !initial && (shared?.requiresAcceptance ?? false),
+    refresh: shared?.refresh ?? refresh,
+  };
 }
 
 export function PaymentRuleContent({
