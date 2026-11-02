@@ -1841,18 +1841,6 @@ export default function RequestStatusScreen() {
             )}
           </View>
 
-          {ratingAvailable ? (
-            <View style={styles.card}>
-              <OrderSectionHeading title={appI18n.t("Rate Service")} icon="star" />
-              <Text style={styles.rowValue}>
-                {appI18n.t("Final delivery is confirmed. You can rate the driver from here if you skipped the prompt.")}</Text>
-              <Pressable style={styles.primaryButton} onPress={onRateDriver}>
-                <Text style={styles.primaryButtonText}>{appI18n.t("Rate driver")}</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-
           <View style={styles.actionStack}>
             <Pressable accessibilityRole="button" style={({ pressed }) => [styles.statusActionButton, pressed && styles.disabledButton]} onPress={() => void loadStatus(false)}>
               <Text style={styles.statusActionButtonText}>

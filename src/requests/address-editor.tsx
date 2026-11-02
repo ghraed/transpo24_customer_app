@@ -321,7 +321,6 @@ export function AddressEditor({
           /> : null}
           {routeOrigin && (pendingPin || value) && GOOGLE_MAPS_API_KEY ? (
             <NativeMapViewDirections
-              key={`${routeOrigin.latitude},${routeOrigin.longitude}:${(pendingPin ?? value)!.latitude},${(pendingPin ?? value)!.longitude}`}
               origin={routeOrigin}
               destination={pendingPin ?? value}
               apikey={GOOGLE_MAPS_API_KEY}

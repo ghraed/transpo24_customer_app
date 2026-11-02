@@ -3,7 +3,7 @@ import { act, create } from 'react-test-renderer';
 import { AppState, Text } from 'react-native';
 import { handleNextAction } from '@stripe/stripe-react-native';
 import { BookingPaymentStatus } from './booking-payment-status';
-import { failBookingApproval } from '@/lib/api';
+import { failBookingApproval, skipBookingCountdown } from '@/lib/api';
 
 jest.mock('expo-symbols', () => ({ SymbolView: () => null }));
 jest.mock('@stripe/stripe-react-native', () => ({
@@ -13,6 +13,7 @@ jest.mock('@/lib/stripe-account', () => ({ withStripeAccount: jest.fn((_id, acti
 jest.mock('@/lib/api', () => ({
   getCustomerPaymentPolicy: jest.fn(),
   failBookingApproval: jest.fn(async () => {}),
+  skipBookingCountdown: jest.fn(async () => ({})),
 }));
 const mockT = (key) => key;
 jest.mock('react-i18next', () => ({
@@ -134,4 +135,39 @@ test('expiry refreshes status without triggering authorization from the phone', 
   expect(refresh).toHaveBeenCalledTimes(1);
   expect(handleNextAction).not.toHaveBeenCalled();
   expect(text()).toContain('payment_info.securing');
+});
+
+const skipButton = () => tree.root.findAll((node) =>
+  typeof node.props.onPress === 'function' &&
+  node.findAllByType(Text).some((child) => child.props.children === 'payment_info.skip_countdown')
+)[0];
+
+test('skips the countdown, prevents duplicate submission and refreshes status', async () => {
+  let complete;
+  skipBookingCountdown.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+  const refresh = jest.fn();
+  await act(async () => { tree = create(<BookingPaymentStatus payment={payment} refresh={refresh} />); });
+  const press = skipButton().props.onPress;
+  await act(async () => { press(); press(); });
+  expect(skipBookingCountdown).toHaveBeenCalledTimes(1);
+  expect(skipBookingCountdown).toHaveBeenCalledWith('request');
+  expect(text()).toContain('payment_info.sending');
+  await act(async () => { complete({}); });
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(handleNextAction).not.toHaveBeenCalled();
+});
+
+test('shows an error and allows retry when skipping fails', async () => {
+  skipBookingCountdown.mockRejectedValueOnce(new Error('Network error'));
+  const refresh = jest.fn();
+  await act(async () => { tree = create(<BookingPaymentStatus payment={payment} refresh={refresh} />); });
+  await act(async () => { skipButton().props.onPress(); });
+  expect(text()).toContain('payment_info.skip_failed');
+  expect(skipButton().props.disabled).toBe(false);
+  expect(refresh).toHaveBeenCalled();
+});
+
+test.each(['ACTION_REQUIRED', 'AUTHORIZING', 'CONFIRMED', 'CANCELLED'])('does not offer skip in %s', async (state) => {
+  await act(async () => { tree = create(<BookingPaymentStatus payment={{ ...payment, confirmation: { ...payment.confirmation, state } }} refresh={jest.fn()} />); });
+  expect(skipButton()).toBeUndefined();
 });

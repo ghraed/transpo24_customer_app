@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
-import { MapLocationMarker } from './map-location-marker';
+import { MapLocationIcon, MapLocationMarker } from './map-location-marker';
 
 jest.mock('./native-maps', () => ({ NativeMarker: 'Marker' }));
 jest.mock('react-native-svg', () => ({ __esModule: true, default: 'Svg', Circle: 'Circle', Path: 'Path', Rect: 'Rect' }));
@@ -10,7 +10,7 @@ afterEach(async () => { if (tree) await act(async () => tree.unmount()); tree = 
 const coordinate = { latitude: 33.89, longitude: 35.5 };
 
 test('driver uses a blue dot with a small halo centered on its coordinate', async () => {
-  await act(async () => { tree = create(<MapLocationMarker kind="driver" coordinate={coordinate} title="Driver" />); });
+  await act(async () => { tree = create(<><MapLocationMarker kind="driver" coordinate={coordinate} title="Driver" /><MapLocationIcon kind="driver" /></>); });
   expect(tree.root.findByType('Marker').props).toMatchObject({ coordinate, anchor: { x: 0.5, y: 0.5 } });
   expect(tree.root.findAllByType('Circle').map(node => ({ r: node.props.r, fill: node.props.fill }))).toEqual([
     { r: 18, fill: 'rgba(66, 133, 244, 0.16)' }, { r: 8, fill: '#4285F4' },
@@ -19,14 +19,25 @@ test('driver uses a blue dot with a small halo centered on its coordinate', asyn
 
 test('pickup and dropoff use consistent pins with distinct colors and center symbols', async () => {
   const onPress = jest.fn();
-  await act(async () => { tree = create(<MapLocationMarker kind="pickup" coordinate={coordinate} title="Pickup" onPress={onPress} />); });
+  await act(async () => { tree = create(<><MapLocationMarker kind="pickup" coordinate={coordinate} title="Pickup" onPress={onPress} /><MapLocationIcon kind="pickup" /></>); });
   expect(tree.root.findByType('Path').props.fill).toBe('#1DB954');
   expect(tree.root.findAllByType('Circle')).toHaveLength(1);
   expect(tree.root.findByType('Marker').props.anchor.y).toBe(42 / 44);
   tree.root.findByType('Marker').props.onPress();
   expect(onPress).toHaveBeenCalledTimes(1);
-  await act(async () => tree.update(<MapLocationMarker kind="dropoff" coordinate={coordinate} title="Dropoff" />));
+  await act(async () => tree.update(<><MapLocationMarker kind="dropoff" coordinate={coordinate} title="Dropoff" /><MapLocationIcon kind="dropoff" /></>));
   expect(tree.root.findByType('Path').props.fill).toBe('#FF4B3E');
   expect(tree.root.findAllByType('Rect')).toHaveLength(1);
   expect(tree.root.findAllByType('Circle')).toHaveLength(0);
+});
+
+
+test('native pins use bundled images and never depend on a captured child view', async () => {
+  for (const kind of ['pickup', 'dropoff', 'driver']) {
+    await act(async () => { if (tree) tree.unmount(); tree = create(<MapLocationMarker kind={kind} coordinate={coordinate} />); });
+    const marker = tree.root.findByType('Marker');
+    expect(marker.props.image).toBeTruthy();
+    expect(marker.props.tracksViewChanges).toBe(false);
+    expect(marker.props.children).toBeUndefined();
+  }
 });

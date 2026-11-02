@@ -1390,6 +1390,10 @@
     "cardSetup": "Guardar un método de pago"
   },
   "payment_info": {
+    "skip_countdown": "Omitir cuenta atrás y enviar al conductor",
+    "sending": "Enviando al conductor…",
+    "skip_hint": "Reserva ahora los fondos y envía la aceptación al conductor. Puede requerirse aprobación bancaria. Las tarifas de cancelación siguen calculándose desde el inicio original de la cuenta atrás.",
+    "skip_failed": "No se pudo omitir la cuenta atrás. Inténtalo de nuevo.",
     "open": "Información de pago",
     "hint": "Leer las reglas de este pago",
     "title": "Reglas de pago",

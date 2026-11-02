@@ -1390,6 +1390,10 @@
     "cardSetup": "Zahlungsmethode speichern"
   },
   "payment_info": {
+    "skip_countdown": "Countdown überspringen und an Fahrer senden",
+    "sending": "Wird an den Fahrer gesendet…",
+    "skip_hint": "Buchungsbetrag jetzt reservieren und dem Fahrer die Zusage senden. Eine Bankfreigabe kann erforderlich sein. Stornogebühren richten sich weiterhin nach dem ursprünglichen Countdown-Start.",
+    "skip_failed": "Der Countdown konnte nicht übersprungen werden. Bitte erneut versuchen.",
     "open": "Zahlungsinformationen",
     "hint": "Regeln für diese Zahlung lesen",
     "title": "Zahlungsregeln",

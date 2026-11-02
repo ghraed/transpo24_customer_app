@@ -27,12 +27,22 @@ export function MapLocationIcon({ kind }: { kind: MapLocationKind }) {
   );
 }
 
-type Props = Omit<MapMarkerProps, 'children' | 'pinColor' | 'anchor'> & { kind: MapLocationKind };
+// Native bitmap markers avoid Android capturing an empty SVG child view.
+const MARKER_IMAGES = {
+  pickup: require('../../assets/map-markers/pickup.png'),
+  dropoff: require('../../assets/map-markers/dropoff.png'),
+  driver: require('../../assets/map-markers/driver.png'),
+} as const;
+
+type Props = Omit<MapMarkerProps, 'children' | 'pinColor' | 'anchor' | 'image'> & { kind: MapLocationKind };
 export function MapLocationMarker({ kind, ...props }: Props) {
   if (!NativeMarker) return null;
   return (
-    <NativeMarker {...props} anchor={{ x: 0.5, y: kind === 'driver' ? 0.5 : 42 / 44 }}>
-      <MapLocationIcon kind={kind} />
-    </NativeMarker>
+    <NativeMarker
+      {...props}
+      image={MARKER_IMAGES[kind]}
+      tracksViewChanges={false}
+      anchor={{ x: 0.5, y: kind === 'driver' ? 0.5 : 42 / 44 }}
+    />
   );
 }

@@ -1748,3 +1748,9 @@ export async function failBookingApproval(requestId: string): Promise<void> {
   const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/payment/approval-failed`, { method: 'POST', headers: getAuthHeaders() });
   if (!response.ok) throw await parseError(response, 'Unable to update bank approval. Refresh the booking status.');
 }
+
+export async function skipBookingCountdown(requestId: string): Promise<PaymentSummary> {
+  const response = await fetchWithNetworkError(`${getApiBaseUrl()}/customer/requests/${encodeURIComponent(requestId)}/payment/skip-countdown`, { method: 'POST', headers: getAuthHeaders() });
+  if (!response.ok) throw await parseError(response, 'Unable to skip the countdown. Please try again.');
+  return parseJsonBody<PaymentSummary>(response, 'Unable to load booking status.');
+}

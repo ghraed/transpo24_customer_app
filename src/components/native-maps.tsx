@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform } from 'react-native';
+import { createReliableMapDirections } from './reliable-map-directions';
 
 export type Region = {
   latitude: number;
@@ -32,6 +33,7 @@ if (Platform.OS !== 'web') {
   const mapsModule = require('react-native-maps') as {
     default: GenericComponent;
     Marker: GenericComponent;
+    Polyline: GenericComponent;
     PROVIDER_GOOGLE?: unknown;
   };
 
@@ -40,15 +42,7 @@ if (Platform.OS !== 'web') {
   GoogleProvider = mapsModule.PROVIDER_GOOGLE;
   mapRuntimeAvailable = true;
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Directions is a native-only optional dependency.
-    const directionsModule = require('react-native-maps-directions') as {
-      default: GenericComponent;
-    };
-    MapViewDirectionsComponent = directionsModule.default;
-  } catch {
-    MapViewDirectionsComponent = UnavailableMapComponent;
-  }
+  MapViewDirectionsComponent = createReliableMapDirections(mapsModule.Polyline);
 }
 
 export const NativeMapView = MapViewComponent;

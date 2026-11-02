@@ -9,17 +9,20 @@ const PRODUCTION_API_URL = 'https://api.transpo24.com';
 
 export function EnvironmentBanner() {
   const apiUrl = getApiBaseUrl();
-  const isProduction = apiUrl === PRODUCTION_API_URL;
+
+  if (apiUrl === PRODUCTION_API_URL) {
+    return null;
+  }
 
   return (
     <View
       accessibilityLabel={appI18n.t('API environment: {{environment}} ({{apiUrl}})', {
-        environment: isProduction ? appI18n.t('Production') : appI18n.t('Local'),
+        environment: appI18n.t('Local'),
         apiUrl,
       })}
-      style={[styles.container, isProduction ? styles.production : styles.local]}
+      style={[styles.container, styles.local]}
     >
-      <Text style={styles.label}>{(isProduction ? appI18n.t('Production') : appI18n.t('Local')).toUpperCase()}</Text>
+      <Text style={styles.label}>{appI18n.t('Local').toUpperCase()}</Text>
       <Text numberOfLines={1} style={styles.url}>{apiUrl}</Text>
     </View>
   );
@@ -33,9 +36,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 30,
     paddingHorizontal: 12,
-  },
-  production: {
-    backgroundColor: '#0B6B3A',
   },
   local: {
     backgroundColor: '#9A3412',

@@ -1395,6 +1395,10 @@
     "cardSetup": "Saving a payment method"
   },
   "payment_info": {
+    "skip_countdown": "Skip countdown and send to driver",
+    "sending": "Sending to driver…",
+    "skip_hint": "Reserve the booking funds now and send acceptance to the driver. Bank approval may be required. Cancellation fees still follow the original countdown start time.",
+    "skip_failed": "Unable to skip the countdown. Please try again.",
     "open": "Payment information",
     "hint": "Read the rules for this payment",
     "title": "Payment rules",

@@ -1390,6 +1390,10 @@
     "cardSetup": "Enregistrement d’un moyen de paiement"
   },
   "payment_info": {
+    "skip_countdown": "Passer le compte à rebours et envoyer au chauffeur",
+    "sending": "Envoi au chauffeur…",
+    "skip_hint": "Réservez les fonds maintenant et envoyez votre acceptation au chauffeur. Une validation bancaire peut être nécessaire. Les frais d’annulation restent calculés depuis le début initial du compte à rebours.",
+    "skip_failed": "Impossible de passer le compte à rebours. Veuillez réessayer.",
     "open": "Informations sur le paiement",
     "hint": "Lire les règles de ce paiement",
     "title": "Règles de paiement",

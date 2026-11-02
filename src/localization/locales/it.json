@@ -1394,6 +1394,10 @@
     "cardSetup": "Salvare un metodo di pagamento"
   },
   "payment_info": {
+    "skip_countdown": "Salta il conto alla rovescia e invia all’autista",
+    "sending": "Invio all’autista…",
+    "skip_hint": "Riserva ora i fondi e invia l’accettazione all’autista. Potrebbe essere richiesta l’approvazione della banca. Le penali di annullamento restano calcolate dall’inizio originale del conto alla rovescia.",
+    "skip_failed": "Impossibile saltare il conto alla rovescia. Riprova.",
     "open": "Informazioni sul pagamento",
     "hint": "Leggi le regole di questo pagamento",
     "title": "Regole di pagamento",

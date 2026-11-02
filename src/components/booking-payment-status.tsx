@@ -3,7 +3,7 @@ import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { handleNextAction } from '@stripe/stripe-react-native';
 import { useTranslation } from 'react-i18next';
 import type { PaymentSummary } from '@/types/customer-request';
-import { failBookingApproval } from '@/lib/api';
+import { failBookingApproval, skipBookingCountdown } from '@/lib/api';
 import { countdownSeconds, paymentMethodName } from '@/lib/payment-rules';
 import { PaymentInfo } from './payment-info';
 import { withStripeAccount } from '@/lib/stripe-account';
@@ -25,6 +25,10 @@ export function BookingPaymentStatus({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const submitting = useRef(false);
+  const bookingKey = `${payment.requestId}:${confirmation?.startedAt ?? ''}`;
+  const [skippedBooking, setSkippedBooking] = useState('');
+  const skipped = skippedBooking === bookingKey;
   useEffect(() => {
     const sampledAt = performance.now();
     const serverTime = confirmation?.serverTime ?? '';
@@ -88,6 +92,23 @@ export function BookingPaymentStatus({
                 : confirmation.state === 'CONFIRMED'
                   ? 'payment_info.funds_held'
                   : 'payment_info.securing';
+  const skip = async () => {
+    if (submitting.current || busy || !grace || expired || skipped) return;
+    submitting.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      await skipBookingCountdown(payment.requestId);
+      setSkippedBooking(bookingKey);
+    } catch {
+      setError(t('payment_info.skip_failed'));
+    } finally {
+      try { await refresh(); } finally {
+        submitting.current = false;
+        setBusy(false);
+      }
+    }
+  };
   const approve = async () => {
     if (busy || !payment.stripeClientSecret || expired) return;
     setBusy(true);
@@ -149,6 +170,20 @@ export function BookingPaymentStatus({
           })}
         </Text>
       ) : null}
+      {grace && !expired ? (
+        <>
+          <Text style={styles.body}>{t('payment_info.skip_hint')}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy || skipped, busy }}
+            disabled={busy || skipped}
+            onPress={() => void skip()}
+            style={({ pressed }) => [styles.button, styles.sendButton, (pressed || busy || skipped) && styles.disabledButton]}
+          >
+            <Text style={styles.sendText}>{t(busy || skipped ? 'payment_info.sending' : 'payment_info.skip_countdown')}</Text>
+          </Pressable>
+        </>
+      ) : null}
       {confirmation.failureReason ? (
         <Text style={styles.body}>{t(confirmation.state === 'MANUAL_REVIEW' ? 'payment_info.manual_review' : ({ INSUFFICIENT_FUNDS: 'payment_info.insufficient_result', PAYMENT_DEADLINE: 'payment_info.deadline_result', OFFER_UNAVAILABLE: 'payment_info.offer_unavailable_result', APPROVAL_FAILED: 'payment_info.approval_result' } as Record<string, string>)[confirmation.failureCode ?? ''] ?? 'payment_info.failed_result')}</Text>
       ) : null}
@@ -172,6 +207,8 @@ export function BookingPaymentStatus({
       {(grace || approval) && !expired && cancel ? (
         <Pressable
           accessibilityRole="button"
+          disabled={busy || skipped}
+          accessibilityState={{ disabled: busy || skipped }}
           onPress={cancel}
           style={styles.button}
         >
@@ -199,6 +236,9 @@ const styles = StyleSheet.create({
     color: '#17212F',
     writingDirection: 'ltr',
   },
+  sendButton: { backgroundColor: '#17212F' },
+  sendText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  disabledButton: { opacity: 0.6 },
   button: {
     minHeight: 48,
     justifyContent: 'center',
