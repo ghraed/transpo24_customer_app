@@ -12,6 +12,8 @@ jest.mock('expo-secure-store', () => ({
   }),
 }));
 
+jest.mock('@/services/socketService', () => ({ disconnectSocket: jest.fn() }));
+
 jest.mock('@/config/backend', () => ({ getApiBaseUrl: () => 'http://api.test' }));
 
 const session = {
@@ -118,6 +120,61 @@ describe('customer session persistence', () => {
 
     expect(auth.getAuthSessionSnapshot().status).toBe('unauthenticated');
     expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(session));
+  });
+
+  it('ignores a successful refresh response after logout', async () => {
+    const auth = loadAuth();
+    await auth.setCustomerSession(session);
+    let complete!: (value: Response) => void;
+    jest.mocked(globalThis.fetch)
+      .mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }))
+      .mockResolvedValueOnce(response(200));
+    const refresh = auth.refreshAccessToken();
+    await auth.logoutCustomerSession();
+    complete(response(200, session));
+    await expect(refresh).resolves.toBeNull();
+    expect(auth.getAuthSessionSnapshot().status).toBe('unauthenticated');
+    expect(mockStorage.size).toBe(0);
+  });
+
+  it.each([200, 401])('ignores a stale refresh result (%s) after changing accounts', async status => {
+    const auth = loadAuth();
+    await auth.setCustomerSession(session);
+    let complete!: (value: Response) => void;
+    jest.mocked(globalThis.fetch).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+    const refresh = auth.refreshAccessToken();
+    const other = { ...session, accessToken: 'other-access', refreshToken: 'other-refresh', user: { ...session.user, id: 'customer-2' } };
+    await auth.setCustomerSession(other);
+    complete(response(status, session));
+    await expect(refresh).resolves.toBeNull();
+    expect(auth.getAuthSessionSnapshot().user?.id).toBe('customer-2');
+    expect(auth.getAccessToken()).toBe('other-access');
+    expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(other));
+  });
+
+  it('does not replay an old account request with the next account credentials', async () => {
+    const auth = loadAuth();
+    await auth.setCustomerSession(session);
+    let complete!: (value: Response) => void;
+    jest.mocked(globalThis.fetch).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+    const pending = auth.authenticatedFetch('http://api.test/customer/private', { method: 'POST' });
+    await auth.setCustomerSession({ ...session, user: { ...session.user, id: 'customer-2' } });
+    complete(response(401));
+    await expect(pending).resolves.toMatchObject({ status: 401 });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not restore storage hydration that finishes after logout', async () => {
+    const secureStore = jest.requireMock('expo-secure-store') as typeof import('expo-secure-store');
+    const auth = loadAuth();
+    let complete!: (value: string | null) => void;
+    jest.mocked(secureStore.getItemAsync).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+    const pending = auth.hydrateAuthSession();
+    await auth.logoutCustomerSession();
+    complete('old-access');
+    await pending;
+    expect(auth.getAccessToken()).toBeNull();
+    expect(auth.getAuthSessionSnapshot().status).toBe('unauthenticated');
   });
 
   it('revokes and clears the session on explicit logout', async () => {

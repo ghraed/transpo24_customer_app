@@ -1,9 +1,9 @@
 {
   "orderChargeLabels": {
-      "reason": "Razón",
-      "equipment": "Equipo",
-      "status": "Estado",
-      "date": "Fecha de creación"
+    "reason": "Razón",
+    "equipment": "Equipo",
+    "status": "Estado",
+    "date": "Fecha de creación"
   },
   "Driver before starting the order": "El conductor se prepara para iniciar el pedido",
   "Driver is on the way to the pickup location": "El conductor va de camino al punto de recogida",
@@ -1136,7 +1136,7 @@
   "Request access, correction or deletion": "Solicitar acceso, rectificación o supresión",
   "Use your browser site settings to manage permissions.": "Usa los ajustes del sitio en tu navegador para gestionar los permisos.",
   "Open device settings manually, or email privacy@transpo24.ch for privacy requests.": "Abre los ajustes del dispositivo manualmente o escribe a privacy@transpo24.ch para solicitudes de privacidad.",
-  "Agree to Terms of Service": "Aceptar los Términos de servicio",
+  "Agree to Terms of Service": "Aceptar las condiciones del servicio",
   "Please accept the Terms of Service to create an account.": "Acepta los Términos de servicio para crear una cuenta.",
   "Read our": "Lee nuestra",
   "chat.options": "Opciones del chat",
@@ -1455,5 +1455,12 @@
     "approval_result": "No se completó la aprobación bancaria. La reserva se canceló sin coste.",
     "failed_result": "No se pudo asegurar el pago. La reserva se canceló sin coste."
   },
-  "Direct driver payments require a card or Apple Pay or Google Pay.": "Los pagos directos a los conductores requieren una tarjeta, Apple Pay o Google Pay."
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Los pagos directos a los conductores requieren una tarjeta, Apple Pay o Google Pay.",
+  "Terms of Service": "Condiciones del servicio",
+  "I agree to the Terms of Service": "Acepto las condiciones del servicio",
+  "Unable to load Terms of Service. Please try again.": "No se pudieron cargar las condiciones del servicio. Inténtalo de nuevo.",
+  "Agree to Terms of Service and Privacy Policy": "Aceptar las condiciones del servicio y la política de privacidad",
+  "I agree to the": "Acepto",
+  "Please accept the Terms of Service and Privacy Policy to create an account.": "Acepta las condiciones del servicio y la política de privacidad para crear una cuenta.",
+  "Privacy Policy": "Política de privacidad"
 }

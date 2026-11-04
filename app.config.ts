@@ -2,6 +2,7 @@ import type { ConfigContext } from 'expo/config';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolveStripePublishableKey } from './config/stripe';
 
+const IS_STAGING = process.env.APP_VARIANT === 'staging';
 const IS_DEV = process.env.APP_VARIANT === 'development';
 
 const MAPS_ANDROID_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY ?? '';
@@ -41,7 +42,7 @@ if (
 export default ({ config }: ConfigContext) => {
   // These guards run only for iOS production workers; Android profiles are unaffected.
   if (process.env.EAS_BUILD_PLATFORM === 'ios' && IS_PRODUCTION_PROFILE) {
-    if (IS_DEV) {
+    if (IS_DEV || IS_STAGING) {
       throw new Error('iOS production builds must not use APP_VARIANT=development.');
     }
     if (!MAPS_IOS_KEY.trim() || MAPS_IOS_KEY.startsWith('replace_')) {
@@ -51,10 +52,10 @@ export default ({ config }: ConfigContext) => {
       throw new Error('iOS production builds must use bundle identifier com.transpo24.app.');
     }
   }
-  const androidPackage = IS_DEV ? 'com.transpo24.app.dev' : config.android?.package;
+  const androidPackage = IS_STAGING ? 'com.transpo24.app.staging' : IS_DEV ? 'com.transpo24.app.dev' : config.android?.package;
   let androidGoogleServicesFile = ANDROID_GOOGLE_SERVICES_FILE;
-  if (IS_DEV) {
-    androidGoogleServicesFile = process.env.EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE?.trim() ||
+  if (IS_DEV || IS_STAGING) {
+    androidGoogleServicesFile = IS_STAGING ? '' : process.env.EXPO_ANDROID_DEV_GOOGLE_SERVICES_FILE?.trim() ||
       (existsSync('./google-services.dev.json') ? './google-services.dev.json' : '');
     if (androidGoogleServicesFile) {
       const services = JSON.parse(readFileSync(androidGoogleServicesFile, 'utf8'));
@@ -66,7 +67,7 @@ export default ({ config }: ConfigContext) => {
     }
   }
   // Validate on the Android build worker, where EAS file variables exist.
-  if (process.env.EAS_BUILD_PLATFORM === 'android' && !IS_DEV) {
+  if (process.env.EAS_BUILD_PLATFORM === 'android' && !IS_DEV && !IS_STAGING) {
     const services = JSON.parse(readFileSync(androidGoogleServicesFile, 'utf8'));
     if (!services.client?.some((client: { client_info?: { android_client_info?: { package_name?: string } } }) =>
       client.client_info?.android_client_info?.package_name === androidPackage,
@@ -102,8 +103,10 @@ export default ({ config }: ConfigContext) => {
       scheme: 'transpo24-dev',
       updates: { ...config.updates, enabled: false },
     } : {}),
+    ...(IS_STAGING ? { name: 'Transpo24 Staging', scheme: 'transpo24-staging', updates: { ...config.updates, enabled: false } } : {}),
     ios: {
       ...config.ios,
+      ...(IS_STAGING ? { bundleIdentifier: 'com.transpo24.app.staging' } : {}),
       ...(IS_DEV ? { bundleIdentifier: 'com.transpo24.app.dev' } : {}),
       ...(IOS_GOOGLE_SERVICES_FILE ? { googleServicesFile: IOS_GOOGLE_SERVICES_FILE } : {}),
       config: {

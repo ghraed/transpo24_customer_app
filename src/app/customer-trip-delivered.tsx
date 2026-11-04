@@ -1,3 +1,4 @@
+import { privateAssetSource } from '@/lib/private-asset';
 import { PaymentInfo } from '@/components/payment-info';
 import type { PaymentPolicy } from '@/types/payment-policy';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -149,7 +150,7 @@ export default function CustomerTripDeliveredScreen() {
               {proofPhotos.map((photo) => (
                 <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
                   <Image
-                    source={{ uri: resolveAssetUrl(photo.url) }}
+                    source={privateAssetSource(resolveAssetUrl(photo.url))}
                     style={styles.photo}
                     resizeMode="cover"
                   />
@@ -159,7 +160,7 @@ export default function CustomerTripDeliveredScreen() {
           ) : deliveryProofImageUrl ? (
             <Pressable onPress={() => setExpandedPhotoUrl(resolveAssetUrl(deliveryProofImageUrl))}>
               <Image
-                source={{ uri: resolveAssetUrl(deliveryProofImageUrl) }}
+                source={privateAssetSource(resolveAssetUrl(deliveryProofImageUrl))}
                 style={styles.photoFallback}
                 resizeMode="cover"
               />
@@ -228,7 +229,7 @@ export default function CustomerTripDeliveredScreen() {
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
             {expandedPhotoUrl ? (
-              <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" />
+              <Image source={privateAssetSource(expandedPhotoUrl)} style={styles.expandedPhoto} resizeMode="contain" />
             ) : null}
           </Pressable>
         </Modal>

@@ -1,3 +1,4 @@
+import { privateAssetSource } from '@/lib/private-asset';
 import { validateSchedule } from '@/requests/schedule-rules';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -482,7 +483,7 @@ export default function EditRequestScreen() {
                       <View key={`${photo.uri}-${index}`}>
                         <Image
                           style={styles.photo}
-                          source={{ uri: photo.uri }}
+                          source={privateAssetSource(photo.uri)}
                         />
                         <Pressable
                           accessibilityRole="button"

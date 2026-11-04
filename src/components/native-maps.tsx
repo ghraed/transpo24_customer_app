@@ -1,3 +1,4 @@
+import { HAS_GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import React from 'react';
 import { Platform } from 'react-native';
 import { createReliableMapDirections } from './reliable-map-directions';
@@ -28,7 +29,7 @@ let MapViewDirectionsComponent: GenericComponent = UnavailableMapComponent;
 let GoogleProvider: unknown;
 let mapRuntimeAvailable = false;
 
-if (Platform.OS !== 'web') {
+if (Platform.OS !== 'web' && HAS_GOOGLE_MAPS_API_KEY) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- Native maps must not load in web bundles.
   const mapsModule = require('react-native-maps') as {
     default: GenericComponent;

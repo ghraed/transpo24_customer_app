@@ -26,7 +26,7 @@ const RESEND_SECONDS = 60;
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
-  const { phoneNumber: rawPhoneNumber } = useLocalSearchParams<{ phoneNumber?: string }>();
+  const { acceptedTermsVersion, phoneNumber: rawPhoneNumber } = useLocalSearchParams<{ acceptedTermsVersion?: string; phoneNumber?: string }>();
   const phoneNumber = typeof rawPhoneNumber === 'string' ? rawPhoneNumber : '';
   const { t } = useTranslation();
   const { isRTL } = useAppLanguage();
@@ -60,7 +60,7 @@ export default function VerifyPhoneScreen() {
     setIsVerifying(true);
     setError('');
     try {
-      const session = await verifyPhoneVerificationCode(phoneNumber, candidate);
+      const session = await verifyPhoneVerificationCode(phoneNumber, candidate, acceptedTermsVersion);
       await setCustomerSession(session);
       void registerCustomerPushNotifications().catch(() => undefined);
       router.dismissAll();
@@ -72,7 +72,7 @@ export default function VerifyPhoneScreen() {
     } finally {
       setIsVerifying(false);
     }
-  }, [code, isVerifying, phoneNumber, router, t]);
+  }, [acceptedTermsVersion, code, isVerifying, phoneNumber, router, t]);
 
   const resend = useCallback(async () => {
     if (secondsRemaining > 0 || isResending) return;

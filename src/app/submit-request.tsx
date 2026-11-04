@@ -1,3 +1,4 @@
+import { privateAssetSource } from '@/lib/private-asset';
 import { OptionalRequestNote } from '@/requests/optional-request-note';
 import { validateSchedule } from '@/requests/schedule-rules';
 import { RequestProgress } from '@/requests/request-progress';
@@ -888,7 +889,7 @@ function SubmitRequestScreen() {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {pendingMotorcyclePhotoAssets.map((photo, index) => (
-                  <Image key={`${photo.uri}-${index}`} source={{ uri: photo.uri }} style={styles.photoThumb} />
+                  <Image key={`${photo.uri}-${index}`} source={privateAssetSource(photo.uri)} style={styles.photoThumb} />
                 ))}
               </ScrollView>
             )}
@@ -903,7 +904,7 @@ function SubmitRequestScreen() {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {pendingGoodsPhotoAssets.map((photo, index) => (
-                  <Image key={`${photo.uri}-${index}`} source={{ uri: photo.uri }} style={styles.photoThumb} />
+                  <Image key={`${photo.uri}-${index}`} source={privateAssetSource(photo.uri)} style={styles.photoThumb} />
                 ))}
               </ScrollView>
             )}
@@ -918,7 +919,7 @@ function SubmitRequestScreen() {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                 {pendingFurniturePhotoAssets.map((photo, index) => (
-                  <Image key={`${photo.uri}-${index}`} source={{ uri: photo.uri }} style={styles.photoThumb} />
+                  <Image key={`${photo.uri}-${index}`} source={privateAssetSource(photo.uri)} style={styles.photoThumb} />
                 ))}
               </ScrollView>
             )}
@@ -1106,7 +1107,7 @@ function SubmitRequestScreen() {
               ) : (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosRow}>
                   {photos.map((photo) => (
-                    <Image key={photo.id} source={{ uri: resolvePhotoUrl(photo.url) }} style={styles.photoThumb} />
+                    <Image key={photo.id} source={privateAssetSource(resolvePhotoUrl(photo.url))} style={styles.photoThumb} />
                   ))}
                 </ScrollView>
               )}

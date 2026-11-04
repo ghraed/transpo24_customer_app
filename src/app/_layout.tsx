@@ -1,3 +1,4 @@
+import { LegalConsentBoundary } from '@/components/legal-consent-boundary';
 import { getStripePublishableKey } from '@/lib/stripe-config';
 import { PickupPaymentReminderPopup } from '@/components/pickup-payment-reminder';
 import { PaymentTermsProvider } from '@/components/payment-terms-provider';
@@ -369,7 +370,7 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <LocalizationProvider>
-      <RootNavigator />
+      <LegalConsentBoundary><RootNavigator /></LegalConsentBoundary>
     </LocalizationProvider>
   );
 }

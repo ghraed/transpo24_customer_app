@@ -1,9 +1,9 @@
 {
   "orderChargeLabels": {
-      "reason": "Raison",
-      "equipment": "Équipement",
-      "status": "Statut",
-      "date": "Date d’ajout"
+    "reason": "Raison",
+    "equipment": "Équipement",
+    "status": "Statut",
+    "date": "Date d’ajout"
   },
   "Driver before starting the order": "Le chauffeur se prépare à démarrer",
   "Driver is on the way to the pickup location": "Le chauffeur est en route vers le lieu de prise en charge",
@@ -1455,5 +1455,12 @@
     "approval_result": "L’approbation bancaire n’a pas abouti. La réservation a été annulée sans frais.",
     "failed_result": "Le paiement n’a pas pu être garanti. La réservation a été annulée sans frais."
   },
-  "Direct driver payments require a card or Apple Pay or Google Pay.": "Les paiements directs aux chauffeurs nécessitent une carte, Apple Pay ou Google Pay."
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Les paiements directs aux chauffeurs nécessitent une carte, Apple Pay ou Google Pay.",
+  "Terms of Service": "Conditions d’utilisation",
+  "I agree to the Terms of Service": "J’accepte les conditions d’utilisation",
+  "Unable to load Terms of Service. Please try again.": "Impossible de charger les conditions d’utilisation. Veuillez réessayer.",
+  "Agree to Terms of Service and Privacy Policy": "Accepter les conditions d’utilisation et la politique de confidentialité",
+  "I agree to the": "J’accepte",
+  "Please accept the Terms of Service and Privacy Policy to create an account.": "Veuillez accepter les conditions d’utilisation et la politique de confidentialité pour créer un compte.",
+  "Privacy Policy": "Politique de confidentialité"
 }

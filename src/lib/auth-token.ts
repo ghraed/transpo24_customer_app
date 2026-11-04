@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 import { getApiBaseUrl } from '@/config/backend';
 import appI18n from '@/localization/i18n';
+import { disconnectSocket } from '@/services/socketService';
 
 const ACCESS_TOKEN_STORAGE_KEY = 'transpo24.customer.accessToken';
 const REFRESH_TOKEN_STORAGE_KEY = 'transpo24.customer.refreshToken';
@@ -48,6 +49,14 @@ let snapshot: AuthSessionSnapshot = { status: 'initializing', user: null };
 let hydratePromise: Promise<AuthSessionSnapshot> | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 let lastRefreshFailure: RefreshFailure | null = null;
+// Async work from a previous account must never restore or erase this session.
+let sessionGeneration = 0;
+let storageMutation: Promise<unknown> = Promise.resolve();
+function mutateSessionStorage(operation: () => Promise<unknown>): Promise<unknown> {
+  const next = storageMutation.then(operation, operation);
+  storageMutation = next.catch(() => undefined);
+  return next;
+}
 const listeners = new Set<() => void>();
 
 function emit(next: AuthSessionSnapshot): void {
@@ -81,6 +90,7 @@ export async function hydrateAuthSession(): Promise<AuthSessionSnapshot> {
   if (snapshot.status !== 'initializing') return snapshot;
   if (hydratePromise) return hydratePromise;
 
+  const generation = sessionGeneration;
   hydratePromise = (async () => {
     try {
       const [storedAccess, storedRefresh, storedUser] = await Promise.all([
@@ -88,13 +98,14 @@ export async function hydrateAuthSession(): Promise<AuthSessionSnapshot> {
         SecureStore.getItemAsync(REFRESH_TOKEN_STORAGE_KEY),
         SecureStore.getItemAsync(USER_STORAGE_KEY),
       ]);
+      if (generation !== sessionGeneration) return snapshot;
       accessToken = storedAccess;
       refreshToken = storedRefresh;
       currentUser = storedUser ? (JSON.parse(storedUser) as CustomerAuthUser) : null;
 
       if (refreshToken) {
         const refreshed = await refreshAccessToken();
-        if (refreshed) return snapshot;
+        if (refreshed || generation !== sessionGeneration) return snapshot;
       }
 
       if (accessToken && !isJwtExpired(accessToken)) {
@@ -105,7 +116,7 @@ export async function hydrateAuthSession(): Promise<AuthSessionSnapshot> {
       // Invalid or unavailable secure storage is treated as a signed-out session.
     }
 
-    await clearSession();
+    if (generation === sessionGeneration) await clearSession();
     return snapshot;
   })();
 
@@ -127,15 +138,22 @@ export async function setAccessToken(token: string): Promise<void> {
 }
 
 export async function setCustomerSession(data: CustomerSessionResponse): Promise<void> {
+  const generation = ++sessionGeneration;
+  if (currentUser?.id !== data.user.id) disconnectSocket();
+  refreshPromise = null;
   accessToken = data.accessToken;
   refreshToken = data.refreshToken;
   currentUser = data.user;
-  await Promise.all([
+  await mutateSessionStorage(async () => {
+    if (generation !== sessionGeneration) return;
+    await Promise.all([
     SecureStore.setItemAsync(ACCESS_TOKEN_STORAGE_KEY, data.accessToken),
     SecureStore.setItemAsync(REFRESH_TOKEN_STORAGE_KEY, data.refreshToken),
     SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(data.user)),
     SecureStore.setItemAsync(TRUSTED_SESSION_STORAGE_KEY, JSON.stringify(data)),
-  ]);
+    ]);
+  });
+  if (generation !== sessionGeneration) return;
   emit({
     status: data.profileCompleted ? 'authenticated' : 'needsProfileCompletion',
     user: data.user,
@@ -177,21 +195,30 @@ export async function clearAccessToken(): Promise<void> {
   await clearSession();
 }
 
-export async function clearSession(): Promise<void> {
+export async function clearSession(forgetTrusted = false): Promise<void> {
+  const generation = ++sessionGeneration;
+  refreshPromise = null;
   accessToken = null;
   refreshToken = null;
   currentUser = null;
-  await Promise.allSettled([
-    SecureStore.deleteItemAsync(ACCESS_TOKEN_STORAGE_KEY),
-    SecureStore.deleteItemAsync(REFRESH_TOKEN_STORAGE_KEY),
-    SecureStore.deleteItemAsync(USER_STORAGE_KEY),
-  ]);
+  disconnectSocket();
   emit({ status: 'unauthenticated', user: null });
+  await mutateSessionStorage(async () => {
+    if (generation !== sessionGeneration) return;
+    await Promise.allSettled([
+      SecureStore.deleteItemAsync(ACCESS_TOKEN_STORAGE_KEY),
+      SecureStore.deleteItemAsync(REFRESH_TOKEN_STORAGE_KEY),
+      SecureStore.deleteItemAsync(USER_STORAGE_KEY),
+      ...(forgetTrusted ? [SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY)] : []),
+    ]);
+  });
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
   if (!refreshToken) return null;
+  const generation = sessionGeneration;
+  const tokenToRefresh = refreshToken;
 
   refreshPromise = (async () => {
     lastRefreshFailure = null;
@@ -199,8 +226,9 @@ export async function refreshAccessToken(): Promise<string | null> {
       const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ refreshToken: tokenToRefresh }),
       });
+      if (generation !== sessionGeneration) return null;
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
           lastRefreshFailure = {
@@ -216,10 +244,13 @@ export async function refreshAccessToken(): Promise<string | null> {
         throw new Error(appI18n.t("Refresh failed"));
       }
       const session = (await response.json()) as CustomerSessionResponse;
+      if (generation !== sessionGeneration) return null;
       if (!session.accessToken || !session.refreshToken) throw new Error(appI18n.t("Invalid refresh response"));
       await setCustomerSession(session);
-      return session.accessToken;
+      return accessToken === session.accessToken && currentUser?.id === session.user.id
+        ? session.accessToken : null;
     } catch (error) {
+      if (generation !== sessionGeneration) return null;
       if (!lastRefreshFailure) {
         lastRefreshFailure = {
           kind: 'unavailable',
@@ -227,13 +258,10 @@ export async function refreshAccessToken(): Promise<string | null> {
         };
       }
 
-      await clearSession();
-      if (lastRefreshFailure.kind === 'invalid') {
-        await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
-      }
+      await clearSession(lastRefreshFailure.kind === 'invalid');
       return null;
     } finally {
-      refreshPromise = null;
+      if (generation === sessionGeneration) refreshPromise = null;
     }
   })();
 
@@ -244,35 +272,33 @@ export async function authenticatedFetch(
   endpoint: string,
   init: RequestInit,
 ): Promise<Response> {
+  const requestUserId = currentUser?.id;
   const response = await fetch(endpoint, withCurrentToken(init));
+  if (requestUserId !== currentUser?.id) return response;
   if (response.status !== 401 || !refreshToken) return response;
 
   const token = await refreshAccessToken();
-  if (!token) return response;
+  if (!token || requestUserId !== currentUser?.id) return response;
   return fetch(endpoint, withCurrentToken(init));
 }
 
 export async function logoutCustomerSession(): Promise<void> {
   const tokenToRevoke = refreshToken;
-  try {
-    if (tokenToRevoke) {
-      await fetch(`${getApiBaseUrl()}/auth/logout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: tokenToRevoke }),
-      });
-    }
-  } finally {
-    await clearSession();
-    await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
+  // Invalidate pending refreshes before waiting for the network.
+  await clearSession(true);
+  if (tokenToRevoke) {
+    await fetch(`${getApiBaseUrl()}/auth/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: tokenToRevoke }),
+    });
   }
 }
 
 export async function deleteCustomerAccountSession(): Promise<void> {
   const { deleteCustomerAccount } = await import('./api');
   await deleteCustomerAccount();
-  await clearSession();
-  await SecureStore.deleteItemAsync(TRUSTED_SESSION_STORAGE_KEY);
+  await clearSession(true);
 }
 
 // Account switching keeps this device's verified session available for Continue.

@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
@@ -14,6 +15,11 @@ import { useTheme } from '@/hooks/use-theme';
 import appI18n from '@/localization/i18n';
 
 export default function TabTwoScreen() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <TabTwoScreenContent />;
+}
+
+function TabTwoScreenContent() {
   const safeAreaInsets = useSafeAreaInsets();
   const insets = {
     ...safeAreaInsets,

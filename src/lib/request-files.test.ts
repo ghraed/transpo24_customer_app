@@ -1,4 +1,6 @@
+jest.mock('@/lib/chat-outbox', () => ({ beginChatOperation: (roomId: string, kind: string, payload: string, file: object) => ({ id: 'test-operation-123456', roomId, kind, payload, file }), finishChatOperation: jest.fn(), chatAccountId: () => 'fixture-owner', assertChatAccount: jest.fn(), pendingChatOperations: () => [] }));
 import { afterEach, beforeEach, expect, it, jest } from '@jest/globals';
+import { viewDocument } from '@react-native-documents/viewer';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getDocumentAsync } from 'expo-document-picker';
@@ -11,9 +13,11 @@ jest.mock('@/lib/auth-token', () => ({ getAccessToken: () => 'test-token' }));
 jest.mock('@/config/backend', () => ({
   getApiBaseUrl: () => 'https://api.test',
 }));
+jest.mock('@react-native-documents/viewer', () => ({ viewDocument: jest.fn(async () => null) }));
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
+  readDirectoryAsync: jest.fn(async () => []),
   downloadAsync: jest.fn(),
   deleteAsync: jest.fn(async () => undefined),
 }));
@@ -38,7 +42,7 @@ it('never sends credentials to a URL supplied by another host', async () => {
   ).rejects.toThrow();
   expect(FileSystem.downloadAsync).not.toHaveBeenCalled();
 });
-it('downloads with authorization and removes its private cache copy after opening', async () => {
+it('opens an authorized official document in the native viewer and keeps its cache file available', async () => {
   jest.mocked(FileSystem.downloadAsync).mockResolvedValue({
     status: 200,
     uri: 'file:///cache/file.pdf',
@@ -51,8 +55,9 @@ it('downloads with authorization and removes its private cache copy after openin
     expect.stringContaining('file:///cache/private-'),
     { headers: { Authorization: 'Bearer test-token' } },
   );
-  expect(Sharing.shareAsync).toHaveBeenCalled();
-  expect(FileSystem.deleteAsync).toHaveBeenCalled();
+  expect(viewDocument).toHaveBeenCalledWith({ uri:'file:///cache/file.pdf', mimeType:'application/pdf', headerTitle:'file.pdf', grantPermissions:'read' });
+  expect(Sharing.shareAsync).not.toHaveBeenCalled();
+  expect(FileSystem.deleteAsync).not.toHaveBeenCalled();
 });
 it('does not open an unauthorized response and still cleans up', async () => {
   jest.mocked(FileSystem.downloadAsync).mockResolvedValue({
@@ -183,4 +188,11 @@ it('reports an oversized upload rejected by the server', async () => {
   await expect(sendChatAttachment('room')).rejects.toThrow(
     'documents.tooLarge',
   );
+});
+
+it('reports a missing native viewer without opening a share chooser and cleans the failed preview',async()=>{
+ jest.mocked(FileSystem.downloadAsync).mockResolvedValue({status:200,uri:'file:///cache/file.pdf',headers:{},mimeType:'application/pdf'});
+ jest.mocked(viewDocument).mockRejectedValueOnce(Error('No viewer'));
+ await expect(openRequestFile('/request-files/file/content','file.pdf')).rejects.toThrow('documents.openFailed');
+ expect(Sharing.shareAsync).not.toHaveBeenCalled();expect(FileSystem.deleteAsync).toHaveBeenCalled();
 });

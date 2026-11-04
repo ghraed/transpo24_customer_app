@@ -1,3 +1,4 @@
+import { beginChatOperation, finishChatOperation } from './chat-outbox';
 import type { PaymentPolicy } from '@/types/payment-policy';
 import type { EditableRequest } from '@/requests/edit-request';
 import { Platform } from 'react-native';
@@ -379,12 +380,13 @@ export async function skipPhoneVerificationForTemporaryTestCustomer(): Promise<C
 export async function verifyPhoneVerificationCode(
   phoneNumber: string,
   code: string,
+  acceptedTermsVersion?: string,
 ): Promise<CustomerSessionResponse> {
   const endpoint = `${getApiBaseUrl()}/auth/phone/verify-code`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phoneNumber, code }),
+    body: JSON.stringify({ phoneNumber, code, acceptedTermsVersion }),
   });
   if (!response.ok) {
     throw await parseError(response, 'Unable to verify the code.');
@@ -1341,18 +1343,21 @@ export async function sendChatMessage(
   roomId: string,
   payload: SendChatMessagePayload,
 ): Promise<ChatMessage> {
+  const operation = beginChatOperation(roomId, 'TEXT', payload.body.trim());
   const endpoint = `${getApiBaseUrl()}/chat/rooms/${encodeURIComponent(roomId)}/messages`;
   const response = await fetchWithNetworkError(endpoint, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, operationId: operation.id }),
   });
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to send chat message.');
   }
 
-  return parseJsonBody<ChatMessage>(response, 'Failed to parse chat message response.');
+  const message = await parseJsonBody<ChatMessage>(response, 'Failed to parse chat message response.');
+  finishChatOperation(operation.id);
+  return message;
 }
 
 export async function markChatRoomMessagesAsRead(roomId: string): Promise<ChatMessageReadReceipt> {

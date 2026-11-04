@@ -16,6 +16,7 @@ export type ChatReportReason =
 export type ChatReportStatus = 'PENDING' | 'REVIEWED' | 'ACTIONED' | 'DISMISSED';
 
 export interface ChatMessage {
+  operationId?: string | null;
   id: string;
   chatRoomId: string;
   senderId: string;

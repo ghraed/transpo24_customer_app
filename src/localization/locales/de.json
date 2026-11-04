@@ -1,9 +1,9 @@
 {
   "orderChargeLabels": {
-      "reason": "Grund",
-      "equipment": "Ausrüstung",
-      "status": "Status",
-      "date": "Hinzugefügt am"
+    "reason": "Grund",
+    "equipment": "Ausrüstung",
+    "status": "Status",
+    "date": "Hinzugefügt am"
   },
   "Driver before starting the order": "Der Fahrer bereitet den Auftrag vor",
   "Driver is on the way to the pickup location": "Der Fahrer ist auf dem Weg zum Abholort",
@@ -1136,7 +1136,7 @@
   "Request access, correction or deletion": "Auskunft, Berichtigung oder Löschung anfordern",
   "Use your browser site settings to manage permissions.": "Verwalten Sie Berechtigungen in den Website-Einstellungen Ihres Browsers.",
   "Open device settings manually, or email privacy@transpo24.ch for privacy requests.": "Öffnen Sie die Geräteeinstellungen manuell oder senden Sie Datenschutzanfragen an privacy@transpo24.ch.",
-  "Agree to Terms of Service": "Den Nutzungsbedingungen zustimmen",
+  "Agree to Terms of Service": "Nutzungsbedingungen zustimmen",
   "Please accept the Terms of Service to create an account.": "Bitte stimmen Sie den Nutzungsbedingungen zu, um ein Konto zu erstellen.",
   "Read our": "Lesen Sie unsere",
   "chat.options": "Chat-Optionen",
@@ -1455,5 +1455,12 @@
     "approval_result": "Die Bankfreigabe wurde nicht abgeschlossen. Die Buchung wurde kostenlos storniert.",
     "failed_result": "Die Zahlung konnte nicht gesichert werden. Die Buchung wurde kostenlos storniert."
   },
-  "Direct driver payments require a card or Apple Pay or Google Pay.": "Direkte Zahlungen an Fahrer erfordern eine Karte, Apple Pay oder Google Pay."
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Direkte Zahlungen an Fahrer erfordern eine Karte, Apple Pay oder Google Pay.",
+  "Terms of Service": "Nutzungsbedingungen",
+  "I agree to the Terms of Service": "Ich stimme den Nutzungsbedingungen zu",
+  "Unable to load Terms of Service. Please try again.": "Die Nutzungsbedingungen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+  "Agree to Terms of Service and Privacy Policy": "Nutzungsbedingungen und Datenschutzrichtlinie zustimmen",
+  "I agree to the": "Ich stimme zu:",
+  "Please accept the Terms of Service and Privacy Policy to create an account.": "Bitte akzeptieren Sie die Nutzungsbedingungen und die Datenschutzrichtlinie, um ein Konto zu erstellen.",
+  "Privacy Policy": "Datenschutzrichtlinie"
 }

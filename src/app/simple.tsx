@@ -1,9 +1,15 @@
+import { Redirect } from 'expo-router';
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { clientTheme } from '@/components/tracking-ui';
 import appI18n from '@/localization/i18n';
 
 export default function SimplePage() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <SimplePageContent />;
+}
+
+function SimplePageContent() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>

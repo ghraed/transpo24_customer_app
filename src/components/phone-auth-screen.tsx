@@ -89,7 +89,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   const sendCode = useCallback(async () => {
     if (isLoading) return;
 
-    if (mode === 'register' && !hasAcceptedLegal) {
+    if (!hasAcceptedLegal) {
       setError(t('Please accept the Terms of Service to create an account.'));
       return;
     }
@@ -104,7 +104,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
 
     try {
       await sendPhoneVerificationCode(normalizedPhoneNumber);
-      router.push({ pathname: '/verify-phone' as never, params: { phoneNumber: normalizedPhoneNumber } });
+      router.push({ pathname: '/verify-phone' as never, params: { phoneNumber: normalizedPhoneNumber, acceptedTermsVersion: '2026-08-25' } });
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -303,7 +303,7 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                       onSubmitEditing={() => void sendCode()}
                     />
                   </View>
-                  {mode === 'register' ? (
+                  {true ? (
                     <View style={styles.legalConsent}>
                       <Pressable
                         accessibilityRole="checkbox"
@@ -340,8 +340,8 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t('Send verification code')}
-                    style={[styles.button, (isLoading || (mode === 'register' && !hasAcceptedLegal)) && styles.disabled]}
-                    disabled={isLoading || (mode === 'register' && !hasAcceptedLegal)}
+                    style={[styles.button, (isLoading || (!hasAcceptedLegal)) && styles.disabled]}
+                    disabled={isLoading || (!hasAcceptedLegal)}
                     onPress={() => void sendCode()}
                   >
                     {isLoading ? <ActivityIndicator color="#111827" /> : <Text style={styles.buttonText}>{t('Send verification code')}</Text>}

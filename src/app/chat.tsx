@@ -1,3 +1,4 @@
+import { pendingChatOperations, reconcileChatOperations } from '@/lib/chat-outbox';
 import { ChatAttachment, ChatAttachmentButton } from '@/components/chat-attachment';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -543,6 +544,15 @@ export default function ChatScreen() {
       setIsSending(false);
     }
   }, [draft, room]);
+
+  useEffect(() => {
+    if (!room?.id) return;
+    try {
+      reconcileChatOperations(messages);
+      const pending = pendingChatOperations(room?.id).filter(op => op.kind === 'TEXT').at(-1);
+      if (pending) setDraft(current => current || pending.payload);
+    } catch { /* Keep the conversation readable if recovery storage is unavailable. */ }
+  }, [room?.id, messages]);
 
   const translateIncomingMessage = useCallback(async (message: ChatMessage): Promise<void> => {
     const body = message.type === 'FILE' ? '' : message.body?.trim() ?? '';

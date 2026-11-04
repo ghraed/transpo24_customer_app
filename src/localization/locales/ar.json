@@ -1,9 +1,9 @@
 {
   "orderChargeLabels": {
-      "reason": "سبب",
-      "equipment": "معدات",
-      "status": "حالة",
-      "date": "تاريخ الإضافة"
+    "reason": "سبب",
+    "equipment": "معدات",
+    "status": "حالة",
+    "date": "تاريخ الإضافة"
   },
   "Driver before starting the order": "السائق يستعد لبدء الطلب",
   "Driver is on the way to the pickup location": "السائق في الطريق إلى موقع الاستلام",
@@ -1455,5 +1455,12 @@
     "approval_result": "لم تكتمل موافقة البنك. تم إلغاء الحجز دون رسوم.",
     "failed_result": "تعذّر تأمين مبلغ الدفع. تم إلغاء الحجز دون رسوم."
   },
-  "Direct driver payments require a card or Apple Pay or Google Pay.": "يتطلب الدفع المباشر للسائق بطاقة أو Apple Pay أو Google Pay."
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "يتطلب الدفع المباشر للسائق بطاقة أو Apple Pay أو Google Pay.",
+  "Terms of Service": "شروط الخدمة",
+  "I agree to the Terms of Service": "أوافق على شروط الخدمة",
+  "Unable to load Terms of Service. Please try again.": "تعذر تحميل شروط الخدمة. يرجى المحاولة مرة أخرى.",
+  "Agree to Terms of Service and Privacy Policy": "الموافقة على شروط الخدمة وسياسة الخصوصية",
+  "I agree to the": "أوافق على",
+  "Please accept the Terms of Service and Privacy Policy to create an account.": "يرجى قبول شروط الخدمة وسياسة الخصوصية لإنشاء حساب.",
+  "Privacy Policy": "سياسة الخصوصية"
 }

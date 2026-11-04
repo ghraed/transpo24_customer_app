@@ -1,9 +1,9 @@
 {
   "orderChargeLabels": {
-      "reason": "Reason",
-      "equipment": "Equipment",
-      "status": "Status",
-      "date": "Date added"
+    "reason": "Reason",
+    "equipment": "Equipment",
+    "status": "Status",
+    "date": "Date added"
   },
   "Driver before starting the order": "Driver before starting the order",
   "Driver is on the way to the pickup location": "Driver is on the way to the pickup location",
@@ -1460,5 +1460,7 @@
     "approval_result": "Bank approval was not completed. The booking was cancelled without a fee.",
     "failed_result": "Payment could not be secured. The booking was cancelled without a fee."
   },
-  "Direct driver payments require a card or Apple Pay or Google Pay.": "Direct driver payments require a card or Apple Pay or Google Pay."
+  "Direct driver payments require a card or Apple Pay or Google Pay.": "Direct driver payments require a card or Apple Pay or Google Pay.",
+  "I agree to the Terms of Service": "I agree to the Terms of Service",
+  "Unable to load Terms of Service. Please try again.": "Unable to load Terms of Service. Please try again."
 }

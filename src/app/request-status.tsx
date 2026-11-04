@@ -1,3 +1,5 @@
+import { newerLocation } from '@/utils/location-sequence';
+import { privateAssetSource } from '@/lib/private-asset';
 import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
 import { BookingPaymentStatus } from '@/components/booking-payment-status';
 import { OrderSectionHeading, OrderDetailRow, OrderRouteCard, OrderNotice, OrderEmptyState, OrderProgress } from '@/components/order-ui';
@@ -607,7 +609,7 @@ export default function RequestStatusScreen() {
         setAdditionalCharges(chargesResponse);
         setDefaultPaymentMethod(paymentMethodResponse);
         setTrackingData(nextTracking);
-        setLatestDriverLocation(nextTracking?.latestDriverLocation ?? null);
+        setLatestDriverLocation(current => newerLocation(current, nextTracking?.latestDriverLocation ?? null));
         setNearDeliveryMessage(
           nextTracking?.nearDeliveryNotifiedAt
             ? 'Your driver is close to the delivery location. Delivery is approaching.'
@@ -746,10 +748,10 @@ export default function RequestStatusScreen() {
       const validated = validateDriverLocationUpdatedPayload(payload);
       if (!validated || validated.tripId !== requestId) return;
 
-      setLatestDriverLocation(validated);
+      setLatestDriverLocation(current => newerLocation(current, validated));
       setTrackingData((previousTrackingData) =>
         previousTrackingData
-          ? { ...previousTrackingData, latestDriverLocation: validated, updatedAt: validated.recordedAt }
+          ? { ...previousTrackingData, latestDriverLocation: newerLocation(previousTrackingData.latestDriverLocation, validated), updatedAt: previousTrackingData.updatedAt > validated.recordedAt ? previousTrackingData.updatedAt : validated.recordedAt }
           : previousTrackingData,
       );
     });
@@ -1657,7 +1659,7 @@ export default function RequestStatusScreen() {
                   <View style={styles.offerTopRow}>
                     {offer.driverVehiclePhoto ? (
                       <Image
-                        source={{ uri: resolveAssetUrl(offer.driverVehiclePhoto) }}
+                        source={privateAssetSource(resolveAssetUrl(offer.driverVehiclePhoto))}
                         style={styles.offerVehiclePhoto}
                         resizeMode="cover"
                       />
@@ -1746,7 +1748,7 @@ export default function RequestStatusScreen() {
                 {trackingData.pickupProofPhotos.map((photo) => (
                   <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
                     <Image
-                      source={{ uri: resolveAssetUrl(photo.url) }}
+                      source={privateAssetSource(resolveAssetUrl(photo.url))}
                       style={styles.photoLarge}
                       resizeMode="cover"
                     />
@@ -1765,7 +1767,7 @@ export default function RequestStatusScreen() {
                 {trackingData.deliveryProofPhotos.map((photo) => (
                   <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
                     <Image
-                      source={{ uri: resolveAssetUrl(photo.url) }}
+                      source={privateAssetSource(resolveAssetUrl(photo.url))}
                       style={styles.photoLarge}
                       resizeMode="cover"
                     />
@@ -1831,7 +1833,7 @@ export default function RequestStatusScreen() {
                 {requestData.photos.map((photo) => (
                   <Pressable key={photo.id} onPress={() => setExpandedPhotoUrl(resolveAssetUrl(photo.url))}>
                     <Image
-                      source={{ uri: resolveAssetUrl(photo.url) }}
+                      source={privateAssetSource(resolveAssetUrl(photo.url))}
                       style={styles.photo}
                       resizeMode="cover"
                     />
@@ -2107,7 +2109,7 @@ export default function RequestStatusScreen() {
           </Modal>
           <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
             <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
-              {expandedPhotoUrl ? <Image source={{ uri: expandedPhotoUrl }} style={styles.expandedPhoto} resizeMode="contain" /> : null}
+              {expandedPhotoUrl ? <Image source={privateAssetSource(expandedPhotoUrl)} style={styles.expandedPhoto} resizeMode="contain" /> : null}
             </Pressable>
           </Modal>
         </ScrollView>

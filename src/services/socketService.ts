@@ -1,3 +1,5 @@
+import { createLocationSequence } from '@/utils/location-sequence';
+import { beginChatOperation, finishChatOperation } from '@/lib/chat-outbox';
 import { io, type Socket } from 'socket.io-client';
 
 import { getSocketBaseUrl } from '@/config/backend';
@@ -177,10 +179,11 @@ export function sendChatMessageViaSocket(
   timeoutMs = 5000,
 ): Promise<ChatMessage> {
   const instance = getSocket();
+  const operation = beginChatOperation(payload.roomId, 'TEXT', payload.body.trim());
   return new Promise((resolve, reject) => {
     instance.timeout(timeoutMs).emit(
       'chat.message.send',
-      payload,
+      { ...payload, operationId: operation.id },
       (error: Error | null, response?: ChatMessage) => {
         if (error) {
           reject(new Error(error.message || appI18n.t("chat.message.send timed out.")));
@@ -192,6 +195,7 @@ export function sendChatMessageViaSocket(
           return;
         }
 
+        finishChatOperation(operation.id);
         resolve(response);
       },
     );
@@ -237,9 +241,10 @@ export function onDriverLocationUpdated(
   callback: (payload: DriverLocationUpdatedPayload) => void,
 ): () => void {
   const instance = getSocket();
-  instance.off('driverLocationUpdated', callback);
-  instance.on('driverLocationUpdated', callback);
-  return () => instance.off('driverLocationUpdated', callback);
+  const accept = createLocationSequence();
+  const ordered = (value: DriverLocationUpdatedPayload) => { if (accept(value)) callback(value); };
+  instance.on('driverLocationUpdated', ordered);
+  return () => instance.off('driverLocationUpdated', ordered);
 }
 
 export function onDriverNearDelivery(
