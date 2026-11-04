@@ -218,3 +218,12 @@ describe('customer session persistence', () => {
     expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(session));
   });
 });
+
+it('explicit offline logout clears trusted credentials even if server revocation cannot be reached',async()=>{
+ mockStorage.clear();jest.resetModules();globalThis.fetch=jest.fn<typeof fetch>();
+ const auth=loadAuth();await auth.setCustomerSession(session);
+ jest.mocked(globalThis.fetch).mockRejectedValueOnce(Error('Offline'));
+ await expect(auth.logoutCustomerSession()).resolves.toBeUndefined();
+ expect(auth.getAuthSessionSnapshot().status).toBe('unauthenticated');
+ expect(mockStorage.size).toBe(0);
+});

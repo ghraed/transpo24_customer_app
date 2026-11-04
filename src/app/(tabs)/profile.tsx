@@ -24,7 +24,7 @@ import {
 import { getCustomerHome } from "@/lib/api";
 import {
   deleteCustomerAccountSession,
-  switchCustomerAccountOnDevice,
+  logoutCustomerSession,
   useAuthSession,
 } from "@/lib/auth-token";
 import { getCountryLabel } from "@/lib/country-currency";
@@ -110,7 +110,7 @@ export default function ProfileTabScreen() {
   }, [loadProfile]);
 
   const onLogout = async (): Promise<void> => {
-    await switchCustomerAccountOnDevice();
+    await logoutCustomerSession();
     router.replace("/");
   };
 

@@ -157,7 +157,7 @@ function RootNavigator() {
           <EnvironmentBanner />
           <OtaUpdateBanner />
           <View style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
-            <Stack>
+            <Stack initialRouteName="index">
           <Stack.Screen name="vehicle-request" options={serviceHeaderOptions(t('vehicleRequest.title'))} />
           <Stack.Screen
             name="index"

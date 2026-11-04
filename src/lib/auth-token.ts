@@ -287,11 +287,18 @@ export async function logoutCustomerSession(): Promise<void> {
   // Invalidate pending refreshes before waiting for the network.
   await clearSession(true);
   if (tokenToRevoke) {
-    await fetch(`${getApiBaseUrl()}/auth/logout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: tokenToRevoke }),
-    });
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), 5000);
+    try {
+      await fetch(`${getApiBaseUrl()}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: tokenToRevoke }),
+        signal: abort.signal,
+      });
+    } catch {
+      // Local credentials are cleared even offline; remote revocation requires connectivity.
+    } finally { clearTimeout(timeout); }
   }
 }
 

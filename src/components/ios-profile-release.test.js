@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { Platform, Text } from 'react-native';
+import { logoutCustomerSession, switchCustomerAccountOnDevice } from '@/lib/auth-token';
 import ProfileScreen from '@/app/(tabs)/profile';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), replace: jest.fn() }) }));
@@ -17,6 +18,7 @@ jest.mock('@/lib/auth-token', () => ({
   useAuthSession: () => ({ user: { name: 'Customer' } }),
   deleteCustomerAccountSession: jest.fn(),
   switchCustomerAccountOnDevice: jest.fn(),
+  logoutCustomerSession: jest.fn(async () => {}),
 }));
 jest.mock('@/localization/provider', () => ({
   useAppLanguage: () => ({ language: 'en', isChangingLanguage: false, setLanguage: jest.fn() }),
@@ -30,6 +32,7 @@ jest.mock('@/components/test-notification-button', () => {
 let renderer;
 let originalDev;
 beforeEach(() => {
+  jest.clearAllMocks();
   originalDev = global.__DEV__;
   jest.useFakeTimers();
 });
@@ -52,4 +55,12 @@ test.each([
   expect(labels.includes('Test Notification')).toBe(diagnostics);
   expect(labels.includes('Register Push Notifications')).toBe(diagnostics);
   expect(labels).toEqual(expect.arrayContaining(['Delete account', 'Privacy Policy', 'Terms of Service', 'Wallet']));
+});
+
+test('Logout clears/revokes the device session instead of keeping the account-switch credential',async()=>{
+ await act(async()=>{renderer=create(<ProfileScreen/>);});
+ const button=renderer.root.findAll(node=>typeof node.props.onPress==='function' && node.findAllByType(Text).some(text=>text.props.children==='Logout'))[0];
+ await act(async()=>button.props.onPress());
+ expect(logoutCustomerSession).toHaveBeenCalledTimes(1);
+ expect(switchCustomerAccountOnDevice).not.toHaveBeenCalled();
 });
