@@ -1,7 +1,7 @@
 jest.mock('node:child_process', () => ({ spawnSync: jest.fn() }));
 
 const { spawnSync } = require('node:child_process');
-const { reversePort } = require('./setup-adb-reverse');
+const { reversePort, getBackendHostPort } = require('./setup-adb-reverse');
 
 beforeEach(() => {
   spawnSync.mockReset();
@@ -41,6 +41,24 @@ test.each([
 test('reverses the requested port for a ready device', () => {
   reversePort(8081);
   expect(spawnSync).toHaveBeenCalledWith('adb', ['reverse', 'tcp:8081', 'tcp:8081'], { encoding: 'utf8' });
+});
+
+test('supports a separate host API port without changing the phone URL', () => {
+  reversePort(3001, 3002);
+  expect(spawnSync).toHaveBeenCalledWith('adb', ['reverse', 'tcp:3001', 'tcp:3002'], { encoding: 'utf8' });
+});
+
+test('validates the configured backend host port', () => {
+  const previous = process.env.EXPO_ANDROID_BACKEND_HOST_PORT;
+  try {
+    process.env.EXPO_ANDROID_BACKEND_HOST_PORT = '3002';
+    expect(getBackendHostPort()).toBe(3002);
+    process.env.EXPO_ANDROID_BACKEND_HOST_PORT = '65536';
+    expect(() => getBackendHostPort()).toThrow('must be a port');
+  } finally {
+    if (previous === undefined) delete process.env.EXPO_ANDROID_BACKEND_HOST_PORT;
+    else process.env.EXPO_ANDROID_BACKEND_HOST_PORT = previous;
+  }
 });
 
 test('still explains when no device is connected', () => {

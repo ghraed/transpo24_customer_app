@@ -44,3 +44,6 @@ example
 # generated native folders
 /ios
 /android
+
+# Local test-signed acceptance APKs; never store artifacts
+/.staging-artifacts/

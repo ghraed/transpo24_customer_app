@@ -1,0 +1,12 @@
+{
+  "sourceHash": "80a740fa09b3d7499eeec4ec8e43b7b0398f49a143f90a0f519ac42fa9247579",
+  "repository": "client_mobile",
+  "apk": "/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/.staging-artifacts/2026-11-05/client_mobile-staging.apk",
+  "sha256": "13eeb1f150136c454f9da53a7656637b1b75e4b4f653075e2d40c54a6405eaef",
+  "api": "http://127.0.0.1:57431",
+  "maps": false,
+  "firebase": false,
+  "ota": false,
+  "storeArtifact": false,
+  "source": "/tmp/transpo24-staging-client_mobile-cXb0nx/source"
+}

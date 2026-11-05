@@ -2,7 +2,7 @@
 
 const net = require('node:net');
 const { spawn, spawnSync } = require('node:child_process');
-const { reversePort } = require('./setup-adb-reverse');
+const { reversePort, getBackendHostPort } = require('./setup-adb-reverse');
 const { loadLocalEnv } = require('./local-env');
 const { prepareAndroid } = require('./prepare-android');
 
@@ -137,7 +137,7 @@ async function main() {
   const restartMetro = shouldRestartMetro(forwardedArgs);
 
   try {
-    reversePort(BACKEND_PORT);
+    reversePort(BACKEND_PORT, getBackendHostPort());
     if (metroPort !== BACKEND_PORT) {
       reversePort(metroPort);
     }

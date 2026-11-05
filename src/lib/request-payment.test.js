@@ -325,3 +325,15 @@ test('a pending terms review blocks booking payment until acceptance', async () 
   expect(tree.root.findByType(Modal).props.visible).toBe(true);
   expect(api.confirmDriverOffer).not.toHaveBeenCalled();
 });
+
+
+test('delayed authorization does not claim the booking is charged immediately', async () => {
+  const delayed = { ...mockLegacyPolicy, version: 'delayed-authorization-v1', booking: { ...mockLegacyPolicy.booking, authorization: 'AFTER_COUNTDOWN', capture: 'CUSTOMER_CONFIRMS_DELIVERY' } };
+  mockRequest.paymentPolicy = delayed;
+  api.getCustomerPaymentPolicy.mockResolvedValue(delayed);
+  await render();
+  expect(text()).toContain('payment_info.confirm_offer');
+  expect(text()).toContain('payment_info.delayed_start');
+  expect(text()).not.toContain('The agreed amount will be collected now when you confirm the driver.');
+  for (const misleading of ['Pay the agreed amount now with your credit card.', 'Pay the agreed amount now with your debit card.', 'Pay now with Google Pay in a development or production build.', 'Pay now using your available in-app wallet balance.']) expect(text()).not.toContain(misleading);
+});

@@ -4,6 +4,14 @@ const { spawnSync } = require('node:child_process');
 
 const BACKEND_PORT = 3001;
 
+function getBackendHostPort() {
+  const value = process.env.EXPO_ANDROID_BACKEND_HOST_PORT || String(BACKEND_PORT);
+  if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 65535) {
+    throw new Error('EXPO_ANDROID_BACKEND_HOST_PORT must be a port from 1 to 65535.');
+  }
+  return Number(value);
+}
+
 function runAdbCommand(args) {
   return spawnSync('adb', args, {
     encoding: 'utf8',
@@ -85,25 +93,26 @@ function getConnectedDevices() {
   return readyDevices;
 }
 
-function reversePort(port = BACKEND_PORT) {
+function reversePort(port = BACKEND_PORT, hostPort = port) {
   ensureAdbInstalled();
   const [device] = getConnectedDevices();
   const portMapping = `tcp:${port}`;
 
-  const reverseResult = runAdbCommand(['reverse', portMapping, portMapping]);
+  const reverseResult = runAdbCommand(['reverse', portMapping, `tcp:${hostPort}`]);
 
   if (reverseResult.status !== 0) {
     fail(reverseResult.stderr.trim() || `Failed to run \`adb reverse ${portMapping} ${portMapping}\`.`);
   }
 
   console.log(
-    `adb reverse is ready for backend port ${port} on device ${device.serial}. Android USB can use http://127.0.0.1:${port}.`,
+    `adb reverse is ready for device port ${port} → computer port ${hostPort} on device ${device.serial}. Android USB can use http://127.0.0.1:${port}.`,
   );
 }
 
 if (require.main === module) {
   try {
-    reversePort();
+    require('./local-env').loadLocalEnv();
+    reversePort(BACKEND_PORT, getBackendHostPort());
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown adb reverse error.';
     console.error(message);
@@ -113,4 +122,5 @@ if (require.main === module) {
 
 module.exports = {
   reversePort,
+  getBackendHostPort,
 };

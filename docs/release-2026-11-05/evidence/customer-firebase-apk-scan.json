@@ -1,0 +1,10 @@
+{
+  "sha256": "a5347195f2069587a196716a22696b570f8533204f031ea21aa41004e7576d6c",
+  "firebaseProjectId": "transpo24-staging",
+  "googleKeyPatternCount": 1,
+  "allGoogleKeyValuesMatchApprovedStagingFirebase": true,
+  "expectedGoogleAppIdPresent": true,
+  "loopbackPresent": true,
+  "serverSecretPatternCount": 0,
+  "scope": "Pattern scan and known Firebase identifiers; not a comprehensive secret audit"
+}

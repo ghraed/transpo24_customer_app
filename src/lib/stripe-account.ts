@@ -1,5 +1,6 @@
 import { initStripe } from '@stripe/stripe-react-native';
 import { getStripePublishableKey } from './stripe-config';
+import { getStripeUrlScheme } from './stripe-url-scheme';
 
 let pending: Promise<void> = Promise.resolve();
 
@@ -13,7 +14,7 @@ export async function withStripeAccount<T>(accountId: string | null | undefined,
   const config = {
     publishableKey: getStripePublishableKey(),
     merchantIdentifier: process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER,
-    urlScheme: 'transpo24',
+    urlScheme: getStripeUrlScheme(),
   };
   try {
     await initStripe({ ...config, stripeAccountId: accountId ?? undefined });

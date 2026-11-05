@@ -72,7 +72,9 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "privacy:check": "node scripts/check-privacy.mjs",
-    "pretypecheck": "npm run privacy:check"
+    "pretypecheck": "npm run privacy:check",
+    "postinstall": "node scripts/security/apply-backports.cjs",
+    "security:backports": "node scripts/security/verify-backports.cjs"
   },
   "jest": {
     "preset": "jest-expo"

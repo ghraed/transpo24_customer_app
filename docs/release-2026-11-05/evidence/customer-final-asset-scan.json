@@ -1,0 +1,7 @@
+{
+  "apkSha256": "13eeb1f150136c454f9da53a7656637b1b75e4b4f653075e2d40c54a6405eaef",
+  "loopbackPresent": true,
+  "secretKeyPatternCount": 0,
+  "googleKeyPatternCount": 0,
+  "scope": "Asset byte pattern scan only; not a complete secret audit"
+}

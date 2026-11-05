@@ -1,5 +1,6 @@
 import { LegalConsentBoundary } from '@/components/legal-consent-boundary';
 import { getStripePublishableKey } from '@/lib/stripe-config';
+import { getStripeUrlScheme } from '@/lib/stripe-url-scheme';
 import { PickupPaymentReminderPopup } from '@/components/pickup-payment-reminder';
 import { PaymentTermsProvider } from '@/components/payment-terms-provider';
 import { PaymentPolicyContext } from '@/lib/payment-policy-context';
@@ -128,7 +129,7 @@ function RootNavigator() {
       <StripeProvider
         publishableKey={publishableKey}
         merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
-        urlScheme="transpo24"
+        urlScheme={getStripeUrlScheme()}
       >
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
@@ -148,7 +149,7 @@ function RootNavigator() {
     <StripeProvider
       publishableKey={publishableKey}
       merchantIdentifier={process.env.EXPO_PUBLIC_STRIPE_MERCHANT_IDENTIFIER}
-      urlScheme="transpo24"
+      urlScheme={getStripeUrlScheme()}
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <PaymentTermsProvider key={`${authSession.status}.${authSession.user?.id ?? ''}`}
@@ -262,7 +263,7 @@ function RootNavigator() {
           <Stack.Screen name="submit-request" options={serviceHeaderOptions(t('Submit Request'))} />
           <Stack.Screen name="pending-requests" options={{ title: t('Pending requests'), headerShown: false }} />
           <Stack.Screen name="request-status" options={{ title: t('Request Status') }} />
-          <Stack.Screen name="request-payment" options={{ title: t('Pay Now') }} />
+          <Stack.Screen name="request-payment" options={{ title: t('Payment') }} />
           <Stack.Screen name="payment-method" options={{ title: t('Payment Method') }} />
           <Stack.Screen name="wallet" options={{ title: t('Wallet') }} />
           <Stack.Screen name="wallet-top-up" options={{ title: t('Add Money') }} />

@@ -187,7 +187,7 @@ async function parseError(response: Response, fallback: string): Promise<Error> 
       const errorData = JSON.parse(raw) as ApiErrorResponse;
       return Object.assign(new Error(toMessage(errorData, fallback)), { code: errorData.code });
     } catch {
-      return new Error(appI18n.t("{{value0}} Server returned: {{value1}}", { value0: fallback, value1: raw.slice(0, 200) }));
+      return new Error(appI18n.t(fallback));
     }
   } catch {
     return new Error(fallback);

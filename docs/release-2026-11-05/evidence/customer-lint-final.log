@@ -1,0 +1,57 @@
+
+> transpo24@1.0.0 lint
+> eslint .
+
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/components/chat-attachment-group.test.js
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/components/chat-attachment-picker.test.js
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/components/chat-attachment.test.js
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/components/phone-auth-screen.tsx
+  117:6  warning  React Hook useCallback has an unnecessary dependency: 'mode'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/chat-files.test.ts
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+  8:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/chat-files.ts
+  63:16  warning  'pickFile' is defined but never used  @typescript-eslint/no-unused-vars
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/request-files.test.ts
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/request-files.ts
+  3:13  warning  'FileSystem' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 33 problems (0 errors, 33 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.
+

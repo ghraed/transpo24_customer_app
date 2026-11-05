@@ -602,9 +602,9 @@ export default function RequestPaymentScreen() {
             </View>
             <Text style={styles.heroLabel}>{appI18n.t("Payment")}</Text>
           </View>
-          <Text style={styles.heroTitle}>{appI18n.t("Pay Now")}</Text>
+          <Text style={styles.heroTitle}>{appI18n.t(policy ? (delayed ? "payment_info.confirm_offer" : "Pay Now") : "Payment")}</Text>
           <Text style={styles.heroSubtitle}>
-            {appI18n.t("The agreed amount will be collected now when you confirm the driver.")}</Text>
+            {policy ? appI18n.t(delayed ? "payment_info.delayed_start" : "The agreed amount will be collected now when you confirm the driver.", { minutes: (policy.booking.freeCancellationSeconds ?? 600) / 60 }) : null}</Text>
         </View>
 
         <PaymentInfo context={requestData?.status === 'RESERVED' ? 'reservation' : 'booking'} policy={policy} details={[formatMoney(amount, currency), getPaymentMethodLabel(selectedMethod)]} />
@@ -648,9 +648,11 @@ export default function RequestPaymentScreen() {
                   <View style={styles.methodCopy}>
                     <Text style={styles.methodTitle}>{appI18n.t(option.title)}</Text>
                     <Text style={styles.methodDescription}>
-                      {appI18n.t(Platform.OS === 'ios' && option.method === 'APPLE_PAY'
-                        ? 'Pay with Apple Pay'
-                        : option.description)}
+                      {policy ? appI18n.t(delayed
+                        ? option.method === 'APP_WALLET' ? 'payment_info.wallet' : 'payment_info.card_setup'
+                        : Platform.OS === 'ios' && option.method === 'APPLE_PAY'
+                          ? 'Pay with Apple Pay'
+                          : option.description) : null}
                     </Text>
                     {isUnavailableInExpoGo ? (
                       <Text style={styles.methodHint}>
@@ -691,9 +693,11 @@ export default function RequestPaymentScreen() {
             <Text style={styles.sectionTitle}>{appI18n.t("Card Details")}</Text>
             <SavedCardPicker disabled={isSubmitting} onChange={setCardSelection} />
             <Text style={styles.helperText}>
-              {selectedMethod === 'CREDIT_CARD'
-                ? delayed ? 'payment_info.delayed_capture' : 'Your credit card will be charged now when you confirm the payment.'
-                : delayed ? 'payment_info.delayed_capture' : 'Your debit card will be charged now when you confirm the payment.'}
+              {policy ? appI18n.t(delayed
+                ? 'payment_info.delayed_capture'
+                : selectedMethod === 'CREDIT_CARD'
+                  ? 'Your credit card will be charged now when you confirm the payment.'
+                  : 'Your debit card will be charged now when you confirm the payment.') : null}
             </Text>
           </View>
         ) : null}
@@ -729,7 +733,7 @@ export default function RequestPaymentScreen() {
                 <Text style={styles.summaryValue}>{paymentResult.status}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{appI18n.t("Collected amount")}</Text>
+                <Text style={styles.summaryLabel}>{appI18n.t(paymentResult.capturedAmount > 0 ? "Collected amount" : "Total amount")}</Text>
                 <Text style={styles.summaryValue}>
                   {formatMoney(
                     paymentResult.capturedAmount > 0 ? paymentResult.capturedAmount : paymentResult.amount,

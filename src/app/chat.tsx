@@ -1,4 +1,4 @@
-import { pendingChatOperations, reconcileChatOperations } from '@/lib/chat-outbox';
+import { reconcileChatComposer } from '@/lib/chat-outbox';
 import { ChatAttachment, ChatAttachmentButton } from '@/components/chat-attachment';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -548,9 +548,8 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!room?.id) return;
     try {
-      reconcileChatOperations(messages);
-      const pending = pendingChatOperations(room?.id).filter(op => op.kind === 'TEXT').at(-1);
-      if (pending) setDraft(current => current || pending.payload);
+      const recoverDraft = reconcileChatComposer(room.id, messages);
+      setDraft(recoverDraft);
     } catch { /* Keep the conversation readable if recovery storage is unavailable. */ }
   }, [room?.id, messages]);
 
