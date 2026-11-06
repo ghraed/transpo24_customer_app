@@ -1,7 +1,7 @@
 import { act, create } from 'react-test-renderer';
 import React from 'react';
 import { beforeEach, expect, it, jest } from '@jest/globals';
-import { VehicleEditor } from './vehicle-editor';
+import { ChoiceField, VehicleEditor } from './vehicle-editor';
 import { newVehicleDraft } from './vehicle-draft';
 import { decodeVehicleVin } from '@/lib/api';
 
@@ -63,15 +63,17 @@ it('rejects an invalid VIN in VIN mode', async () => {
   expect(decodeVehicleVin).not.toHaveBeenCalled();
 });
 
-it('keeps both identifiers visible and shows only the six vehicle inputs', async () => {
+it('shows make and model dropdowns in manual entry with editable identifiers, weight and year', async () => {
   let tree;
   const value = { ...newVehicleDraft('customer', 'service').vehicle, manual: true };
   await act(async () => { tree = create(<VehicleEditor value={value} onChange={jest.fn()} errors={[]} />); });
   const fields = tree.root.findAll(node => typeof node.props.onChangeText === 'function')
     .map(node => node.props.accessibilityLabel).filter(Boolean);
   expect([...new Set(fields)]).toEqual([
-    'vehicleRequest.vin', 'vehicleRequest.registration', 'vehicleRequest.brand',
-    'vehicleRequest.model', 'vehicleRequest.weight', 'vehicleRequest.year',
+    'vehicleRequest.vin', 'vehicleRequest.registration', 'vehicleRequest.weight', 'vehicleRequest.year',
+  ]);
+  expect(tree.root.findAllByType(ChoiceField).map(node => node.props.label)).toEqual([
+    'vehicleRequest.brand', 'vehicleRequest.model',
   ]);
   expect(tree.root.findAll(node => node.props.children === 'vehicleRequest.bodyType')).toHaveLength(0);
   expect(tree.root.findAll(node => node.props.children === 'vehicleRequest.transmission')).toHaveLength(0);

@@ -1008,7 +1008,7 @@
   "vehicleRequest.entryMethod": "Entry method",
   "vehicleRequest.catalogMode": "Catalog",
   "vehicleRequest.manualMode": "Manual entry",
-  "vehicleRequest.catalogUnavailable": "The vehicle list is unavailable. You can enter the details manually.",
+  "vehicleRequest.catalogUnavailable": "The vehicle list is unavailable. Please retry or use VIN / registration lookup.",
   "vehicleRequest.lookupUnavailable": "No complete vehicle data found. Please select or enter the missing details.",
   "vehicleRequest.checkLookup": "Please check the vehicle data and complete any missing fields.",
   "vehicleRequest.additionalIssues": "Additional requirements (multiple choices)",
@@ -1462,5 +1462,10 @@
   },
   "Direct driver payments require a card or Apple Pay or Google Pay.": "Direct driver payments require a card or Apple Pay or Google Pay.",
   "I agree to the Terms of Service": "I agree to the Terms of Service",
-  "Unable to load Terms of Service. Please try again.": "Unable to load Terms of Service. Please try again."
+  "Unable to load Terms of Service. Please try again.": "Unable to load Terms of Service. Please try again.",
+  "vehicleRequest.catalogLoading": "Loading vehicle list…",
+  "vehicleRequest.catalogEmpty": "No matches. Try another search or use VIN / registration lookup.",
+  "vehicleRequest.catalogRetry": "Try again",
+  "vehicleRequest.modelSearchHint": "Search to find more models for this make, e.g. C 320. Results are suggestions, not the complete model list.",
+  "vehicleRequest.catalogSource": "Vehicle data: SwissCarInfo"
 }

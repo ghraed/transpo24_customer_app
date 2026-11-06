@@ -1003,7 +1003,7 @@
   "vehicleRequest.entryMethod": "طريقة الإدخال",
   "vehicleRequest.catalogMode": "القائمة",
   "vehicleRequest.manualMode": "إدخال يدوي",
-  "vehicleRequest.catalogUnavailable": "قائمة السيارات غير متاحة. يمكنك إدخال البيانات يدوياً.",
+  "vehicleRequest.catalogUnavailable": "قائمة المركبات غير متاحة. أعد المحاولة أو ابحث برقم الهيكل أو رقم التسجيل.",
   "vehicleRequest.lookupUnavailable": "لم تتوفر بيانات كاملة للسيارة. اختر البيانات الناقصة أو أدخلها يدوياً.",
   "vehicleRequest.checkLookup": "يرجى مراجعة بيانات السيارة وإكمال الحقول الناقصة.",
   "vehicleRequest.additionalIssues": "مشاكل ومتطلبات إضافية (اختيارات متعددة)",
@@ -1462,5 +1462,10 @@
   "Agree to Terms of Service and Privacy Policy": "الموافقة على شروط الخدمة وسياسة الخصوصية",
   "I agree to the": "أوافق على",
   "Please accept the Terms of Service and Privacy Policy to create an account.": "يرجى قبول شروط الخدمة وسياسة الخصوصية لإنشاء حساب.",
-  "Privacy Policy": "سياسة الخصوصية"
+  "Privacy Policy": "سياسة الخصوصية",
+  "vehicleRequest.catalogLoading": "جارٍ تحميل قائمة المركبات…",
+  "vehicleRequest.catalogEmpty": "لا توجد نتائج. جرّب بحثاً آخر أو ابحث برقم الهيكل أو رقم التسجيل.",
+  "vehicleRequest.catalogRetry": "إعادة المحاولة",
+  "vehicleRequest.modelSearchHint": "ابحث عن طرازات أخرى لهذه العلامة، مثل C 320. النتائج اقتراحات وليست قائمة كاملة بالطرازات.",
+  "vehicleRequest.catalogSource": "بيانات المركبات: SwissCarInfo"
 }

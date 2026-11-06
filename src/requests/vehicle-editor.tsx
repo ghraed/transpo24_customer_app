@@ -3,7 +3,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TextInput,
@@ -27,12 +27,26 @@ export function ChoiceField({
   options,
   onChange,
   invalid = false,
+  disabled = false,
+  loading = false,
+  onSearchChange,
+  searchHint,
+  error = false,
+  onRetry,
+  displayValue,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
   invalid?: boolean;
+  disabled?: boolean;
+  loading?: boolean;
+  onSearchChange?: (query: string) => void;
+  searchHint?: string;
+  error?: boolean;
+  onRetry?: () => void;
+  displayValue?: string;
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -43,17 +57,21 @@ export function ChoiceField({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
-        style={[styles.input, invalid && styles.invalid]}
+        accessibilityState={{ disabled: disabled || loading, expanded: open, busy: loading }}
+        disabled={disabled || loading}
+        style={[styles.input, (disabled || loading) && styles.disabled, invalid && styles.invalid]}
         onPress={() => {
           setQuery('');
+          onSearchChange?.('');
           setOpen(true);
         }}
       >
-        <Text style={styles.body}>
+        {loading ? <ActivityIndicator color="#111827" /> : <Text style={styles.body}>
           {options.find((option) => option.value === value)?.label ||
+            displayValue ||
             value ||
             t('vehicleRequest.select')}
-        </Text>
+        </Text>}
       </Pressable>
       <Modal
         visible={open}
@@ -72,18 +90,29 @@ export function ChoiceField({
             style={styles.input}
             placeholderTextColor="#98A2B3"
             value={query}
-            onChangeText={setQuery}
+            onChangeText={(text) => { setQuery(text); onSearchChange?.(text); }}
+            maxLength={80}
             accessibilityLabel={t('vehicleRequest.search')}
             placeholder={t('vehicleRequest.search')}
           />
-          <ScrollView keyboardShouldPersistTaps="handled">
-            {options
+          {searchHint ? <Text style={styles.body}>{searchHint}</Text> : null}
+          <FlatList
+            keyboardShouldPersistTaps="handled"
+            data={loading || error ? [] : options
               .filter((option) =>
                 option.label
                   .toLocaleLowerCase()
-                  .includes(query.toLocaleLowerCase()),
-              )
-              .map((option) => (
+                  .replace(/\s/g, '')
+                  .includes(query.toLocaleLowerCase().replace(/\s/g, '')),
+              )}
+            keyExtractor={(option) => option.value}
+            ListEmptyComponent={loading ? <ActivityIndicator accessibilityLabel={t('vehicleRequest.catalogLoading')} /> : (
+              <View style={styles.field}>
+                <Text accessibilityLiveRegion="polite" style={styles.body}>{t(error ? 'vehicleRequest.catalogUnavailable' : 'vehicleRequest.catalogEmpty')}</Text>
+                {error && onRetry ? <Pressable style={styles.lookup} onPress={onRetry}><Text style={styles.buttonText}>{t('vehicleRequest.catalogRetry')}</Text></Pressable> : null}
+              </View>
+            )}
+            renderItem={({ item: option }) => (
                 <Pressable
                   accessibilityRole="radio"
                   accessibilityState={{ selected: value === option.value }}
@@ -96,8 +125,8 @@ export function ChoiceField({
                 >
                   <Text style={styles.body}>{option.label}</Text>
                 </Pressable>
-              ))}
-          </ScrollView>
+              )}
+          />
         </SafeAreaView>
       </Modal>
     </View>
@@ -116,6 +145,21 @@ export function VehicleEditor({
   const { t } = useTranslation();
   const [brands, setBrands] = useState<VehicleCatalogBrand[]>([]);
   const [models, setModels] = useState<VehicleCatalogModel[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [brandError, setBrandError] = useState(false);
+  const [modelError, setModelError] = useState(false);
+  const [modelSearch, setModelSearch] = useState('');
+  const [loadedModelContext, setLoadedModelContext] = useState('');
+  const [catalogRetry, setCatalogRetry] = useState(0);
+  const modelContext = value.brandId ? `${value.brandId}:${modelSearch}` : '';
+  const retryCatalog = () => {
+    setBrandsLoading(true);
+    setBrandError(false);
+    setModelsLoading(Boolean(value.brandId));
+    setModelError(false);
+    setCatalogRetry((count) => count + 1);
+  };
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [lookupMode, setLookupMode] = useState<'vin' | 'registration'>(
@@ -139,26 +183,34 @@ export function VehicleEditor({
         if (active) setBrands(result);
       })
       .catch(() => {
-        if (active) setMessage('vehicleRequest.catalogUnavailable');
-      });
+        if (active) { setBrandError(true); setMessage('vehicleRequest.catalogUnavailable'); }
+      })
+      .finally(() => { if (active) setBrandsLoading(false); });
     return () => {
       active = false;
     };
-  }, []);
+  }, [catalogRetry]);
   useEffect(() => {
     let active = true;
-    if (value.brandId)
-      void getVehicleModels(value.brandId)
+    const timer = setTimeout(() => {
+      if (!value.brandId) return;
+      setModels([]);
+      setModelError(false);
+      setModelsLoading(true);
+      void getVehicleModels(value.brandId, modelSearch)
         .then((result) => {
-          if (active) setModels(result);
+          if (active) setModels(result.filter((model) => !model.brandId || model.brandId === value.brandId));
         })
         .catch(() => {
-          if (active) setMessage('vehicleRequest.catalogUnavailable');
-        });
+          if (active) { setModelError(true); setMessage('vehicleRequest.catalogUnavailable'); }
+        })
+        .finally(() => { if (active) { setModelsLoading(false); setLoadedModelContext(`${value.brandId}:${modelSearch}`); } });
+    }, modelSearch ? 350 : 0);
     return () => {
       active = false;
+      clearTimeout(timer);
     };
-  }, [value.brandId]);
+  }, [value.brandId, modelSearch, catalogRetry]);
   const lookup = async () => {
     if (lookupMode === 'vin' && !/^[A-HJ-NPR-Z0-9]{17}$/.test(value.vin)) {
       setMessage('vehicleRequest.errorVin');
@@ -241,7 +293,7 @@ export function VehicleEditor({
     }
   };
   const field = (
-    name: 'vin' | 'registration' | 'brand' | 'model' | 'year' | 'weight',
+    name: 'vin' | 'registration' | 'year' | 'weight',
     label: string,
     numeric = false,
   ) => (
@@ -310,88 +362,61 @@ export function VehicleEditor({
         ) : null}
       </View>
       <View style={styles.card}>
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('vehicleRequest.entryMethod')}</Text>
-          <View style={styles.entryModes}>
-            {([false, true] as const).map((manual) => {
-              const selected = value.manual === manual;
-              const label = manual
-                ? 'vehicleRequest.manualMode'
-                : 'vehicleRequest.catalogMode';
-              return (
-                <Pressable
-                  key={label}
-                  accessibilityRole="radio"
-                  accessibilityLabel={t(label)}
-                  accessibilityState={{ selected, checked: selected }}
-                  onPress={() => {
-                    if (!selected) patch({ manual, source: 'MANUAL' });
-                  }}
-                  style={({ pressed }) => [
-                    styles.entryMode,
-                    selected && styles.entryModeSelected,
-                    pressed && styles.entryModePressed,
-                  ]}
-                >
-                  <View
-                    accessibilityElementsHidden
-                    importantForAccessibility="no-hide-descendants"
-                    style={[styles.modeIndicator, selected && styles.modeIndicatorSelected]}
-                  >
-                    {selected ? <View style={styles.modeIndicatorDot} /> : null}
-                  </View>
-                  <Text style={[styles.entryModeText, selected && styles.entryModeTextSelected]}>
-                    {t(label)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-        {value.manual ? (
-          <>
-            {field('brand', 'vehicleRequest.brand')}
-            {field('model', 'vehicleRequest.model')}
-          </>
-        ) : (
-          <>
-            <ChoiceField
-              label={t('vehicleRequest.brand')}
-              value={value.brandId || value.brand}
-              invalid={errors.includes('brand')}
-              options={brands.map((brand) => ({
-                value: brand.id,
-                label: brand.name,
-              }))}
-              onChange={(id) => {
-                setModels([]);
-                patch({
-                  brandId: id,
-                  brand: brands.find((brand) => brand.id === id)?.name ?? '',
-                  modelId: '',
-                  model: '',
-                  source: 'MANUAL',
-                });
-              }}
-            />
-            <ChoiceField
-              label={t('vehicleRequest.model')}
-              value={value.modelId || value.model}
-              invalid={errors.includes('model')}
-              options={models.map((model) => ({
-                value: model.id,
-                label: model.name,
-              }))}
-              onChange={(id) =>
-                patch({
-                  modelId: id,
-                  model: models.find((model) => model.id === id)?.name ?? '',
-                  source: 'MANUAL',
-                })
-              }
-            />
-          </>
-        )}
+        <Text style={styles.label}>{t('vehicleRequest.manualMode')}</Text>
+        <ChoiceField
+          label={t('vehicleRequest.brand')}
+          value={value.brandId || value.brand}
+          displayValue={value.brand}
+          invalid={errors.includes('brand')}
+          loading={brandsLoading}
+          disabled={loading}
+          error={brandError}
+          onRetry={retryCatalog}
+          options={brands.map((brand) => ({
+            value: brand.id,
+            label: brand.name,
+          }))}
+          onChange={(id) => {
+            if (id === value.brandId) return;
+            setModels([]);
+            setModelSearch('');
+            patch({
+              brandId: id,
+              brand: brands.find((brand) => brand.id === id)?.name ?? '',
+              modelId: '',
+              model: '',
+              manual: false,
+              source: 'MANUAL',
+            });
+          }}
+        />
+        <ChoiceField
+          label={t('vehicleRequest.model')}
+          value={value.modelId || value.model}
+          displayValue={value.model}
+          invalid={errors.includes('model')}
+          disabled={!value.brandId || loading}
+          loading={Boolean(value.brandId) && (modelsLoading || loadedModelContext !== modelContext)}
+          error={modelError}
+          onRetry={retryCatalog}
+          onSearchChange={value.brandId.startsWith('sci:') ? (query) => {
+            if (query !== modelSearch) { setModels([]); setModelsLoading(true); setModelSearch(query); }
+          } : undefined}
+          searchHint={value.brandId.startsWith('sci:') ? t('vehicleRequest.modelSearchHint') : undefined}
+          options={models.map((model) => ({
+            value: model.id,
+            label: model.name,
+          }))}
+          onChange={(id) =>
+            patch({
+              modelId: id,
+              model: models.find((model) => model.id === id)?.name ?? '',
+              manual: false,
+              source: 'MANUAL',
+            })
+          }
+        />
+        {(value.brandId.startsWith('sci:') || brands.some((brand) => brand.id.startsWith('sci:'))) ? <Text style={styles.body}>{t('vehicleRequest.catalogSource')}</Text> : null}
         {field('weight', 'vehicleRequest.weight', true)}
         {field('year', 'vehicleRequest.year', true)}
       </View>
@@ -415,43 +440,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   field: { gap: 8 },
-  entryModes: {
-    flexDirection: 'row',
-    gap: 8,
-    padding: 4,
-    borderRadius: 16,
-    backgroundColor: '#F4F6F8',
-    borderWidth: 1,
-    borderColor: '#E5E8EF',
-  },
-  entryMode: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    minHeight: 48,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  entryModeSelected: { backgroundColor: '#FFF', borderColor: '#FFC548' },
-  entryModePressed: { opacity: 0.7 },
-  entryModeText: { flexShrink: 1, color: '#475467', fontSize: 14, fontWeight: '500' },
-  entryModeTextSelected: { color: '#111827', fontWeight: '700' },
-  modeIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#667085',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modeIndicatorSelected: { borderColor: '#111827' },
-  modeIndicatorDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#111827' },
   label: { fontSize: 14, fontWeight: '600', color: '#111827' },
   input: {
     borderWidth: 1,
@@ -465,6 +453,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   invalid: { borderColor: '#C0392B', borderWidth: 2 },
+  disabled: { backgroundColor: '#F4F6F8', opacity: 0.65 },
   row: {
     flexDirection: 'row',
     gap: 12,

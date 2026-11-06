@@ -25,6 +25,28 @@ accepts a Swiss Stammnummer without requiring a VIN. Ambiguous lookup results
 fall back to manual selection. The existing Google Maps/Places configuration is
 used for autocomplete, country fallback and route distance.
 
+SwissCarInfo catalog dropdowns
+----------------------------
+
+The vehicle transport form has one Manual entry section: make and model are
+always searchable dropdowns, including for restored drafts previously using
+free-text entry. The separate Catalog / Manual entry switch has been removed.
+
+With the existing backend `SWISSCARINFO_API_KEY` configured, the make selector
+loads `/v3/brands?with_models=1`. The dependent model selector requests
+`type=brand_model` search suggestions for that make, with debounced remote search
+and exact-make filtering. Results are a shortlist from at most 100 matching
+vehicle records, not an exhaustive list of models. The API's model-list endpoint
+has not been confirmed; no full database import is performed. Responses are
+cached in backend memory for 24 hours, bounded to 200 queries. The key stays on
+the server, and the form attributes the data to SwissCarInfo.
+
+Changing the make clears the selected model and ignores pending results for the
+previous make. Search accepts compact input such as C320. Year and weight remain
+editable; neither is inferred from ambiguous model matches. Deploy the updated
+backend and client together to enable remote model search. Verify the dropdown
+modal, keyboard, loading/retry states and selection on a physical device.
+
 Translation review
 ------------------
 

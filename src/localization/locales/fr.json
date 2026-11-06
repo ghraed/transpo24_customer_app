@@ -1003,7 +1003,7 @@
   "vehicleRequest.entryMethod": "Mode de saisie",
   "vehicleRequest.catalogMode": "Catalogue",
   "vehicleRequest.manualMode": "Saisie manuelle",
-  "vehicleRequest.catalogUnavailable": "La liste est indisponible. Vous pouvez saisir les données manuellement.",
+  "vehicleRequest.catalogUnavailable": "La liste des véhicules est indisponible. Réessayez ou utilisez la recherche par VIN / numéro de registre.",
   "vehicleRequest.lookupUnavailable": "Données incomplètes ou introuvables. Sélectionnez ou saisissez les informations manquantes.",
   "vehicleRequest.checkLookup": "Vérifiez les données et complétez les champs manquants.",
   "vehicleRequest.additionalIssues": "Besoins supplémentaires (choix multiples)",
@@ -1462,5 +1462,10 @@
   "Agree to Terms of Service and Privacy Policy": "Accepter les conditions d’utilisation et la politique de confidentialité",
   "I agree to the": "J’accepte",
   "Please accept the Terms of Service and Privacy Policy to create an account.": "Veuillez accepter les conditions d’utilisation et la politique de confidentialité pour créer un compte.",
-  "Privacy Policy": "Politique de confidentialité"
+  "Privacy Policy": "Politique de confidentialité",
+  "vehicleRequest.catalogLoading": "Chargement de la liste des véhicules…",
+  "vehicleRequest.catalogEmpty": "Aucun résultat. Essayez une autre recherche ou la recherche par VIN / numéro de registre.",
+  "vehicleRequest.catalogRetry": "Réessayer",
+  "vehicleRequest.modelSearchHint": "Recherchez d’autres modèles de cette marque, par ex. C 320. Les résultats sont des suggestions et non une liste complète.",
+  "vehicleRequest.catalogSource": "Données des véhicules : SwissCarInfo"
 }

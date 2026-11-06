@@ -921,8 +921,8 @@ export async function getVehicleBrands(): Promise<VehicleCatalogBrand[]> {
   return Array.isArray(data) ? data : (data.brands ?? []);
 }
 
-export async function getVehicleModels(brandId: string): Promise<VehicleCatalogModel[]> {
-  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/models?brandId=${encodeURIComponent(brandId)}`;
+export async function getVehicleModels(brandId: string, search = ''): Promise<VehicleCatalogModel[]> {
+  const endpoint = `${getApiBaseUrl()}/vehicles/catalog/models?brandId=${encodeURIComponent(brandId)}${search ? `&search=${encodeURIComponent(search)}` : ''}`;
   const response = await fetchWithNetworkError(endpoint, {
       method: 'GET',
       headers: getAuthHeaders(),

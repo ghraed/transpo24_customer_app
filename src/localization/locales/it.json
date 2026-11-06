@@ -1008,7 +1008,7 @@
   "vehicleRequest.entryMethod": "Modalità di inserimento",
   "vehicleRequest.catalogMode": "Catalogo",
   "vehicleRequest.manualMode": "Inserimento manuale",
-  "vehicleRequest.catalogUnavailable": "L’elenco non è disponibile. Puoi inserire i dati manualmente.",
+  "vehicleRequest.catalogUnavailable": "L’elenco dei veicoli non è disponibile. Riprova o cerca tramite VIN / numero di registro.",
   "vehicleRequest.lookupUnavailable": "Dati incompleti o non trovati. Completa i campi mancanti.",
   "vehicleRequest.checkLookup": "Controlla i dati del veicolo e completa i campi mancanti.",
   "vehicleRequest.additionalIssues": "Esigenze aggiuntive (scelta multipla)",
@@ -1462,5 +1462,10 @@
   "Direct driver payments require a card or Apple Pay or Google Pay.": "I pagamenti diretti agli autisti richiedono una carta, Apple Pay o Google Pay.",
   "I agree to the Terms of Service": "Accetto i termini di servizio",
   "Unable to load Terms of Service. Please try again.": "Impossibile caricare i termini di servizio. Riprova.",
-  "Translated to {{language}}": "Tradotto in {{language}}"
+  "Translated to {{language}}": "Tradotto in {{language}}",
+  "vehicleRequest.catalogLoading": "Caricamento dell’elenco dei veicoli…",
+  "vehicleRequest.catalogEmpty": "Nessun risultato. Prova un’altra ricerca o cerca tramite VIN / numero di registro.",
+  "vehicleRequest.catalogRetry": "Riprova",
+  "vehicleRequest.modelSearchHint": "Cerca altri modelli di questa marca, ad es. C 320. I risultati sono suggerimenti, non l’elenco completo.",
+  "vehicleRequest.catalogSource": "Dati dei veicoli: SwissCarInfo"
 }
