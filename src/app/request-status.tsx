@@ -10,6 +10,7 @@ import { ReportDriver } from '@/components/report-driver';
 import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { handleNextAction } from '@stripe/stripe-react-native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -55,6 +56,7 @@ import {
   getRequestTracking,
 } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth-token';
+import { withStripeAccount } from '@/lib/stripe-account';
 import { isHistoryRequestStatus, requestStatusErrorKey } from '@/lib/request-status';
 import { DEFAULT_LANGUAGE } from '@/localization/languages';
 import { useAppLanguage } from '@/localization/provider';
@@ -1176,12 +1178,31 @@ export default function RequestStatusScreen() {
     setSuccessMessage('');
 
     try {
-      const updatedCharge = await approveAdditionalCharge(requestId, activeAdditionalCharge.id, {
+      const approval = {
         confirmationLocale: resolvedConfirmationLocale,
         confirmationText: trimmedAdditionalChargeConfirmationText,
         paymentOption: additionalChargePaymentOption,
         policyVersion: transactionPolicy.version,
-      });
+      };
+      let updatedCharge = await approveAdditionalCharge(requestId, activeAdditionalCharge.id, approval);
+      if (updatedCharge.payment.stripeClientSecret) {
+        const result = await withStripeAccount(updatedCharge.payment.stripeAccountId, () =>
+          handleNextAction(updatedCharge.payment.stripeClientSecret!),
+        );
+        if (result.error) throw new Error(result.error.message);
+        try {
+          updatedCharge = await approveAdditionalCharge(requestId, activeAdditionalCharge.id, approval);
+        } catch (retryError) {
+          const reconciled = (await getRequestAdditionalCharges(requestId)).find(
+            (charge) => charge.id === activeAdditionalCharge.id && charge.status === 'CAPTURED',
+          );
+          if (!reconciled) throw retryError;
+          updatedCharge = reconciled;
+        }
+      }
+      if (updatedCharge.status !== 'CAPTURED') {
+        throw new Error(t('extra_expense.approval_failed'));
+      }
 
       setAdditionalCharges((previousCharges) =>
         previousCharges.map((charge) =>

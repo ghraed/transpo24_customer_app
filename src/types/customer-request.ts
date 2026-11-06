@@ -498,6 +498,8 @@ export interface AdditionalCharge {
     paymentOption: "SAVED_CARD" | "CASH_ON_DELIVERY" | null;
     stripePaymentIntentId: string | null;
     stripeChargeId: string | null;
+    stripeClientSecret?: string | null;
+    stripeAccountId?: string | null;
     savedPaymentMethod: SavedPaymentMethodSummary | null;
     failureReason: string | null;
   };
