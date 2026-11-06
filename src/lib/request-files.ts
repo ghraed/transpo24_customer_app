@@ -1,3 +1,4 @@
+import { chatAccountId, assertChatAccount } from './chat-outbox';
 import { openChatFile } from './chat-files';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -58,8 +59,9 @@ function uploadNativeFile(
   });
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, expectedOwner = chatAccountId()): Promise<T> {
   const token = await readToken();
+  assertChatAccount(expectedOwner);
   const url = `${baseUrl()}${path}`;
   const response =
     Platform.OS !== 'web' && options.body instanceof FormData
@@ -75,7 +77,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(
       response.status === 413 ? 'documents.tooLarge' : 'documents.failed',
     );
-  return response.json() as Promise<T>;
+  const result = await response.json() as T;
+  assertChatAccount(expectedOwner);
+  return result;
 }
 export const listRequestDocuments = (id: string) =>
   request<DocumentsState>(`/request-files/request/${encodeURIComponent(id)}`);
@@ -104,12 +108,15 @@ async function pickFile() {
   return form;
 }
 export async function uploadRequestDocument(id: string, type: DocumentType) {
+  const owner = chatAccountId();
   const form = await pickFile();
   if (!form) return null;
+  assertChatAccount(owner);
   form.append('documentType', type);
   return request<RequestFile>(
     `/request-files/request/${encodeURIComponent(id)}`,
     { method: 'POST', body: form },
+    owner,
   );
 }
 export { sendChatAttachment } from './chat-files';

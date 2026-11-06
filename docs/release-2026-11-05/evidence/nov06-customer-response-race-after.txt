@@ -1,0 +1,43 @@
+FAIL src/lib/auth-token.test.ts
+  ✓ explicit offline logout clears trusted credentials even if server revocation cannot be reached (16 ms)
+  customer session persistence
+    ✓ stores access, refresh, and user data securely after verification (367 ms)
+    ✓ persists the name in both session copies after completion and profile edits (14 ms)
+    ✓ restores a session by rotating the stored refresh token (14 ms)
+    ✓ coalesces simultaneous refresh requests (13 ms)
+    ✕ refreshes after a 401 and retries the original request once (14 ms)
+    ✓ clears the local session when refresh fails (15 ms)
+    ✓ keeps the trusted device when refresh is temporarily unavailable (13 ms)
+    ✓ ignores a successful refresh response after logout (15 ms)
+    ✓ ignores a stale refresh result (200) after changing accounts (18 ms)
+    ✓ ignores a stale refresh result (401) after changing accounts (14 ms)
+    ✓ discards an old account response (200) without replaying it with next-account credentials (15 ms)
+    ✓ discards an old account response (401) without replaying it with next-account credentials (15 ms)
+    ✓ does not restore storage hydration that finishes after logout (18 ms)
+    ✓ revokes and clears the session on explicit logout (14 ms)
+    ✓ keeps a verified session available when switching accounts on this device (13 ms)
+    ✓ restores a trusted session by refreshing its stored credential (13 ms)
+    ✓ keeps the continue option after a transient trusted-session failure (14 ms)
+
+  ● customer session persistence › refreshes after a 401 and retries the original request once
+
+    The signed-in account changed.
+
+      275 |   const requestUserId = currentUser?.id;
+      276 |   const generation = sessionGeneration;
+    > 277 |   const assertCurrent = () => { if (generation !== sessionGeneration || requestUserId !== currentUser?.id) throw new Error('The signed-in account changed.'); };
+          |                                                                                                                  ^
+      278 |   const response = await fetch(endpoint, withCurrentToken(init));
+      279 |   assertCurrent();
+      280 |   if (response.status !== 401 || !refreshToken) return response;
+
+      at assertCurrent (src/lib/auth-token.ts:277:114)
+      at Object.assertCurrent (src/lib/auth-token.ts:283:3)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 17 passed, 18 total
+Snapshots:   0 total
+Time:        0.904 s, estimated 1 s
+Ran all test suites matching /src\/lib\/auth-token.test.ts/i.

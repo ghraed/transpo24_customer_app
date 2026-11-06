@@ -1,0 +1,68 @@
+FAIL src/lib/request-status.test.ts
+  ✕ does not misclassify network access diagnostics as an ownership denial (1 ms)
+  ✕ uses HTTP403 independently of translated backend prose (1 ms)
+  ✕ uses HTTP404 independently of translated backend prose
+  request status rules
+    ✓ DELIVERED is completed history (3 ms)
+    ✓ COMPLETED is completed history (1 ms)
+    ✓ treats cancellation as history without claiming delivery (1 ms)
+    ✓ "PENDING_REQUEST" is not completed history
+    ✓ "DRIVER_GOING_TO_PICKUP" is not completed history (1 ms)
+    ✓ "" is not completed history
+    ✓ "delivered" is not completed history
+    ✓ null is not completed history (1 ms)
+    ✓ undefined is not completed history
+
+  ● does not misclassify network access diagnostics as an ownership denial
+
+    expect(received).toBeNull()
+
+    Received: "You do not have access to this request."
+
+      24 |
+      25 | it('does not misclassify network access diagnostics as an ownership denial', () => {
+    > 26 |   expect(requestStatusErrorKey(new Error('Cannot reach backend. Verify backend network access.'))).toBeNull();
+         |                                                                                                    ^
+      27 | });
+      28 | it.each([[403, 'You do not have access to this request.'], [404, 'Request not found.']])('uses HTTP%s independently of translated backend prose', (status, key) => {
+      29 |   expect(requestStatusErrorKey(Object.assign(new Error('Localized provider response'), { status }))).toBe(key);
+
+      at Object.toBeNull (src/lib/request-status.test.ts:26:100)
+
+  ● uses HTTP403 independently of translated backend prose
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "You do not have access to this request."
+    Received: null
+
+      27 | });
+      28 | it.each([[403, 'You do not have access to this request.'], [404, 'Request not found.']])('uses HTTP%s independently of translated backend prose', (status, key) => {
+    > 29 |   expect(requestStatusErrorKey(Object.assign(new Error('Localized provider response'), { status }))).toBe(key);
+         |                                                                                                      ^
+      30 | });
+      31 |
+
+      at toBe (src/lib/request-status.test.ts:29:102)
+
+  ● uses HTTP404 independently of translated backend prose
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Request not found."
+    Received: null
+
+      27 | });
+      28 | it.each([[403, 'You do not have access to this request.'], [404, 'Request not found.']])('uses HTTP%s independently of translated backend prose', (status, key) => {
+    > 29 |   expect(requestStatusErrorKey(Object.assign(new Error('Localized provider response'), { status }))).toBe(key);
+         |                                                                                                      ^
+      30 | });
+      31 |
+
+      at toBe (src/lib/request-status.test.ts:29:102)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 9 passed, 12 total
+Snapshots:   0 total
+Time:        0.589 s, estimated 1 s
+Ran all test suites matching /src\/lib\/request-status.test.ts/i.

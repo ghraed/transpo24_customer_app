@@ -1023,7 +1023,7 @@ export async function getCustomerRequestStatus(requestId: string): Promise<Reque
   });
 
   if (!response.ok) {
-    throw await parseError(response, 'Failed to load request status.');
+    throw Object.assign(await parseError(response, 'Failed to load request status.'), { status: response.status });
   }
 
   return parseJsonBody<RequestStatusResponse>(

@@ -1,0 +1,17 @@
+{
+  "sourceHash": "f63ce2ed991f564251f9b3ddd9290ffa79644dad75ebeb88893557e34375fb8d",
+  "repository": "client_mobile",
+  "apk": "/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/.staging-artifacts/2026-11-05/resume/client_mobile-staging.apk",
+  "sha256": "7c1f542486d10d91229e04ff1e99b77e05dbc05ad8174154cffe7022ee69a5fe",
+  "api": "http://127.0.0.1:57431",
+  "maps": false,
+  "firebase": true,
+  "firebaseProjectId": "transpo24-staging",
+  "firebaseConfigSha256": "f5be8230d338b3cb580610f2e87ec9e1f68982c4f034cb290650260a3ed1d943",
+  "ota": false,
+  "storeArtifact": false,
+  "source": "/tmp/transpo24-staging-client_mobile-JKKlJW/source",
+  "installedOnDevice": false,
+  "deviceAcceptance": "BLOCKED: disconnected Android; no affected flow retest",
+  "gitRevision": "142009f5e89d5812be0038e4f087903906f349d1"
+}

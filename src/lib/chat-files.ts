@@ -155,6 +155,8 @@ function fileUrl(path: string) {
 }
 
 async function loadNativeFile(path: string, fileName: string) {
+  const owner = chatAccountId();
+  const assertCurrent = () => assertChatAccount(owner);
   const url = fileUrl(path);
   if (!FileSystem.cacheDirectory) throw new Error('documents.failed');
   // Native viewers resolve as soon as they launch. Keep their files available,
@@ -164,7 +166,9 @@ async function loadNativeFile(path: string, fileName: string) {
     const match = /^private-(\d+)-/.exec(name);
     return match && Date.now() - Number(match[1]) > 24 * 60 * 60 * 1000;
   }).map((name) => FileSystem.deleteAsync(`${FileSystem.cacheDirectory}${name}`, { idempotent: true }).catch(() => undefined)));
+  assertCurrent();
   const token = await readToken();
+  assertCurrent();
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-160) || 'document.pdf';
   const local = `${FileSystem.cacheDirectory}private-${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`;
   const cleanup = () => FileSystem.deleteAsync(local, { idempotent: true }).catch(() => undefined);
@@ -172,12 +176,13 @@ async function loadNativeFile(path: string, fileName: string) {
     const result = await FileSystem.downloadAsync(url, local, {
       headers: { Authorization: `Bearer ${token ?? ''}` },
     });
+    assertCurrent();
     if (result.status !== 200) throw new Error('documents.failed');
     const mimeType = result.mimeType?.split(';')[0].trim() ||
       (safeName.toLowerCase().endsWith('.pdf') ? 'application/pdf' :
         /\.jpe?g$/i.test(safeName) ? 'image/jpeg' :
           /\.png$/i.test(safeName) ? 'image/png' : 'application/octet-stream');
-    return { uri: result.uri, safeName, mimeType, cleanup };
+    return { uri: result.uri, safeName, mimeType, cleanup, assertCurrent };
   } catch (error) {
     await cleanup();
     throw error;
@@ -186,15 +191,20 @@ async function loadNativeFile(path: string, fileName: string) {
 
 export async function loadChatImagePreview(path: string, fileName: string) {
   if (Platform.OS !== 'web') return loadNativeFile(path, fileName);
+  const owner = chatAccountId();
   const url = fileUrl(path);
   const token = await readToken();
+  assertChatAccount(owner);
   const response = await fetch(url, { headers: { Authorization: `Bearer ${token ?? ''}` } });
   if (!response.ok) throw new Error('documents.failed');
-  const uri = URL.createObjectURL(await response.blob());
+  const blob = await response.blob();
+  assertChatAccount(owner);
+  const uri = URL.createObjectURL(blob);
   return { uri, cleanup: () => URL.revokeObjectURL(uri) };
 }
 
 async function openWebFile(path: string, fileName: string, download: boolean) {
+  const owner = chatAccountId();
   const url = fileUrl(path);
   // Open synchronously before fetching so browsers do not block the preview popup.
   const preview = download ? null : window.open('about:blank', '_blank');
@@ -202,9 +212,12 @@ async function openWebFile(path: string, fileName: string, download: boolean) {
   if (preview) preview.opener = null;
   try {
     const token = await readToken();
+    assertChatAccount(owner);
     const response = await fetch(url, { headers: { Authorization: `Bearer ${token ?? ''}` } });
     if (!response.ok) throw new Error('documents.failed');
-    const blobUrl = URL.createObjectURL(await response.blob());
+    const blob = await response.blob();
+    assertChatAccount(owner);
+    const blobUrl = URL.createObjectURL(blob);
     if (preview) preview.location.href = blobUrl;
     else {
       const link = document.createElement('a');
@@ -226,6 +239,7 @@ export async function openChatFile(path: string, fileName: string) {
     // Load only on native platforms; the web bundle has no native viewer module.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { viewDocument } = require('@react-native-documents/viewer') as typeof import('@react-native-documents/viewer');
+    file.assertCurrent();
     await viewDocument({
       uri: file.uri,
       mimeType: file.mimeType,
@@ -248,12 +262,14 @@ export async function downloadChatFile(path: string, fileName: string) {
     if (Platform.OS === 'android') {
       const saf = FileSystem.StorageAccessFramework;
       const permission = await saf.requestDirectoryPermissionsAsync();
+      file.assertCurrent();
       if (!permission.granted) return false;
       const target = await saf.createFileAsync(
         permission.directoryUri, file.safeName.replace(/\.[^.]+$/, ''), file.mimeType,
       );
       try {
         const contents = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
+        file.assertCurrent();
         await saf.writeAsStringAsync(target, contents, { encoding: FileSystem.EncodingType.Base64 });
       } catch (error) {
         await saf.deleteAsync(target, { idempotent: true }).catch(() => undefined);

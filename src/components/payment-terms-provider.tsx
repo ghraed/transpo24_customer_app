@@ -167,7 +167,7 @@ export function PaymentTermsProvider({ ready, userId, children }: {
             paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 16),
           }]}>
             <View accessibilityViewIsModal style={[styles.dialog, { direction: rtl ? 'rtl' : 'ltr' }]}>
-              <ScrollView ref={scroll} contentContainerStyle={styles.content} bounces={false}>
+              <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.content} bounces={false}>
                 <Text ref={heading} accessible accessibilityRole="header" style={[styles.title, textStyle]}>
                   {t(accepted ? 'payment_terms.updated' : 'payment_terms.title')}
                 </Text>
@@ -216,7 +216,8 @@ export function PaymentTermsProvider({ ready, userId, children }: {
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(17,24,39,0.55)', justifyContent: 'center', paddingHorizontal: 16 },
-  dialog: { maxHeight: '100%', maxWidth: 560, width: '100%', alignSelf: 'center', backgroundColor: theme.surface, borderRadius: 24, overflow: 'hidden' },
+  dialog: { flexShrink: 1, maxHeight: '100%', maxWidth: 560, width: '100%', alignSelf: 'center', backgroundColor: theme.surface, borderRadius: 24, overflow: 'hidden' },
+  scroll: { flexShrink: 1 },
   content: { padding: 24, gap: 16 },
   title: { color: theme.text, fontSize: 24, fontWeight: '800' },
   sectionTitle: { color: theme.text, fontSize: 18, fontWeight: '700' },

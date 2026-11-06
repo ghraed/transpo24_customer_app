@@ -1,0 +1,14 @@
+
+> transpo24@1.0.0 pretypecheck
+> npm run privacy:check
+
+
+> transpo24@1.0.0 privacy:check
+> node scripts/check-privacy.mjs
+
+Privacy source checks passed. Release SDK/network and operational reviews remain required.
+
+> transpo24@1.0.0 typecheck
+> tsc --noEmit
+
+src/app/wallet-top-up.tsx(324,33): error TS2339: Property 'container' does not exist on type '{ screen: { flex: number; backgroundColor: string; }; keyboardAvoidingView: { flex: number; }; scrollView: { flex: number; }; content: { paddingHorizontal: number; gap: number; }; heroCard: { backgroundColor: string; ... 8 more ...; elevation: number; }; ... 29 more ...; footerText: { ...; }; }'.

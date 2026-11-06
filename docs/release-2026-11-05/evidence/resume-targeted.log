@@ -1,0 +1,10 @@
+PASS src/lib/stripe-return.test.ts
+PASS src/localization/provider.test.tsx
+PASS src/notifications/usePendingRequestLink.test.tsx
+PASS src/lib/pending-request-link.test.ts
+
+Test Suites: 4 passed, 4 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        0.833 s, estimated 1 s
+Ran all test suites matching /src\/localization\/provider.test.tsx|src\/lib\/pending-request-link.test.ts|src\/notifications\/usePendingRequestLink.test.tsx|src\/lib\/stripe-return.test.ts/i.

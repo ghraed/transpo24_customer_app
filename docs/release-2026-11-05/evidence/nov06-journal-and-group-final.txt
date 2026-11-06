@@ -1,0 +1,9 @@
+PASS src/components/chat-attachment-group.test.js
+PASS src/lib/chat-outbox.test.ts
+PASS src/lib/chat-outbox-native.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        1.196 s
+Ran all test suites matching /src\/lib\/chat-outbox.test.ts|src\/lib\/chat-outbox-native.test.ts|src\/components\/chat-attachment-group.test.js/i.

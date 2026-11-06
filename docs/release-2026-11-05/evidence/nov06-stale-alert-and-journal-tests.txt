@@ -1,0 +1,121 @@
+PASS src/components/chat-attachment.test.js
+PASS src/lib/chat-outbox.test.ts
+  ● Console
+
+    console.warn
+      An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+      1 |
+    > 2 | import { Directory, File, Paths } from 'expo-file-system';
+        | ^
+      3 | import { Platform } from 'react-native';
+      4 | import { getAccessToken as readToken } from './auth-token';
+      5 | export type PendingChatOperation = { id: string; roomId: string; kind: 'TEXT' | 'FILE'; payload: string; file?: { uri: string; name: string; mimeType?: string; size?: number; operationId?: string } };
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo-file-system/src/ExpoFileSystem.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Directory.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Paths.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/index.ts:1:1)
+      at Object.require (src/lib/chat-outbox.ts:2:1)
+      at requireActual (src/lib/chat-outbox.test.ts:16:31)
+      at Object.load (src/lib/chat-outbox.test.ts:18:17)
+
+    console.warn
+      An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+      1 |
+    > 2 | import { Directory, File, Paths } from 'expo-file-system';
+        | ^
+      3 | import { Platform } from 'react-native';
+      4 | import { getAccessToken as readToken } from './auth-token';
+      5 | export type PendingChatOperation = { id: string; roomId: string; kind: 'TEXT' | 'FILE'; payload: string; file?: { uri: string; name: string; mimeType?: string; size?: number; operationId?: string } };
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo-file-system/src/ExpoFileSystem.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Directory.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Paths.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/index.ts:1:1)
+      at Object.require (src/lib/chat-outbox.ts:2:1)
+      at requireActual (src/lib/chat-outbox.test.ts:16:31)
+      at Object.load (src/lib/chat-outbox.test.ts:21:10)
+
+    console.warn
+      An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+      1 |
+    > 2 | import { Directory, File, Paths } from 'expo-file-system';
+        | ^
+      3 | import { Platform } from 'react-native';
+      4 | import { getAccessToken as readToken } from './auth-token';
+      5 | export type PendingChatOperation = { id: string; roomId: string; kind: 'TEXT' | 'FILE'; payload: string; file?: { uri: string; name: string; mimeType?: string; size?: number; operationId?: string } };
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo-file-system/src/ExpoFileSystem.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Directory.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Paths.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/index.ts:1:1)
+      at Object.require (src/lib/chat-outbox.ts:2:1)
+      at requireActual (src/lib/chat-outbox.test.ts:16:31)
+      at Object.load (src/lib/chat-outbox.test.ts:26:17)
+
+    console.warn
+      An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+      1 |
+    > 2 | import { Directory, File, Paths } from 'expo-file-system';
+        | ^
+      3 | import { Platform } from 'react-native';
+      4 | import { getAccessToken as readToken } from './auth-token';
+      5 | export type PendingChatOperation = { id: string; roomId: string; kind: 'TEXT' | 'FILE'; payload: string; file?: { uri: string; name: string; mimeType?: string; size?: number; operationId?: string } };
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo-file-system/src/ExpoFileSystem.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Directory.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Paths.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/index.ts:1:1)
+      at Object.require (src/lib/chat-outbox.ts:2:1)
+      at requireActual (src/lib/chat-outbox.test.ts:16:31)
+      at Object.load (src/lib/chat-outbox.test.ts:32:17)
+
+    console.warn
+      An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+      1 |
+    > 2 | import { Directory, File, Paths } from 'expo-file-system';
+        | ^
+      3 | import { Platform } from 'react-native';
+      4 | import { getAccessToken as readToken } from './auth-token';
+      5 | export type PendingChatOperation = { id: string; roomId: string; kind: 'TEXT' | 'FILE'; payload: string; file?: { uri: string; name: string; mimeType?: string; size?: number; operationId?: string } };
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo-file-system/src/ExpoFileSystem.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Directory.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/Paths.ts:1:1)
+      at Object.require (node_modules/expo-file-system/src/index.ts:1:1)
+      at Object.require (src/lib/chat-outbox.ts:2:1)
+      at requireActual (src/lib/chat-outbox.test.ts:16:31)
+      at Object.load (src/lib/chat-outbox.test.ts:38:17)
+
+PASS src/lib/chat-outbox-native.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        1.218 s
+Ran all test suites matching /src\/components\/chat-attachment.test.js|src\/lib\/chat-outbox.test.ts|src\/lib\/chat-outbox-native.test.ts/i.

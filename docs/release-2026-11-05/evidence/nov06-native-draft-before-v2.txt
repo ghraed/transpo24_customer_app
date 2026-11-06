@@ -1,0 +1,53 @@
+FAIL src/requests/vehicle-draft-storage.test.ts
+  persistent vehicle draft
+    ✓ restores schedule, multiple conditions and photos after reopening without leaking between accounts (6 ms)
+    ✕ persists rapid edits before returning, without pending moves racing the next edit (2 ms)
+    ✕ copies picked photos out of the temporary cache before persisting (1 ms)
+
+  ● persistent vehicle draft › persists rapid edits before returning, without pending moves racing the next edit
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "Source file no longer exists",
+    +   "Source file no longer exists",
+    + ]
+
+      89 |     await Promise.resolve();
+      90 |     await Promise.resolve();
+    > 91 |     expect(mockMoveFailures).toEqual([]);
+         |                              ^
+      92 |     expect(readVehicleDraft('alice', 'vehicle-service').condition.notes).toBe('SYNTHETIC FINAL');
+      93 |   });
+      94 |   it('copies picked photos out of the temporary cache before persisting', () => {
+
+      at Object.toEqual (src/requests/vehicle-draft-storage.test.ts:91:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● persistent vehicle draft › copies picked photos out of the temporary cache before persisting
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "photo bytes"
+    Received: undefined
+
+      100 |     });
+      101 |     mockFiles.delete('cache/car.jpg');
+    > 102 |     expect(mockFiles.get(retained.uri)).toBe('photo bytes');
+          |                                         ^
+      103 |   });
+      104 | });
+      105 |
+
+      at Object.toBe (src/requests/vehicle-draft-storage.test.ts:102:41)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        0.614 s, estimated 1 s
+Ran all test suites matching /src\/requests\/vehicle-draft-storage.test.ts/i.

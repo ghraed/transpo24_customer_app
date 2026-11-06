@@ -1,0 +1,10 @@
+PASS src/requests/vehicle-draft-storage.test.ts
+PASS src/requests/vehicle-flow.test.js
+PASS src/requests/vehicle-repeat-route.test.js
+PASS src/localization/literal-labels.test.ts
+
+Test Suites: 4 passed, 4 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        1.44 s, estimated 2 s
+Ran all test suites matching /src\/requests\/vehicle-draft-storage.test.ts|src\/requests\/vehicle-flow.test.js|src\/requests\/vehicle-repeat-route.test.js|src\/localization\/literal-labels.test.ts/i.

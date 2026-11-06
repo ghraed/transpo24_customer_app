@@ -1,0 +1,184 @@
+PASS src/localization/consent-translations.test.ts (9.275 s)
+PASS src/components/request-status-map.test.js
+PASS src/requests/registration-scan.test.js
+PASS src/requests/wallet-policy.test.js
+PASS src/lib/request-payment.test.js
+  ● Console
+
+    console.warn
+      react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next { code: 'NO_I18NEXT_INSTANCE' }
+
+      82 |   details?: string[];
+      83 | }) {
+    > 84 |   const { t, i18n } = useTranslation();
+         |                                     ^
+      85 |   const [open, setOpen] = useState(false);
+      86 |   const trigger = useRef<View>(null);
+      87 |   const heading = useRef<Text>(null);
+
+      at warn (node_modules/react-i18next/dist/commonjs/utils.js:19:13)
+      at warnOnce (node_modules/react-i18next/dist/commonjs/utils.js:27:3)
+      at useTranslation (node_modules/react-i18next/dist/commonjs/useTranslation.js:37:25)
+      at PaymentInfo (src/components/payment-info.tsx:84:37)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12181:11)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at node_modules/react/cjs/react.development.js:847:21
+
+PASS src/requests/motorcycle-flow.test.js
+PASS src/requests/edit-request.test.js
+PASS src/localization/literal-labels.test.ts
+PASS src/lib/auth-token.test.ts
+PASS src/requests/vehicle-flow.test.js
+PASS src/notifications/notifications-screen.test.js
+PASS src/components/chat-wallpaper.test.js
+PASS src/requests/service-schedule.test.js
+PASS src/requests/delivery-date-editor.test.js
+PASS src/components/client-chat-screen.test.js
+PASS src/components/chat-attachment-group.test.js
+PASS src/components/payment-terms-provider.test.js
+PASS src/requests/address-editor.test.js
+PASS src/components/payment-info.test.js
+PASS src/requests/vehicle-lookup.test.js
+PASS src/components/report-driver.test.js
+PASS src/components/chat-attachment.test.js
+PASS src/components/chat-attachment-picker.test.js
+PASS src/requests/address-places.test.js
+PASS src/requests/vehicle-repeat-route.test.js
+PASS src/requests/service-address-step.test.js
+PASS scripts/build-refresh.test.js
+PASS src/components/ios-profile-release.test.js
+PASS src/components/pickup-payment-reminder.test.js
+PASS src/components/release-routes.test.js
+PASS src/components/legal-consent-boundary.test.js
+PASS src/components/customer-profile-name.test.js
+PASS src/lib/phone-auth-api.test.js
+PASS src/requests/repeat-route.test.js
+PASS src/lib/registration-api.test.js
+PASS src/components/request-documents.test.js
+PASS src/components/saved-card-picker.test.js
+PASS src/lib/furniture-reservations.test.js
+PASS src/lib/customer-profile-api.test.js
+PASS src/lib/chat-files.test.ts
+PASS src/components/date-time-picker-dialog.test.js
+PASS src/components/booking-payment-status.test.js
+PASS src/lib/furniture-request-api.test.js
+PASS src/lib/phone-number.test.ts
+PASS src/lib/request-files.test.ts
+PASS src/lib/chat-outbox.test.ts
+  ● Console
+
+    console.warn
+      An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+       6 | jest.mock('./auth-token', () => ({ getAccessToken: () => btoa(JSON.stringify({ sub: mockOwner })) + '.synthetic' }));
+       7 | beforeEach(() => {
+    >  8 |   jest.resetModules(); mockStorage.clear(); mockOwner = 'customer-1';
+         |        ^
+       9 |
+      10 |   Object.defineProperty(globalThis, 'localStorage', { configurable:true, value: {
+      11 |     getItem: (key:string) => mockStorage.get(key) ?? null,
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo/src/winter/fetch/ExpoFetchModule.ts:1:1)
+      at Object.require (node_modules/expo/src/winter/fetch/fetch.ts:1:1)
+      at Object.require (node_modules/expo/src/winter/fetch/index.ts:1:1)
+      at require (node_modules/expo/src/winter/runtime.native.ts:52:26)
+      at getValue (node_modules/expo/src/winter/installGlobal.ts:102:21)
+      at Object.get [as fetch] (node_modules/expo/src/winter/installGlobal.ts:44:16)
+          at Array.forEach (<anonymous>)
+      at Object.resetModules (src/lib/chat-outbox.test.ts:8:8)
+
+PASS src/services/socketService.test.ts
+PASS src/components/reliable-map-directions.test.js
+PASS src/lib/chat-outbox-native.test.ts
+  ● Console
+
+    console.warn
+      An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+       8 |  File:class { uri: string; constructor(...parts:any[]){this.uri=parts.map(p=>typeof p==='string'?p:p.uri).join('/');}get exists(){return mockFiles.has(this.uri);}textSync(){return mockFiles.get(this.uri);}write(value:string){mockFiles.set(this.uri,value);}delete(){mockFiles.delete(this.uri);}copy(target:{uri:string}){if(!mockFiles.has(this.uri))throw Error('missing source');mockFiles.set(target.uri,mockFiles.get(this.uri)!);}move(target:{uri:string}){mockFiles.set(target.uri,mockFiles.get(this.uri)!);mockFiles.delete(this.uri);this.uri=target.uri;} },
+       9 | }));
+    > 10 | beforeEach(()=>{mockFiles.clear();jest.resetModules();});
+         |                                        ^
+      11 | function load(){return jest.requireActual('./chat-outbox') as typeof import('./chat-outbox');}
+      12 | test('a failed attachment survives cache loss and module restart, reuses its operation, and is removed only after acknowledgment',()=>{
+      13 |  mockFiles.set('file:///picker-cache/card.pdf','synthetic-bytes');
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo/src/winter/fetch/ExpoFetchModule.ts:1:1)
+      at Object.require (node_modules/expo/src/winter/fetch/fetch.ts:1:1)
+      at Object.require (node_modules/expo/src/winter/fetch/index.ts:1:1)
+      at require (node_modules/expo/src/winter/runtime.native.ts:52:26)
+      at getValue (node_modules/expo/src/winter/installGlobal.ts:102:21)
+      at Object.get [as fetch] (node_modules/expo/src/winter/installGlobal.ts:44:16)
+          at Array.forEach (<anonymous>)
+      at Object.resetModules (src/lib/chat-outbox-native.test.ts:10:40)
+
+PASS src/lib/places-distance.test.ts
+PASS src/localization/languages.test.ts
+PASS src/requests/registration-mapping.test.ts
+PASS src/requests/vehicle-translations.test.ts
+PASS src/notifications/pickup-reminders.test.ts
+PASS src/components/privacy-controls.test.js
+PASS scripts/client-release.test.js
+PASS scripts/stripe-config.test.js
+PASS scripts/ios-production-config.test.js
+PASS src/notifications/usePendingRequestLink.test.tsx
+PASS src/components/native-maps.test.js
+PASS src/components/ota-update-banner.test.js
+PASS src/components/test-notification-button.test.js
+PASS src/notifications/useNotificationNavigation.test.js
+PASS src/lib/stripe-account.test.ts
+PASS src/hooks/use-chat-auto-scroll.test.js
+PASS src/requests/submit-vehicle-draft.test.ts
+PASS src/localization/provider.test.tsx
+PASS src/lib/stripe-url-scheme.test.ts
+PASS src/components/map-location-marker.test.js
+PASS src/services/translation-service.test.ts
+PASS src/notifications/assertPushBackend.test.js
+PASS src/notifications/usePushRegistration.test.js
+PASS scripts/setup-adb-reverse.test.js
+PASS src/utils/vin.test.ts
+PASS src/utils/trip-validation.test.ts
+PASS src/requests/schedule-rules.test.ts
+PASS src/notifications/notificationDestination.test.ts
+PASS src/config/backend.test.ts
+PASS src/requests/vehicle-draft.test.ts
+PASS src/lib/stripe-return.test.ts
+PASS src/lib/pending-request-link.test.ts
+PASS src/requests/customer-places.test.ts
+PASS src/requests/use-initial-map-center.test.js
+PASS src/lib/ios-payment-options.test.ts
+PASS scripts/staging-config.test.js
+PASS src/requests/vehicle-draft-storage.test.ts
+PASS src/lib/private-asset.test.ts
+PASS scripts/staging-firebase-config.test.js
+PASS src/utils/location-sequence.test.ts
+PASS src/requests/resolve-current-address.test.ts
+PASS src/notifications/notificationRoute.test.js
+PASS src/notifications/notificationDateFilter.test.js
+PASS src/lib/otp.test.ts
+PASS src/lib/native-intent.test.ts
+PASS src/lib/chat-attachment-groups.test.ts
+PASS src/lib/request-status.test.ts
+
+Test Suites: 96 passed, 96 total
+Tests:       688 passed, 688 total
+Snapshots:   0 total
+Time:        22.948 s
+Ran all test suites.

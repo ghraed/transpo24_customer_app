@@ -1,0 +1,9 @@
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/requests/vehicle-draft-storage.test.ts:36
+        if (!this.exists) throw new Error('Source file no longer exists');
+                                ^
+
+Error: Source file no longer exists
+    at File.copySync (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/requests/vehicle-draft-storage.test.ts:33:31)
+    at copySync (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/requests/vehicle-draft-storage.test.ts:37:48)
+
+Node.js v22.22.3

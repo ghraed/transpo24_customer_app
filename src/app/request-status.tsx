@@ -55,7 +55,7 @@ import {
   getRequestTracking,
 } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth-token';
-import { isHistoryRequestStatus } from '@/lib/request-status';
+import { isHistoryRequestStatus, requestStatusErrorKey } from '@/lib/request-status';
 import { DEFAULT_LANGUAGE } from '@/localization/languages';
 import { useAppLanguage } from '@/localization/provider';
 import {
@@ -545,19 +545,13 @@ export default function RequestStatusScreen() {
       setErrorMessage('');
 
       try {
-        let data: RequestStatusResponse;
-        try {
-          data = await getCustomerRequestStatus(requestId);
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : appI18n.t("Unknown status error.");
-          throw new Error(appI18n.t("Request status failed: {{value0}}", { value0: message }));
-        }
+        const data = await getCustomerRequestStatus(requestId);
 
         if (data.status === 'CANCELLED') {
           setRequestData(data);
           setOffers([]);
-          setAdditionalCharges([]);
+          // Cancellation closes transport actions, but paid expenses remain part of its history.
+          setAdditionalCharges(await getRequestAdditionalCharges(requestId));
           setDefaultPaymentMethod(null);
           setTrackingData(null);
           setLatestDriverLocation(null);
@@ -617,15 +611,8 @@ export default function RequestStatusScreen() {
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : appI18n.t("Failed to load request status.");
-        const normalized = message.toLowerCase();
-
-        if (normalized.includes('not found')) {
-          setErrorMessage(appI18n.t("Request not found."));
-        } else if (normalized.includes('forbidden') || normalized.includes('access')) {
-          setErrorMessage(appI18n.t("You do not have access to this request."));
-        } else {
-          setErrorMessage(message);
-        }
+        const key = requestStatusErrorKey(error);
+        setErrorMessage(key ? appI18n.t(key) : message);
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -1085,7 +1072,6 @@ export default function RequestStatusScreen() {
           : previousRequestData,
       );
       setOffers([]);
-      setAdditionalCharges([]);
       setDefaultPaymentMethod(null);
       setTrackingData(null);
       setLatestDriverLocation(null);
@@ -1117,7 +1103,6 @@ export default function RequestStatusScreen() {
         if (latestStatus?.status === 'CANCELLED') {
           setRequestData(latestStatus);
           setOffers([]);
-          setAdditionalCharges([]);
           setDefaultPaymentMethod(null);
           setTrackingData(null);
           setLatestDriverLocation(null);
@@ -1588,7 +1573,10 @@ export default function RequestStatusScreen() {
             {refundPreview ? <OrderNotice icon="info" tone="warning" text={appI18n.t('Cancellation is free for the first 10 minutes after payment. A 15% fee applies after 10 minutes through 24 hours, and 50% after 24 hours.')} /> : null}
             {refundPreview && requestData.status !== 'CANCELLED' ? (
               <Text style={styles.mutedCaption}>
-                {appI18n.t('Cancel now: refund {{refund}} and keep fee {{fee}}.', {
+                {requestData.confirmation ? appI18n.t('payment_info.cancel_preview', {
+                  fee: formatMoney(refundPreview.retainedAmount, refundPreview.currency),
+                  released: formatMoney(refundPreview.releasedAmount ?? 0, refundPreview.currency),
+                }) : appI18n.t('Cancel now: refund {{refund}} and keep fee {{fee}}.', {
                   refund: formatMoney(refundPreview.refundedAmount, refundPreview.currency),
                   fee: formatMoney(refundPreview.retainedAmount, refundPreview.currency),
                 })}
@@ -1781,7 +1769,7 @@ export default function RequestStatusScreen() {
 
           <View style={styles.card}>
             <OrderSectionHeading title={appI18n.t("Additional Charges")} icon="payment" count={additionalCharges.length} />
-            <OrderDetailRow icon="payment" label={t('extra_expense.saved_card_notice')} value={formatSavedPaymentMethod(defaultPaymentMethod)} />
+            {requestData.status !== 'CANCELLED' ? <OrderDetailRow icon="payment" label={t('extra_expense.saved_card_notice')} value={formatSavedPaymentMethod(defaultPaymentMethod)} /> : null}
             {additionalCharges.length === 0 ? (
               <OrderEmptyState icon="payment" text={appI18n.t("No additional charges yet.")} />
             ) : (
@@ -1806,7 +1794,7 @@ export default function RequestStatusScreen() {
                   {charge.payment.failureReason ? (
                     <Text style={styles.errorText}>{charge.payment.failureReason}</Text>
                   ) : null}
-                  {(charge.status === 'PENDING' || charge.status === 'FAILED') ? (
+                  {requestData.status !== 'CANCELLED' && (charge.status === 'PENDING' || charge.status === 'FAILED') ? (
                     <Pressable
                       style={[styles.rateActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
                       disabled={isApprovingAdditionalCharge}
@@ -1957,13 +1945,9 @@ export default function RequestStatusScreen() {
             animationType="fade"
             onRequestClose={closeAdditionalChargeModal}
           >
-            <View style={styles.dialogBackdrop}>
-              <View
-                style={[
-                  styles.chargeDialogCard,
-                  keyboardInset > 0 ? { marginBottom: keyboardInset } : undefined,
-                ]}
-              >
+            <KeyboardAvoidingView style={styles.dialogBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <View style={styles.chargeDialogCard}>
+                <ScrollView style={styles.chargeDialogScroll} contentContainerStyle={styles.chargeDialogContent} keyboardShouldPersistTaps="handled">
                 <View style={styles.chargeDialogHeader}>
                   <Text style={styles.cardTitle}>{t('extra_expense.confirm_title')}</Text>
                   <Text style={styles.chargeDialogAmount}>
@@ -2080,6 +2064,7 @@ export default function RequestStatusScreen() {
                       : t('extra_expense.add_payment_method_button')}
                   </Text>
                 </Pressable>
+                </ScrollView>
                 <View style={styles.dialogActions}>
                   <Pressable
                     style={[styles.supportActionButton, isApprovingAdditionalCharge && styles.disabledButton]}
@@ -2105,7 +2090,7 @@ export default function RequestStatusScreen() {
                   </Pressable>
                 </View>
               </View>
-            </View>
+            </KeyboardAvoidingView>
           </Modal>
           <Modal visible={Boolean(expandedPhotoUrl)} transparent animationType="fade" onRequestClose={() => setExpandedPhotoUrl('')}>
             <Pressable style={styles.modalBackdrop} onPress={() => setExpandedPhotoUrl('')}>
@@ -2698,7 +2683,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: 10,
   },
+  chargeDialogScroll: { flexShrink: 1 },
+  chargeDialogContent: { gap: 14 },
   chargeDialogCard: {
+    maxHeight: '90%',
+    flexShrink: 1,
     width: '100%',
     maxWidth: 420,
     backgroundColor: colors.surface,

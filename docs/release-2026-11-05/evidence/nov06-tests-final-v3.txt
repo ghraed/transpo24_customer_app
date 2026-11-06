@@ -1,0 +1,63 @@
+
+> transpo24@1.0.0 test
+> jest --runInBand --watch=false
+
+PASS src/localization/consent-translations.test.ts (9.181 s)
+PASS src/requests/registration-scan.test.js
+PASS src/components/chat-attachment-group.test.js
+PASS src/lib/request-payment.test.js
+  ● Console
+
+    console.warn
+      react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next { code: 'NO_I18NEXT_INSTANCE' }
+
+      82 |   details?: string[];
+      83 | }) {
+    > 84 |   const { t, i18n } = useTranslation();
+         |                                     ^
+      85 |   const [open, setOpen] = useState(false);
+      86 |   const trigger = useRef<View>(null);
+      87 |   const heading = useRef<Text>(null);
+
+      at warn (node_modules/react-i18next/dist/commonjs/utils.js:19:13)
+      at warnOnce (node_modules/react-i18next/dist/commonjs/utils.js:27:3)
+      at useTranslation (node_modules/react-i18next/dist/commonjs/useTranslation.js:37:25)
+      at PaymentInfo (src/components/payment-info.tsx:84:37)
+      at Object.react_stack_bottom_frame (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12181:11)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:590:34)
+      at node_modules/react/cjs/react.development.js:847:21
+
+PASS src/requests/motorcycle-flow.test.js
+PASS src/components/request-status-map.test.js
+PASS src/requests/edit-request.test.js
+PASS src/requests/vehicle-flow.test.js
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/auth-token.ts:415
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+                           ^
+
+TypeError: headers.set is not a function
+    at set (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/auth-token.ts:362:28)
+    at Object.withCurrentToken (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/auth-token.ts:276:42)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+    at _next (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+    at /media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+    at new Promise (<anonymous>)
+    at Object.<anonymous> (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+    at Object.apply (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/auth-token.ts:283:2)
+    at Object.apply [as authenticatedFetch] (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/auth-token.ts:271:41)
+    at Object.authenticatedFetch (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/auth-token.test.ts:162:26)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+    at _next (/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Node.js v22.22.3

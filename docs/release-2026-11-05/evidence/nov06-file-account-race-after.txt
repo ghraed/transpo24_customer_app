@@ -1,0 +1,8 @@
+PASS src/lib/chat-files.test.ts
+PASS src/lib/request-files.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       37 passed, 37 total
+Snapshots:   0 total
+Time:        0.799 s, estimated 1 s
+Ran all test suites matching /src\/lib\/chat-files.test.ts|src\/lib\/request-files.test.ts/i.

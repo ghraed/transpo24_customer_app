@@ -1,0 +1,51 @@
+FAIL src/lib/chat-files.test.ts
+  ✓ never sends credentials to a URL supplied by another host (7 ms)
+  ✓ opens an authenticated attachment in a viewer and keeps it readable after launch (2 ms)
+  ✓ does not open an unauthorized response and still cleans up (1 ms)
+  ✓ does not send anything when picking an attachment is cancelled
+  ✓ uploads image/png native URI parts without Expo fetch serialization (2 ms)
+  ✓ uploads image/jpeg native URI parts without Expo fetch serialization (1 ms)
+  ✓ uploads application/pdf native URI parts without Expo fetch serialization (1 ms)
+  ✓ rejects a native upload error instead of reporting success (1 ms)
+  ✓ rejects a native upload timeout instead of reporting success (1 ms)
+  ✓ rejects a native upload abort instead of reporting success
+  ✓ reports an oversized upload rejected by the server
+  ✓ cleans up a failed viewer launch without opening the share menu (1 ms)
+  ✓ saves an Android attachment to the folder the client chooses
+  ✓ does not save or report success when the folder picker is cancelled (1 ms)
+  ✓ offers the iOS export sheet only for an explicit download
+  ✓ rejects untrusted download URLs before contacting them (1 ms)
+  ✓ removes a partial saved file when writing fails (1 ms)
+  ✓ prunes old previews while leaving recent and unrelated cache files alone
+  ✓ enables multi-select and retains all selected files (1 ms)
+  ✓ does not create a selection when the picker is cancelled
+  ✓ validates all files before uploading any part of the selection (1 ms)
+  ✓ sends each selected file in order and reports progress (1 ms)
+  ✓ keeps only failed uploads for retry and still delivers subsequent files (1 ms)
+  ✕ discards and deletes a private download completed after account change instead of launching a viewer (1 ms)
+
+  ● discards and deletes a private download completed after account change instead of launching a viewer
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: undefined
+
+      304 |   changed = true;
+      305 |   release({ status: 200, uri: 'file:///cache/file.pdf', headers: {}, mimeType: 'application/pdf' });
+    > 306 |   await expect(opening).rejects.toThrow();
+          |               ^
+      307 |   expect(viewDocument).not.toHaveBeenCalled();
+      308 |   expect(FileSystem.deleteAsync).toHaveBeenCalled();
+      309 |   assertChatAccount.mockReset();
+
+      at expect (node_modules/expect/build/index.js:113:15)
+      at Object.<anonymous> (src/lib/chat-files.test.ts:306:15)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 23 passed, 24 total
+Snapshots:   0 total
+Time:        0.733 s, estimated 1 s
+Ran all test suites matching /src\/lib\/chat-files.test.ts/i.

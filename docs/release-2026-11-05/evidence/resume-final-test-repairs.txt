@@ -1,0 +1,8 @@
+PASS scripts/build-refresh.test.js
+PASS src/lib/native-intent.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.11 s
+Ran all test suites matching /src\/lib\/native-intent.test.ts|scripts\/build-refresh.test.js/i.

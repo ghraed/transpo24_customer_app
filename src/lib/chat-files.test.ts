@@ -292,3 +292,19 @@ it('keeps only failed uploads for retry and still delivers subsequent files', as
   expect(onSent).toHaveBeenCalledTimes(2);
   expect(xhr.send).toHaveBeenCalledTimes(3);
 });
+
+it('discards and deletes a private download completed after account change instead of launching a viewer', async () => {
+  const { assertChatAccount } = jest.requireMock('@/lib/chat-outbox') as { assertChatAccount: jest.Mock };
+  let changed = false;
+  assertChatAccount.mockImplementation(() => { if (changed) throw new Error('account changed'); });
+  let release!: (value: unknown) => void;
+  jest.mocked(FileSystem.downloadAsync).mockImplementation(() => new Promise(resolve => { release = resolve as typeof release; }));
+  const opening = openChatFile('/request-files/file/content', 'file.pdf');
+  while (!release) await Promise.resolve();
+  changed = true;
+  release({ status: 200, uri: 'file:///cache/file.pdf', headers: {}, mimeType: 'application/pdf' });
+  await expect(opening).rejects.toThrow();
+  expect(viewDocument).not.toHaveBeenCalled();
+  expect(FileSystem.deleteAsync).toHaveBeenCalled();
+  assertChatAccount.mockReset();
+});

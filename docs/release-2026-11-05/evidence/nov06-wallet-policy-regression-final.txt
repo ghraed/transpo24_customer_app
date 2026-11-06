@@ -1,0 +1,9 @@
+PASS src/requests/wallet-policy.test.js
+  ✓ keeps existing balances readable and removes unavailable funding navigation for direct charges (156 ms)
+  ✓ retains top-up navigation when the active payment policy supports wallet funding (19 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.869 s
+Ran all test suites matching /src\/requests\/wallet-policy.test.js/i.

@@ -1,0 +1,101 @@
+
+> transpo24@1.0.0 test
+> jest --runInBand --silent
+
+PASS src/localization/consent-translations.test.ts (9.906 s)
+PASS src/lib/phone-auth-api.test.js
+PASS src/lib/request-payment.test.js
+PASS src/requests/registration-scan.test.js
+PASS src/requests/motorcycle-flow.test.js
+PASS src/notifications/usePendingRequestLink.test.tsx
+PASS src/requests/edit-request.test.js
+PASS src/components/request-status-map.test.js
+PASS scripts/staging-firebase-config.test.js
+PASS src/requests/vehicle-flow.test.js
+PASS src/lib/auth-token.test.ts
+PASS src/requests/service-schedule.test.js
+PASS src/notifications/notifications-screen.test.js
+PASS src/components/chat-wallpaper.test.js
+PASS src/requests/delivery-date-editor.test.js
+PASS src/components/chat-attachment-group.test.js
+PASS src/components/client-chat-screen.test.js
+PASS src/components/payment-terms-provider.test.js
+PASS src/components/payment-info.test.js
+PASS src/requests/address-editor.test.js
+PASS src/requests/vehicle-lookup.test.js
+PASS src/components/chat-attachment-picker.test.js
+PASS src/components/report-driver.test.js
+PASS src/lib/customer-profile-api.test.js
+PASS src/requests/vehicle-repeat-route.test.js
+PASS src/components/chat-attachment.test.js
+PASS src/requests/address-places.test.js
+PASS src/requests/service-address-step.test.js
+PASS src/lib/phone-number.test.ts
+PASS src/components/pickup-payment-reminder.test.js
+PASS src/components/ios-profile-release.test.js
+PASS src/lib/chat-outbox.test.ts
+PASS src/requests/repeat-route.test.js
+PASS src/components/release-routes.test.js
+PASS src/components/request-documents.test.js
+PASS src/components/saved-card-picker.test.js
+PASS src/lib/registration-api.test.js
+PASS src/components/booking-payment-status.test.js
+PASS scripts/setup-adb-reverse.test.js
+PASS src/components/date-time-picker-dialog.test.js
+PASS src/lib/stripe-url-scheme.test.ts
+PASS src/lib/furniture-reservations.test.js
+PASS src/components/customer-profile-name.test.js
+PASS src/components/legal-consent-boundary.test.js
+PASS src/lib/furniture-request-api.test.js
+PASS src/lib/chat-files.test.ts
+PASS src/services/socketService.test.ts
+PASS src/components/ota-update-banner.test.js
+PASS scripts/client-release.test.js
+PASS src/localization/provider.test.tsx
+PASS src/lib/request-files.test.ts
+PASS src/components/reliable-map-directions.test.js
+PASS src/notifications/useNotificationNavigation.test.js
+PASS src/requests/vehicle-translations.test.ts
+PASS src/components/privacy-controls.test.js
+PASS src/requests/registration-mapping.test.ts
+PASS src/config/backend.test.ts
+PASS src/components/test-notification-button.test.js
+PASS src/hooks/use-chat-auto-scroll.test.js
+PASS src/requests/submit-vehicle-draft.test.ts
+PASS scripts/ios-production-config.test.js
+PASS src/lib/stripe-account.test.ts
+PASS src/lib/places-distance.test.ts
+PASS src/notifications/usePushRegistration.test.js
+PASS src/lib/pending-request-link.test.ts
+PASS scripts/staging-config.test.js
+PASS src/components/map-location-marker.test.js
+PASS src/requests/schedule-rules.test.ts
+PASS src/utils/trip-validation.test.ts
+PASS src/notifications/notificationDestination.test.ts
+PASS src/services/translation-service.test.ts
+PASS src/requests/use-initial-map-center.test.js
+PASS src/requests/vehicle-draft.test.ts
+PASS src/requests/customer-places.test.ts
+PASS src/notifications/assertPushBackend.test.js
+PASS src/lib/chat-outbox-native.test.ts
+PASS scripts/stripe-config.test.js
+PASS src/utils/vin.test.ts
+PASS src/requests/resolve-current-address.test.ts
+PASS src/requests/vehicle-draft-storage.test.ts
+PASS src/notifications/notificationRoute.test.js
+PASS src/lib/ios-payment-options.test.ts
+PASS src/lib/stripe-return.test.ts
+PASS src/localization/languages.test.ts
+PASS src/lib/chat-attachment-groups.test.ts
+PASS src/lib/private-asset.test.ts
+PASS src/utils/location-sequence.test.ts
+PASS src/notifications/pickup-reminders.test.ts
+PASS src/notifications/notificationDateFilter.test.js
+PASS src/lib/otp.test.ts
+PASS src/lib/request-status.test.ts
+PASS src/components/native-maps.test.js
+
+Test Suites: 92 passed, 92 total
+Tests:       675 passed, 675 total
+Snapshots:   0 total
+Time:        26.193 s

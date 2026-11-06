@@ -860,7 +860,7 @@ function SubmitRequestScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{appI18n.t("Service")}</Text>
-          <Text style={styles.value}>{serviceName || serviceKey || serviceId || appI18n.t("Unknown service")}</Text>
+          <Text style={styles.value}>{appI18n.t(serviceName || ({ VEHICLE_TRANSPORT: "Vehicle", MOTORCYCLE_TRANSPORT: "Motorcycle & Bicycle", GOODS_TRANSPORT: "Goods", FURNITURE_TRANSPORT: "House Moving" } as Record<string, string>)[serviceKey] || "Unknown service")}</Text>
         </View>
 
         {vehicleDetails ? (

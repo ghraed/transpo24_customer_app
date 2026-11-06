@@ -1,0 +1,26 @@
+PASS src/components/payment-terms-provider.test.js
+  ✓ opens on first load and saves explicit acceptance per account without making a payment (246 ms)
+  ✓ does not prompt again for unchanged accepted terms, regardless of property order (1 ms)
+  ✓ shows old and new rules for changed booking terms (7 ms)
+  ✓ detects changed policy content even when the version stays the same (5 ms)
+  ✓ checks again on resume and Later never counts as acceptance (11 ms)
+  ✓ resuming with newly changed terms opens a review for an existing acceptance (6 ms)
+  ✓ terms changing while the dialog is open require another explicit acceptance (11 ms)
+  ✓ corrupt storage prompts a fresh review (invalid) (4 ms)
+  ✓ corrupt storage prompts a fresh review ({"policy":{"version":"v1"},"acceptedAt":"yesterday"}) (4 ms)
+  ✓ a storage failure leaves acceptance pending and offers a retry (11 ms)
+  ✓ loading failure offers retry without inventing terms (8 ms)
+  ✓ signing in as a different customer reads a different acceptance record (5 ms)
+  ✓ review labels are translated in en (1 ms)
+  ✓ review labels are translated in fr (3 ms)
+  ✓ review labels are translated in de (3 ms)
+  ✓ review labels are translated in es (2 ms)
+  ✓ review labels are translated in it (4 ms)
+  ✓ review labels are translated in ar (3 ms)
+  ✓ fingerprints retain fee tier ordering while ignoring object key order (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       19 passed, 19 total
+Snapshots:   0 total
+Time:        1.134 s
+Ran all test suites matching /src\/components\/payment-terms-provider.test.js/i.

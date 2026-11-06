@@ -42,8 +42,8 @@ function loadAuth(): typeof import('./auth-token') {
 describe('customer session persistence', () => {
   beforeEach(() => {
     mockStorage.clear();
-    jest.resetModules();
     globalThis.fetch = jest.fn<typeof fetch>();
+    jest.resetModules();
   });
 
   it('stores access, refresh, and user data securely after verification', async () => {
@@ -152,15 +152,15 @@ describe('customer session persistence', () => {
     expect(mockStorage.get('transpo24.customer.trustedSession')).toBe(JSON.stringify(other));
   });
 
-  it('does not replay an old account request with the next account credentials', async () => {
+  it.each([200, 401])('discards an old account response (%s) without replaying it with next-account credentials', async status => {
     const auth = loadAuth();
     await auth.setCustomerSession(session);
     let complete!: (value: Response) => void;
     jest.mocked(globalThis.fetch).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
     const pending = auth.authenticatedFetch('http://api.test/customer/private', { method: 'POST' });
     await auth.setCustomerSession({ ...session, user: { ...session.user, id: 'customer-2' } });
-    complete(response(401));
-    await expect(pending).resolves.toMatchObject({ status: 401 });
+    complete(response(status));
+    await expect(pending).rejects.toThrow('account changed');
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 

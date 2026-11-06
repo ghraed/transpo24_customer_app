@@ -1,0 +1,26 @@
+PASS src/lib/auth-token.test.ts
+  ✓ explicit offline logout clears trusted credentials even if server revocation cannot be reached (14 ms)
+  customer session persistence
+    ✓ stores access, refresh, and user data securely after verification (398 ms)
+    ✓ persists the name in both session copies after completion and profile edits (15 ms)
+    ✓ restores a session by rotating the stored refresh token (13 ms)
+    ✓ coalesces simultaneous refresh requests (13 ms)
+    ✓ refreshes after a 401 and retries the original request once (13 ms)
+    ✓ clears the local session when refresh fails (18 ms)
+    ✓ keeps the trusted device when refresh is temporarily unavailable (13 ms)
+    ✓ ignores a successful refresh response after logout (14 ms)
+    ✓ ignores a stale refresh result (200) after changing accounts (20 ms)
+    ✓ ignores a stale refresh result (401) after changing accounts (15 ms)
+    ✓ discards an old account response (200) without replaying it with next-account credentials (25 ms)
+    ✓ discards an old account response (401) without replaying it with next-account credentials (14 ms)
+    ✓ does not restore storage hydration that finishes after logout (17 ms)
+    ✓ revokes and clears the session on explicit logout (18 ms)
+    ✓ keeps a verified session available when switching accounts on this device (14 ms)
+    ✓ restores a trusted session by refreshing its stored credential (13 ms)
+    ✓ keeps the continue option after a transient trusted-session failure (16 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        0.943 s, estimated 1 s
+Ran all test suites matching /src\/lib\/auth-token.test.ts/i.

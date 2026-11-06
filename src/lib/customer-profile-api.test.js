@@ -1,4 +1,4 @@
-import { completeCustomerProfile, updateCustomerProfile } from './api';
+import { completeCustomerProfile, updateCustomerProfile, getCustomerRequestStatus } from './api';
 import { authenticatedFetch } from './auth-token';
 
 jest.mock('@/lib/auth-token', () => ({
@@ -53,4 +53,10 @@ describe.each([
     await expect(submit('Mohamad Rhayel', 'CH')).rejects.toThrow('Customer access is required.');
     expect(authenticatedFetch).toHaveBeenCalledTimes(1);
   });
+});
+
+
+test.each([403, 404])('preserves HTTP%s on status failures for localized ownership handling', async (status) => {
+  authenticatedFetch.mockResolvedValue({ ok: false, status, text: async () => JSON.stringify({ message: 'Localized response' }) });
+  await expect(getCustomerRequestStatus('owned-synthetic-request')).rejects.toMatchObject({ status, message: 'Localized response' });
 });

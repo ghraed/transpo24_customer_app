@@ -2,6 +2,9 @@ import { beforeEach, expect, it, jest } from '@jest/globals';
 import { handleURLCallback } from '@stripe/stripe-react-native';
 import { redirectSystemPath } from '../app/+native-intent';
 
+jest.mock('@/lib/stripe-url-scheme', () => ({ getStripeUrlScheme: () => 'transpo24' }));
+jest.mock('expo-secure-store', () => ({ setItemAsync: jest.fn(async () => {}) }));
+
 jest.mock('@stripe/stripe-react-native', () => ({ handleURLCallback: jest.fn() }));
 
 beforeEach(() => { jest.resetAllMocks(); });
@@ -14,7 +17,7 @@ it('resumes bank verification without putting payment secrets in navigation stat
 });
 
 it('keeps unrelated app links unchanged', async () => {
-  for (const path of ['/request-status?requestId=123', 'transpo24://chat', 'https://example.com/safepay']) {
+  for (const path of ['transpo24://chat', 'https://example.com/safepay']) {
     await expect(redirectSystemPath({ path, initial: false })).resolves.toBe(path);
   }
   expect(handleURLCallback).not.toHaveBeenCalled();
@@ -23,4 +26,9 @@ it('keeps unrelated app links unchanged', async () => {
 it('does not navigate to a secret-bearing callback if native handling fails', async () => {
   jest.mocked(handleURLCallback).mockRejectedValue(new Error('no pending payment'));
   await expect(redirectSystemPath({ path: 'transpo24://safepay?secret=test', initial: true })).resolves.toBeNull();
+});
+
+it('retains a cold request link separately from the authentication route', async () => {
+  await expect(redirectSystemPath({ path: 'transpo24://request-status?requestId=123', initial: true })).resolves.toBe('/');
+  expect(handleURLCallback).not.toHaveBeenCalled();
 });

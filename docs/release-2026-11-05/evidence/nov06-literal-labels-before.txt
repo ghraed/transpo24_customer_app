@@ -1,0 +1,27 @@
+FAIL src/localization/literal-labels.test.ts
+  ✕ literal review labels ending in colons retain their labels in every supported language (5 ms)
+
+  ● literal review labels ending in colons retain their labels in every supported language
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Description:"
+    Received: ""
+
+      11 |  for (const [language, resources] of Object.entries({ en, ar, fr, de, es, it })) {
+      12 |   await i18n.changeLanguage(language);
+    > 13 |   for (const key of ['Description:', 'Fragile:', 'Refrigeration:'] as const) expect(i18n.t(key)).toBe(resources[key]);
+         |                                                                                                  ^
+      14 |  }
+      15 | });
+      16 |
+
+      at Object.toBe (src/localization/literal-labels.test.ts:13:98)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.726 s
+Ran all test suites matching /src\/localization\/literal-labels.test.ts/i.

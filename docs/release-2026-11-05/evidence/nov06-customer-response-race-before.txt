@@ -1,0 +1,66 @@
+FAIL src/lib/auth-token.test.ts
+  ✓ explicit offline logout clears trusted credentials even if server revocation cannot be reached (13 ms)
+  customer session persistence
+    ✓ stores access, refresh, and user data securely after verification (38 ms)
+    ✓ persists the name in both session copies after completion and profile edits (13 ms)
+    ✓ restores a session by rotating the stored refresh token (12 ms)
+    ✓ coalesces simultaneous refresh requests (14 ms)
+    ✓ refreshes after a 401 and retries the original request once (17 ms)
+    ✓ clears the local session when refresh fails (15 ms)
+    ✓ keeps the trusted device when refresh is temporarily unavailable (13 ms)
+    ✓ ignores a successful refresh response after logout (15 ms)
+    ✓ ignores a stale refresh result (200) after changing accounts (17 ms)
+    ✓ ignores a stale refresh result (401) after changing accounts (14 ms)
+    ✕ discards an old account response (200) without replaying it with next-account credentials (14 ms)
+    ✕ discards an old account response (401) without replaying it with next-account credentials (14 ms)
+    ✓ does not restore storage hydration that finishes after logout (17 ms)
+    ✓ revokes and clears the session on explicit logout (14 ms)
+    ✓ keeps a verified session available when switching accounts on this device (13 ms)
+    ✓ restores a trusted session by refreshing its stored credential (14 ms)
+    ✓ keeps the continue option after a transient trusted-session failure (18 ms)
+
+  ● customer session persistence › discards an old account response (200) without replaying it with next-account credentials
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"json": [Function mockConstructor], "ok": true, "status": 200}
+
+      164 |     await auth.setCustomerSession({ ...session, user: { ...session.user, id: 'customer-2' } });
+      165 |     complete(response(status));
+    > 166 |     await expect(pending).rejects.toThrow('account changed');
+          |                 ^
+      167 |     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      168 |   });
+      169 |
+
+      at expect (node_modules/expect/build/index.js:113:15)
+      at src/lib/auth-token.test.ts:166:17
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● customer session persistence › discards an old account response (401) without replaying it with next-account credentials
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"json": [Function mockConstructor], "ok": false, "status": 401}
+
+      164 |     await auth.setCustomerSession({ ...session, user: { ...session.user, id: 'customer-2' } });
+      165 |     complete(response(status));
+    > 166 |     await expect(pending).rejects.toThrow('account changed');
+          |                 ^
+      167 |     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      168 |   });
+      169 |
+
+      at expect (node_modules/expect/build/index.js:113:15)
+      at src/lib/auth-token.test.ts:166:17
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 16 passed, 18 total
+Snapshots:   0 total
+Time:        0.872 s, estimated 1 s
+Ran all test suites matching /src\/lib\/auth-token.test.ts/i.

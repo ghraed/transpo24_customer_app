@@ -51,6 +51,7 @@ let refreshPromise: Promise<string | null> | null = null;
 let lastRefreshFailure: RefreshFailure | null = null;
 // Async work from a previous account must never restore or erase this session.
 let sessionGeneration = 0;
+let accountRevision = 0;
 let storageMutation: Promise<unknown> = Promise.resolve();
 function mutateSessionStorage(operation: () => Promise<unknown>): Promise<unknown> {
   const next = storageMutation.then(operation, operation);
@@ -139,7 +140,7 @@ export async function setAccessToken(token: string): Promise<void> {
 
 export async function setCustomerSession(data: CustomerSessionResponse): Promise<void> {
   const generation = ++sessionGeneration;
-  if (currentUser?.id !== data.user.id) disconnectSocket();
+  if (currentUser?.id !== data.user.id) { ++accountRevision; disconnectSocket(); }
   refreshPromise = null;
   accessToken = data.accessToken;
   refreshToken = data.refreshToken;
@@ -196,6 +197,7 @@ export async function clearAccessToken(): Promise<void> {
 }
 
 export async function clearSession(forgetTrusted = false): Promise<void> {
+  ++accountRevision;
   const generation = ++sessionGeneration;
   refreshPromise = null;
   accessToken = null;
@@ -273,13 +275,18 @@ export async function authenticatedFetch(
   init: RequestInit,
 ): Promise<Response> {
   const requestUserId = currentUser?.id;
+  const generation = accountRevision;
+  const assertCurrent = () => { if (generation !== accountRevision || requestUserId !== currentUser?.id) throw new Error('The signed-in account changed.'); };
   const response = await fetch(endpoint, withCurrentToken(init));
-  if (requestUserId !== currentUser?.id) return response;
+  assertCurrent();
   if (response.status !== 401 || !refreshToken) return response;
 
   const token = await refreshAccessToken();
-  if (!token || requestUserId !== currentUser?.id) return response;
-  return fetch(endpoint, withCurrentToken(init));
+  assertCurrent();
+  if (!token) return response;
+  const retried = await fetch(endpoint, withCurrentToken(init));
+  assertCurrent();
+  return retried;
 }
 
 export async function logoutCustomerSession(): Promise<void> {

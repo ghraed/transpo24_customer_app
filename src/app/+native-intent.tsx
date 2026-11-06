@@ -1,20 +1,15 @@
 import { handleURLCallback } from '@stripe/stripe-react-native';
+import { queueRequestLink } from '@/lib/pending-request-link';
+import { getStripeUrlScheme } from '@/lib/stripe-url-scheme';
 
-export async function redirectSystemPath({ path }: { path: string; initial: boolean }): Promise<string | null> {
-  let url: URL;
+export async function redirectSystemPath({ path, initial }: { path: string; initial: boolean }): Promise<string | null> {
   try {
-    url = new URL(path);
-  } catch {
-    return path;
-  }
-  if (url.protocol !== 'transpo24:' || url.hostname !== 'safepay') return path;
-
-  // Let Stripe resume verification without navigating away from the payment screen
-  // or putting the callback's sensitive query parameters into router state.
-  try {
-    await handleURLCallback(path);
-  } catch {
-    // The payment screen handles an incomplete/cancelled verification.
-  }
-  return null;
+    const url = new URL(path, 'transpo24://local');
+    if (url.protocol === getStripeUrlScheme() + ':' && url.hostname === 'safepay') {
+      // Consume sensitive Stripe callback parameters without putting them in router state.
+      try { await handleURLCallback(path); } catch { /* Payment screen reconciles. */ }
+      return null;
+    }
+    return await queueRequestLink(path) ? (initial ? '/' : null) : path;
+  } catch { return '/'; }
 }

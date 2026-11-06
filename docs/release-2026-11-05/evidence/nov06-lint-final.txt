@@ -1,0 +1,52 @@
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/components/chat-attachment-group.test.js
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/components/chat-attachment.test.js
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/auth-token.test.ts
+  4:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/chat-files.test.ts
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+  8:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/chat-files.ts
+  63:16  warning  'pickFile' is defined but never used  @typescript-eslint/no-unused-vars
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/chat-outbox-native.test.ts
+  3:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/chat-outbox.test.ts
+  4:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/request-files.test.ts
+  2:1  warning  Import in body of module; reorder to top  import/first
+  3:1  warning  Import in body of module; reorder to top  import/first
+  4:1  warning  Import in body of module; reorder to top  import/first
+  5:1  warning  Import in body of module; reorder to top  import/first
+  6:1  warning  Import in body of module; reorder to top  import/first
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+/media/raed/Data/from ubuntu/Transpo_24 workspace/client_mobile/src/lib/request-files.ts
+  4:13  warning  'FileSystem' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 30 problems (0 errors, 30 warnings)
+  0 errors and 7 warnings potentially fixable with the `--fix` option.
+

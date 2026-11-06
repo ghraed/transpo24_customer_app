@@ -63,7 +63,7 @@ export default function VerifyPhoneScreen() {
       const session = await verifyPhoneVerificationCode(phoneNumber, candidate, acceptedTermsVersion);
       await setCustomerSession(session);
       void registerCustomerPushNotifications().catch(() => undefined);
-      router.dismissAll();
+      if (router.canDismiss()) router.dismissAll();
       router.replace((session.profileCompleted ? '/(tabs)/home' : '/complete-profile') as never);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('Unable to verify the code.'));

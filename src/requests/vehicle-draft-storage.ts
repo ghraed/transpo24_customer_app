@@ -62,7 +62,7 @@ export function writeVehicleDraft(draft: VehicleDraft) {
   pending.write(JSON.stringify(draft));
   const target = new File(dir, 'draft.json');
   if (target.exists) target.delete();
-  pending.move(target);
+  pending.moveSync(target);
 }
 export function retainDraftPhoto(
   ownerId: string,
@@ -74,7 +74,7 @@ export function retainDraftPhoto(
     directory(ownerId),
     `${photo.localId}.${extension}`,
   );
-  new File(photo.uri).copy(destination);
+  new File(photo.uri).copySync(destination);
   return { ...photo, uri: destination.uri };
 }
 export function clearVehicleDraft(ownerId: string) {

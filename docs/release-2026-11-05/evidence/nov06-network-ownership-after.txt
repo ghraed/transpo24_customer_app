@@ -1,0 +1,8 @@
+PASS src/lib/request-status.test.ts
+PASS src/lib/customer-profile-api.test.js
+
+Test Suites: 2 passed, 2 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        0.955 s, estimated 1 s
+Ran all test suites matching /src\/lib\/request-status.test.ts|src\/lib\/customer-profile-api.test.js/i.

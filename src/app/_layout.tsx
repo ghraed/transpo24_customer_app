@@ -1,3 +1,4 @@
+import { usePendingRequestLink } from '@/notifications/usePendingRequestLink';
 import { LegalConsentBoundary } from '@/components/legal-consent-boundary';
 import { getStripePublishableKey } from '@/lib/stripe-config';
 import { getStripeUrlScheme } from '@/lib/stripe-url-scheme';
@@ -106,7 +107,8 @@ function RootNavigator() {
   const authReady = authSession.status !== 'initializing';
   const publishableKey = getStripePublishableKey();
 
-  useNotificationNavigation(authSession.status === 'authenticated' && localizationReady);
+  useNotificationNavigation(authSession.status === 'authenticated' && localizationReady, authSession.user?.id ?? null);
+  usePendingRequestLink(authSession.status === 'authenticated' && localizationReady);
 
   useEffect(() => {
     void hydrateAuthSession();

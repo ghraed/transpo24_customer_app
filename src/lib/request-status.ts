@@ -15,3 +15,10 @@ export function isDeliveryCompletedStatus(
 ): boolean {
   return status === 'DELIVERED' || status === 'COMPLETED';
 }
+
+export function requestStatusErrorKey(error: unknown): 'Request not found.' | 'You do not have access to this request.' | null {
+  const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+  if (status === 404) return 'Request not found.';
+  if (status === 403) return 'You do not have access to this request.';
+  return null;
+}

@@ -1,0 +1,23 @@
+  console.warn
+    An error occurred while requiring the 'ExpoModulesCoreJSLogger' module: Cannot read properties of undefined (reading 'get')
+
+      at warn (node_modules/expo-modules-core/src/requireNativeModule.ts:46:13)
+      at Object.<anonymous> (node_modules/expo-modules-core/src/sweet/setUpJsLogger.fx.ts:14:53)
+      at Object.require (node_modules/expo-modules-core/src/index.ts:2:1)
+      at node_modules/jest-expo/src/preset/setup.js:234:32
+      at Object.require (node_modules/expo/src/winter/fetch/ExpoFetchModule.ts:1:1)
+      at Object.require (node_modules/expo/src/winter/fetch/fetch.ts:1:1)
+      at Object.require (node_modules/expo/src/winter/fetch/index.ts:1:1)
+      at require (node_modules/expo/src/winter/runtime.native.ts:52:26)
+      at getValue (node_modules/expo/src/winter/installGlobal.ts:102:21)
+      at Object.get [as fetch] (node_modules/expo/src/winter/installGlobal.ts:44:16)
+          at Array.forEach (<anonymous>)
+
+PASS src/components/native-maps.test.js
+  ✓ missing staging Maps configuration provides the existing unavailable-map path without initializing the SDK (4 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.443 s, estimated 1 s
+Ran all test suites matching /src\/components\/native-maps.test.js/i.

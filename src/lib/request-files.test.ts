@@ -196,3 +196,17 @@ it('reports a missing native viewer without opening a share chooser and cleans t
  await expect(openRequestFile('/request-files/file/content','file.pdf')).rejects.toThrow('documents.openFailed');
  expect(Sharing.shareAsync).not.toHaveBeenCalled();expect(FileSystem.deleteAsync).toHaveBeenCalled();
 });
+
+it('does not upload a document picked after the initiating account changed', async () => {
+  const { assertChatAccount } = jest.requireMock('@/lib/chat-outbox') as { assertChatAccount: jest.Mock };
+  let changed = false;
+  assertChatAccount.mockImplementation(() => { if (changed) throw new Error('account changed'); });
+  let release!: (value: unknown) => void;
+  jest.mocked(getDocumentAsync).mockImplementation(() => new Promise(resolve => { release = resolve as typeof release; }));
+  const sending = uploadRequestDocument('owned-request', 'OTHER');
+  while (!release) await Promise.resolve();
+  changed = true;
+  release({ canceled: false, assets: [{ uri: 'file:///synthetic.pdf', name: 'synthetic.pdf', mimeType: 'application/pdf', size: 601 }] });
+  await expect(sending).rejects.toThrow('account changed');
+  assertChatAccount.mockReset();
+});

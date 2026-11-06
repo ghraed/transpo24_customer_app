@@ -1,4 +1,4 @@
-import { PaymentInfo } from '@/components/payment-info';
+import { PaymentInfo, usePaymentPolicy } from '@/components/payment-info';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import React, { useEffect, useState } from 'react';
@@ -104,6 +104,7 @@ function getTransactionTone(type: CustomerWalletTransaction['type']): {
 }
 
 export default function WalletScreen() {
+  const { policy } = usePaymentPolicy();
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
@@ -186,6 +187,7 @@ export default function WalletScreen() {
             </View>
           </View>
 
+          {policy?.directCharges ? <Text style={styles.walletMeta}>{appI18n.t('Direct driver payments require a card or Apple Pay or Google Pay.')}</Text> : policy ? (
           <Pressable
             style={styles.primaryButton}
             onPress={() =>
@@ -199,6 +201,8 @@ export default function WalletScreen() {
           >
             <Text style={styles.primaryButtonText}>{appI18n.t("Add Money")}</Text>
           </Pressable>
+
+          ) : <ActivityIndicator />}
 
           <View style={styles.currencyRow}>
             <View style={styles.currencyIconWrap}>
@@ -259,7 +263,7 @@ export default function WalletScreen() {
                 />
               </View>
               <Text style={styles.emptyText}>
-                {appI18n.t("No wallet activity yet. Add money to start using your app wallet.")}</Text>
+                {appI18n.t(policy?.directCharges ? 'Direct driver payments require a card or Apple Pay or Google Pay.' : 'No wallet activity yet. Add money to start using your app wallet.')}</Text>
             </View>
           )}
         </View>

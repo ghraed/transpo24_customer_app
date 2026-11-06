@@ -320,6 +320,17 @@ export default function WalletTopUpScreen() {
     }
   };
 
+  if (policy?.directCharges) return (
+    <SafeAreaView style={styles.screen}>
+      <View style={{ padding: 24, gap: 20 }}>
+        <Text>{appI18n.t('Direct driver payments require a card or Apple Pay or Google Pay.')}</Text>
+        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>{appI18n.t('Back')}</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
