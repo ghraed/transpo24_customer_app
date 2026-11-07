@@ -57,9 +57,9 @@ export function ChoiceField({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
-        accessibilityState={{ disabled: disabled || loading, expanded: open, busy: loading }}
-        disabled={disabled || loading}
-        style={[styles.input, (disabled || loading) && styles.disabled, invalid && styles.invalid]}
+        accessibilityState={{ disabled, expanded: open, busy: loading }}
+        disabled={disabled}
+        style={[styles.input, disabled && styles.disabled, invalid && styles.invalid]}
         onPress={() => {
           setQuery('');
           onSearchChange?.('');
@@ -192,23 +192,41 @@ export function VehicleEditor({
   }, [catalogRetry]);
   useEffect(() => {
     let active = true;
+    if (!value.brandId) return () => { active = false; };
+    let retryTimer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    const loadModels = async () => {
+      try {
+        const result = await getVehicleModels(value.brandId, modelSearch);
+        if (!active) return;
+        setModels(result.filter((model) => !model.brandId || model.brandId === value.brandId));
+        setMessage((current) => current === 'vehicleRequest.catalogUnavailable' ? '' : current);
+        setModelsLoading(false);
+        setLoadedModelContext(`${value.brandId}:${modelSearch}`);
+      } catch (error) {
+        if (!active) return;
+        const status = (error as { status?: number }).status;
+        if (attempts < 1 && (status === undefined || status === 429 || status >= 500)) {
+          attempts += 1;
+          retryTimer = setTimeout(() => { void loadModels(); }, 400);
+          return;
+        }
+        setModelError(true);
+        setMessage('vehicleRequest.catalogUnavailable');
+        setModelsLoading(false);
+        setLoadedModelContext(`${value.brandId}:${modelSearch}`);
+      }
+    };
     const timer = setTimeout(() => {
-      if (!value.brandId) return;
       setModels([]);
       setModelError(false);
       setModelsLoading(true);
-      void getVehicleModels(value.brandId, modelSearch)
-        .then((result) => {
-          if (active) setModels(result.filter((model) => !model.brandId || model.brandId === value.brandId));
-        })
-        .catch(() => {
-          if (active) { setModelError(true); setMessage('vehicleRequest.catalogUnavailable'); }
-        })
-        .finally(() => { if (active) { setModelsLoading(false); setLoadedModelContext(`${value.brandId}:${modelSearch}`); } });
+      void loadModels();
     }, modelSearch ? 350 : 0);
     return () => {
       active = false;
       clearTimeout(timer);
+      clearTimeout(retryTimer);
     };
   }, [value.brandId, modelSearch, catalogRetry]);
   const lookup = async () => {

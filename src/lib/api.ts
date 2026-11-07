@@ -930,7 +930,9 @@ export async function getVehicleModels(brandId: string, search = ''): Promise<Ve
   );
 
   if (!response.ok) {
-    throw await parseError(response, 'Failed to load vehicle models.');
+    throw Object.assign(await parseError(response, 'Failed to load vehicle models.'), {
+      status: response.status,
+    });
   }
 
   const data = await parseJsonBody<VehicleCatalogModel[] | { models: VehicleCatalogModel[] }>(

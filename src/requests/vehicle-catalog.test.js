@@ -23,6 +23,52 @@ beforeEach(() => {
 });
 afterEach(() => { jest.useRealTimers(); jest.clearAllMocks(); });
 
+it('loads models after a temporary failure without requiring a tap on Try again', async () => {
+  getVehicleModels
+    .mockRejectedValueOnce(Object.assign(new Error('Temporary catalog failure'), { status: 503 }))
+    .mockResolvedValueOnce([{ id: 'lancer', name: 'Lancer', brandId: 'sci:mitsubishi' }]);
+  getVehicleBrands.mockResolvedValue([{ id: 'sci:mitsubishi', name: 'Mitsubishi' }]);
+  function Form() {
+    const [value, onChange] = React.useState(newVehicleDraft('customer', 'service').vehicle);
+    return <VehicleEditor value={value} onChange={onChange} errors={[]} />;
+  }
+  let tree;
+  await act(async () => { tree = create(<Form />); });
+  const selector = label => tree.root.findAllByType(ChoiceField).find(node => node.props.label === `vehicleRequest.${label}`);
+  await act(async () => { selector('brand').props.onChange('sci:mitsubishi'); });
+  const modelButton = selector('model').findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === 'vehicleRequest.model')[0];
+  expect(modelButton.props.disabled).toBe(false);
+  await act(async () => { modelButton.props.onPress(); });
+  expect(modelButton.props.accessibilityState.expanded).toBe(true);
+  await act(async () => { jest.advanceTimersByTime(0); });
+  expect(selector('model').props.loading).toBe(true);
+  expect(selector('model').props.error).toBe(false);
+  await act(async () => { jest.advanceTimersByTime(400); });
+  expect(getVehicleModels).toHaveBeenCalledTimes(2);
+  expect(selector('model').props.options).toEqual([{ value: 'lancer', label: 'Lancer' }]);
+  expect(selector('model').props.loading).toBe(false);
+  expect(selector('model').props.error).toBe(false);
+  await act(async () => tree.unmount());
+});
+
+it('shows the retry fallback after the automatic attempt also fails', async () => {
+  getVehicleModels.mockRejectedValue(Object.assign(new Error('Catalog unavailable'), { status: 503 }));
+  function Form() {
+    const [value, onChange] = React.useState(newVehicleDraft('customer', 'service').vehicle);
+    return <VehicleEditor value={value} onChange={onChange} errors={[]} />;
+  }
+  let tree;
+  await act(async () => { tree = create(<Form />); });
+  const selector = label => tree.root.findAllByType(ChoiceField).find(node => node.props.label === `vehicleRequest.${label}`);
+  await act(async () => { selector('brand').props.onChange('sci:bmw'); });
+  await act(async () => { jest.advanceTimersByTime(0); });
+  await act(async () => { jest.advanceTimersByTime(400); });
+  expect(getVehicleModels).toHaveBeenCalledTimes(2);
+  expect(selector('model').props.loading).toBe(false);
+  expect(selector('model').props.error).toBe(true);
+  await act(async () => tree.unmount());
+});
+
 it('clears the old model, ignores a late response for another make and searches within the selected make', async () => {
   let resolveMercedes;
   getVehicleModels.mockImplementation((brand) => brand === 'sci:mercedes'
