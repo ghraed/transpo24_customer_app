@@ -80,6 +80,22 @@ const services = [
 describe.each(services)(
   "%s delivery scheduling",
   (Screen, serviceKey, detailsKey, details) => {
+    it.each([0, 5])("accepts delivery today + %i", async (offset) => {
+      mockParams = {
+        serviceId: "service",
+        serviceKey,
+        [detailsKey]: JSON.stringify(details),
+        pendingFurniturePhotoAssets: JSON.stringify([{ uri: "file:///sofa.jpg" }]),
+      };
+      await act(async () => { tree = create(<Screen />); });
+      const delivery = addCalendarDays(new Date(), offset);
+      await act(async () =>
+        tree.root.findByType(DeliveryDateEditor).props.onChange(delivery),
+      );
+      await press("Continue to Pickup Location");
+      expect(JSON.parse(mockPush.mock.calls[0][0].params[detailsKey]).scheduledDeliveryAt)
+        .toBe(delivery.toISOString());
+    });
     it("requires a manually chosen delivery date before continuing", async () => {
       mockParams = {
         serviceId: "service",

@@ -37,7 +37,6 @@ export function ScheduleEditor({
   onChange,
   invalid,
   furniture = false,
-  bicycle = false,
 }: {
   value: VehicleDraft['schedule'];
   onChange: (value: VehicleDraft['schedule']) => void;
@@ -134,9 +133,9 @@ export function ScheduleEditor({
           ))}
         </View>
       ) : null}
-      {!(bicycle && value.immediate) ? <DeliveryDateEditor furniture={furniture} pickup={value.immediate ? new Date() : current}
+      <DeliveryDateEditor furniture={furniture} pickup={value.immediate ? new Date() : current}
         value={value.deliveryAt ? new Date(value.deliveryAt) : undefined}
-        onChange={(date) => onChange({ ...value, deliveryAt: date.toISOString() })} /> : null}
+        onChange={(date) => onChange({ ...value, deliveryAt: date.toISOString() })} />
       {Platform.OS === 'ios' ? (
         <Modal
           transparent

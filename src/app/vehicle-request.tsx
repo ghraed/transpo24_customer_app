@@ -21,7 +21,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthSession } from '@/lib/auth-token';
-import { submitVehicleDraft } from '@/requests/submit-vehicle-draft';
+import { submitVehicleDraft, VehicleSubmissionError } from '@/requests/submit-vehicle-draft';
 import { getDrivingDistance } from '@/lib/places';
 import { AddressEditor } from '@/requests/address-editor';
 import { ScheduleEditor, scheduleLabel } from '@/requests/schedule-editor';
@@ -195,13 +195,20 @@ function VehicleRequest({
     setShowErrors(true);
   };
   const next = () => {
-    const actualErrors = validateVehicleDraft(draftRef.current).filter(
-      belongsToStep,
-    );
+    const allErrors = validateVehicleDraft(draftRef.current);
+    const actualErrors = allErrors.filter(belongsToStep);
     if (actualErrors.length) {
       setShowErrors(true);
       scroll.current?.scrollTo({ y: 0, animated: true });
       return;
+    }
+    if (editing || step === 'schedule') {
+      const firstError = allErrors[0];
+      if (firstError) {
+        go(firstError.step, true);
+        setShowErrors(true);
+        return;
+      }
     }
     go(editing ? 'review' : STEPS[STEPS.indexOf(step) + 1]);
   };
@@ -273,8 +280,23 @@ function VehicleRequest({
           params: { requestId: submittedId },
         });
       }, 350);
-    } catch {
-      setError('vehicleRequest.submitFailed');
+    } catch (failure) {
+      if (failure instanceof Error && failure.message === 'vehicleRequest.invalidDraft') {
+        setClock(Date.now());
+        setShowErrors(true);
+        busyRef.current = false;
+        setBusy(false);
+        return;
+      }
+      const stage = failure instanceof VehicleSubmissionError
+        ? failure.step === 'submit'
+          ? t('vehicleRequest.submit')
+          : t(`vehicleRequest.step.${failure.step}`)
+        : t('vehicleRequest.submit');
+      const detail = failure instanceof Error ? failure.message.trim() : '';
+      setError(detail
+        ? `${stage}: ${t(detail)} ${t('vehicleRequest.submitFailed')}`
+        : `${stage}: ${t('vehicleRequest.submitFailed')}`);
       busyRef.current = false;
       setBusy(false);
     }
@@ -713,7 +735,7 @@ function VehicleRequest({
               <Text style={styles.primaryText}>
                 {t(
                   step === 'review'
-                    ? 'vehicleRequest.submit'
+                    ? errors.length > 0 ? 'vehicleRequest.step.review' : 'vehicleRequest.submit'
                     : step === 'pickup'
                       ? 'vehicleRequest.confirmPickup'
                       : step === 'dropoff'

@@ -116,6 +116,21 @@ describe("delivery date picker", () => {
     );
     expect(button("Delivery Date")).toBeDefined();
   });
+  it("shows an optional delivery picker for immediate bicycle edits", async () => {
+    await act(async () => {
+      tree = create(
+        <ScheduleEditor
+          bicycle
+          value={{ immediate: true, at: new Date().toISOString() }}
+          onChange={jest.fn()}
+          invalid={false}
+        />,
+      );
+    });
+    await act(async () => button("Delivery Date").props.onPress());
+    expect(tree.root.findByType("DateTimePicker").props.minimumDate)
+      .toEqual(addCalendarDays(new Date(), 0));
+  });
 });
 
 it("allows same-day through pickup + five for distant furniture bookings", async () => {

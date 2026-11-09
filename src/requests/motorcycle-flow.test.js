@@ -5,6 +5,7 @@ import { act, create } from 'react-test-renderer';
 import { TextInput } from 'react-native';
 import MotorcycleDetails from '@/app/motorcycle-details';
 import { DeliveryDateEditor } from './delivery-date-editor';
+import { calendarDay } from './schedule-rules';
 import SubmitRequest from '@/app/submit-request';
 import { createMotorcycleTransportRequest, updateScheduleAndItemDetails, submitCustomerRequest } from '@/lib/api';
 
@@ -65,7 +66,7 @@ test('bicycle flow validates type, hides VIN, retains optional details and needs
   });
   await press(tree, 'Continue');
   await press(tree, 'Immediate pickup');
-  expect(tree.root.findAllByType(DeliveryDateEditor)).toHaveLength(0);
+  expect(tree.root.findAllByType(DeliveryDateEditor)).toHaveLength(1);
   await press(tree, 'Schedule for later');
   expect(tree.root.findAllByType(DeliveryDateEditor)).toHaveLength(1);
   await press(tree, 'Continue to Pickup Location');
@@ -82,6 +83,22 @@ test('bicycle flow validates type, hides VIN, retains optional details and needs
   expect(JSON.parse(route.params.pendingMotorcycleDetails).chassisNumber).toBeUndefined();
   expect(JSON.parse(route.params.pendingMotorcycleDetails).scheduledDeliveryAt).toBeUndefined();
   expect(JSON.parse(route.params.pendingMotorcyclePhotoAssets)).toEqual([]);
+});
+
+test('immediate bicycle requests can choose delivery today', async () => {
+  mockParams = { serviceId: 'service', serviceKey: 'MOTORCYCLE_TRANSPORT' };
+  await act(async () => { tree = create(<MotorcycleDetails />); });
+  await press(tree, 'Bicycle');
+  await press(tree, 'Select bicycle type');
+  await press(tree, 'City bike');
+  await press(tree, 'Continue');
+  await press(tree, 'Immediate pickup');
+  const today = calendarDay(new Date());
+  today.setHours(12);
+  await act(async () => tree.root.findByType(DeliveryDateEditor).props.onChange(today));
+  await press(tree, 'Continue to Pickup Location');
+  expect(JSON.parse(mockPush.mock.calls[0][0].params.pendingMotorcycleDetails).scheduledDeliveryAt)
+    .toBe(today.toISOString());
 });
 
 test('switching from motorcycle to bicycle removes a stale VIN from the outgoing request', async () => {

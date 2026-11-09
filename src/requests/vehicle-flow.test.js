@@ -53,7 +53,10 @@ jest.mock('./schedule-editor', () => ({
   ScheduleEditor: () => null,
   scheduleLabel: (value) => value.at,
 }));
-jest.mock('./submit-vehicle-draft', () => ({ submitVehicleDraft: jest.fn() }));
+jest.mock('./submit-vehicle-draft', () => ({
+  submitVehicleDraft: jest.fn(),
+  VehicleSubmissionError: class extends Error {},
+}));
 jest.mock('@/lib/places', () => ({
   getDrivingDistance: jest.fn(async () => 90),
 }));
@@ -263,7 +266,24 @@ describe('vehicle review editing', () => {
       expect(mockReplace).not.toHaveBeenCalled();
       expect(form().props.pointerEvents).toBe('auto');
       expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
+      expect(JSON.stringify(tree.toJSON())).toContain('offline');
     }
+    await act(async () => tree.unmount());
+  });
+
+  it('keeps Send request unavailable until a long note is corrected', async () => {
+    const draft = readVehicleDraft();
+    readVehicleDraft.mockReturnValueOnce({ ...draft, customerNote: 'x'.repeat(1001) });
+    let tree;
+    await act(async () => { tree = create(<VehicleRequestRoute />); });
+    for (const label of ['continue', 'continue', 'confirmPickup', 'confirmDropoff', 'continue']) {
+      await act(async () => button(tree, `vehicleRequest.${label}`).props.onPress());
+    }
+    expect(button(tree, 'vehicleRequest.submit')).toBeUndefined();
+    expect(JSON.stringify(tree.toJSON())).toContain('vehicleRequest.errorNotes');
+    expect(submitVehicleDraft).not.toHaveBeenCalled();
+    await act(async () => tree.root.findByType(OptionalRequestNote).props.onChangeText('Call first'));
+    expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
     await act(async () => tree.unmount());
   });
 

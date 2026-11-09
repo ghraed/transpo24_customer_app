@@ -656,7 +656,7 @@ export default function MotorcycleDetailsScreen() {
       </View>
       </View>
 
-      {!(isBicycle && form.isImmediate) ? <DeliveryDateEditor pickup={form.isImmediate ? new Date() : form.scheduledPickupAt} value={form.scheduledDeliveryAt} onChange={(date) => setForm((prev) => ({ ...prev, scheduledDeliveryAt: date }))} /> : null}
+      <DeliveryDateEditor pickup={form.isImmediate ? new Date() : form.scheduledPickupAt} value={form.scheduledDeliveryAt} onChange={(date) => setForm((prev) => ({ ...prev, scheduledDeliveryAt: date }))} />
 
       <Pressable
         style={[styles.continueButton, !canContinue && styles.continueDisabled]}

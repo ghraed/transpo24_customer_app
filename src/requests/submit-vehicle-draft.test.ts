@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import * as api from '@/lib/api';
-import { submitVehicleDraft } from './submit-vehicle-draft';
+import { submitVehicleDraft, VehicleSubmissionError } from './submit-vehicle-draft';
 import {
   newVehicleDraft,
   patchVehicleDraft,
@@ -94,6 +94,21 @@ describe('vehicle submission', () => {
     await submitVehicleDraft(draft, persist);
     expect(mocked.createCustomerRequest).toHaveBeenCalledTimes(1);
     expect(mocked.uploadRequestPhotos).toHaveBeenCalledTimes(1);
+  });
+  it('identifies a failed photo upload before final submission', async () => {
+    let draft = {
+      ...fixture(),
+      photos: [{ localId: 'photo-1', uri: 'file:///car.jpg' }],
+    } as VehicleDraft;
+    mocked.uploadRequestPhotos.mockRejectedValueOnce(new Error('Photo is too large.'));
+    await expect(submitVehicleDraft(draft, (change) =>
+      (draft = patchVehicleDraft(draft, change)),
+    )).rejects.toMatchObject({
+      step: 'photos',
+      message: 'Photo is too large.',
+      name: VehicleSubmissionError.name,
+    });
+    expect(mocked.submitCustomerRequest).not.toHaveBeenCalled();
   });
   it('recovers when the server submitted successfully but the response was lost', async () => {
     const draft = { ...fixture(), requestId: 'already-sent' };
