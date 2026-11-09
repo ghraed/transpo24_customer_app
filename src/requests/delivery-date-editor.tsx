@@ -77,7 +77,7 @@ export function DeliveryDateEditor({
           available
             ? furniture
               ? "Furniture delivery must be on pickup day or within five days after pickup."
-              : "Delivery must be after pickup and within today through five days ahead."
+              : "Delivery must be between today and five days ahead."
             : "No delivery dates available. Choose an earlier pickup date.",
         )}
       </Text>

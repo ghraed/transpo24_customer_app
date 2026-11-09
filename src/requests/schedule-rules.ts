@@ -25,7 +25,7 @@ export function scheduleBounds(
   furniture = false,
 ) {
   return {
-    minimum: addCalendarDays(pickup, furniture ? 0 : 1),
+    minimum: calendarDay(pickup),
     maximum: addCalendarDays(furniture ? pickup : now, 5),
   };
 }
@@ -72,7 +72,7 @@ export function validateSchedule({
     delivery.getTime() >= maximum
   )
     return "Delivery must be between today and five days ahead.";
-  if (calendarDay(delivery).getTime() <= calendarDay(effectivePickup).getTime())
-    return "Delivery date must be after the pickup date.";
+  if (calendarDay(delivery).getTime() < calendarDay(effectivePickup).getTime())
+    return "Delivery date cannot be before the pickup date.";
   return null;
 }

@@ -126,10 +126,10 @@ it('rejects a vehicle draft months ahead with same-day delivery', () => {
 it('requires a customer-selected delivery date for a new vehicle draft', () => {
   expect(newVehicleDraft('customer', 'service').schedule.deliveryAt).toBeUndefined();
 });
-it('rejects same-day vehicle delivery but accepts the next day', () => {
+it('accepts same-day vehicle delivery and the next day', () => {
   const draft = completeDraft();
   draft.schedule.deliveryAt = draft.schedule.at;
-  expect(validateVehicleDraft(draft)).toContainEqual(expect.objectContaining({ step: 'schedule', key: 'Delivery date must be after the pickup date.' }));
+  expect(validateVehicleDraft(draft)).toEqual([]);
   const delivery = new Date(draft.schedule.at);
   delivery.setDate(delivery.getDate() + 1);
   draft.schedule.deliveryAt = delivery.toISOString();

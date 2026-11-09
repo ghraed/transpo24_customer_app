@@ -602,6 +602,8 @@ function SubmitRequestScreen() {
       },
     } as unknown as Href;
 
+    // Remove every form screen and its route parameters before leaving the flow.
+    router.dismissAll();
     setTimeout(() => {
       router.replace(statusRoute);
     }, 350);

@@ -36,7 +36,7 @@ const button = (label) =>
       typeof node.props.onPress === "function",
   )[0];
 describe("delivery date picker", () => {
-  it("bounds delivery to the day after pickup through today + five and saves the date", async () => {
+  it("bounds delivery from pickup day through today + five and saves the date", async () => {
     const onChange = jest.fn();
     await act(async () => {
       tree = create(
@@ -45,7 +45,7 @@ describe("delivery date picker", () => {
     });
     await act(async () => button("Delivery Date").props.onPress());
     const picker = tree.root.findByType("DateTimePicker");
-    expect(picker.props.minimumDate).toEqual(addCalendarDays(new Date(), 1));
+    expect(picker.props.minimumDate).toEqual(addCalendarDays(new Date(), 0));
     expect(picker.props.maximumDate).toEqual(addCalendarDays(new Date(), 5));
     await act(async () =>
       picker.props.onChange({ type: "dismissed" }, undefined),
@@ -59,7 +59,7 @@ describe("delivery date picker", () => {
     );
     expect(onChange.mock.calls[0][0].getDate()).toBe(22);
   });
-  it("disables delivery selection when pickup leaves no later date in the window", async () => {
+  it("allows delivery on the last pickup day in the window", async () => {
     await act(async () => {
       tree = create(
         <DeliveryDateEditor
@@ -68,8 +68,9 @@ describe("delivery date picker", () => {
         />,
       );
     });
-    expect(button("Delivery Date").props.disabled).toBe(true);
-    expect(tree.root.findAllByType("DateTimePicker")).toHaveLength(0);
+    expect(button("Delivery Date").props.disabled).toBe(false);
+    await act(async () => button("Delivery Date").props.onPress());
+    expect(tree.root.findByType("DateTimePicker").props.minimumDate).toEqual(addCalendarDays(new Date(), 5));
   });
   it("caps regular pickup, preserves furniture exemption and shows delivery for immediate pickup", async () => {
     await act(async () => {
@@ -159,10 +160,10 @@ it("vehicle pickup and later delivery stay within today through five days ahead"
   );
   await act(async () => button("Delivery Date").props.onPress());
   const picker = tree.root.findByType("DateTimePicker");
-  expect(picker.props.minimumDate).toEqual(addCalendarDays(pickup, 1));
+  expect(picker.props.minimumDate).toEqual(pickup);
   expect(picker.props.maximumDate).toEqual(addCalendarDays(new Date(), 5));
   await act(async () =>
-    picker.props.onChange({ type: "set" }, addCalendarDays(pickup, 1)),
+    picker.props.onChange({ type: "set" }, pickup),
   );
   expect(onChange.mock.calls[0][0].deliveryAt).toBeDefined();
 });

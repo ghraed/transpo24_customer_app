@@ -1314,6 +1314,7 @@
   "Delivery must be between today and five days ahead.": "Delivery must be between today and five days ahead.",
   "Please select a delivery date.": "Please select a delivery date.",
   "Delivery date must be after the pickup date.": "Delivery date must be after the pickup date.",
+  "Delivery date cannot be before the pickup date.": "Delivery date cannot be before the pickup date.",
   "Delivery must be after pickup and within today through five days ahead.": "Delivery must be after pickup and within today through five days ahead.",
   "No delivery dates available. Choose an earlier pickup date.": "No delivery dates available. Choose an earlier pickup date.",
   "Furniture delivery must be on pickup day or within five days after pickup.": "Furniture delivery must be on pickup day or within five days after pickup.",

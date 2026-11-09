@@ -24,10 +24,8 @@ describe("six calendar day scheduling window", () => {
       expect(check(day(offset), day(offset + 1))).toBeNull();
     },
   );
-  it("accepts the entire sixth pickup day, but requires a later delivery day", () => {
-    expect(check(day(5, 23), day(5))).toBe(
-      "Delivery date must be after the pickup date.",
-    );
+  it("accepts same-day delivery through the sixth pickup day", () => {
+    expect(check(day(5, 23), day(5))).toBeNull();
     expect(check(day(6), day(5))).toBe(
       "Pickup must be between today and five days ahead.",
     );
@@ -40,10 +38,14 @@ describe("six calendar day scheduling window", () => {
       );
     },
   );
-  it.each([0, 1, 2])("rejects delivery on or before pickup: %i", (offset) => {
+  it.each([0, 1])("rejects delivery before pickup: %i", (offset) => {
     expect(check(day(2), day(offset))).toBe(
-      "Delivery date must be after the pickup date.",
+      "Delivery date cannot be before the pickup date.",
     );
+  });
+  it("accepts delivery on the pickup day, including today", () => {
+    expect(check(day(0), day(0))).toBeNull();
+    expect(check(day(2), day(2))).toBeNull();
   });
   it("requires a delivery date, including immediate pickup", () => {
     expect(check(day(0), undefined)).toBe("Please select a delivery date.");
@@ -51,14 +53,12 @@ describe("six calendar day scheduling window", () => {
       "Please select a delivery date.",
     );
     expect(check(undefined, day(1), false, true)).toBeNull();
-    expect(check(undefined, day(0), false, true)).toBe(
-      "Delivery date must be after the pickup date.",
-    );
+    expect(check(undefined, day(0), false, true)).toBeNull();
   });
   it("invalidates delivery after pickup changes", () => {
     expect(check(day(1), day(2))).toBeNull();
     expect(check(day(3), day(2))).toBe(
-      "Delivery date must be after the pickup date.",
+      "Delivery date cannot be before the pickup date.",
     );
   });
   it("allows furniture delivery on pickup day through five days after any future pickup", () => {
@@ -113,16 +113,14 @@ describe("six calendar day scheduling window", () => {
 });
 
 describe("vehicle scheduling follows goods rules", () => {
-  it("accepts a pickup and later delivery inside the six-day window", () => {
+  it("accepts pickup and delivery on the same or later day inside the six-day window", () => {
     expect(check(day(0), day(1))).toBeNull();
+    expect(check(day(0), day(0))).toBeNull();
     expect(check(day(4), day(5))).toBeNull();
   });
-  it("rejects distant pickup, same-day delivery, and delivery outside the window", () => {
+  it("rejects distant pickup and delivery outside the window", () => {
     expect(check(day(6), day(7))).toBe(
       "Pickup must be between today and five days ahead.",
-    );
-    expect(check(day(0), day(0))).toBe(
-      "Delivery date must be after the pickup date.",
     );
     expect(check(day(4), day(6))).toBe(
       "Delivery must be between today and five days ahead.",

@@ -265,10 +265,14 @@ function VehicleRequest({
       } catch {
         /* Submission succeeded; navigation must still complete. */
       }
-      router.replace({
-        pathname: '/request-status',
-        params: { requestId: submittedId },
-      });
+      // Popping the form stack also discards the live draft and its route state.
+      router.dismissAll();
+      setTimeout(() => {
+        router.replace({
+          pathname: '/request-status',
+          params: { requestId: submittedId },
+        });
+      }, 350);
     } catch {
       setError('vehicleRequest.submitFailed');
       busyRef.current = false;

@@ -1309,6 +1309,7 @@
   "Delivery must be between today and five days ahead.": "يجب أن يكون التسليم بين اليوم وخمسة أيام من الآن.",
   "Please select a delivery date.": "يرجى اختيار تاريخ التسليم.",
   "Delivery date must be after the pickup date.": "يجب أن يكون تاريخ التسليم بعد تاريخ الاستلام.",
+  "Delivery date cannot be before the pickup date.": "لا يمكن أن يكون تاريخ التسليم قبل تاريخ الاستلام.",
   "Delivery must be after pickup and within today through five days ahead.": "يجب أن يكون التسليم بعد الاستلام وضمن الفترة من اليوم إلى خمسة أيام من الآن.",
   "No delivery dates available. Choose an earlier pickup date.": "لا توجد تواريخ تسليم متاحة. اختر تاريخ استلام أبكر.",
   "Furniture delivery must be on pickup day or within five days after pickup.": "يجب تسليم الأثاث في يوم الاستلام أو خلال خمسة أيام بعده.",

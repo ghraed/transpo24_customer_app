@@ -10,10 +10,11 @@ import { createMotorcycleTransportRequest, updateScheduleAndItemDetails, submitC
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+const mockDismissAll = jest.fn();
 let mockParams = {};
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
-  useRouter: () => ({ push: mockPush, replace: mockReplace }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace, dismissAll: mockDismissAll }),
   Stack: { Screen: ({ options }) => options?.header?.() ?? null },
 }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key) => key, i18n: { language: 'en' } }) }));
@@ -123,6 +124,7 @@ test('review submits bicycle brand/model and transport notes before publishing',
   }));
   expect(submitCustomerRequest).toHaveBeenCalledWith('request-1', { customerNote: 'Call before pickup' });
   expect(updateScheduleAndItemDetails.mock.invocationCallOrder[0]).toBeLessThan(submitCustomerRequest.mock.invocationCallOrder[0]);
+  expect(mockDismissAll).toHaveBeenCalledTimes(1);
 });
 
 test('motorcycle pickup changes clear delivery and block continuation', async () => {
@@ -191,6 +193,7 @@ test.each(['BICYCLE', 'MOTORCYCLE_TRANSPORT', 'GOODS_TRANSPORT', 'FURNITURE_TRAN
     await act(async () => note.props.onChangeText(value));
     await press(tree, 'Submit Request');
     expect(submitCustomerRequest).toHaveBeenCalledWith('request-1', { customerNote: value.trim() || undefined });
+    expect(mockDismissAll).toHaveBeenCalledTimes(1);
   },
 );
 

@@ -1309,6 +1309,7 @@
   "Delivery must be between today and five days ahead.": "Die Lieferung muss zwischen heute und in fünf Tagen liegen.",
   "Please select a delivery date.": "Bitte wählen Sie ein Lieferdatum.",
   "Delivery date must be after the pickup date.": "Das Lieferdatum muss nach dem Abholdatum liegen.",
+  "Delivery date cannot be before the pickup date.": "Das Lieferdatum darf nicht vor dem Abholdatum liegen.",
   "Delivery must be after pickup and within today through five days ahead.": "Die Lieferung muss nach der Abholung und spätestens in fünf Tagen erfolgen.",
   "No delivery dates available. Choose an earlier pickup date.": "Keine Liefertermine verfügbar. Wählen Sie ein früheres Abholdatum.",
   "Furniture delivery must be on pickup day or within five days after pickup.": "Die Möbellieferung muss am Abholtag oder innerhalb von fünf Tagen danach erfolgen.",

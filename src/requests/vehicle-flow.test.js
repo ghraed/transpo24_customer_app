@@ -11,19 +11,20 @@ import React from 'react';
 import { act, create } from 'react-test-renderer';
 import VehicleRequestRoute from '@/app/vehicle-request';
 import { newVehicleDraft } from './vehicle-draft';
-import { readVehicleDraft, writeVehicleDraft } from './vehicle-draft-storage';
+import { clearVehicleDraft, readVehicleDraft, writeVehicleDraft } from './vehicle-draft-storage';
 import { AddressEditor } from './address-editor';
 import { ScheduleEditor } from './schedule-editor';
 import { submitVehicleDraft } from './submit-vehicle-draft';
 import { serviceHeaderOptions } from './service-header';
 const mockReplace = jest.fn();
+const mockDismissAll = jest.fn();
 const mockBack = jest.fn();
 let mockServiceId = 'vehicle-service';
 let mockCanGoBack = false;
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ serviceId: mockServiceId }),
-  useRouter: () => ({ back: mockBack, replace: mockReplace, canGoBack: () => mockCanGoBack }),
+  useRouter: () => ({ back: mockBack, replace: mockReplace, dismissAll: mockDismissAll, canGoBack: () => mockCanGoBack }),
   router: { replace: (...args) => mockReplace(...args) },
   Stack: { Screen: ({ options }) => options?.header?.() ?? null },
 }));
@@ -103,6 +104,8 @@ describe('vehicle review editing', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     mockReplace.mockClear();
+    mockDismissAll.mockClear();
+    clearVehicleDraft.mockClear();
     mockBack.mockClear();
     mockServiceId = 'vehicle-service';
     mockCanGoBack = false;
@@ -249,9 +252,14 @@ describe('vehicle review editing', () => {
     });
     expect(form()).toBe(parent);
     if (outcome === 'success') {
+      expect(clearVehicleDraft).toHaveBeenCalledWith('customer');
+      expect(mockDismissAll).toHaveBeenCalledTimes(1);
+      await act(async () => { jest.advanceTimersByTime(350); });
       expect(mockReplace).toHaveBeenCalledWith({ pathname: '/request-status', params: { requestId: 'request-123' } });
       expect(form().props.pointerEvents).toBe('none');
     } else {
+      expect(clearVehicleDraft).not.toHaveBeenCalled();
+      expect(mockDismissAll).not.toHaveBeenCalled();
       expect(mockReplace).not.toHaveBeenCalled();
       expect(form().props.pointerEvents).toBe('auto');
       expect(button(tree, 'vehicleRequest.submit').props.disabled).toBe(false);
