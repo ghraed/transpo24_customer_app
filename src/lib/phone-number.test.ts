@@ -1,8 +1,16 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { countryFlag, getCallingCode, normalizePhoneNumber } from './phone-number';
+import { countryFlag, getCallingCode, normalizePhoneNumber, phoneCountryForRegion } from './phone-number';
 
 describe('phone input utilities', () => {
+  it('defaults to the device region when it has a calling code', () => {
+    expect(phoneCountryForRegion('CH')).toBe('CH');
+    expect(getCallingCode(phoneCountryForRegion('CH'))).toBe('+41');
+    expect(phoneCountryForRegion('lb')).toBe('LB');
+    expect(phoneCountryForRegion(null)).toBe('LB');
+    expect(phoneCountryForRegion('XX')).toBe('LB');
+  });
+
   it('normalizes a Lebanese local number to E.164', () => {
     expect(normalizePhoneNumber('70 123 456', 'LB')).toBe('+96170123456');
   });

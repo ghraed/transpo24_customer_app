@@ -1,4 +1,5 @@
 import { Redirect, useRouter } from 'expo-router';
+import { getLocales } from 'expo-localization';
 import type { CountryCode } from 'libphonenumber-js';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +31,7 @@ import {
   useAuthSession,
 } from '@/lib/auth-token';
 import { registerCustomerPushNotifications } from '@/notifications/registerPushNotifications';
-import { normalizePhoneNumber } from '@/lib/phone-number';
+import { normalizePhoneNumber, phoneCountryForRegion } from '@/lib/phone-number';
 import {
   LANGUAGE_CONFIGS,
   SUPPORTED_LANGUAGES,
@@ -53,7 +54,9 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
   } = useAppLanguage();
   const auth = useAuthSession();
   const keyboardInset = useAndroidKeyboardInset();
-  const [country, setCountry] = useState<CountryCode>('LB');
+  const [country, setCountry] = useState<CountryCode>(() =>
+    phoneCountryForRegion(getLocales()[0]?.regionCode),
+  );
   const [localNumber, setLocalNumber] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -295,7 +298,13 @@ export function PhoneAuthScreen({ mode }: PhoneAuthScreenProps) {
                       style={[styles.phoneInput, isRTL && styles.rtlInput]}
                       value={localNumber}
                       onChangeText={handleNumberChange}
-                      placeholder="70 123 456"
+                      placeholder={
+                        country === 'LB'
+                          ? '70 123 456'
+                          : country === 'CH'
+                            ? '79 123 45 67'
+                            : t('Phone number')
+                      }
                       placeholderTextColor="#8A94A6"
                       keyboardType="phone-pad"
                       textContentType="telephoneNumber"

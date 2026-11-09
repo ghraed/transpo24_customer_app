@@ -1,9 +1,15 @@
 import {
   getCountryCallingCode,
+  isSupportedCountry,
   parsePhoneNumberFromString,
   type CountryCode,
 } from 'libphonenumber-js';
 import appI18n from '@/localization/i18n';
+
+export function phoneCountryForRegion(regionCode: string | null | undefined): CountryCode {
+  const code = regionCode?.toUpperCase() ?? '';
+  return isSupportedCountry(code) ? code : 'LB';
+}
 
 export function normalizePhoneNumber(
   localNumber: string,
