@@ -1,4 +1,4 @@
-import { getAccessToken, useAuthSession, logoutCustomerSession } from '@/lib/auth-token';
+import { authenticatedFetch, getAccessToken, useAuthSession, logoutCustomerSession } from '@/lib/auth-token';
 import { getApiBaseUrl as apiBase } from '@/config/backend';
 
 import React, { useEffect, useState } from 'react';
@@ -8,6 +8,15 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useTranslation } from 'react-i18next';
 
 type Policy = { version: string; text: string; accepted: boolean };
+async function loadPolicy(): Promise<Policy> {
+  const response = await authenticatedFetch(apiBase() + '/auth/legal', { method: 'GET' });
+  if (!response.ok) throw new Error('Unable to load terms');
+  const value = await response.json();
+  if (typeof value.version !== 'string' || typeof value.text !== 'string' || typeof value.accepted !== 'boolean') {
+    throw new Error('Invalid terms response');
+  }
+  return value as Policy;
+}
 export function LegalConsentBoundary({ children }: { children: React.ReactNode }) {
   const auth = useAuthSession(); const token = auth.user ? getAccessToken() : null; const logout = logoutCustomerSession;
   return token ? <AccountConsent key={auth.user?.id} token={token} logout={logout}>{children}</AccountConsent> : <>{children}</>;
@@ -21,9 +30,8 @@ function AccountConsent({ token, logout, children }: { token: string; logout: ()
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
-    void fetch(apiBase() + '/auth/legal', { headers: { Authorization: 'Bearer ' + token } })
-      .then(async response => { if (!response.ok) throw Error(); const value = await response.json(); if (typeof value.version !== 'string' || typeof value.text !== 'string' || typeof value.accepted !== 'boolean') throw Error(); return value as Policy; })
-      .then(value => { if (active) setPolicy(value); })
+    void loadPolicy()
+      .then(value => { if (active) { setPolicy(value); setError(false); } })
       .catch(() => { if (active) setError(true); });
     void SplashScreen.hideAsync();
     return () => { active = false; };
@@ -33,10 +41,18 @@ function AccountConsent({ token, logout, children }: { token: string; logout: ()
     if (!policy || !checked || busy) return;
     setBusy(true); setError(false);
     try {
-      const response = await fetch(apiBase() + '/auth/legal', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ version: policy.version }) });
+      const response = await authenticatedFetch(apiBase() + '/auth/legal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: policy.version }) });
       if (!response.ok) throw Error();
       setPolicy({ ...policy, accepted: true });
-    } catch { setError(true); } finally { setBusy(false); }
+    } catch {
+      // A lost response can follow a successful server write. Reconcile before showing failure.
+      try {
+        const current = await loadPolicy();
+        setPolicy(current);
+        if (current.version !== policy.version) setChecked(false);
+        setError(!current.accepted);
+      } catch { setError(true); }
+    } finally { setBusy(false); }
   }
   return <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
     <ScrollView contentContainerStyle={{ padding: 24, gap: 16, flexGrow: 1 }}>

@@ -5,7 +5,7 @@ import { LegalConsentBoundary } from './legal-consent-boundary';
 let mockToken='account-a';
 let mockOwnerId='account-a';
 const mockLogout=jest.fn(async()=>{});
-jest.mock('@/lib/auth-token',()=>({useAuthSession:()=>({user:{id:mockOwnerId}}),getAccessToken:()=>mockToken,logoutCustomerSession:mockLogout}));
+jest.mock('@/lib/auth-token',()=>({useAuthSession:()=>({user:{id:mockOwnerId}}),getAccessToken:()=>mockToken,logoutCustomerSession:mockLogout,authenticatedFetch:(url,init)=>global.fetch(url,{...init,headers:{...init.headers,Authorization:'Bearer '+mockToken}})}));
 jest.mock('@/config/backend',()=>({getApiBaseUrl:()=> 'http://synthetic.test'}));
 jest.mock('react-i18next',()=>({useTranslation:()=>({t:key=>key})}));
 jest.mock('expo-splash-screen',()=>({hideAsync:async()=>{}}));
@@ -36,6 +36,23 @@ test('failed acceptance does not admit the account',async()=>{
  await act(async()=>tree.root.findAll(n=>typeof n.props.onPress==='function').find(n=>n.props.disabled===false).props.onPress());
  expect(business()).toBe(false);
  expect(tree.root.findAllByType(Text).some(n=>n.props.accessibilityRole==='alert')).toBe(true);
+});
+test('checks server state when acceptance succeeds but its response is lost',async()=>{
+ await act(async()=>{tree=create(<LegalConsentBoundary><Text>business</Text></LegalConsentBoundary>);});
+ await act(async()=>find('checkbox').props.onPress());
+ global.fetch.mockRejectedValueOnce(new Error('response lost'));
+ global.fetch.mockResolvedValueOnce(response({...policy,accepted:true}));
+ await act(async()=>tree.root.findAll(n=>typeof n.props.onPress==='function').find(n=>n.props.disabled===false).props.onPress());
+ expect(business()).toBe(true);
+ expect(tree.root.findAllByType(Text).some(n=>n.props.accessibilityRole==='alert')).toBe(false);
+});
+test('successful retry clears a previous terms loading error',async()=>{
+ global.fetch.mockRejectedValueOnce(new Error('offline'));
+ await act(async()=>{tree=create(<LegalConsentBoundary><Text>business</Text></LegalConsentBoundary>);});
+ expect(tree.root.findAllByType(Text).some(n=>n.props.accessibilityRole==='alert')).toBe(true);
+ global.fetch.mockResolvedValueOnce(response({...policy,accepted:true}));
+ await act(async()=>find('button').props.onPress());
+ expect(business()).toBe(true);
 });
 test('account switch discards a delayed policy response from the previous account',async()=>{
  let finish;
