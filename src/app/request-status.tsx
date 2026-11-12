@@ -514,6 +514,7 @@ export default function RequestStatusScreen() {
   const [isApprovingAdditionalCharge, setIsApprovingAdditionalCharge] = useState<boolean>(false);
   const [cancelTripDebugMessage, setCancelTripDebugMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [requestAccessError, setRequestAccessError] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [nearDeliveryMessage, setNearDeliveryMessage] = useState<string>('');
   const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string>('');
@@ -545,6 +546,7 @@ export default function RequestStatusScreen() {
       }
 
       setErrorMessage('');
+      setRequestAccessError(false);
 
       try {
         const data = await getCustomerRequestStatus(requestId);
@@ -561,6 +563,7 @@ export default function RequestStatusScreen() {
           return;
         }
 
+        let paymentMethodError = '';
         const [offersResponse, chargesResponse, paymentMethodResponse] =
           await Promise.all([
             getCustomerRequestOffers(requestId).catch((error: unknown) => {
@@ -576,11 +579,10 @@ export default function RequestStatusScreen() {
               );
             }),
             getDefaultPaymentMethod().catch((error: unknown) => {
-              throw new Error(
-                appI18n.t("Default payment method failed: {{value0}}", { value0: error instanceof Error
-                  ? error.message
-                  : appI18n.t("Unknown payment method error.") }),
-              );
+              paymentMethodError = appI18n.t("Default payment method failed: {{value0}}", { value0: error instanceof Error
+                ? error.message
+                : appI18n.t("Unknown payment method error.") });
+              return null;
             }),
           ]);
         let nextTracking: RequestTracking | null = null;
@@ -604,6 +606,7 @@ export default function RequestStatusScreen() {
         setOffers(sortOffers(offersResponse.offers ?? []));
         setAdditionalCharges(chargesResponse);
         setDefaultPaymentMethod(paymentMethodResponse);
+        setErrorMessage(paymentMethodError);
         setTrackingData(nextTracking);
         setLatestDriverLocation(current => newerLocation(current, nextTracking?.latestDriverLocation ?? null));
         setNearDeliveryMessage(
@@ -614,6 +617,7 @@ export default function RequestStatusScreen() {
       } catch (error) {
         const message = error instanceof Error ? error.message : appI18n.t("Failed to load request status.");
         const key = requestStatusErrorKey(error);
+        setRequestAccessError(key !== null);
         setErrorMessage(key ? appI18n.t(key) : message);
       } finally {
         setIsLoading(false);
@@ -1397,8 +1401,8 @@ export default function RequestStatusScreen() {
       <SafeAreaView style={styles.centeredContainer}>
         <Text style={styles.title}>{appI18n.t("Request Status")}</Text>
         <Text style={styles.errorText}>{errorMessage || appI18n.t("Unable to load request status.")}</Text>
-        <Pressable style={styles.primaryButton} onPress={() => void loadStatus(false)}>
-          <Text style={styles.primaryButtonText}>{appI18n.t("Retry")}</Text>
+        <Pressable style={styles.primaryButton} onPress={() => requestAccessError ? router.replace('/(tabs)/requests') : void loadStatus(false)}>
+          <Text style={styles.primaryButtonText}>{appI18n.t(requestAccessError ? "Orders" : "Retry")}</Text>
         </Pressable>
       </SafeAreaView>
     );
